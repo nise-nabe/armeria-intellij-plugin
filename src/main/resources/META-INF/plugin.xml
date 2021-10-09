@@ -4,7 +4,7 @@
     <vendor email="nise.nabe@gmail.com" url="https://www.nisecoder.com">nise_nabe</vendor>
 
     <extensions defaultExtensionNs="com.intellij">
-
+        <moduleBuilder builderClass="com.nisecoder.intellij.plugins.armeria.ArmeriaModuleWizardStep" />
     </extensions>
 
     <actions>
