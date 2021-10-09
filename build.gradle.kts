@@ -1,9 +1,11 @@
 import com.nisecoder.gradle.plugin.idea.ext.packagePrefix
 import com.nisecoder.gradle.plugin.idea.ext.settings
+import org.jetbrains.changelog.ChangelogPluginExtension
 
 plugins {
     kotlin("jvm")
     id("org.jetbrains.intellij")
+    id("org.jetbrains.changelog")
     id("org.jetbrains.gradle.plugin.idea-ext")
     id("com.nisecoder.idea-ext-ext")
     id("org.asciidoctor.jvm.convert")
@@ -41,9 +43,9 @@ tasks {
         autoReloadPlugins.set(true)
     }
     patchPluginXml {
-        changeNotes.set("""
-            Add change notes here.<br>
-            <em>most HTML tags may be used</em>        """.trimIndent())
+        val changelog: ChangelogPluginExtension = extensions.getByType()
+
+        changeNotes.set(provider { changelog.getLatest().toHTML()} )
     }
 
     asciidoctor {

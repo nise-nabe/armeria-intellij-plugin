@@ -29,5 +29,6 @@ pluginManagement {
         id("org.jetbrains.intellij") version "1.1.6"
         id("org.jetbrains.gradle.plugin.idea-ext") version "1.0.1"
         id("org.asciidoctor.jvm.convert") version "3.+"
+        id("org.jetbrains.changelog") version "1.3.0"
     }
 }
