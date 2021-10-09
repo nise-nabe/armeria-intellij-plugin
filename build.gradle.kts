@@ -42,9 +42,8 @@ tasks {
     runIde {
         autoReloadPlugins.set(true)
     }
+    val changelog: ChangelogPluginExtension = extensions.getByType()
     patchPluginXml {
-        val changelog: ChangelogPluginExtension = extensions.getByType()
-
         changeNotes.set(provider { changelog.getLatest().toHTML()} )
     }
 
