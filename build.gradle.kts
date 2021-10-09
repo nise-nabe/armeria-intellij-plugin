@@ -6,6 +6,7 @@ plugins {
     id("org.jetbrains.intellij")
     id("org.jetbrains.gradle.plugin.idea-ext")
     id("com.nisecoder.idea-ext-ext")
+    id("org.asciidoctor.jvm.convert")
 }
 
 group = "com.nisecoder.intellij"
@@ -43,5 +44,15 @@ tasks {
         changeNotes.set("""
             Add change notes here.<br>
             <em>most HTML tags may be used</em>        """.trimIndent())
+    }
+
+    asciidoctor {
+        // collect into root buildDirectory for publishing to Github Pages
+        val outputDir = if (project == rootProject) {
+            rootProject.buildDir.resolve("docs/asciidoc")
+        } else {
+            rootProject.buildDir.resolve("docs/asciidoc/${project.name}")
+        }
+        setOutputDir(outputDir)
     }
 }

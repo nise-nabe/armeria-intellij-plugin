@@ -1,0 +1,33 @@
+name: "Publish to Github Pages"
+
+on:
+  push:
+    branches: [ main ]
+
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2.3.4
+
+      - name: Set up Java for Publication
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'temurin'
+          java-version: 11
+
+      - name: Generate Document
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: asciidoctor
+        env:
+          ORG_GRADLE_PROJECT_gitHubPackagesUsername: ${{ github.actor }}
+          ORG_GRADLE_PROJECT_gitHubPackagesPassword: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish Document to Github Pages
+        uses: JamesIves/github-pages-deploy-action@4.1.5
+        with:
+          branch: gh-pages
+          folder: build/docs/asciidoc
