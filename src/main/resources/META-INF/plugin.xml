@@ -1,0 +1,13 @@
+<idea-plugin>
+    <id>com.nisecoder.intellij.armeria-intellij-plugin</id>
+    <name>Armeria</name>
+    <vendor email="nise.nabe@gmail.com" url="https://www.nisecoder.com">nise_nabe</vendor>
+
+    <extensions defaultExtensionNs="com.intellij">
+
+    </extensions>
+
+    <actions>
+
+    </actions>
+</idea-plugin>
