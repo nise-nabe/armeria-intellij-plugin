@@ -5,8 +5,8 @@ import com.nisecoder.intellij.plugins.armeria.ArmeriaIcons
 import com.nisecoder.intellij.plugins.armeria.message
 import javax.swing.Icon
 
-class ArmeriaModuleType: ModuleType<ArmeriaModuleWizardStep>(ARMERIA_MODULE) {
-    override fun createModuleBuilder(): ArmeriaModuleWizardStep = ArmeriaModuleWizardStep()
+class ArmeriaModuleType: ModuleType<ArmeriaModuleBuilder>(ARMERIA_MODULE) {
+    override fun createModuleBuilder(): ArmeriaModuleBuilder = ArmeriaModuleBuilder()
 
     override fun getName() = message("module.type.armeria.name")
 
