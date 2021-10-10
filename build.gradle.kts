@@ -1,6 +1,7 @@
 import com.nisecoder.gradle.plugin.idea.ext.packagePrefix
 import com.nisecoder.gradle.plugin.idea.ext.settings
 import org.jetbrains.changelog.ChangelogPluginExtension
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm")
@@ -55,5 +56,14 @@ tasks {
             rootProject.buildDir.resolve("docs/asciidoc/${project.name}")
         }
         setOutputDir(outputDir)
+    }
+
+    withType<KotlinCompile>().configureEach {
+        kotlinOptions {
+            targetCompatibility = JavaVersion.VERSION_11.toString()
+            apiVersion = "1.5"
+            languageVersion = "1.5"
+            javaParameters = true
+        }
     }
 }
