@@ -25,9 +25,11 @@
             </dependency>
 #if ($context.testRunnerId == "junit5")
             <dependency>
-                <groupId>org.junit.jupiter</groupId>
+                <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
-                <version>${context.getVersion("org.junit.jupiter", "junit-bom")}</version>
+                <version>${context.getVersion("org.junit", "junit-bom")}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
 #end
         </dependencies>

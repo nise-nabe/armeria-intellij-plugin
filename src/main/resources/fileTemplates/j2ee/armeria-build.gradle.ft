@@ -75,7 +75,7 @@ dependencies {
     testImplementation 'junit:junit:${context.getVersion("junit", "junit")}'
 #end
 #if ($context.testRunnerId == "junit5")
-    testRuntimeOnly platform('org.junit:junit-bom:${context.getVersion("org.junit.jupiter", "junit-bom")}')
+    testRuntimeOnly platform('org.junit:junit-bom:${context.getVersion("org.junit", "junit-bom")}')
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter'
 #end
 }
