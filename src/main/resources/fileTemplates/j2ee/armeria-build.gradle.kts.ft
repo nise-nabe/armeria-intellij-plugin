@@ -15,7 +15,6 @@ dependencies {
     runtimeOnly("org.slf4j:log4j-over-slf4j:${context.getVersion("org.slf4j", "log4j-over-slf4j")}")
 }
 
-tasks.withType<JavaCompile> {
-    options.compileArgs
-
+tasks.withType<JavaCompile>().configureEach {
+    options.compilerArgs.add("-parameters")
 }
