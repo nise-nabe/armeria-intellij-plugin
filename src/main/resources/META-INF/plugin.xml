@@ -10,6 +10,7 @@
     <extensions defaultExtensionNs="com.intellij">
         <moduleBuilder builderClass="com.nisecoder.intellij.plugins.armeria.module.ArmeriaModuleBuilder" />
         <framework.type implementation="com.nisecoder.intellij.plugins.armeria.framework.ArmeriaFrameworkEx" />
+        <spellchecker.bundledDictionaryProvider implementation="com.nisecoder.intellij.plugins.armeria.ArmeriaDictionaryProvider" />
     </extensions>
 
     <actions>
