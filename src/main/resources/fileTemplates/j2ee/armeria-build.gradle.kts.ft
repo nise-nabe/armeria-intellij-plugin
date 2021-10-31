@@ -1,0 +1,17 @@
+plugins {
+    id("java")
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Adjust the list as you need.
+    implementation(platform("com.linecorp.armeria:armeria-bom:${context.getVersion("com.linecorp.armeria", "armeria-bom")}"))
+    implementation("com.linecorp.armeria:armeria")
+
+    // Logging
+    runtimeOnly("ch.qos.logback:logback-classic:1.2.6")
+    runtimeOnly("org.slf4j:log4j-over-slf4j:1.7.32")
+}
