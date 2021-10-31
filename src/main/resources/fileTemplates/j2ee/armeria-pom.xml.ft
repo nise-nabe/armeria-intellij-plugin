@@ -1,0 +1,49 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>${context.group}</groupId>
+    <artifactId>${context.artifact}</artifactId>
+    <version>${context.version}</version>
+    <packaging>jar</packaging>
+    <name>${context.moduleName}</name>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.linecorp.armeria</groupId>
+                <artifactId>armeria-bom</artifactId>
+                <version>${context.getVersion("com.linecorp.armeria", "armeria-bom")}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria</artifactId>
+        </dependency>
+
+        <!-- Logging -->
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${context.getVersion("ch.qos.logback", "logback-classic")}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>log4j-over-slf4j</artifactId>
+            <version>${context.getVersion("org.slf4j", "log4j-over-slf4j")}</version>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+</project>

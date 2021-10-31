@@ -1,0 +1,16 @@
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation platform('com.linecorp.armeria:armeria-bom:${context.getVersion("com.linecorp.armeria", "armeria-bom")}')
+    implementation 'com.linecorp.armeria:armeria'
+
+    // Logging
+    runtimeOnly 'ch.qos.logback:logback-classic:${context.getVersion("ch.qos.logback", "logback-classic")}'
+    runtimeOnly 'org.slf4j:log4j-over-slf4j:${context.getVersion("org.slf4j", "log4j-over-slf4j")}'
+}

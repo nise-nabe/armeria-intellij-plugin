@@ -8,10 +8,10 @@ import com.intellij.ide.starters.local.GeneratorTemplateFile
 import com.intellij.ide.starters.local.Starter
 import com.intellij.ide.starters.local.StarterModuleBuilder
 import com.intellij.ide.starters.local.StarterPack
-import com.intellij.ide.starters.shared.GRADLE_PROJECT
 import com.intellij.ide.starters.shared.JAVA_STARTER_LANGUAGE
 import com.intellij.ide.starters.shared.JUNIT_TEST_RUNNER
 import com.intellij.ide.starters.shared.KOTLIN_STARTER_LANGUAGE
+import com.intellij.ide.starters.shared.MAVEN_PROJECT
 import com.intellij.ide.starters.shared.StarterLanguage
 import com.intellij.ide.starters.shared.StarterProjectType
 import com.intellij.ide.starters.shared.StarterTestRunner
@@ -30,7 +30,7 @@ class ArmeriaModuleBuilder: StarterModuleBuilder() {
         val ftManager = FileTemplateManager.getInstance(ProjectManager.getInstance().defaultProject)
         val assets = mutableListOf<GeneratorAsset>()
         when (starterContext.projectType) {
-            GRADLE_PROJECT -> {
+            GRADLE_KTS_PROJECT -> {
                 assets.add(GeneratorTemplateFile(
                     "build.gradle.kts",
                     ftManager.getJ2eeTemplate("armeria-build.gradle.kts")
@@ -38,6 +38,22 @@ class ArmeriaModuleBuilder: StarterModuleBuilder() {
                 assets.add(GeneratorTemplateFile(
                     "settings.gradle.kts",
                     ftManager.getJ2eeTemplate("armeria-settings.gradle.kts")
+                ))
+            }
+            GRADLE_GROOVY_PROJECT -> {
+                assets.add(GeneratorTemplateFile(
+                    "build.gradle",
+                    ftManager.getJ2eeTemplate("armeria-build.gradle")
+                ))
+                assets.add(GeneratorTemplateFile(
+                    "settings.gradle",
+                    ftManager.getJ2eeTemplate("armeria-settings.gradle")
+                ))
+            }
+            MAVEN_PROJECT -> {
+                assets.add(GeneratorTemplateFile(
+                    "pom.xml",
+                    ftManager.getJ2eeTemplate("armeria-pom.xml")
                 ))
             }
         }
@@ -57,7 +73,7 @@ class ArmeriaModuleBuilder: StarterModuleBuilder() {
     override fun getPresentableName(): String = message("module.type.armeria.name")
 
     override fun getProjectTypes(): List<StarterProjectType> {
-        return listOf(GRADLE_PROJECT)
+        return listOf(GRADLE_KTS_PROJECT, GRADLE_GROOVY_PROJECT, MAVEN_PROJECT)
     }
 
     override fun getStarterPack(): StarterPack {
