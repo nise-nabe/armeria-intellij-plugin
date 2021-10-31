@@ -1,5 +1,8 @@
 plugins {
-    id("java")
+    java
+#if ($context.hasLanguage("kotlin"))
+    kotlin("jvm") version "${context.getVersion("org.jetbrains.kotlin", "kotlin-bom")}"
+#end
 }
 
 repositories {
@@ -7,6 +10,11 @@ repositories {
 }
 
 dependencies {
+#if ($context.hasLanguage("kotlin"))
+    implementation(platform("org.jetbrains.kotlin:kotlin-bom:${context.getVersion("org.jetbrains.kotlin", "kotlin-bom")}"))
+    implementation(kotlin("stdlib-jdk8"))
+
+#end
     implementation(platform("com.linecorp.armeria:armeria-bom:${context.getVersion("com.linecorp.armeria", "armeria-bom")}"))
     implementation("com.linecorp.armeria:armeria")
 #if ($context.hasLibrary("armeria-brave"))
@@ -77,6 +85,14 @@ dependencies {
 #if ($context.testRunnerId == "junit5")
     testRuntimeOnly(platform("org.junit:junit-bom:${context.getVersion("org.junit", "junit-bom")}"))
     testRuntimeOnly("org.junit.jupiter:junit-jupiter")
+#end
+#if ($context.hasLanguage("kotlin"))
+#if ($context.testRunnerId == "junit4")
+    testImplementation(kotlin("test-junit"))
+#end
+#if ($context.testRunnerId == "junit5")
+    testImplementation(kotlin("test-junit5"))
+#end
 #end
 }
 

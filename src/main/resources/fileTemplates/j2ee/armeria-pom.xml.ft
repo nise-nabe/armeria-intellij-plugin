@@ -12,10 +12,23 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+#if ($context.hasLanguage("kotlin"))
+        <kotlin.version>${context.getVersion("org.jetbrains.kotlin", "kotlin-bom")}</kotlin.version>
+        <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
+#end
     </properties>
 
     <dependencyManagement>
         <dependencies>
+#if ($context.hasLanguage("kotlin"))
+            <dependency>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-bom</artifactId>
+                <version>${context.getVersion("org.jetbrains.kotlin", "kotlin-bom")}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+#end
             <dependency>
                 <groupId>com.linecorp.armeria</groupId>
                 <artifactId>armeria-bom</artifactId>
@@ -36,6 +49,12 @@
     </dependencyManagement>
 
     <dependencies>
+#if ($context.hasLanguage("kotlin"))
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib-jdk8</artifactId>
+        </dependency>
+#end
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria</artifactId>
@@ -183,9 +202,29 @@
             <scope>test</scope>
         </dependency>
 #end
+#if ($context.hasLanguage("kotlin"))
+#if ($context.testRunnerId == "junit4")
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-test-junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+#end
+    #if ($context.testRunnerId == "junit5")
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-test-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+#end
+#end
     </dependencies>
 
     <build>
+#if ($context.hasLanguage("kotlin"))
+        <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
+        <testSourceDirectory>${project.basedir}/src/test/kotlin</testSourceDirectory>
+#end
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -196,6 +235,32 @@
                     </compilerArgs>
                 </configuration>
             </plugin>
+#if ($context.hasLanguage("kotlin"))
+            <plugin>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-maven-plugin</artifactId>
+                <version>${kotlin.version}</version>
+
+                <executions>
+                    <execution>
+                        <id>compile</id>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                    </execution>
+
+                    <execution>
+                        <id>test-compile</id>
+                        <goals>
+                            <goal>test-compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+#end
         </plugins>
+#if ($context.hasLanguage("kotlin"))
+
+#end
     </build>
 </project>

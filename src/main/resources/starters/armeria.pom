@@ -7,6 +7,11 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-bom</artifactId>
+                <version>1.5.31</version>
+            </dependency>
+            <dependency>
                 <groupId>com.linecorp.armeria</groupId>
                 <artifactId>armeria-bom</artifactId>
                 <version>1.13.2</version>
