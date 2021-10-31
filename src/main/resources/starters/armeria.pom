@@ -1,7 +1,7 @@
 <project>
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.linecorp.armeria</groupId>
-    <artifactId>armeria-starter</artifactId>
+    <artifactId>armeria</artifactId>
     <version>1.0</version>
 
     <dependencyManagement>

@@ -62,7 +62,8 @@ class ArmeriaModuleBuilder: StarterModuleBuilder() {
 
     override fun getStarterPack(): StarterPack {
         return StarterPack("armeria", listOf(
-            Starter("server", "Server", getDependencyConfig("/starters/server.pom"), listOf())
+            Starter("server", "Server", getDependencyConfig("/starters/armeria.pom"), listOf()),
+            Starter("client", "Client", getDependencyConfig("/starters/armeria.pom"), listOf())
         ))
     }
 
