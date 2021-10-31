@@ -61,13 +61,13 @@ class ArmeriaModuleBuilder: StarterModuleBuilder() {
         }
 
 
-        val srcDir = listOf("src", "main")
-        val languageDir = listOf(when (starterContext.language) {
+        val languageDir = when (starterContext.language) {
             KOTLIN_STARTER_LANGUAGE -> "kotlin"
             else -> "java"
-        })
+        }
         val packageDir = starterContext.group.split(".")
-        assets.add(GeneratorEmptyDirectory((srcDir + languageDir + packageDir).joinToString("/")))
+        assets.add(GeneratorEmptyDirectory((listOf("src", "main", languageDir) + packageDir).joinToString("/")))
+        assets.add(GeneratorEmptyDirectory((listOf("src", "test", languageDir) + packageDir).joinToString("/")))
 
         return assets
     }
