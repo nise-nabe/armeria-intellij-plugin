@@ -23,6 +23,13 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+#if ($context.testRunnerId == "junit5")
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>${context.getVersion("org.junit.jupiter", "junit-bom")}</version>
+            </dependency>
+#end
         </dependencies>
     </dependencyManagement>
 
@@ -159,6 +166,21 @@
             <version>${context.getVersion("org.slf4j", "log4j-over-slf4j")}</version>
             <scope>runtime</scope>
         </dependency>
+
+#if ($context.testRunnerId == "junit4")
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${context.getVersion("junit", "junit")}</version>
+        </dependency>
+#end
+#if ($context.testRunnerId == "junit5")
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+#end
     </dependencies>
 
     <build>

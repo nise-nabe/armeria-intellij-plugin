@@ -70,8 +70,22 @@ dependencies {
     // Logging
     runtimeOnly("ch.qos.logback:logback-classic:${context.getVersion("ch.qos.logback", "logback-classic")}")
     runtimeOnly("org.slf4j:log4j-over-slf4j:${context.getVersion("org.slf4j", "log4j-over-slf4j")}")
+
+#if ($context.testRunnerId == "junit4")
+    testImplementation("junit:junit:${context.getVersion("junit", "junit")}")
+#end
+#if ($context.testRunnerId == "junit5")
+    testRuntimeOnly(platform("org.junit:junit-bom:${context.getVersion("org.junit.jupiter", "junit-bom")}"))
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter")
+#end
 }
 
 tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.add("-parameters")
 }
+
+#if ($context.testRunnerId == "junit5")
+tasks.test {
+    useJUnitPlatform()
+}
+#end
