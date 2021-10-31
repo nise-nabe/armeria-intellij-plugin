@@ -179,7 +179,7 @@ val ArmeriaScalaPB2_12 = armeriaLibrary(
     description = message("module.library.armeria.scalapb212.description"),
 )
 val ArmeriaScalaPB2_13 = armeriaLibrary(
-    id = "scalapb_2.13",
+    id = "armeria-scalapb_2.13",
     title = message("module.library.armeria.scalapb213.title"),
     description = message("module.library.armeria.scalapb213.description"),
 )
@@ -190,7 +190,7 @@ val ArmeriaSpringBoot2 = armeriaLibrary(
     description = message("module.library.armeria.spring-boot2.description"),
 )
 val ArmeriaSpringBoot2WebFlux = armeriaLibrary(
-    id = "spring-boot2-webflux-autoconfigure",
+    id = "armeria-spring-boot2-webflux-autoconfigure",
     title = message("module.library.armeria.spring-boot2-webflux.title"),
     description = message("module.library.armeria.spring-boot2-webflux.description"),
     links = listOf(
@@ -203,7 +203,7 @@ val ArmeriaSpringBoot2WebFlux = armeriaLibrary(
 )
 
 val ArmeriaThrift0_13 = armeriaLibrary(
-    id = "thrift0.13",
+    id = "armeria-thrift0.13",
     title = message("module.library.armeria.thrift.title"),
     description = message("module.library.armeria.thrift.description"),
     links = listOf(
@@ -221,7 +221,7 @@ val ArmeriaThrift0_13 = armeriaLibrary(
 )
 
 val ArmeriaTomcat = armeriaLibrary(
-    id = "tomcat9",
+    id = "armeria-tomcat9",
     title = message("module.library.armeria.tomcat.title"),
     description = message("module.library.armeria.tomcat.description"),
     links = listOf(
@@ -234,7 +234,7 @@ val ArmeriaTomcat = armeriaLibrary(
 )
 
 val ArmeriaZookeeper = armeriaLibrary(
-    id = "zookeeper3",
+    id = "armeria-zookeeper3",
     title = message("module.library.armeria.zookeeper.title"),
     description = message("module.library.armeria.zookeeper.description"),
     links = listOf(
