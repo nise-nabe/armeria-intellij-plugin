@@ -65,7 +65,7 @@ class ArmeriaModuleBuilder: StarterModuleBuilder() {
     override fun getDescription(): String = message("module.builder.armeria.description")
 
     override fun getLanguages(): List<StarterLanguage> {
-        return listOf(JAVA_STARTER_LANGUAGE, KOTLIN_STARTER_LANGUAGE)
+        return listOf(KOTLIN_STARTER_LANGUAGE, JAVA_STARTER_LANGUAGE)
     }
 
     override fun getNodeIcon(): Icon = ArmeriaIcons.Armeria
@@ -108,6 +108,6 @@ class ArmeriaModuleBuilder: StarterModuleBuilder() {
     }
 
     override fun getTestFrameworks(): List<StarterTestRunner> {
-        return listOf(JUNIT_TEST_RUNNER)
+        return listOf(JUNIT5_TEST_RUNNER, JUNIT4_TEST_RUNNER)
     }
 }
