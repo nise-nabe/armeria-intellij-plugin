@@ -62,8 +62,32 @@ class ArmeriaModuleBuilder: StarterModuleBuilder() {
 
     override fun getStarterPack(): StarterPack {
         return StarterPack("armeria", listOf(
-            Starter("server", "Server", getDependencyConfig("/starters/armeria.pom"), listOf()),
-            Starter("client", "Client", getDependencyConfig("/starters/armeria.pom"), listOf())
+            Starter("server", "Server", getDependencyConfig("/starters/armeria.pom"), listOf(
+                ArmeriaBrave,
+                ArmeriaDropwizard2,
+                ArmeriaEureka,
+                ArmeriaGrpc,
+                ArmeriaJetty,
+                ArmeriaKafka,
+                ArmeriaKotlin,
+                ArmeriaLogback,
+                ArmeriaProtobuf,
+                ArmeriaRetrofit,
+                ArmeriaRxJava3,
+                ArmeriaSaml,
+                ArmeriaScalaPB2_12,
+                ArmeriaScalaPB2_13,
+                ArmeriaSpringBoot2,
+                ArmeriaSpringBoot2WebFlux,
+                ArmeriaThrift0_13,
+                ArmeriaTomcat,
+                ArmeriaZookeeper,
+            )),
+            Starter("client", "Client", getDependencyConfig("/starters/armeria.pom"), listOf(
+                ArmeriaGrpc,
+                ArmeriaThrift0_13,
+                ArmeriaRetrofit,
+            ))
         ))
     }
 
