@@ -14,3 +14,8 @@ dependencies {
     runtimeOnly("ch.qos.logback:logback-classic:${context.getVersion("ch.qos.logback", "logback-classic")}")
     runtimeOnly("org.slf4j:log4j-over-slf4j:${context.getVersion("org.slf4j", "log4j-over-slf4j")}")
 }
+
+tasks.withType<JavaCompile> {
+    options.compileArgs
+
+}
