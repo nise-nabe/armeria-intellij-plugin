@@ -31,6 +31,120 @@
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria</artifactId>
         </dependency>
+#if ($context.hasLibrary("armeria-brave"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-brave</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-dropwizard2"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-dropwizard2</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-eureka"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-eureka</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-grpc"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-grpc</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-jetty9"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-jetty9</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-kafka"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-kafka</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-kotlin"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-kotlin</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-logback"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-logback</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-protobuf"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-protobuf</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-retrofit2"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-retrofit2</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-rxjava3"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-rxjava3</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-saml"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-saml</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-scalapb_2.12"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-scalapb_2.12</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-scalapb_2.13"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-scalapb_2.13</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-spring-boot2-autoconfigure"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-spring-boot2-autoconfigure</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-spring-boot2-webflux-autoconfigure"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-spring-boot2-webflux-autoconfigure</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-thrift0.13"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-thrift0.13</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-tomcat9"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-tomcat9</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-zookeeper3"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-zookeeper3</artifactId>
+        </dependency>
+#end
 
         <!-- Logging -->
         <dependency>

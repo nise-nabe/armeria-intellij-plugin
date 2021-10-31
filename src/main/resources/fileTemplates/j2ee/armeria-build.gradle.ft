@@ -9,6 +9,64 @@ repositories {
 dependencies {
     implementation platform('com.linecorp.armeria:armeria-bom:${context.getVersion("com.linecorp.armeria", "armeria-bom")}')
     implementation 'com.linecorp.armeria:armeria'
+#if ($context.hasLibrary("armeria-brave"))
+    implementation 'com.linecorp.armeria:armeria-brave'
+#end
+#if ($context.hasLibrary("armeria-dropwizard2"))
+    implementation 'com.linecorp.armeria:armeria-dropwizard2'
+#end
+#if ($context.hasLibrary("armeria-eureka"))
+    implementation 'com.linecorp.armeria:armeria-eureka'
+#end
+#if ($context.hasLibrary("armeria-grpc"))
+    implementation 'com.linecorp.armeria:armeria-grpc'
+#end
+#if ($context.hasLibrary("armeria-jetty9"))
+    implementation 'com.linecorp.armeria:armeria-jetty9'
+#end
+#if ($context.hasLibrary("armeria-kafka"))
+    implementation 'com.linecorp.armeria:armeria-kafka'
+#end
+#if ($context.hasLibrary("armeria-kotlin"))
+    implementation 'com.linecorp.armeria:armeria-kotlin'
+#end
+#if ($context.hasLibrary("armeria-logback"))
+    implementation 'com.linecorp.armeria:armeria-logback'
+#end
+#if ($context.hasLibrary("armeria-protobuf"))
+    implementation 'com.linecorp.armeria:armeria-protobuf'
+#end
+#if ($context.hasLibrary("armeria-retrofit2"))
+    implementation 'com.linecorp.armeria:armeria-retrofit2'
+#end
+#if ($context.hasLibrary("armeria-rxjava3"))
+    implementation 'com.linecorp.armeria:armeria-rxjava3'
+#end
+#if ($context.hasLibrary("armeria-saml"))
+    implementation 'com.linecorp.armeria:armeria-saml'
+#end
+#if ($context.hasLibrary("armeria-scalapb_2.12"))
+    implementation 'com.linecorp.armeria:armeria-scalapb_2.12'
+#end
+#if ($context.hasLibrary("armeria-scalapb_2.13"))
+    implementation 'com.linecorp.armeria:armeria-scalapb_2.13'
+#end
+#if ($context.hasLibrary("armeria-spring-boot2-autoconfigure"))
+    implementation 'com.linecorp.armeria:armeria-spring-boot2-autoconfigure'
+#end
+#if ($context.hasLibrary("armeria-spring-boot2-webflux-autoconfigure"))
+    implementation 'com.linecorp.armeria:armeria-spring-boot2-webflux-autoconfigure'
+#end
+#if ($context.hasLibrary("armeria-thrift0.13"))
+    implementation 'com.linecorp.armeria:armeria-thrift0.13'
+#end
+#if ($context.hasLibrary("armeria-tomcat9"))
+    implementation 'com.linecorp.armeria:armeria-tomcat9'
+#end
+#if ($context.hasLibrary("armeria-zookeeper3"))
+    implementation 'com.linecorp.armeria:armeria-zookeeper3'
+#end
+
 
     // Logging
     runtimeOnly 'ch.qos.logback:logback-classic:${context.getVersion("ch.qos.logback", "logback-classic")}'
