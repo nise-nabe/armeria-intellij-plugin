@@ -4,6 +4,7 @@ package com.nisecoder.intellij.plugins.armeria.module
 
 import com.intellij.ide.fileTemplates.FileTemplateManager
 import com.intellij.ide.starters.local.GeneratorAsset
+import com.intellij.ide.starters.local.GeneratorEmptyDirectory
 import com.intellij.ide.starters.local.GeneratorTemplateFile
 import com.intellij.ide.starters.local.Starter
 import com.intellij.ide.starters.local.StarterModuleBuilder
@@ -15,13 +16,14 @@ import com.intellij.ide.starters.shared.MAVEN_PROJECT
 import com.intellij.ide.starters.shared.StarterLanguage
 import com.intellij.ide.starters.shared.StarterProjectType
 import com.intellij.ide.starters.shared.StarterTestRunner
+import com.intellij.openapi.module.JavaModuleType
 import com.intellij.openapi.project.ProjectManager
 import com.nisecoder.intellij.plugins.armeria.ArmeriaIcons
 import com.nisecoder.intellij.plugins.armeria.message
 import javax.swing.Icon
 
 class ArmeriaModuleBuilder: StarterModuleBuilder() {
-    override fun getModuleType() = ArmeriaModuleType()
+    override fun getModuleType() = JavaModuleType()
 
     /**
      * setup module after 'finish' button pressed
@@ -57,6 +59,16 @@ class ArmeriaModuleBuilder: StarterModuleBuilder() {
                 ))
             }
         }
+
+
+        val srcDir = listOf("src", "main")
+        val languageDir = listOf(when (starterContext.language) {
+            KOTLIN_STARTER_LANGUAGE -> "kotlin"
+            else -> "java"
+        })
+        val packageDir = starterContext.group.split(".")
+        assets.add(GeneratorEmptyDirectory((srcDir + languageDir + packageDir).joinToString("/")))
+
         return assets
     }
 
