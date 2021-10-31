@@ -1,0 +1,9 @@
+# suppress inspection "UnusedProperty" for whole file
+#if ($context.hasLanguage("kotlin"))
+kotlin.code.style=official
+
+#end
+org.gradle.parallel=true
+org.gradle.caching=true
+org.gradle.warning.mode=all
+org.gradle.vfs.watch=true
