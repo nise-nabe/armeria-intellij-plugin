@@ -100,7 +100,17 @@ tasks.withType(JavaCompile).configureEach {
     options.compilerArgs += '-parameters'
 }
 #if ($context.testRunnerId == "junit5")
+
 test {
     useJUnitPlatform()
+}
+#end
+
+#if ($context.hasLanguage("kotlin"))
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    kotlinOptions {
+        javaParameters = true
+    }
 }
 #end
