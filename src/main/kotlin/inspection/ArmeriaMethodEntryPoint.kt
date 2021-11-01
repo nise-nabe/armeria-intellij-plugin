@@ -3,7 +3,6 @@ package com.nisecoder.intellij.plugins.armeria.inspection
 import com.intellij.codeInsight.AnnotationUtil
 import com.intellij.codeInspection.reference.EntryPoint
 import com.intellij.codeInspection.reference.RefElement
-import com.intellij.openapi.util.DefaultJDOMExternalizer
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.util.xmlb.XmlSerializer
