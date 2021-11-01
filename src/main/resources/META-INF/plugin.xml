@@ -11,6 +11,7 @@
         <moduleBuilder builderClass="com.nisecoder.intellij.plugins.armeria.module.ArmeriaModuleBuilder" />
         <framework.type implementation="com.nisecoder.intellij.plugins.armeria.framework.ArmeriaFrameworkEx" />
         <spellchecker.bundledDictionaryProvider implementation="com.nisecoder.intellij.plugins.armeria.ArmeriaDictionaryProvider" />
+        <deadCode implementation="com.nisecoder.intellij.plugins.armeria.inspection.ArmeriaMethodEntryPoint" />
     </extensions>
 
     <actions>
