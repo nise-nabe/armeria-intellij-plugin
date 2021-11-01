@@ -19,7 +19,14 @@ class ArmeriaMethodEntryPoint(
 
     override fun isEntryPoint(psiElement: PsiElement): Boolean {
         return psiElement is PsiMethod && AnnotationUtil.isAnnotated(psiElement, listOf(
-            "com.linecorp.armeria.server.annotation.Post"
+            "com.linecorp.armeria.server.annotation.Get",
+            "com.linecorp.armeria.server.annotation.Head",
+            "com.linecorp.armeria.server.annotation.Post",
+            "com.linecorp.armeria.server.annotation.Put",
+            "com.linecorp.armeria.server.annotation.Delete",
+            "com.linecorp.armeria.server.annotation.Options",
+            "com.linecorp.armeria.server.annotation.Patch",
+            "com.linecorp.armeria.server.annotation.Trace",
         ), AnnotationUtil.CHECK_TYPE)
     }
 
