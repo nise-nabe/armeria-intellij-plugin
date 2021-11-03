@@ -12,17 +12,7 @@ pluginManagement {
                 }
             }
             filter {
-                includeGroup("com.nisecoder.gradle.plugin")
-            }
-        }
-    }
-    resolutionStrategy {
-        eachPlugin {
-            if (requested.id.id.startsWith("com.nisecoder.idea-ext-ext")) {
-                useModule("com.nisecoder.gradle.plugin:idea-ext-ext:0.0.4")
-            }
-            if (requested.id.id.startsWith("com.nisecoder.github-pages.asciidoctor")) {
-                useModule("com.nisecoder.gradle.plugin:asciidoctor:0.0.4")
+                includeGroupByRegex("com.nisecoder.*")
             }
         }
     }
@@ -33,5 +23,7 @@ pluginManagement {
         id("org.jetbrains.gradle.plugin.idea-ext") version "1.1"
         id("org.asciidoctor.jvm.convert") version "3.+"
         id("org.jetbrains.changelog") version "1.3.1"
+        id("com.nisecoder.idea-ext-ext") version "0.0.4"
+        id("com.nisecoder.github-pages.asciidoctor") version "0.0.4"
     }
 }
