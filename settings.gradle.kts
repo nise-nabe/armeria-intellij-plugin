@@ -19,7 +19,10 @@ pluginManagement {
     resolutionStrategy {
         eachPlugin {
             if (requested.id.id.startsWith("com.nisecoder.idea-ext-ext")) {
-                useModule("com.nisecoder.gradle.plugin:idea-ext-ext:0.0.1")
+                useModule("com.nisecoder.gradle.plugin:idea-ext-ext:0.0.4")
+            }
+            if (requested.id.id.startsWith("com.nisecoder.github-pages.asciidoctor")) {
+                useModule("com.nisecoder.gradle.plugin:asciidoctor:0.0.4")
             }
         }
     }
