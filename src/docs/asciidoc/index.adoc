@@ -4,3 +4,9 @@
 == Introduction
 
 Intellij IDEA Plugin for https://armeria.dev/[armeria]
+
+== Features
+
+* Project/Module Project Wizard
+* dictionaries for armeria
+* suppress warning "unused" for Annotated Service methods
