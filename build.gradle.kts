@@ -37,7 +37,10 @@ intellij {
     version.set("2021.2.3")
     type.set("IU")
     downloadSources.set(true)
-    plugins.set(listOf("org.jetbrains.plugins.gradle"))
+    plugins.set(listOf(
+        "org.jetbrains.plugins.gradle",
+        "grpc"
+    ))
 }
 
 tasks {
