@@ -3,9 +3,9 @@
     <name>Armeria</name>
     <vendor email="nise.nabe@gmail.com" url="https://www.nisecoder.com">nise_nabe</vendor>
 
-    <dependencies>
-        <plugin id="org.jetbrains.plugins.gradle" />
-    </dependencies>
+    <depends>org.jetbrains.plugins.gradle</depends>
+    <depends optional="true" config-file="grpc-integration.xml">com.intellij.grpc</depends>
+    <depends optional="true" config-file="proto-integration.xml">idea.plugin.protoeditor</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <moduleBuilder builderClass="com.nisecoder.intellij.plugins.armeria.module.ArmeriaModuleBuilder" />
