@@ -11,10 +11,17 @@ plugins {
     id("com.nisecoder.idea-ext-ext")
     id("com.nisecoder.github-pages.asciidoctor")
     id("org.asciidoctor.jvm.convert")
+    `maven-publish`
 }
 
 group = "com.nisecoder.intellij"
-version = "1.0-SNAPSHOT"
+// inject in GitHub Action Publish Workflow
+val publishVersion: String? by project
+version = if (publishVersion?.isNotEmpty() == true) {
+    publishVersion!!.replaceFirst("refs/tags/v", "")
+} else {
+    "1.0-SNAPSHOT"
+}
 
 repositories {
     mavenCentral()
@@ -63,6 +70,24 @@ tasks {
             apiVersion = "1.5"
             languageVersion = "1.5"
             javaParameters = true
+        }
+    }
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "gitHubPackages"
+            url = uri("https://maven.pkg.github.com/nise-nabe/armeria-intellij-plugin")
+            // set ~/.gradle/gradle.properties
+            // gitHubPackagesUsername
+            // gitHubPackagesPassword
+            credentials(PasswordCredentials::class)
+        }
+    }
+    publications {
+        create<MavenPublication>("plugin") {
+            artifact(tasks.getByName("buildPlugin"))
         }
     }
 }

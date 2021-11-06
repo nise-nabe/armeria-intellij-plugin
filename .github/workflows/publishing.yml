@@ -1,0 +1,29 @@
+name: "Publish Artifacts"
+
+on:
+  push:
+    tags: [ "v*" ]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Java for Publishing
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'temurin'
+          java-version: 11
+
+      - name: Publish to Github Packages
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: publish
+          wrapper-cache-enabled: true
+          dependencies-cache-enabled: true
+        env:
+          ORG_GRADLE_PROJECT_publishVersion: ${{ github.ref }}
+          ORG_GRADLE_PROJECT_gitHubPackagesUsername: ${{ github.actor }}
+          ORG_GRADLE_PROJECT_gitHubPackagesPassword: ${{ secrets.GITHUB_TOKEN }}
