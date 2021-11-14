@@ -37,4 +37,4 @@ jobs:
           curl -s -XPOST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/octet-stream" \
             --upload-file build/distributions/${{ env.ARTIFACT_NAME }} \
-            "https://uploads.github.com/repos/${{ github.repository }}/releases/${{ env.RELEASE_NAME }}/assets?name=${{ env.ARTIFACT_NAME" }}
+            "https://uploads.github.com/repos/${{ github.repository }}/releases/${{ env.RELEASE_NAME }}/assets?name=${{ env.ARTIFACT_NAME }}
