@@ -11,6 +11,7 @@ plugins {
     id("com.nisecoder.idea-ext-ext")
     id("com.nisecoder.github-pages.asciidoctor")
     id("org.asciidoctor.jvm.convert")
+    id("com.nisecoder.github-release-upload")
     `maven-publish`
 }
 
@@ -71,6 +72,14 @@ tasks {
             languageVersion = "1.5"
             javaParameters = true
         }
+    }
+
+    githubReleaseUpload {
+        githubRepository.set("nise-nabe/armeria-intellij-plugin")
+        val credentials = providers.credentials(PasswordCredentials::class, "gitHubPackages")
+        githubToken.set(credentials.map { it.password ?: throw GradleException("githubPackagesPassword is required") })
+        releaseVersion.set(provider { "v$version" })
+        releaseFile.set(buildPlugin.flatMap { it.archiveFile })
     }
 }
 

@@ -25,5 +25,6 @@ pluginManagement {
         id("org.jetbrains.changelog") version "1.3.1"
         id("com.nisecoder.idea-ext-ext") version "0.0.4"
         id("com.nisecoder.github-pages.asciidoctor") version "0.0.4"
+        id("com.nisecoder.github-release-upload") version "0.0.7"
     }
 }
