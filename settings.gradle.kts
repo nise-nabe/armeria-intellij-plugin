@@ -6,7 +6,7 @@ pluginManagement {
         exclusiveContent {
             forRepository {
                 maven {
-                    name = "gitHubPackages"
+                    name = "github"
                     url = uri("https://maven.pkg.github.com/nise-nabe/gradle-plugins")
                     credentials(PasswordCredentials::class)
                 }

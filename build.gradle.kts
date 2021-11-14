@@ -76,7 +76,7 @@ tasks {
 
     githubReleaseUpload {
         githubRepository.set("nise-nabe/armeria-intellij-plugin")
-        val credentials = providers.credentials(PasswordCredentials::class, "gitHubPackages")
+        val credentials = providers.credentials(PasswordCredentials::class, "github")
         githubToken.set(credentials.map { it.password ?: throw GradleException("githubPackagesPassword is required") })
         releaseName.set(provider { "v$version" })
         releaseFile.set(buildPlugin.flatMap { it.archiveFile })
@@ -86,11 +86,11 @@ tasks {
 publishing {
     repositories {
         maven {
-            name = "gitHubPackages"
+            name = "github"
             url = uri("https://maven.pkg.github.com/nise-nabe/armeria-intellij-plugin")
             // set ~/.gradle/gradle.properties
-            // gitHubPackagesUsername
-            // gitHubPackagesPassword
+            // githubUsername
+            // githubPassword
             credentials(PasswordCredentials::class)
         }
     }
