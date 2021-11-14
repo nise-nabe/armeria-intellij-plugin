@@ -29,7 +29,7 @@ jobs:
       - name: Publish to GitHub Release
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: githubUploadTask
+          arguments: githubReleaseUpload
         env:
           ORG_GRADLE_PROJECT_publishVersion: ${{ github.ref }}
           ORG_GRADLE_PROJECT_gitHubPackagesUsername: ${{ github.actor }}
