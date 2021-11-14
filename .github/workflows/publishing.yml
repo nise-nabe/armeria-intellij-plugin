@@ -26,12 +26,15 @@ jobs:
           ORG_GRADLE_PROJECT_gitHubPackagesUsername: ${{ github.actor }}
           ORG_GRADLE_PROJECT_gitHubPackagesPassword: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Setup Release Environment Variables
+        run: |
+          echo "RELEASE_NAME=`echo ${{ github.ref }} | sed -e 's/refs\/tags\///'`" >>　$GITHUB_ENV
+          echo "VERSION=`echo ${{ github.ref }} | sed -e 's/refs\/tags\/v//'`" >>　$GITHUB_ENV
+          echo "ARTIFACT_NAME=${{ github.event.repository.name }}-`echo ${{ github.ref }} | sed -e 's/refs\/tags\/v//'`.zip" >>　$GITHUB_ENV
+
       - name: Upload to GitHub Release
         run: |
-          RELEASE_NAME=`echo ${{ github.ref }} | sed -e 's/refs\/tags\///'`
-          VERSION=`echo ${{ github.ref }} | sed -e 's/refs\/tags\/v//'`
-          ARTIFACT_NAME=${{ github.event.repository.name }}-$VERSION.zip
           curl -s -XPOST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/octet-stream" \
-            --upload-file build/distributions/$ARTIFACT_NAME \
-            "https://uploads.github.com/repos/${{ github.repository }}/releases/$RELEASE_NAME/assets?name=$ARTIFACT_NAME"
+            --upload-file build/distributions/${{ env.ARTIFACT_NAME }} \
+            "https://uploads.github.com/repos/${{ github.repository }}/releases/${{ env.RELEASE_NAME }}/assets?name=${{ env.ARTIFACT_NAME" }}
