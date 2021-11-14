@@ -25,10 +25,3 @@ jobs:
           ORG_GRADLE_PROJECT_publishVersion: ${{ github.ref }}
           ORG_GRADLE_PROJECT_gitHubPackagesUsername: ${{ github.actor }}
           ORG_GRADLE_PROJECT_gitHubPackagesPassword: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload to GitHub Release
-        run: |
-          curl -s -XPOST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Content-Type: application/octet-stream" \
-            --upload-file build/distributions/${{ github.event.repository.name }}-`echo ${{ github.ref }} | sed -e 's/refs\/tags\/v//'`.zip \
-            "https://uploads.github.com/repos/${{ github.repository }}/releases/`echo ${{ github.ref }} | sed -e 's/refs\/tags\///'`/assets?name=${{ github.event.repository.name }}-`echo ${{ github.ref }} | sed -e 's/refs\/tags\/v//'`.zip
