@@ -30,7 +30,7 @@ jobs:
         run: |
           RELEASE_NAME=`echo ${{ github.ref }} | sed -e 's/refs\/tags\///'`
           VERSION=`echo ${{ github.ref }} | sed -e 's/refs\/tags\/v//'`
-          ARTIFACT_NAME=${{ github.repository }}-$VERSION.zip
+          ARTIFACT_NAME=`echo ${{ github.repository }} | sed -e 's/\/${{ github.owner }}\///g'`-$VERSION.zip
           curl -s -XPOST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/octet-stream" \
             --upload-file build/distributions/$ARTIFACT_NAME \
