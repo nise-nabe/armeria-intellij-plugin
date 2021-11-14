@@ -28,7 +28,7 @@ jobs:
 
       - name: Upload to GitHub Release
         run: |
-          RELEASE_NAME=`echo ${{ github.ref }} | sed -e 's/refs\/tags\//'`
+          RELEASE_NAME=`echo ${{ github.ref }} | sed -e 's/refs\/tags\///'`
           VERSION=`echo ${{ github.ref }} | sed -e 's/refs\/tags\/v//'`
           ARTIFACT_NAME=${{ github.repository }}-$VERSION.zip
           curl -s -XPOST -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
