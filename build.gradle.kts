@@ -78,7 +78,7 @@ tasks {
         githubRepository.set("nise-nabe/armeria-intellij-plugin")
         val credentials = providers.credentials(PasswordCredentials::class, "gitHubPackages")
         githubToken.set(credentials.map { it.password ?: throw GradleException("githubPackagesPassword is required") })
-        releaseVersion.set(provider { "v$version" })
+        releaseName.set(provider { "v$version" })
         releaseFile.set(buildPlugin.flatMap { it.archiveFile })
     }
 }
