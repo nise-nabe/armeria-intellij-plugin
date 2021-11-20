@@ -30,5 +30,5 @@ jobs:
         env:
           ORG_GRADLE_PROJECT_gitHubPackagesUsername: ${{ github.actor }}
           ORG_GRADLE_PROJECT_gitHubPackagesPassword: ${{ secrets.GITHUB_TOKEN }}
-          ORG_GRADLE_PROJECT_githubUsername: ${{ github.actor }}
-          ORG_GRADLE_PROJECT_githubPassword: ${{ secrets.GITHUB_TOKEN }}
+          ORG_GRADLE_PROJECT_gitHubUsername: ${{ github.actor }}
+          ORG_GRADLE_PROJECT_gitHubPassword: ${{ secrets.GITHUB_TOKEN }}
