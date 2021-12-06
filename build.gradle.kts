@@ -86,7 +86,7 @@ tasks {
 publishing {
     repositories {
         maven {
-            name = "github"
+            name = "gitHub"
             url = uri("https://maven.pkg.github.com/nise-nabe/armeria-intellij-plugin")
             // set ~/.gradle/gradle.properties
             // githubUsername
