@@ -1,4 +1,3 @@
-import com.nisecoder.gradle.plugin.github.publish.gitHubRelease
 import com.nisecoder.gradle.plugin.idea.ext.packagePrefix
 import com.nisecoder.gradle.plugin.idea.ext.settings
 import org.jetbrains.changelog.ChangelogPluginExtension
