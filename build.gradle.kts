@@ -1,3 +1,4 @@
+import com.nisecoder.gradle.plugin.github.publish.gitHubRelease
 import com.nisecoder.gradle.plugin.idea.ext.packagePrefix
 import com.nisecoder.gradle.plugin.idea.ext.settings
 import org.jetbrains.changelog.ChangelogPluginExtension
@@ -42,7 +43,7 @@ idea {
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/
 intellij {
-    version.set("2021.2.3")
+    version.set("2021.3.0")
     type.set("IU")
     downloadSources.set(true)
     plugins.set(listOf(
