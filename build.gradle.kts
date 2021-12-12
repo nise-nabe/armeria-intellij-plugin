@@ -89,8 +89,8 @@ publishing {
             name = "gitHub"
             url = uri("https://maven.pkg.github.com/nise-nabe/armeria-intellij-plugin")
             // set ~/.gradle/gradle.properties
-            // githubUsername
-            // githubPassword
+            // gitHubUsername
+            // gitHubPassword
             credentials(PasswordCredentials::class)
         }
     }
