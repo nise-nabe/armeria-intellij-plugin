@@ -2,19 +2,15 @@ rootProject.name = "armeria-intellij-plugin"
 
 pluginManagement {
     repositories {
-        gradlePluginPortal()
-        exclusiveContent {
-            forRepository {
-                maven {
-                    name = "gitHub"
-                    url = uri("https://maven.pkg.github.com/nise-nabe/gradle-plugins")
-                    credentials(PasswordCredentials::class)
-                }
-            }
-            filter {
+        maven {
+            name = "GitHub"
+            url = uri("https://maven.pkg.github.com/nise-nabe/gradle-plugins")
+            credentials(PasswordCredentials::class)
+            content {
                 includeGroupByRegex("com.nisecoder.*")
             }
         }
+        gradlePluginPortal()
     }
 
     plugins {

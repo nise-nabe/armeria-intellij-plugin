@@ -23,5 +23,5 @@ jobs:
           arguments: publish githubReleaseUpload
         env:
           ORG_GRADLE_PROJECT_publishVersion: ${{ github.ref }}
-          ORG_GRADLE_PROJECT_gitHubUsername: ${{ github.actor }}
-          ORG_GRADLE_PROJECT_gitHubPassword: ${{ secrets.GITHUB_TOKEN }}
+          ORG_GRADLE_PROJECT_GitHubUsername: ${{ github.actor }}
+          ORG_GRADLE_PROJECT_GitHubPassword: ${{ secrets.GITHUB_TOKEN }}
