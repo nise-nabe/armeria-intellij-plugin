@@ -20,6 +20,7 @@ import com.intellij.openapi.module.JavaModuleType
 import com.intellij.openapi.project.ProjectManager
 import com.linecorp.intellij.plugins.armeria.ArmeriaIcons
 import com.linecorp.intellij.plugins.armeria.message
+import com.linecorp.intellij.plugins.armeria.starters.SCALA_STARTER_LANGUAGE
 import javax.swing.Icon
 
 class ArmeriaModuleBuilder: StarterModuleBuilder() {
@@ -71,6 +72,7 @@ class ArmeriaModuleBuilder: StarterModuleBuilder() {
 
         val languageDir = when (starterContext.language) {
             KOTLIN_STARTER_LANGUAGE -> "kotlin"
+            SCALA_STARTER_LANGUAGE -> "scala"
             else -> "java"
         }
         val packageDir = starterContext.group.split(".")
@@ -85,7 +87,7 @@ class ArmeriaModuleBuilder: StarterModuleBuilder() {
     override fun getDescription(): String = message("module.builder.armeria.description")
 
     override fun getLanguages(): List<StarterLanguage> {
-        return listOf(KOTLIN_STARTER_LANGUAGE, JAVA_STARTER_LANGUAGE)
+        return listOf(KOTLIN_STARTER_LANGUAGE, JAVA_STARTER_LANGUAGE, SCALA_STARTER_LANGUAGE)
     }
 
     override fun getNodeIcon(): Icon = ArmeriaIcons.Armeria
