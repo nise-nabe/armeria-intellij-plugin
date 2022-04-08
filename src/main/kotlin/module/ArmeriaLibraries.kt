@@ -211,7 +211,7 @@ val ArmeriaSpringBoot2WebFlux = armeriaLibrary(
         LibraryLink(
             type = LibraryLinkType.GUIDE,
             url = "https://armeria.dev/docs/advanced-spring-webflux-integration",
-            title = message("armeria.website.spring-boto2-webflux.title"),
+            title = message("armeria.website.spring-boot2-webflux.title"),
         ),
     ),
 )
