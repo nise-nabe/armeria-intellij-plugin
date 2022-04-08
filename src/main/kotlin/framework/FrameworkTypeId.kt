@@ -1,3 +1,3 @@
-package com.nisecoder.intellij.plugins.armeria.framework
+package com.linecorp.intellij.plugins.armeria.framework
 
 const val ARMERIA_FRAMEWORK = "ARMERIA_FRAMEWORK"

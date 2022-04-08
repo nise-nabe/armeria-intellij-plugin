@@ -1,6 +1,6 @@
 @file:Suppress("UnstableApiUsage")
 
-package com.nisecoder.intellij.plugins.armeria.module
+package com.linecorp.intellij.plugins.armeria.module
 
 import com.intellij.ide.fileTemplates.FileTemplateManager
 import com.intellij.ide.starters.local.GeneratorAsset
@@ -18,8 +18,8 @@ import com.intellij.ide.starters.shared.StarterProjectType
 import com.intellij.ide.starters.shared.StarterTestRunner
 import com.intellij.openapi.module.JavaModuleType
 import com.intellij.openapi.project.ProjectManager
-import com.nisecoder.intellij.plugins.armeria.ArmeriaIcons
-import com.nisecoder.intellij.plugins.armeria.message
+import com.linecorp.intellij.plugins.armeria.ArmeriaIcons
+import com.linecorp.intellij.plugins.armeria.message
 import javax.swing.Icon
 
 class ArmeriaModuleBuilder: StarterModuleBuilder() {

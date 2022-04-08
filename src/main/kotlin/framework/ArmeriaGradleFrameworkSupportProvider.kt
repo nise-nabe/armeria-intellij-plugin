@@ -1,4 +1,4 @@
-package com.nisecoder.intellij.plugins.armeria.framework
+package com.linecorp.intellij.plugins.armeria.framework
 
 import com.intellij.framework.FrameworkTypeEx
 import org.jetbrains.plugins.gradle.frameworkSupport.KotlinDslGradleFrameworkSupportProvider

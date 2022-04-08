@@ -1,6 +1,6 @@
 @file:Suppress("UnstableApiUsage")
 
-package com.nisecoder.intellij.plugins.armeria.module
+package com.linecorp.intellij.plugins.armeria.module
 
 import com.intellij.ide.starters.shared.StarterTestRunner
 

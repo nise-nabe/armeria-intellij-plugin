@@ -1,4 +1,4 @@
-package com.nisecoder.intellij.plugins.armeria.inspection
+package com.linecorp.intellij.plugins.armeria.inspection
 
 import com.intellij.codeInsight.AnnotationUtil
 import com.intellij.codeInspection.reference.EntryPoint
@@ -6,7 +6,7 @@ import com.intellij.codeInspection.reference.RefElement
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.util.xmlb.XmlSerializer
-import com.nisecoder.intellij.plugins.armeria.message
+import com.linecorp.intellij.plugins.armeria.message
 import org.jdom.Element
 
 class ArmeriaMethodEntryPoint(

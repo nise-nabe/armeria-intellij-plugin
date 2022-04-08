@@ -1,4 +1,4 @@
-package com.nisecoder.intellij.plugins.armeria
+package com.linecorp.intellij.plugins.armeria
 
 import com.intellij.DynamicBundle
 import org.jetbrains.annotations.Nls

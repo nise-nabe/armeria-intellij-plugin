@@ -1,13 +1,13 @@
 @file:Suppress("UnstableApiUsage")
 
-package com.nisecoder.intellij.plugins.armeria.module
+package com.linecorp.intellij.plugins.armeria.module
 
 import com.intellij.ide.starters.local.Library
 import com.intellij.ide.starters.local.LibraryCategory
 import com.intellij.ide.starters.shared.LibraryLink
 import com.intellij.ide.starters.shared.LibraryLinkType
-import com.nisecoder.intellij.plugins.armeria.ArmeriaIcons
-import com.nisecoder.intellij.plugins.armeria.message
+import com.linecorp.intellij.plugins.armeria.ArmeriaIcons
+import com.linecorp.intellij.plugins.armeria.message
 
 
 val ArmeriaCategory = LibraryCategory(

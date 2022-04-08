@@ -1,4 +1,4 @@
-package com.nisecoder.intellij.plugins.armeria
+package com.linecorp.intellij.plugins.armeria
 
 import com.intellij.ui.IconManager
 import javax.swing.Icon

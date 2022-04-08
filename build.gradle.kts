@@ -14,7 +14,7 @@ plugins {
     `maven-publish`
 }
 
-group = "com.nisecoder.intellij"
+group = "com.linecorp.intellij"
 // inject in GitHub Action Publish Workflow
 val publishVersion: String? by project
 version = if (publishVersion?.isNotEmpty() == true) {
@@ -34,7 +34,7 @@ dependencies {
 idea {
     module {
         settings {
-            packagePrefix["src/main/kotlin"] = "com.nisecoder.intellij.plugins.armeria"
+            packagePrefix["src/main/kotlin"] = "com.linecorp.intellij.plugins.armeria"
         }
     }
 }

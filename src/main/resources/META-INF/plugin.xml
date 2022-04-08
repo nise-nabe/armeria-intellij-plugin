@@ -1,5 +1,5 @@
 <idea-plugin>
-    <id>com.nisecoder.intellij.armeria-intellij-plugin</id>
+    <id>com.linecorp.intellij.armeria-intellij-plugin</id>
     <name>Armeria</name>
     <vendor email="nise.nabe@gmail.com" url="https://www.nisecoder.com">nise_nabe</vendor>
 
@@ -8,10 +8,10 @@
     <depends optional="true" config-file="proto-integration.xml">idea.plugin.protoeditor</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <moduleBuilder builderClass="com.nisecoder.intellij.plugins.armeria.module.ArmeriaModuleBuilder" />
-        <framework.type implementation="com.nisecoder.intellij.plugins.armeria.framework.ArmeriaFrameworkEx" />
-        <spellchecker.bundledDictionaryProvider implementation="com.nisecoder.intellij.plugins.armeria.ArmeriaDictionaryProvider" />
-        <deadCode implementation="com.nisecoder.intellij.plugins.armeria.inspection.ArmeriaMethodEntryPoint" />
+        <moduleBuilder builderClass="com.linecorp.intellij.plugins.armeria.module.ArmeriaModuleBuilder" />
+        <framework.type implementation="com.linecorp.intellij.plugins.armeria.framework.ArmeriaFrameworkEx" />
+        <spellchecker.bundledDictionaryProvider implementation="com.linecorp.intellij.plugins.armeria.ArmeriaDictionaryProvider" />
+        <deadCode implementation="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaMethodEntryPoint" />
     </extensions>
 
     <actions>

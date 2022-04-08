@@ -1,8 +1,8 @@
-package com.nisecoder.intellij.plugins.armeria.module
+package com.linecorp.intellij.plugins.armeria.module
 
 import com.intellij.openapi.module.ModuleType
-import com.nisecoder.intellij.plugins.armeria.ArmeriaIcons
-import com.nisecoder.intellij.plugins.armeria.message
+import com.linecorp.intellij.plugins.armeria.ArmeriaIcons
+import com.linecorp.intellij.plugins.armeria.message
 import javax.swing.Icon
 
 class ArmeriaModuleType: ModuleType<ArmeriaModuleBuilder>(ARMERIA_MODULE) {
