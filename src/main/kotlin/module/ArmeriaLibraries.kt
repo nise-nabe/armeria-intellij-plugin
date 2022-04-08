@@ -220,6 +220,19 @@ val ArmeriaThrift0_13 = armeriaLibrary(
     ),
 )
 
+val ArmeriaTomcat8 = armeriaLibrary(
+    id = "armeria-tomcat8",
+    title = message("module.library.armeria.tomcat8.title"),
+    description = message("module.library.armeria.tomcat8.description"),
+    links = listOf(
+        LibraryLink(
+            type = LibraryLinkType.GUIDE,
+            url = "https://armeria.dev/docs/server-servlet",
+            title = message("armeria.website.servlet.title"),
+        ),
+    ),
+)
+
 val ArmeriaTomcat = armeriaLibrary(
     id = "armeria-tomcat9",
     title = message("module.library.armeria.tomcat.title"),
