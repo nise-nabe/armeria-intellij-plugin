@@ -8,7 +8,6 @@ plugins {
     id("org.jetbrains.intellij")
     id("org.jetbrains.changelog")
     id("org.jetbrains.gradle.plugin.idea-ext")
-    id("com.nisecoder.idea-ext-ext")
     id("com.nisecoder.github-pages.asciidoctor")
     id("org.asciidoctor.jvm.convert")
     id("com.nisecoder.github-release-upload")
