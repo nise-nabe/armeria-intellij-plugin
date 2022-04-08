@@ -173,6 +173,45 @@ val ArmeriaSaml = armeriaLibrary(
     description = message("module.library.armeria.saml.description"),
 )
 
+val ArmeriaScala212 = armeriaLibrary(
+    id = "armeria-scala_2.12",
+    title = message("module.library.armeria.scala212.title"),
+    description = message("module.library.armeria.scala212.description"),
+    links = listOf(
+        LibraryLink(
+            type = LibraryLinkType.GUIDE,
+            url = "https://armeria.dev/docs/advanced-scala",
+            title = message("armeria.website.scala.title")
+        )
+    ),
+)
+
+val ArmeriaScala213 = armeriaLibrary(
+    id = "armeria-scala_2.13",
+    title = message("module.library.armeria.scala213.title"),
+    description = message("module.library.armeria.scala213.description"),
+    links = listOf(
+        LibraryLink(
+            type = LibraryLinkType.GUIDE,
+            url = "https://armeria.dev/docs/advanced-scala",
+            title = message("armeria.website.scala.title")
+        )
+    ),
+)
+
+val ArmeriaScala3 = armeriaLibrary(
+    id = "armeria-scala_3",
+    title = message("module.library.armeria.scala3.title"),
+    description = message("module.library.armeria.scala3.description"),
+    links = listOf(
+        LibraryLink(
+            type = LibraryLinkType.GUIDE,
+            url = "https://armeria.dev/docs/advanced-scala",
+            title = message("armeria.website.scala.title")
+        )
+    ),
+)
+
 val ArmeriaScalaPB2_12 = armeriaLibrary(
     id = "armeria-scalapb_2.12",
     title = message("module.library.armeria.scalapb212.title"),
