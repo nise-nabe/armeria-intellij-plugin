@@ -177,11 +177,25 @@ val ArmeriaScalaPB2_12 = armeriaLibrary(
     id = "armeria-scalapb_2.12",
     title = message("module.library.armeria.scalapb212.title"),
     description = message("module.library.armeria.scalapb212.description"),
+    links = listOf(
+        LibraryLink(
+            type = LibraryLinkType.GUIDE,
+            url = "https://armeria.dev/docs/advanced-scalapb",
+            title = message("armeria.website.scalapb.title")
+        )
+    ),
 )
 val ArmeriaScalaPB2_13 = armeriaLibrary(
     id = "armeria-scalapb_2.13",
     title = message("module.library.armeria.scalapb213.title"),
     description = message("module.library.armeria.scalapb213.description"),
+    links = listOf(
+        LibraryLink(
+            type = LibraryLinkType.GUIDE,
+            url = "https://armeria.dev/docs/advanced-scalapb",
+            title = message("armeria.website.scalapb.title")
+        )
+    ),
 )
 
 val ArmeriaSpringBoot2 = armeriaLibrary(
