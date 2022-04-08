@@ -1,6 +1,6 @@
-import com.nisecoder.gradle.plugin.idea.ext.packagePrefix
-import com.nisecoder.gradle.plugin.idea.ext.settings
 import org.jetbrains.changelog.ChangelogPluginExtension
+import org.jetbrains.gradle.ext.packagePrefix
+import org.jetbrains.gradle.ext.settings
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
