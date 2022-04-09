@@ -106,6 +106,11 @@ testing {
     suites {
         val test by getting(JvmTestSuite::class) {
             useJUnitJupiter()
+
+            dependencies {
+                implementation(project.dependencies.gradleTestKit())
+                implementation(project.dependencies.kotlin("test-junit5"))
+            }
         }
     }
 }
