@@ -10,7 +10,6 @@ import com.intellij.ide.starters.local.Starter
 import com.intellij.ide.starters.local.StarterModuleBuilder
 import com.intellij.ide.starters.local.StarterPack
 import com.intellij.ide.starters.shared.JAVA_STARTER_LANGUAGE
-import com.intellij.ide.starters.shared.JUNIT_TEST_RUNNER
 import com.intellij.ide.starters.shared.KOTLIN_STARTER_LANGUAGE
 import com.intellij.ide.starters.shared.MAVEN_PROJECT
 import com.intellij.ide.starters.shared.StarterLanguage
