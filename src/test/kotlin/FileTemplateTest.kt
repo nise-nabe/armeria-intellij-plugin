@@ -1,7 +1,6 @@
 package com.linecorp.intellij.plugins.armeria
 
 import com.intellij.ide.fileTemplates.FileTemplateManager
-import com.intellij.ide.starters.local.DependencyConfig
 import com.intellij.ide.starters.local.GeneratorAsset
 import com.intellij.ide.starters.local.StarterUtils
 import com.intellij.openapi.project.ex.ProjectManagerEx
@@ -11,17 +10,20 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.OpenProjectTaskBuilder
 import com.intellij.testFramework.TestApplicationManager
 import io.mockk.every
+import io.mockk.impl.annotations.RelaxedMockK
+import io.mockk.junit5.MockKExtension
 import io.mockk.mockk
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
-import org.jetbrains.debugger.getClassName
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
+@ExtendWith(MockKExtension::class)
 internal class FileTemplateTest {
     @TempDir
     private lateinit var testProjectDir: File
@@ -29,44 +31,52 @@ internal class FileTemplateTest {
     private lateinit var settingsFile: File
     private lateinit var buildFile: File
 
+    private lateinit var ftManager: FileTemplateManager
+
+    @RelaxedMockK
+    private lateinit var context: GeneratorContext
+
+    private lateinit var runner: GradleRunner
+
     @BeforeEach
     fun setup() {
         settingsFile = testProjectDir.resolve("settings.gradle.kts")
         buildFile = testProjectDir.resolve("build.gradle.kts")
-    }
 
-    @Test
-    fun test() {
         val projectName = "test"
         TestApplicationManager.getInstance()
         val projectOptions = OpenProjectTaskBuilder().projectName(projectName)
         val intellijProject = ProjectManagerEx.getInstanceEx().openProject(testProjectDir.toPath(), projectOptions.build())
-        val ftManager = FileTemplateManager.getInstance(intellijProject!!)
+        ftManager = FileTemplateManager.getInstance(intellijProject!!)
 
-        val pom = FileTemplateTest::class.java.classLoader.getResourceAsStream("starters/armeria.pom").let { JDOMUtil.load(it) }
-        val dependencyConfig = StarterUtils.parseDependencyConfig(pom, "", true)
-        val template = ftManager.getJ2eeTemplate("armeria-build.gradle.kts")
-        buildFile.writeText(template.getText(mapOf(
-            "context" to mockk<GeneratorContext>(relaxed = true) {
-                every { hasLanguage("kotlin") } returns true
-                every { hasLanguage("scala") } returns false
-                every { getVersion(any(), any()) } answers {
-                    dependencyConfig.getVersion(arg(0), arg(1))
-                }
-                every { hasLibrary(any()) } returns true
-            },
-        )))
         settingsFile.writeText(ftManager.getJ2eeTemplate("armeria-settings.gradle.kts").getText(mapOf<String, Any>(
             "context" to mockk<GeneratorContext> {
                 every { artifact } returns projectName
             }
         )))
 
-        val buildResult = GradleRunner.create()
+        val pom = FileTemplateTest::class.java.classLoader.getResourceAsStream("starters/armeria.pom").let { JDOMUtil.load(it) }
+        val dependencyConfig = StarterUtils.parseDependencyConfig(pom, "", true)
+        every { context.getVersion(any(), any()) } answers {
+            dependencyConfig.getVersion(arg(0), arg(1))
+        }
+
+        runner = GradleRunner.create()
             .withProjectDir(testProjectDir)
             .withGradleVersion("7.1.1") // Intellij bundled gradle version
-            .withArguments("help")
-            .build()
+    }
+
+    @Test
+    fun test() {
+        buildFile.writeText(ftManager.getJ2eeTemplate("armeria-build.gradle.kts").getText(mapOf(
+            "context" to context.apply {
+                every { hasLanguage("kotlin") } returns true
+                every { hasLanguage("scala") } returns false
+                every { hasLibrary(any()) } returns true
+            }
+        )))
+
+        val buildResult = runner.withArguments("help").build()
 
         val taskResult = buildResult.task(":help")
         assertNotNull(taskResult)
