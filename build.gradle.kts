@@ -35,6 +35,7 @@ idea {
     module {
         settings {
             packagePrefix["src/main/kotlin"] = "com.linecorp.intellij.plugins.armeria"
+            packagePrefix["src/test/kotlin"] = "com.linecorp.intellij.plugins.armeria"
         }
     }
 }
