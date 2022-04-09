@@ -100,3 +100,12 @@ publishing {
         }
     }
 }
+
+testing {
+    @Suppress("UNUSED_VARIABLE")
+    suites {
+        val test by getting(JvmTestSuite::class) {
+            useJUnitJupiter()
+        }
+    }
+}
