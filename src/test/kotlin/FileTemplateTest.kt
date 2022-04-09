@@ -9,6 +9,7 @@ import com.intellij.openapi.util.JDOMUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.OpenProjectTaskBuilder
 import com.intellij.testFramework.TestApplicationManager
+import com.linecorp.intellij.plugins.armeria.utils.GeneratorContextForTest
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.junit5.MockKExtension
@@ -34,7 +35,7 @@ internal class FileTemplateTest {
     private lateinit var ftManager: FileTemplateManager
 
     @RelaxedMockK
-    private lateinit var context: GeneratorContext
+    private lateinit var context: GeneratorContextForTest
 
     private lateinit var runner: GradleRunner
 
@@ -50,7 +51,7 @@ internal class FileTemplateTest {
         ftManager = FileTemplateManager.getInstance(intellijProject!!)
 
         settingsFile.writeText(ftManager.getJ2eeTemplate("armeria-settings.gradle.kts").getText(mapOf<String, Any>(
-            "context" to mockk<GeneratorContext> {
+            "context" to mockk<GeneratorContextForTest> {
                 every { artifact } returns projectName
             }
         )))
@@ -81,32 +82,5 @@ internal class FileTemplateTest {
         val taskResult = buildResult.task(":help")
         assertNotNull(taskResult)
         assertEquals(TaskOutcome.SUCCESS, taskResult.outcome)
-    }
-
-    /** @see  com.intellij.ide.starters.local.GeneratorContext */
-    @Suppress("unused")
-    interface GeneratorContext {
-        val starterId: String
-        val moduleName: String
-        val group: String
-        val artifact: String
-        val version: String
-        val testRunnerId: String?
-        val rootPackage: String
-        val sdkVersion: JavaSdkVersion?
-        val assets: List<GeneratorAsset>
-        val outputDirectory: VirtualFile
-
-        fun hasLanguage(languageId: String): Boolean
-        fun hasLibrary(libraryId: String): Boolean
-        fun hasAnyLibrary(vararg ids: String): Boolean
-        fun hasAllLibraries(vararg ids: String): Boolean
-        fun getVersion(group: String, artifact: String): String?
-        fun getBomProperty(propertyId: String): String?
-        fun getProperty(propertyId: String): String?
-        fun asPlaceholder(propertyId: String): String
-        fun isSdkAtLeast(version: String): Boolean
-        val rootPackagePath: String
-        val sdkFeatureVersion: Int
     }
 }
