@@ -105,7 +105,7 @@ testing {
     @Suppress("UNUSED_VARIABLE")
     suites {
         val test by getting(JvmTestSuite::class) {
-            useJUnitJupiter()
+            useJUnitJupiter("5.8.2")
 
             dependencies {
                 implementation(project.dependencies.gradleTestKit())

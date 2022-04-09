@@ -12,7 +12,7 @@ import kotlin.test.assertNotNull
 
 internal class FileTemplateTest {
     @TempDir
-    lateinit var testProjectDir: File
+    private lateinit var testProjectDir: File
 
     private lateinit var settingsFile: File
     private lateinit var buildFile: File
