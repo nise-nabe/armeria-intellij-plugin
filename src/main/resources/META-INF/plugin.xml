@@ -6,6 +6,7 @@
     <depends>org.jetbrains.plugins.gradle</depends>
     <depends optional="true" config-file="grpc-integration.xml">com.intellij.grpc</depends>
     <depends optional="true" config-file="proto-integration.xml">idea.plugin.protoeditor</depends>
+    <depends optional="true" config-file="microservices-integration.xml">com.intellij.modules.microservices</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <moduleBuilder builderClass="com.linecorp.intellij.plugins.armeria.module.ArmeriaModuleBuilder" />
