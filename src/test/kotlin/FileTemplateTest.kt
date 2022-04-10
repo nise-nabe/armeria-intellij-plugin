@@ -1,14 +1,9 @@
 package com.linecorp.intellij.plugins.armeria
 
-import com.intellij.ide.fileTemplates.FileTemplateManager
-import com.intellij.ide.starters.local.GeneratorAsset
 import com.intellij.ide.starters.local.StarterUtils
-import com.intellij.openapi.project.ex.ProjectManagerEx
-import com.intellij.openapi.projectRoots.JavaSdkVersion
 import com.intellij.openapi.util.JDOMUtil
-import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.testFramework.OpenProjectTaskBuilder
-import com.intellij.testFramework.TestApplicationManager
+import com.linecorp.intellij.plugins.armeria.junit5.IntellijProject
+import com.linecorp.intellij.plugins.armeria.junit5.IntellijProjectExtension
 import com.linecorp.intellij.plugins.armeria.utils.GeneratorContextForTest
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
@@ -19,20 +14,12 @@ import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.junit.jupiter.api.io.TempDir
-import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-@ExtendWith(MockKExtension::class)
+@ExtendWith(MockKExtension::class, IntellijProjectExtension::class)
 internal class FileTemplateTest {
-    @TempDir
-    private lateinit var testProjectDir: File
-
-    private lateinit var settingsFile: File
-    private lateinit var buildFile: File
-
-    private lateinit var ftManager: FileTemplateManager
+    private lateinit var project: IntellijProject
 
     @RelaxedMockK
     private lateinit var context: GeneratorContextForTest
@@ -41,18 +28,9 @@ internal class FileTemplateTest {
 
     @BeforeEach
     fun setup() {
-        settingsFile = testProjectDir.resolve("settings.gradle.kts")
-        buildFile = testProjectDir.resolve("build.gradle.kts")
-
-        val projectName = "test"
-        TestApplicationManager.getInstance()
-        val projectOptions = OpenProjectTaskBuilder().projectName(projectName)
-        val intellijProject = ProjectManagerEx.getInstanceEx().openProject(testProjectDir.toPath(), projectOptions.build())
-        ftManager = FileTemplateManager.getInstance(intellijProject!!)
-
-        settingsFile.writeText(ftManager.getJ2eeTemplate("armeria-settings.gradle.kts").getText(mapOf<String, Any>(
+        project.settingsFile.writeText(project.ftManager.getJ2eeTemplate("armeria-settings.gradle.kts").getText(mapOf<String, Any>(
             "context" to mockk<GeneratorContextForTest> {
-                every { artifact } returns projectName
+                every { artifact } returns "test"
             }
         )))
 
@@ -63,13 +41,13 @@ internal class FileTemplateTest {
         }
 
         runner = GradleRunner.create()
-            .withProjectDir(testProjectDir)
+            .withProjectDir(project.testProjectDir)
             .withGradleVersion("7.1.1") // Intellij bundled gradle version
     }
 
     @Test
     fun test() {
-        buildFile.writeText(ftManager.getJ2eeTemplate("armeria-build.gradle.kts").getText(mapOf(
+        project.buildFile.writeText(project.ftManager.getJ2eeTemplate("armeria-build.gradle.kts").getText(mapOf(
             "context" to context.apply {
                 every { hasLanguage("kotlin") } returns true
                 every { hasLanguage("scala") } returns false
