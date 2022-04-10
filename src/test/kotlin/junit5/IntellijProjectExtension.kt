@@ -1,6 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.junit5
 
-import com.intellij.ide.fileTemplates.FileTemplateManager
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ex.ProjectManagerEx
 import com.intellij.testFramework.OpenProjectTaskBuilder
 import com.intellij.testFramework.TestApplicationManager
@@ -15,7 +15,7 @@ import kotlin.io.path.createTempDirectory
 
 class IntellijProjectExtension: ParameterResolver, BeforeEachCallback {
     override fun supportsParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Boolean {
-        return parameterContext.parameter.isAssignableTo<IntellijProject>()
+        return parameterContext.parameter.isAssignableTo<Project>()
     }
 
     override fun resolveParameter(parameterContext: ParameterContext, extensionContext: ExtensionContext): Any {
@@ -29,23 +29,22 @@ class IntellijProjectExtension: ParameterResolver, BeforeEachCallback {
     }
 
     private fun injectFields(context: ExtensionContext, instance: Any) {
-        instance::class.findFields<IntellijProject>().forEach {
+        instance::class.findFields<Project>().forEach {
             it.toAccessible().set(instance, context.getProject())
         }
     }
 
-    private fun ExtensionContext.getProject(): IntellijProject {
+    private fun ExtensionContext.getProject(): Project {
         TestApplicationManager.getInstance()
         return getStore(NAMESPACE).getOrComputeIfAbsent(KEY) {
             val tempDir = createTempDirectory(TEMP_DIR_PREFIX).toFile()
             val projectOptions = OpenProjectTaskBuilder().projectName("test")
-            val intellijProject = requireNotNull(ProjectManagerEx.getInstanceEx().openProject(tempDir.toPath(), projectOptions.build()))
-            IntellijProject(tempDir, FileTemplateManager.getInstance(intellijProject))
-        } as IntellijProject
+            requireNotNull(ProjectManagerEx.getInstanceEx().openProject(tempDir.toPath(), projectOptions.build()))
+        } as Project
     }
 
     companion object {
-        private val NAMESPACE = ExtensionContext.Namespace.create(IntellijProject::class)
+        private val NAMESPACE = ExtensionContext.Namespace.create(IntellijProjectExtension::class)
         private const val KEY = "intellij.project.dir"
         private const val TEMP_DIR_PREFIX = "armeria-intellij-plugin"
     }

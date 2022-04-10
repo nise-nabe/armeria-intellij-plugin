@@ -1,9 +1,12 @@
 package com.linecorp.intellij.plugins.armeria
 
 import com.intellij.ide.starters.local.StarterUtils
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.JDOMUtil
-import com.linecorp.intellij.plugins.armeria.junit5.IntellijProject
 import com.linecorp.intellij.plugins.armeria.junit5.IntellijProjectExtension
+import com.linecorp.intellij.plugins.armeria.junit5.buildFile
+import com.linecorp.intellij.plugins.armeria.junit5.ftManager
+import com.linecorp.intellij.plugins.armeria.junit5.settingsFile
 import com.linecorp.intellij.plugins.armeria.utils.GeneratorContextForTest
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
@@ -14,12 +17,13 @@ import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 @ExtendWith(MockKExtension::class, IntellijProjectExtension::class)
 internal class FileTemplateTest {
-    private lateinit var project: IntellijProject
+    private lateinit var project: Project
 
     @RelaxedMockK
     private lateinit var context: GeneratorContextForTest
@@ -41,7 +45,7 @@ internal class FileTemplateTest {
         }
 
         runner = GradleRunner.create()
-            .withProjectDir(project.testProjectDir)
+            .withProjectDir(File(project.basePath))
             .withGradleVersion("7.1.1") // Intellij bundled gradle version
     }
 
