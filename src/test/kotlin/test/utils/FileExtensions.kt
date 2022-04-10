@@ -1,6 +1,6 @@
 @file:Suppress("unused")
 
-package com.linecorp.intellij.plugins.armeria.utils
+package com.linecorp.intellij.plugins.armeria.test.utils
 
 import org.intellij.lang.annotations.Language
 import java.io.File

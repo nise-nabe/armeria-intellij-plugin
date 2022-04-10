@@ -1,4 +1,4 @@
-package com.linecorp.intellij.plugins.armeria.junit5
+package com.linecorp.intellij.plugins.armeria.test.intellij
 
 import com.intellij.ide.fileTemplates.FileTemplateManager
 import com.intellij.openapi.project.Project

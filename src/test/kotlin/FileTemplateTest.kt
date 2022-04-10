@@ -3,11 +3,11 @@ package com.linecorp.intellij.plugins.armeria
 import com.intellij.ide.starters.local.StarterUtils
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.JDOMUtil
-import com.linecorp.intellij.plugins.armeria.junit5.IntellijProjectExtension
-import com.linecorp.intellij.plugins.armeria.junit5.buildFile
-import com.linecorp.intellij.plugins.armeria.junit5.ftManager
-import com.linecorp.intellij.plugins.armeria.junit5.settingsFile
-import com.linecorp.intellij.plugins.armeria.utils.GeneratorContextForTest
+import com.linecorp.intellij.plugins.armeria.test.junit5.IntellijProjectExtension
+import com.linecorp.intellij.plugins.armeria.test.intellij.buildFile
+import com.linecorp.intellij.plugins.armeria.test.intellij.ftManager
+import com.linecorp.intellij.plugins.armeria.test.intellij.settingsFile
+import com.linecorp.intellij.plugins.armeria.test.intellij.GeneratorContextForTest
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.junit5.MockKExtension

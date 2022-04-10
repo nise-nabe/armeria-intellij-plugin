@@ -1,6 +1,6 @@
 @file:Suppress("unused")
 
-package com.linecorp.intellij.plugins.armeria.junit5.utils
+package com.linecorp.intellij.plugins.armeria.test.junit5.utils
 
 import org.junit.platform.commons.util.AnnotationUtils
 import org.junit.platform.commons.util.ReflectionUtils

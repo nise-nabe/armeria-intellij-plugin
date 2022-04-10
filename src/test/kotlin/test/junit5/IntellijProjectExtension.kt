@@ -1,12 +1,12 @@
-package com.linecorp.intellij.plugins.armeria.junit5
+package com.linecorp.intellij.plugins.armeria.test.junit5
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ex.ProjectManagerEx
 import com.intellij.testFramework.OpenProjectTaskBuilder
 import com.intellij.testFramework.TestApplicationManager
-import com.linecorp.intellij.plugins.armeria.junit5.utils.findFields
-import com.linecorp.intellij.plugins.armeria.junit5.utils.isAssignableTo
-import com.linecorp.intellij.plugins.armeria.junit5.utils.toAccessible
+import com.linecorp.intellij.plugins.armeria.test.junit5.utils.findFields
+import com.linecorp.intellij.plugins.armeria.test.junit5.utils.isAssignableTo
+import com.linecorp.intellij.plugins.armeria.test.junit5.utils.toAccessible
 import org.junit.jupiter.api.extension.BeforeEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext

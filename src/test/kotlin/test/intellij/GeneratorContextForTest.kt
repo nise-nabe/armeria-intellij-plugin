@@ -1,4 +1,4 @@
-package com.linecorp.intellij.plugins.armeria.utils
+package com.linecorp.intellij.plugins.armeria.test.intellij
 
 import com.intellij.ide.starters.local.GeneratorAsset
 import com.intellij.openapi.projectRoots.JavaSdkVersion
