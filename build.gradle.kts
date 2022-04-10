@@ -47,7 +47,9 @@ intellij {
     downloadSources.set(true)
     plugins.set(listOf(
         "org.jetbrains.plugins.gradle",
-        "grpc"
+        "org.jetbrains.kotlin",
+        "grpc",
+        "PsiViewer:213-SNAPSHOT",
     ))
 }
 

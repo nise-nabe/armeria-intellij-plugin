@@ -3,7 +3,7 @@
     <name>Armeria</name>
     <vendor email="nise.nabe@gmail.com" url="https://www.nisecoder.com">nise_nabe</vendor>
 
-    <depends>org.jetbrains.plugins.gradle</depends>
+    <depends optional="true" config-file="armeria-gradle.xml">org.jetbrains.plugins.gradle</depends>
     <depends optional="true" config-file="grpc-integration.xml">com.intellij.grpc</depends>
     <depends optional="true" config-file="proto-integration.xml">idea.plugin.protoeditor</depends>
     <depends optional="true" config-file="microservices-integration.xml">com.intellij.modules.microservices</depends>
