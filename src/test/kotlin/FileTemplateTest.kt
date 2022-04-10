@@ -15,6 +15,7 @@ import io.mockk.mockk
 import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.io.File
@@ -44,25 +45,69 @@ internal class FileTemplateTest {
             dependencyConfig.getVersion(arg(0), arg(1))
         }
 
+        every { context.hasLanguage(any()) } returns false
+
+        every { context.hasLibrary(any()) } returns true
+
         runner = GradleRunner.create()
             .withProjectDir(File(project.basePath))
             .withGradleVersion("7.1.1") // Intellij bundled gradle version
     }
 
-    @Test
-    fun test() {
-        project.buildFile.writeText(project.ftManager.getJ2eeTemplate("armeria-build.gradle.kts").getText(mapOf(
-            "context" to context.apply {
-                every { hasLanguage("kotlin") } returns true
-                every { hasLanguage("scala") } returns false
-                every { hasLibrary(any()) } returns true
-            }
-        )))
+    @Nested
+    inner class Kotlin {
+        @BeforeEach
+        fun hasKotlin() {
+            every { context.hasLanguage("kotlin") } returns true
+        }
 
-        val buildResult = runner.withArguments("help").build()
+        @Test
+        fun test() {
+            project.buildFile.writeText(project.ftManager.getJ2eeTemplate("armeria-build.gradle.kts").getText(mapOf(
+                "context" to context
+            )))
 
-        val taskResult = buildResult.task(":help")
-        assertNotNull(taskResult)
-        assertEquals(TaskOutcome.SUCCESS, taskResult.outcome)
+            val buildResult = runner.withArguments("help").build()
+
+            val taskResult = buildResult.task(":help")
+            assertNotNull(taskResult)
+            assertEquals(TaskOutcome.SUCCESS, taskResult.outcome)
+        }
+    }
+
+    @Nested
+    inner class Java {
+        @Test
+        fun test() {
+            project.buildFile.writeText(project.ftManager.getJ2eeTemplate("armeria-build.gradle.kts").getText(mapOf(
+                "context" to context
+            )))
+
+            val buildResult = runner.withArguments("help").build()
+
+            val taskResult = buildResult.task(":help")
+            assertNotNull(taskResult)
+            assertEquals(TaskOutcome.SUCCESS, taskResult.outcome)
+        }
+    }
+
+    @Nested
+    inner class Scala {
+        @BeforeEach
+        fun hasKotlin() {
+            every { context.hasLanguage("scala") } returns true
+        }
+        @Test
+        fun test() {
+            project.buildFile.writeText(project.ftManager.getJ2eeTemplate("armeria-build.gradle.kts").getText(mapOf(
+                "context" to context
+            )))
+
+            val buildResult = runner.withArguments("help").build()
+
+            val taskResult = buildResult.task(":help")
+            assertNotNull(taskResult)
+            assertEquals(TaskOutcome.SUCCESS, taskResult.outcome)
+        }
     }
 }
