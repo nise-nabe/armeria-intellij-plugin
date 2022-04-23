@@ -49,7 +49,7 @@ intellij {
         "org.jetbrains.plugins.gradle",
         "org.jetbrains.kotlin",
         "grpc",
-        "PsiViewer:213-SNAPSHOT",
+        "PsiViewer:221-SNAPSHOT",
     ))
 }
 
