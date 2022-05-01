@@ -60,6 +60,7 @@ kotlin {
 tasks {
     runIde {
         autoReloadPlugins.set(true)
+        maxHeapSize = "2g"
     }
     val changelog: ChangelogPluginExtension = extensions.getByType()
     patchPluginXml {
