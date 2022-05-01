@@ -1,6 +1,7 @@
 import org.jetbrains.changelog.ChangelogPluginExtension
 import org.jetbrains.gradle.ext.packagePrefix
 import org.jetbrains.gradle.ext.settings
+import org.jetbrains.intellij.tasks.RunIdeBase
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -60,6 +61,11 @@ kotlin {
 }
 
 tasks {
+    withType<RunIdeBase>().configureEach {
+        // avoid warning log
+        jvmArgs("--add-exports", "java.base/jdk.internal.vm=ALL-UNNAMED")
+    }
+
     runIde {
         autoReloadPlugins.set(true)
         maxHeapSize = "2g"
