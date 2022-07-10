@@ -43,7 +43,7 @@ idea {
 
 // See https://github.com/JetBrains/gradle-intellij-plugin/
 intellij {
-    version.set("2022.1")
+    version.set("2022.1.3")
     type.set("IU")
     downloadSources.set(true)
     plugins.set(listOf(
