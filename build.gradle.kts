@@ -117,7 +117,7 @@ testing {
             dependencies {
                 implementation(project.dependencies.gradleTestKit())
                 implementation(project.dependencies.kotlin("test-junit5"))
-                implementation("io.mockk:mockk:1.12.7")
+                implementation("io.mockk:mockk:1.12.8")
             }
         }
     }
