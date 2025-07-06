@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria
 
 import com.intellij.ide.starters.local.StarterUtils
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.JDOMUtil
 import com.intellij.testFramework.junit5.TestApplication
 import com.intellij.testFramework.junit5.fixture.projectFixture
@@ -26,7 +27,7 @@ import kotlin.test.assertNotNull
 @TestApplication
 internal class FileTemplateTest{
     companion object {
-        private var project = projectFixture()
+        private val projectFixture = projectFixture()
     }
 
     @RelaxedMockK
@@ -34,10 +35,12 @@ internal class FileTemplateTest{
 
     private lateinit var runner: GradleRunner
 
+    private lateinit var project: Project
+
     @BeforeEach
     fun setup() {
         // Initialize the project
-        val project = project.get()
+        project = projectFixture.get()
 
         project.settingsFile.writeText(project.ftManager.getJ2eeTemplate("armeria-settings.gradle.kts").getText(mapOf<String, Any>(
             "context" to mockk<GeneratorContextForTest> {
@@ -69,7 +72,6 @@ internal class FileTemplateTest{
 
         @Test
         fun test() {
-            val project = project.get()
             project.buildFile.writeText(project.ftManager.getJ2eeTemplate("armeria-build.gradle.kts").getText(mapOf(
                 "context" to context
             )))
@@ -86,7 +88,6 @@ internal class FileTemplateTest{
     inner class Java {
         @Test
         fun test() {
-            val project = project.get()
             project.buildFile.writeText(project.ftManager.getJ2eeTemplate("armeria-build.gradle.kts").getText(mapOf(
                 "context" to context
             )))
@@ -107,7 +108,6 @@ internal class FileTemplateTest{
         }
         @Test
         fun test() {
-            val project = project.get()
             project.buildFile.writeText(project.ftManager.getJ2eeTemplate("armeria-build.gradle.kts").getText(mapOf(
                 "context" to context
             )))
