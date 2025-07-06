@@ -20,6 +20,7 @@ plugins {
     id("org.jetbrains.intellij.platform.settings") version "2.6.0"
 }
 
+@Suppress("UnstableApiUsage")
 dependencyResolutionManagement {
     repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
 
