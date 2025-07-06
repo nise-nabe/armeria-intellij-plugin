@@ -1,3 +1,4 @@
+import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.ChangelogPluginExtension
 import org.jetbrains.gradle.ext.packagePrefix
 import org.jetbrains.gradle.ext.settings
@@ -38,13 +39,21 @@ java {
     }
 }
 
-tasks {
-    val changelog: ChangelogPluginExtension = extensions.getByType()
-    patchPluginXml {
-        changeNotes.set(provider { changelog.getLatest().toHTML()} )
+intellijPlatform {
+    pluginConfiguration {
+        val changelog = project.changelog
+        changeNotes = providers.gradleProperty("pluginVersion").map { pluginVersion ->
+            with(changelog) {
+                renderItem(
+                    (getOrNull(pluginVersion) ?: getUnreleased())
+                        .withHeader(false)
+                        .withEmptySections(false),
+                    Changelog.OutputType.HTML,
+                )
+            }
+        }
     }
 }
-
 
 testing {
     @Suppress("UNUSED_VARIABLE")
