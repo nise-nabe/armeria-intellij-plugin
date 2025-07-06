@@ -1,9 +1,9 @@
 package com.linecorp.intellij.plugins.armeria
 
 import com.intellij.ide.starters.local.StarterUtils
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.JDOMUtil
-import com.linecorp.intellij.plugins.armeria.test.junit5.IntellijProjectExtension
+import com.intellij.testFramework.junit5.TestApplication
+import com.intellij.testFramework.junit5.fixture.projectFixture
 import com.linecorp.intellij.plugins.armeria.test.intellij.buildFile
 import com.linecorp.intellij.plugins.armeria.test.intellij.ftManager
 import com.linecorp.intellij.plugins.armeria.test.intellij.settingsFile
@@ -22,9 +22,12 @@ import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-@ExtendWith(MockKExtension::class, IntellijProjectExtension::class)
-internal class FileTemplateTest {
-    private lateinit var project: Project
+@ExtendWith(MockKExtension::class)
+@TestApplication
+internal class FileTemplateTest{
+    companion object {
+        private var project = projectFixture()
+    }
 
     @RelaxedMockK
     private lateinit var context: GeneratorContextForTest
@@ -33,6 +36,9 @@ internal class FileTemplateTest {
 
     @BeforeEach
     fun setup() {
+        // Initialize the project
+        val project = project.get()
+
         project.settingsFile.writeText(project.ftManager.getJ2eeTemplate("armeria-settings.gradle.kts").getText(mapOf<String, Any>(
             "context" to mockk<GeneratorContextForTest> {
                 every { artifact } returns "test"
@@ -51,7 +57,7 @@ internal class FileTemplateTest {
 
         runner = GradleRunner.create()
             .withProjectDir(File(project.basePath))
-            .withGradleVersion("7.1.1") // Intellij bundled gradle version
+            .withGradleVersion("8.14.3") // Intellij bundled gradle version
     }
 
     @Nested
@@ -63,6 +69,7 @@ internal class FileTemplateTest {
 
         @Test
         fun test() {
+            val project = project.get()
             project.buildFile.writeText(project.ftManager.getJ2eeTemplate("armeria-build.gradle.kts").getText(mapOf(
                 "context" to context
             )))
@@ -79,6 +86,7 @@ internal class FileTemplateTest {
     inner class Java {
         @Test
         fun test() {
+            val project = project.get()
             project.buildFile.writeText(project.ftManager.getJ2eeTemplate("armeria-build.gradle.kts").getText(mapOf(
                 "context" to context
             )))
@@ -99,6 +107,7 @@ internal class FileTemplateTest {
         }
         @Test
         fun test() {
+            val project = project.get()
             project.buildFile.writeText(project.ftManager.getJ2eeTemplate("armeria-build.gradle.kts").getText(mapOf(
                 "context" to context
             )))
