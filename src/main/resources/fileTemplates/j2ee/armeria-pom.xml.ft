@@ -155,6 +155,18 @@
             <artifactId>armeria-spring-boot2-webflux-autoconfigure</artifactId>
         </dependency>
 #end
+#if ($context.hasLibrary("armeria-spring-boot3-autoconfigure"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-spring-boot3-autoconfigure</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-spring-boot3-webflux-autoconfigure"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-spring-boot3-webflux-autoconfigure</artifactId>
+        </dependency>
+#end
 #if ($context.hasLibrary("armeria-thrift0.13"))
         <dependency>
             <groupId>com.linecorp.armeria</groupId>

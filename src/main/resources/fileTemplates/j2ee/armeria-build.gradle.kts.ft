@@ -86,6 +86,12 @@ dependencies {
 #if ($context.hasLibrary("armeria-spring-boot2-webflux-autoconfigure"))
     implementation("com.linecorp.armeria:armeria-spring-boot2-webflux-autoconfigure")
 #end
+#if ($context.hasLibrary("armeria-spring-boot3-autoconfigure"))
+    implementation("com.linecorp.armeria:armeria-spring-boot3-autoconfigure")
+#end
+#if ($context.hasLibrary("armeria-spring-boot3-webflux-autoconfigure"))
+    implementation("com.linecorp.armeria:armeria-spring-boot3-webflux-autoconfigure")
+#end
 #if ($context.hasLibrary("armeria-thrift0.13"))
     implementation("com.linecorp.armeria:armeria-thrift0.13")
 #end

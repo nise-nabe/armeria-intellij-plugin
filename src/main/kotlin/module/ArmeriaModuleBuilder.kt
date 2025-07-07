@@ -119,6 +119,8 @@ class ArmeriaModuleBuilder: StarterModuleBuilder() {
                 ArmeriaScalaPB2_13,
                 ArmeriaSpringBoot2,
                 ArmeriaSpringBoot2WebFlux,
+                ArmeriaSpringBoot3,
+                ArmeriaSpringBoot3WebFlux,
                 ArmeriaThrift0_13,
                 ArmeriaTomcat8,
                 ArmeriaTomcat,

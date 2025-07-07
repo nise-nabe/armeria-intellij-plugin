@@ -255,6 +255,24 @@ val ArmeriaSpringBoot2WebFlux = armeriaLibrary(
     ),
 )
 
+val ArmeriaSpringBoot3 = armeriaLibrary(
+    id = "armeria-spring-boot3-autoconfigure",
+    title = message("module.library.armeria.spring-boot3.title"),
+    description = message("module.library.armeria.spring-boot3.description"),
+)
+val ArmeriaSpringBoot3WebFlux = armeriaLibrary(
+    id = "armeria-spring-boot3-webflux-autoconfigure",
+    title = message("module.library.armeria.spring-boot3-webflux.title"),
+    description = message("module.library.armeria.spring-boot3-webflux.description"),
+    links = listOf(
+        LibraryLink(
+            type = LibraryLinkType.GUIDE,
+            url = "https://armeria.dev/docs/advanced-spring-webflux-integration",
+            title = message("armeria.website.spring-boot3-webflux.title"),
+        ),
+    ),
+)
+
 val ArmeriaThrift0_13 = armeriaLibrary(
     id = "armeria-thrift0.13",
     title = message("module.library.armeria.thrift.title"),
