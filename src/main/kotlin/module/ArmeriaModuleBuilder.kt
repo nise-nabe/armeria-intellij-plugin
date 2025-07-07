@@ -45,6 +45,10 @@ class ArmeriaModuleBuilder: StarterModuleBuilder() {
                     "gradle.properties",
                     ftManager.getJ2eeTemplate("armeria-gradle.properties")
                 ))
+                assets.add(GeneratorTemplateFile(
+                    "gradle/libs.versions.toml",
+                    ftManager.getJ2eeTemplate("armeria-libs.versions.toml")
+                ))
             }
             GRADLE_GROOVY_PROJECT -> {
                 assets.add(GeneratorTemplateFile(
@@ -58,6 +62,10 @@ class ArmeriaModuleBuilder: StarterModuleBuilder() {
                 assets.add(GeneratorTemplateFile(
                     "gradle.properties",
                     ftManager.getJ2eeTemplate("armeria-gradle.properties")
+                ))
+                assets.add(GeneratorTemplateFile(
+                    "gradle/libs.versions.toml",
+                    ftManager.getJ2eeTemplate("armeria-libs.versions.toml")
                 ))
             }
             MAVEN_PROJECT -> {

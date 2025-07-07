@@ -11,93 +11,111 @@ repositories {
 
 dependencies {
 #if ($context.hasLanguage("kotlin"))
-    implementation platform('org.jetbrains.kotlin:kotlin-bom:${context.getVersion("org.jetbrains.kotlin", "kotlin-bom")}')
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+    implementation platform(libs.kotlin.bom)
+    implementation libs.kotlin.stdlib.jdk8
 
 #end
-    implementation platform('com.linecorp.armeria:armeria-bom:${context.getVersion("com.linecorp.armeria", "armeria-bom")}')
-    implementation 'com.linecorp.armeria:armeria'
+    implementation platform(libs.armeria.bom)
+    implementation libs.armeria
 #if ($context.hasLibrary("armeria-brave"))
-    implementation 'com.linecorp.armeria:armeria-brave'
+    implementation libs.armeria.brave
 #end
 #if ($context.hasLibrary("armeria-dropwizard2"))
-    implementation 'com.linecorp.armeria:armeria-dropwizard2'
+    implementation libs.armeria.dropwizard2
 #end
 #if ($context.hasLibrary("armeria-eureka"))
-    implementation 'com.linecorp.armeria:armeria-eureka'
+    implementation libs.armeria.eureka
 #end
 #if ($context.hasLibrary("armeria-grpc"))
-    implementation 'com.linecorp.armeria:armeria-grpc'
+    implementation libs.armeria.grpc
 #end
 #if ($context.hasLibrary("armeria-jetty9"))
-    implementation 'com.linecorp.armeria:armeria-jetty9'
+    implementation libs.armeria.jetty9
 #end
 #if ($context.hasLibrary("armeria-kafka"))
-    implementation 'com.linecorp.armeria:armeria-kafka'
+    implementation libs.armeria.kafka
 #end
 #if ($context.hasLibrary("armeria-kotlin"))
-    implementation 'com.linecorp.armeria:armeria-kotlin'
+    implementation libs.armeria.kotlin
 #end
 #if ($context.hasLibrary("armeria-logback"))
-    implementation 'com.linecorp.armeria:armeria-logback'
+    implementation libs.armeria.logback
 #end
 #if ($context.hasLibrary("armeria-protobuf"))
-    implementation 'com.linecorp.armeria:armeria-protobuf'
+    implementation libs.armeria.protobuf
 #end
 #if ($context.hasLibrary("armeria-retrofit2"))
-    implementation 'com.linecorp.armeria:armeria-retrofit2'
+    implementation libs.armeria.retrofit2
 #end
 #if ($context.hasLibrary("armeria-rxjava3"))
-    implementation 'com.linecorp.armeria:armeria-rxjava3'
+    implementation libs.armeria.rxjava3
 #end
 #if ($context.hasLibrary("armeria-saml"))
-    implementation 'com.linecorp.armeria:armeria-saml'
+    implementation libs.armeria.saml
+#end
+#if ($context.hasLibrary("armeria-scala_2.12"))
+#if ($context.hasLanguage("scala"))
+    implementation libs.scala.library.'2.12'
+#end
+    implementation libs.armeria.scala_2.12
+#end
+#if ($context.hasLibrary("armeria-scala_2.13"))
+#if ($context.hasLanguage("scala"))
+    implementation libs.scala.library.'2.13'
+#end
+    implementation libs.armeria.scala_2.13
+#end
+#if ($context.hasLibrary("armeria-scala_3"))
+#if ($context.hasLanguage("scala"))
+    implementation libs.scala3.library
+#end
+    implementation libs.armeria.scala_3
 #end
 #if ($context.hasLibrary("armeria-scalapb_2.12"))
-    implementation 'com.linecorp.armeria:armeria-scalapb_2.12'
+    implementation libs.armeria.scalapb_2.12
 #end
 #if ($context.hasLibrary("armeria-scalapb_2.13"))
-    implementation 'com.linecorp.armeria:armeria-scalapb_2.13'
+    implementation libs.armeria.scalapb_2.13
 #end
 #if ($context.hasLibrary("armeria-spring-boot2-autoconfigure"))
-    implementation 'com.linecorp.armeria:armeria-spring-boot2-autoconfigure'
+    implementation libs.armeria.spring.boot2.autoconfigure
 #end
 #if ($context.hasLibrary("armeria-spring-boot2-webflux-autoconfigure"))
-    implementation 'com.linecorp.armeria:armeria-spring-boot2-webflux-autoconfigure'
+    implementation libs.armeria.spring.boot2.webflux.autoconfigure
 #end
 #if ($context.hasLibrary("armeria-spring-boot3-autoconfigure"))
-    implementation 'com.linecorp.armeria:armeria-spring-boot3-autoconfigure'
+    implementation libs.armeria.spring.boot3.autoconfigure
 #end
 #if ($context.hasLibrary("armeria-spring-boot3-webflux-autoconfigure"))
-    implementation 'com.linecorp.armeria:armeria-spring-boot3-webflux-autoconfigure'
+    implementation libs.armeria.spring.boot3.webflux.autoconfigure
 #end
 #if ($context.hasLibrary("armeria-thrift0.13"))
-    implementation 'com.linecorp.armeria:armeria-thrift0.13'
+    implementation libs.armeria.thrift0.13
 #end
 #if ($context.hasLibrary("armeria-tomcat9"))
-    implementation 'com.linecorp.armeria:armeria-tomcat9'
+    implementation libs.armeria.tomcat9
 #end
 #if ($context.hasLibrary("armeria-zookeeper3"))
-    implementation 'com.linecorp.armeria:armeria-zookeeper3'
+    implementation libs.armeria.zookeeper3
 #end
 
     // Logging
-    runtimeOnly 'ch.qos.logback:logback-classic:${context.getVersion("ch.qos.logback", "logback-classic")}'
-    runtimeOnly 'org.slf4j:log4j-over-slf4j:${context.getVersion("org.slf4j", "log4j-over-slf4j")}'
+    runtimeOnly libs.logback.classic
+    runtimeOnly libs.log4j.over.slf4j
 
 #if ($context.testRunnerId == "junit4")
-    testImplementation 'junit:junit:${context.getVersion("junit", "junit")}'
+    testImplementation libs.junit
 #end
 #if ($context.testRunnerId == "junit5")
-    testRuntimeOnly platform('org.junit:junit-bom:${context.getVersion("org.junit", "junit-bom")}')
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly platform(libs.junit.bom)
+    testRuntimeOnly libs.junit.jupiter
 #end
 #if ($context.hasLanguage("kotlin"))
 #if ($context.testRunnerId == "junit4")
-    testImplementation 'org.jetbrains.kotlin:kotlin-test-junit'
+    testImplementation libs.kotlin.test.junit
 #end
 #if ($context.testRunnerId == "junit5")
-    testImplementation 'org.jetbrains.kotlin:kotlin-test-junit5'
+    testImplementation libs.kotlin.test.junit5
 #end
 #end
 }
