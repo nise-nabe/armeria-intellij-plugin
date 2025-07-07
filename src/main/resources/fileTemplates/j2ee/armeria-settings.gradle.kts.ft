@@ -1,7 +1,14 @@
 rootProject.name = "${context.artifact}"
 
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+    }
+}
+
+@Suppress("UnstableApiUsage")
 dependencyResolutionManagement {
-    versionCatalogs {
-        // Version catalog is defined in the gradle/libs.versions.toml file
+    repositories {
+        mavenCentral()
     }
 }

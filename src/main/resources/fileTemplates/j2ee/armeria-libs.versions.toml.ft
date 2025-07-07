@@ -100,8 +100,8 @@ kotlin-test-junit5 = { group = "org.jetbrains.kotlin", name = "kotlin-test-junit
 #end
 #end
 
-# Scala
 #if ($context.hasLanguage("scala"))
+# Scala
 #if ($context.hasLibrary("armeria-scala_2.12"))
 scala-library."2.12" = { group = "org.scala-lang", name = "scala-library", version = "2.12.15" }
 #end
