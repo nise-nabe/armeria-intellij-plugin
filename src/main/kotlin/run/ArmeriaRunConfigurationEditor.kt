@@ -36,10 +36,11 @@ class ArmeriaRunConfigurationEditor(private val project: Project) : SettingsEdit
                         val isPublic = modifierList.hasModifierProperty("public")
                         val isStatic = modifierList.hasModifierProperty("static")
                         val isVoid = method.returnType?.canonicalText == "void"
-                        val hasCorrectParameters = method.parameterList.parametersCount == 1 &&
-                            method.parameterList.parameters[0].type.canonicalText.let { paramType ->
-                                paramType == "java.lang.String[]" || paramType == "String[]"
-                            }
+                        val hasCorrectParameters = method.parameterList.parametersCount == 0 ||
+                            (method.parameterList.parametersCount == 1 &&
+                                method.parameterList.parameters[0].type.canonicalText.let { paramType ->
+                                    paramType == "java.lang.String[]" || paramType == "String[]"
+                                })
 
                         isPublic && isStatic && isVoid && hasCorrectParameters
                     }
