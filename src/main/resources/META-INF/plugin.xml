@@ -12,6 +12,10 @@
         <framework.type implementation="com.linecorp.intellij.plugins.armeria.framework.ArmeriaFrameworkEx" />
         <spellchecker.bundledDictionaryProvider implementation="com.linecorp.intellij.plugins.armeria.ArmeriaDictionaryProvider" />
         <deadCode implementation="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaMethodEntryPoint" />
+
+        <!-- Run configuration -->
+        <configurationType implementation="com.linecorp.intellij.plugins.armeria.run.ArmeriaRunConfigurationType" />
+        <runConfigurationProducer implementation="com.linecorp.intellij.plugins.armeria.run.ArmeriaRunConfigurationProducer" />
     </extensions>
 
     <actions>
