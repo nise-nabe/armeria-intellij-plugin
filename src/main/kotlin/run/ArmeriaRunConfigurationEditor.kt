@@ -1,11 +1,11 @@
 package com.linecorp.intellij.plugins.armeria.run
 
-import com.intellij.ide.util.ClassFilter
 import com.intellij.ide.util.TreeClassChooserFactory
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.util.PsiMethodUtil
 import com.intellij.ui.components.JBPanel
 import com.intellij.util.ui.FormBuilder
 import com.linecorp.intellij.plugins.armeria.message
@@ -28,23 +28,7 @@ class ArmeriaRunConfigurationEditor(private val project: Project) : SettingsEdit
             val chooser = TreeClassChooserFactory.getInstance(project).createWithInnerClassesScopeChooser(
                 "Choose Main Class",
                 GlobalSearchScope.projectScope(project),
-                ClassFilter { psiClass ->
-                    // Filter for classes with main method
-                    psiClass.findMethodsByName("main", false).any { method ->
-                        // Check if method is public static void main(String[] args)
-                        val modifierList = method.modifierList
-                        val isPublic = modifierList.hasModifierProperty("public")
-                        val isStatic = modifierList.hasModifierProperty("static")
-                        val isVoid = method.returnType?.canonicalText == "void"
-                        val hasCorrectParameters = method.parameterList.parametersCount == 0 ||
-                            (method.parameterList.parametersCount == 1 &&
-                                method.parameterList.parameters[0].type.canonicalText.let { paramType ->
-                                    paramType == "java.lang.String[]" || paramType == "String[]"
-                                })
-
-                        isPublic && isStatic && isVoid && hasCorrectParameters
-                    }
-                },
+                { PsiMethodUtil.hasMainInClass(it) },
                 null
             )
 
