@@ -33,8 +33,8 @@ class ArmeriaRunConfigurationEditor(private val project: Project) : SettingsEdit
                     psiClass.findMethodsByName("main", false).any { method ->
                         // Check if method is public static void main(String[] args)
                         val modifierList = method.modifierList
-                        val isPublic = modifierList.hasModifierProperty("public") == true
-                        val isStatic = modifierList.hasModifierProperty("static") == true
+                        val isPublic = modifierList.hasModifierProperty("public")
+                        val isStatic = modifierList.hasModifierProperty("static")
                         val isVoid = method.returnType?.canonicalText == "void"
                         val hasCorrectParameters = method.parameterList.parametersCount == 1 &&
                             method.parameterList.parameters[0].type.canonicalText.let { paramType ->
