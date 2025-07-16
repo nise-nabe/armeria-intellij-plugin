@@ -64,7 +64,7 @@ testing {
             dependencies {
                 implementation(gradleTestKit())
                 implementation("org.jetbrains.kotlin:kotlin-test-junit5")
-                implementation("io.mockk:mockk:1.14.4")
+                implementation("io.mockk:mockk:1.14.5")
             }
         }
     }
