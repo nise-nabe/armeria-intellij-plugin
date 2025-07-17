@@ -11,7 +11,7 @@ pluginManagement {
     plugins {
         kotlin("jvm") version "2.2.0"
         id("org.jetbrains.intellij.platform") version "2.6.0"
-        id("org.jetbrains.gradle.plugin.idea-ext") version "1.1.10"
+        id("org.jetbrains.gradle.plugin.idea-ext") version "1.2"
         id("org.jetbrains.changelog") version "2.2.1"
     }
 }
