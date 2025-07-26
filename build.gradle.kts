@@ -35,7 +35,8 @@ dependencies {
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
-        vendor = JvmVendorSpec.ADOPTIUM
+        @Suppress("UnstableApiUsage")
+        vendor = JvmVendorSpec.JETBRAINS
     }
 }
 
