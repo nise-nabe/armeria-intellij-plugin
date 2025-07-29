@@ -12,7 +12,7 @@ pluginManagement {
         kotlin("jvm") version "2.2.0"
         id("org.jetbrains.intellij.platform") version "2.7.0"
         id("org.jetbrains.gradle.plugin.idea-ext") version "1.2"
-        id("org.jetbrains.changelog") version "2.2.1"
+        id("org.jetbrains.changelog") version "2.3.0"
     }
 }
 
