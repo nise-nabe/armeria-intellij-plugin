@@ -6,7 +6,7 @@ Always reference these instructions first and fallback to search or bash command
 ## Working Effectively
 
 ### Prerequisites and Environment Setup
-- **CRITICAL**: Requires Java 17 or higher (originally targets Java 21+ but can work with Java 17)
+- **CRITICAL**: Requires Java 21 or higher
 - Uses Gradle 8.14.3 with Gradle Wrapper
 - **NETWORK DEPENDENCY**: IntelliJ Platform dependencies require internet access
 - **VERSION CONSTRAINTS**: IntelliJ IDEA version must be compatible with plugin version
@@ -43,7 +43,7 @@ Always reference these instructions first and fallback to search or bash command
 
 ### Build Configuration Issues
 - **COMMON PROBLEM**: Java toolchain version conflicts
-  - Original config requires Java 23 (bleeding edge)
+  - Original config requires Java 21
   - Modify `gradle/gradle-daemon-jvm.properties` toolchainVersion to match available Java
   - Update `build.gradle.kts` java toolchain configuration if needed
 - **COMMON PROBLEM**: IntelliJ Platform version not found
@@ -149,7 +149,7 @@ After making changes, ALWAYS test these scenarios:
 
 ### CI/CD Notes
 - Runs on Ubuntu, Windows, and macOS
-- Originally configured for Java 23 (updated to Java 17 for compatibility)
+- Uses Java 21 for consistent Java versions
 - Build matrix tests across multiple platforms
 - Uses JetBrains toolchain for consistent Java versions
 
