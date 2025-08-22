@@ -25,7 +25,7 @@ idea {
 
 dependencies {
     intellijPlatform {
-        intellijIdeaUltimate("2025.1.4.1")
+        intellijIdeaCommunity("2024.1")
         bundledPlugin("org.jetbrains.plugins.gradle")
 
         testFramework(TestFrameworkType.JUnit5)
@@ -33,11 +33,8 @@ dependencies {
 }
 
 java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-        @Suppress("UnstableApiUsage")
-        vendor = JvmVendorSpec.JETBRAINS
-    }
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 intellijPlatform {
