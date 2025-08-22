@@ -1,0 +1,41 @@
+# CODEOWNERS file for armeria-intellij-plugin
+# This file defines code ownership for automatic review requests
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global ownership - all files are owned by the repository maintainer
+* @nise-nabe
+
+# Documentation files
+*.md @nise-nabe
+*.adoc @nise-nabe
+/src/docs/ @nise-nabe
+
+# Build and configuration files
+build.gradle.kts @nise-nabe
+settings.gradle.kts @nise-nabe
+gradle.properties @nise-nabe
+/gradle/ @nise-nabe
+gradlew @nise-nabe
+gradlew.bat @nise-nabe
+
+# Source code
+/src/main/kotlin/ @nise-nabe
+/src/test/kotlin/ @nise-nabe
+/src/main/resources/ @nise-nabe
+
+# Plugin configuration and templates
+/src/main/resources/META-INF/ @nise-nabe
+/src/main/resources/fileTemplates/ @nise-nabe
+
+# GitHub configuration and workflows
+/.github/ @nise-nabe
+
+# Git configuration
+.gitignore @nise-nabe
+
+# IDE configuration
+/.idea/ @nise-nabe
+
+# License and legal files
+LICENSE @nise-nabe
+CHANGELOG.md @nise-nabe
