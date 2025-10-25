@@ -1,5 +1,4 @@
 import org.jetbrains.changelog.Changelog
-import org.jetbrains.changelog.ChangelogPluginExtension
 import org.jetbrains.gradle.ext.packagePrefix
 import org.jetbrains.gradle.ext.settings
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
