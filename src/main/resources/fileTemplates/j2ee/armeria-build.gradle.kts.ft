@@ -127,15 +127,19 @@ tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.add("-parameters")
 }
 #if ($context.testRunnerId == "junit5")
-
-tasks.test {
-    useJUnitPlatform()
+testing {
+    @Suppress("UnstableApiUsage", "unused")
+    suites {
+        val test by getting(JvmTestSuite::class) {
+            useJUnitJupiter()
+        }
+    }
 }
 #end
 #if ($context.hasLanguage("kotlin"))
 
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    kotlinOptions {
+kotlin {
+    compilerOptions {
         javaParameters = true
     }
 }
