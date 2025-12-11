@@ -24,7 +24,7 @@ idea {
 
 dependencies {
     intellijPlatform {
-        intellijIdeaUltimate("2025.1.6")
+        intellijIdeaUltimate("2025.3")
         bundledPlugin("org.jetbrains.plugins.gradle")
 
         testFramework(TestFrameworkType.JUnit5)
@@ -64,7 +64,12 @@ testing {
             dependencies {
                 implementation(gradleTestKit())
                 implementation("org.jetbrains.kotlin:kotlin-test-junit5")
-                implementation("io.mockk:mockk:1.14.6")
+                implementation("io.mockk:mockk:1.14.6") {
+                    // we should use intellij bundled kotlin and kotlinx versions
+                    // https://plugins.jetbrains.com/docs/intellij/using-kotlin.html#coroutinesLibraries
+                    exclude(group = "org.jetbrains.kotlin")
+                    exclude(group = "org.jetbrains.kotlinx")
+                }
             }
         }
     }
