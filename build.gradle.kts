@@ -64,7 +64,7 @@ testing {
             dependencies {
                 implementation(gradleTestKit())
                 implementation("org.jetbrains.kotlin:kotlin-test-junit5")
-                implementation("io.mockk:mockk:1.14.6") {
+                implementation("io.mockk:mockk:1.14.9") {
                     // we should use intellij bundled kotlin and kotlinx versions
                     // https://plugins.jetbrains.com/docs/intellij/using-kotlin.html#coroutinesLibraries
                     exclude(group = "org.jetbrains.kotlin")
