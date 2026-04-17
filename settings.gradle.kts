@@ -10,14 +10,14 @@ pluginManagement {
 
     plugins {
         kotlin("jvm") version "2.3.20"
-        id("org.jetbrains.intellij.platform") version "2.13.1"
+        id("org.jetbrains.intellij.platform") version "2.14.0"
         id("org.jetbrains.gradle.plugin.idea-ext") version "1.4.1"
         id("org.jetbrains.changelog") version "2.5.0"
     }
 }
 
 plugins {
-    id("org.jetbrains.intellij.platform.settings") version "2.13.1"
+    id("org.jetbrains.intellij.platform.settings") version "2.14.0"
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
