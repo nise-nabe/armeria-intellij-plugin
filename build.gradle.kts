@@ -25,6 +25,7 @@ idea {
 dependencies {
     intellijPlatform {
         intellijIdeaUltimate("2026.1")
+        bundledPlugin("com.intellij.java")
         bundledPlugin("org.jetbrains.plugins.gradle")
 
         testFramework(TestFrameworkType.JUnit5)
