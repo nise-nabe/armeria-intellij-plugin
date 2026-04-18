@@ -39,6 +39,7 @@ java {
 }
 
 intellijPlatform {
+    buildSearchableOptions = false
     pluginConfiguration {
         val changelog = project.changelog
         changeNotes = providers.gradleProperty("pluginVersion").map { pluginVersion ->
