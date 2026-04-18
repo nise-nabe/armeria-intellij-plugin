@@ -65,6 +65,12 @@
             <artifactId>armeria-brave</artifactId>
         </dependency>
 #end
+#if ($context.hasLibrary("armeria-bucket4j"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-bucket4j</artifactId>
+        </dependency>
+#end
 #if ($context.hasLibrary("armeria-dropwizard2"))
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
@@ -77,6 +83,12 @@
             <artifactId>armeria-eureka</artifactId>
         </dependency>
 #end
+#if ($context.hasLibrary("armeria-graphql"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-graphql</artifactId>
+        </dependency>
+#end
 #if ($context.hasLibrary("armeria-grpc"))
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
@@ -87,6 +99,12 @@
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria-jetty9</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-jetty11"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-jetty11</artifactId>
         </dependency>
 #end
 #if ($context.hasLibrary("armeria-kafka"))
@@ -105,6 +123,18 @@
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria-logback</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-logback12"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-logback12</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-prometheus1"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-prometheus1</artifactId>
         </dependency>
 #end
 #if ($context.hasLibrary("armeria-protobuf"))
@@ -143,6 +173,12 @@
             <artifactId>armeria-scalapb_2.13</artifactId>
         </dependency>
 #end
+#if ($context.hasLibrary("armeria-scalapb_3"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-scalapb_3</artifactId>
+        </dependency>
+#end
 #if ($context.hasLibrary("armeria-spring-boot2-autoconfigure"))
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
@@ -161,10 +197,22 @@
             <artifactId>armeria-spring-boot3-autoconfigure</artifactId>
         </dependency>
 #end
+#if ($context.hasLibrary("armeria-spring-boot3-starter"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-spring-boot3-starter</artifactId>
+        </dependency>
+#end
 #if ($context.hasLibrary("armeria-spring-boot3-webflux-autoconfigure"))
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria-spring-boot3-webflux-autoconfigure</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-spring-boot3-webflux-starter"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-spring-boot3-webflux-starter</artifactId>
         </dependency>
 #end
 #if ($context.hasLibrary("armeria-thrift0.13"))
@@ -173,10 +221,22 @@
             <artifactId>armeria-thrift0.13</artifactId>
         </dependency>
 #end
+#if ($context.hasLibrary("armeria-thrift0.18"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-thrift0.18</artifactId>
+        </dependency>
+#end
 #if ($context.hasLibrary("armeria-tomcat9"))
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria-tomcat9</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-tomcat10"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-tomcat10</artifactId>
         </dependency>
 #end
 #if ($context.hasLibrary("armeria-zookeeper3"))
@@ -206,11 +266,21 @@
             <artifactId>junit</artifactId>
             <version>${context.getVersion("junit", "junit")}</version>
         </dependency>
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-junit4</artifactId>
+            <scope>test</scope>
+        </dependency>
 #end
 #if ($context.testRunnerId == "junit5")
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-junit5</artifactId>
             <scope>test</scope>
         </dependency>
 #end

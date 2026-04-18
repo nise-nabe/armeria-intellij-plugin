@@ -23,17 +23,26 @@ dependencies {
 #if ($context.hasLibrary("armeria-brave"))
     implementation("com.linecorp.armeria:armeria-brave")
 #end
+#if ($context.hasLibrary("armeria-bucket4j"))
+    implementation("com.linecorp.armeria:armeria-bucket4j")
+#end
 #if ($context.hasLibrary("armeria-dropwizard2"))
     implementation("com.linecorp.armeria:armeria-dropwizard2")
 #end
 #if ($context.hasLibrary("armeria-eureka"))
     implementation("com.linecorp.armeria:armeria-eureka")
 #end
+#if ($context.hasLibrary("armeria-graphql"))
+    implementation("com.linecorp.armeria:armeria-graphql")
+#end
 #if ($context.hasLibrary("armeria-grpc"))
     implementation("com.linecorp.armeria:armeria-grpc")
 #end
 #if ($context.hasLibrary("armeria-jetty9"))
     implementation("com.linecorp.armeria:armeria-jetty9")
+#end
+#if ($context.hasLibrary("armeria-jetty11"))
+    implementation("com.linecorp.armeria:armeria-jetty11")
 #end
 #if ($context.hasLibrary("armeria-kafka"))
     implementation("com.linecorp.armeria:armeria-kafka")
@@ -43,6 +52,12 @@ dependencies {
 #end
 #if ($context.hasLibrary("armeria-logback"))
     implementation("com.linecorp.armeria:armeria-logback")
+#end
+#if ($context.hasLibrary("armeria-logback12"))
+    implementation("com.linecorp.armeria:armeria-logback12")
+#end
+#if ($context.hasLibrary("armeria-prometheus1"))
+    implementation("com.linecorp.armeria:armeria-prometheus1")
 #end
 #if ($context.hasLibrary("armeria-protobuf"))
     implementation("com.linecorp.armeria:armeria-protobuf")
@@ -80,6 +95,9 @@ dependencies {
 #if ($context.hasLibrary("armeria-scalapb_2.13"))
     implementation("com.linecorp.armeria:armeria-scalapb_2.13")
 #end
+#if ($context.hasLibrary("armeria-scalapb_3"))
+    implementation("com.linecorp.armeria:armeria-scalapb_3")
+#end
 #if ($context.hasLibrary("armeria-spring-boot2-autoconfigure"))
     implementation("com.linecorp.armeria:armeria-spring-boot2-autoconfigure")
 #end
@@ -89,14 +107,26 @@ dependencies {
 #if ($context.hasLibrary("armeria-spring-boot3-autoconfigure"))
     implementation("com.linecorp.armeria:armeria-spring-boot3-autoconfigure")
 #end
+#if ($context.hasLibrary("armeria-spring-boot3-starter"))
+    implementation("com.linecorp.armeria:armeria-spring-boot3-starter")
+#end
 #if ($context.hasLibrary("armeria-spring-boot3-webflux-autoconfigure"))
     implementation("com.linecorp.armeria:armeria-spring-boot3-webflux-autoconfigure")
+#end
+#if ($context.hasLibrary("armeria-spring-boot3-webflux-starter"))
+    implementation("com.linecorp.armeria:armeria-spring-boot3-webflux-starter")
 #end
 #if ($context.hasLibrary("armeria-thrift0.13"))
     implementation("com.linecorp.armeria:armeria-thrift0.13")
 #end
+#if ($context.hasLibrary("armeria-thrift0.18"))
+    implementation("com.linecorp.armeria:armeria-thrift0.18")
+#end
 #if ($context.hasLibrary("armeria-tomcat9"))
     implementation("com.linecorp.armeria:armeria-tomcat9")
+#end
+#if ($context.hasLibrary("armeria-tomcat10"))
+    implementation("com.linecorp.armeria:armeria-tomcat10")
 #end
 #if ($context.hasLibrary("armeria-zookeeper3"))
     implementation("com.linecorp.armeria:armeria-zookeeper3")
@@ -108,9 +138,11 @@ dependencies {
 
 #if ($context.testRunnerId == "junit4")
     testImplementation("junit:junit:${context.getVersion("junit", "junit")}")
+    testImplementation("com.linecorp.armeria:armeria-junit4")
 #end
 #if ($context.testRunnerId == "junit5")
     testRuntimeOnly(platform("org.junit:junit-bom:${context.getVersion("org.junit", "junit-bom")}"))
+    testImplementation("com.linecorp.armeria:armeria-junit5")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter")
 #end
 #if ($context.hasLanguage("kotlin"))

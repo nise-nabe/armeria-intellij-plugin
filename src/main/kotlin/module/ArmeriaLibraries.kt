@@ -48,6 +48,19 @@ val ArmeriaBrave = armeriaLibrary(
     ),
 )
 
+val ArmeriaBucket4j = armeriaLibrary(
+    id = "armeria-bucket4j",
+    title = message("module.library.armeria.bucket4j.title"),
+    description = message("module.library.armeria.bucket4j.description"),
+    links = listOf(
+        LibraryLink(
+            type = LibraryLinkType.GUIDE,
+            url = "https://armeria.dev/docs/setup",
+            title = message("armeria.website.bucket4j.title"),
+        ),
+    ),
+)
+
 val ArmeriaDropwizard2 = armeriaLibrary(
     id = "armeria-dropwizard2",
     title = message("module.library.armeria.dropwizard2.title"),
@@ -79,6 +92,19 @@ val ArmeriaEureka = armeriaLibrary(
     )
 )
 
+val ArmeriaGraphql = armeriaLibrary(
+    id = "armeria-graphql",
+    title = message("module.library.armeria.graphql.title"),
+    description = message("module.library.armeria.graphql.description"),
+    links = listOf(
+        LibraryLink(
+            type = LibraryLinkType.GUIDE,
+            url = "https://armeria.dev/docs/server-graphql",
+            title = message("armeria.website.graphql.title")
+        ),
+    ),
+)
+
 val ArmeriaGrpc = armeriaLibrary(
     id = "armeria-grpc",
     title = message("module.library.armeria.grpc.title"),
@@ -101,6 +127,19 @@ val ArmeriaJetty = armeriaLibrary(
     id = "armeria-jetty9",
     title = message("module.library.armeria.jetty.title"),
     description = message("module.library.armeria.jetty.description"),
+    links = listOf(
+        LibraryLink(
+            type = LibraryLinkType.GUIDE,
+            url = "https://armeria.dev/docs/server-servlet",
+            title = message("armeria.website.servlet.title")
+        ),
+    )
+)
+
+val ArmeriaJetty11 = armeriaLibrary(
+    id = "armeria-jetty11",
+    title = message("module.library.armeria.jetty11.title"),
+    description = message("module.library.armeria.jetty11.description"),
     links = listOf(
         LibraryLink(
             type = LibraryLinkType.GUIDE,
@@ -142,10 +181,36 @@ val ArmeriaLogback = armeriaLibrary(
     ),
 )
 
+val ArmeriaLogback12 = armeriaLibrary(
+    id = "armeria-logback12",
+    title = message("module.library.armeria.logback12.title"),
+    description = message("module.library.armeria.logback12.description"),
+    links = listOf(
+        LibraryLink(
+            type = LibraryLinkType.GUIDE,
+            url = "https://armeria.dev/docs/advanced-logging",
+            title = message("armeria.website.logback.title")
+        ),
+    ),
+)
+
 val ArmeriaProtobuf = armeriaLibrary(
     id = "armeria-protobuf",
     title = message("module.library.armeria.protobuf.title"),
     description = message("module.library.armeria.protobuf.description"),
+)
+
+val ArmeriaPrometheus1 = armeriaLibrary(
+    id = "armeria-prometheus1",
+    title = message("module.library.armeria.prometheus1.title"),
+    description = message("module.library.armeria.prometheus1.description"),
+    links = listOf(
+        LibraryLink(
+            type = LibraryLinkType.GUIDE,
+            url = "https://armeria.dev/docs/monitoring-metrics",
+            title = message("armeria.website.prometheus.title")
+        ),
+    ),
 )
 
 val ArmeriaRetrofit = armeriaLibrary(
@@ -237,6 +302,19 @@ val ArmeriaScalaPB2_13 = armeriaLibrary(
     ),
 )
 
+val ArmeriaScalaPB3 = armeriaLibrary(
+    id = "armeria-scalapb_3",
+    title = message("module.library.armeria.scalapb3.title"),
+    description = message("module.library.armeria.scalapb3.description"),
+    links = listOf(
+        LibraryLink(
+            type = LibraryLinkType.GUIDE,
+            url = "https://armeria.dev/docs/advanced-scalapb",
+            title = message("armeria.website.scalapb.title")
+        )
+    ),
+)
+
 val ArmeriaSpringBoot2 = armeriaLibrary(
     id = "armeria-spring-boot2-autoconfigure",
     title = message("module.library.armeria.spring-boot2.title"),
@@ -260,6 +338,20 @@ val ArmeriaSpringBoot3 = armeriaLibrary(
     title = message("module.library.armeria.spring-boot3.title"),
     description = message("module.library.armeria.spring-boot3.description"),
 )
+
+val ArmeriaSpringBoot3Starter = armeriaLibrary(
+    id = "armeria-spring-boot3-starter",
+    title = message("module.library.armeria.spring-boot3-starter.title"),
+    description = message("module.library.armeria.spring-boot3-starter.description"),
+    links = listOf(
+        LibraryLink(
+            type = LibraryLinkType.GUIDE,
+            url = "https://armeria.dev/docs/setup",
+            title = message("armeria.website.setup.title"),
+        ),
+    ),
+)
+
 val ArmeriaSpringBoot3WebFlux = armeriaLibrary(
     id = "armeria-spring-boot3-webflux-autoconfigure",
     title = message("module.library.armeria.spring-boot3-webflux.title"),
@@ -273,10 +365,41 @@ val ArmeriaSpringBoot3WebFlux = armeriaLibrary(
     ),
 )
 
+val ArmeriaSpringBoot3WebFluxStarter = armeriaLibrary(
+    id = "armeria-spring-boot3-webflux-starter",
+    title = message("module.library.armeria.spring-boot3-webflux-starter.title"),
+    description = message("module.library.armeria.spring-boot3-webflux-starter.description"),
+    links = listOf(
+        LibraryLink(
+            type = LibraryLinkType.GUIDE,
+            url = "https://armeria.dev/docs/advanced-spring-webflux-integration",
+            title = message("armeria.website.spring-boot3-webflux.title"),
+        ),
+    ),
+)
+
 val ArmeriaThrift0_13 = armeriaLibrary(
     id = "armeria-thrift0.13",
     title = message("module.library.armeria.thrift.title"),
     description = message("module.library.armeria.thrift.description"),
+    links = listOf(
+        LibraryLink(
+            type = LibraryLinkType.GUIDE,
+            url = "https://armeria.dev/docs/server-thrift",
+            title = message("armeria.website.thrift.server.title"),
+        ),
+        LibraryLink(
+            type = LibraryLinkType.GUIDE,
+            url = "https://armeria.dev/docs/client-thrift",
+            title = message("armeria.website.thrift.client.title"),
+        ),
+    ),
+)
+
+val ArmeriaThrift0_18 = armeriaLibrary(
+    id = "armeria-thrift0.18",
+    title = message("module.library.armeria.thrift018.title"),
+    description = message("module.library.armeria.thrift018.description"),
     links = listOf(
         LibraryLink(
             type = LibraryLinkType.GUIDE,
@@ -308,6 +431,19 @@ val ArmeriaTomcat = armeriaLibrary(
     id = "armeria-tomcat9",
     title = message("module.library.armeria.tomcat.title"),
     description = message("module.library.armeria.tomcat.description"),
+    links = listOf(
+        LibraryLink(
+            type = LibraryLinkType.GUIDE,
+            url = "https://armeria.dev/docs/server-servlet",
+            title = message("armeria.website.servlet.title"),
+        ),
+    ),
+)
+
+val ArmeriaTomcat10 = armeriaLibrary(
+    id = "armeria-tomcat10",
+    title = message("module.library.armeria.tomcat10.title"),
+    description = message("module.library.armeria.tomcat10.description"),
     links = listOf(
         LibraryLink(
             type = LibraryLinkType.GUIDE,
