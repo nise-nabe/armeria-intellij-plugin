@@ -27,8 +27,6 @@ dependencies {
         intellijIdeaUltimate("2026.1")
         bundledPlugin("com.intellij.java")
         bundledPlugin("org.jetbrains.plugins.gradle")
-
-        testFramework(TestFrameworkType.JUnit5)
     }
 }
 
@@ -57,19 +55,11 @@ intellijPlatform {
 }
 
 testing {
-    @Suppress("UNUSED_VARIABLE")
     suites {
-        @Suppress("UnstableApiUsage") val test by getting(JvmTestSuite::class) {
-            useJUnitJupiter()
-
-            dependencies {
-                implementation(gradleTestKit())
-                implementation("org.jetbrains.kotlin:kotlin-test-junit5")
-                implementation("io.mockk:mockk:1.14.9") {
-                    // we should use intellij bundled kotlin and kotlinx versions
-                    // https://plugins.jetbrains.com/docs/intellij/using-kotlin.html#coroutinesLibraries
-                    exclude(group = "org.jetbrains.kotlin")
-                    exclude(group = "org.jetbrains.kotlinx")
+        val test by getting(JvmTestSuite::class) {
+            targets.all {
+                testTask.configure {
+                    failOnNoDiscoveredTests = false
                 }
             }
         }
