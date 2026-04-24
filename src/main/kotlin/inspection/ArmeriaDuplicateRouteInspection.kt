@@ -6,6 +6,7 @@ import com.intellij.psi.JavaElementVisitor
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiMethod
+import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.message
 
 class ArmeriaDuplicateRouteInspection : AbstractBaseJavaLocalInspectionTool() {
@@ -19,7 +20,7 @@ class ArmeriaDuplicateRouteInspection : AbstractBaseJavaLocalInspectionTool() {
                 for (method in aClass.methods) {
                     val route = ArmeriaMethodRoute.from(method) ?: continue
                     for (path in route.paths) {
-                        val key = route.httpMethod to ArmeriaMethodRoute.combinePaths(route.classPrefix, path)
+                        val key = route.httpMethod to ArmeriaRouteSupport.combinePaths(route.classPrefix, path)
                         val previous = seen.putIfAbsent(key, method)
                         if (previous != null) {
                             duplicateRoutes += previous
@@ -44,52 +45,13 @@ private data class ArmeriaMethodRoute(
     val paths: List<String>,
 ) {
     companion object {
-        private val routeAnnotations = mapOf(
-            "com.linecorp.armeria.server.annotation.Get" to "GET",
-            "com.linecorp.armeria.server.annotation.Head" to "HEAD",
-            "com.linecorp.armeria.server.annotation.Post" to "POST",
-            "com.linecorp.armeria.server.annotation.Put" to "PUT",
-            "com.linecorp.armeria.server.annotation.Delete" to "DELETE",
-            "com.linecorp.armeria.server.annotation.Options" to "OPTIONS",
-            "com.linecorp.armeria.server.annotation.Patch" to "PATCH",
-            "com.linecorp.armeria.server.annotation.Trace" to "TRACE",
-        )
-
         fun from(method: PsiMethod): ArmeriaMethodRoute? {
-            val annotation = method.modifierList.annotations.firstNotNullOfOrNull { candidate ->
-                val qualifiedName = candidate.qualifiedName ?: return@firstNotNullOfOrNull null
-                routeAnnotations[qualifiedName]?.let { candidate to it }
-            } ?: return null
-            val classPrefix = method.containingClass?.getAnnotation("com.linecorp.armeria.server.annotation.PathPrefix")
-                ?.findDeclaredAttributeValue("value")
-                ?.text
-                ?.removePrefix("\"")
-                ?.removeSuffix("\"")
-                .orEmpty()
-            val paths = sequenceOf("value", "path")
-                .mapNotNull { annotation.first.findDeclaredAttributeValue(it) }
-                .flatMap {
-                    when (it) {
-                        is com.intellij.psi.PsiAnnotationArrayInitializerMemberValue -> it.initializers.asSequence().map { initializer -> initializer.text.removePrefix("\"").removeSuffix("\"") }
-                        else -> sequenceOf(it.text.removePrefix("\"").removeSuffix("\""))
-                    }
-                }
-                .map { if (it.startsWith("/")) it else "/$it" }
-                .toList()
-                .ifEmpty { listOf("/") }
+            val annotation = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return null
+            val classPrefix = ArmeriaRouteSupport.extractPrimaryPath(
+                method.containingClass?.getAnnotation(ArmeriaRouteSupport.pathPrefixAnnotation),
+            )
+            val paths = ArmeriaRouteSupport.extractPaths(annotation.first).ifEmpty { listOf("/") }
             return ArmeriaMethodRoute(annotation.second, classPrefix, paths)
-        }
-
-        fun combinePaths(prefix: String, path: String): String {
-            if (prefix.isBlank() || prefix == "/") {
-                return if (path.startsWith("/")) path else "/$path"
-            }
-            val normalizedPrefix = if (prefix.startsWith("/")) prefix else "/$prefix"
-            val normalizedPath = if (path.startsWith("/")) path else "/$path"
-            if (normalizedPath == "/") {
-                return normalizedPrefix
-            }
-            return "${normalizedPrefix.removeSuffix("/")}/${normalizedPath.removePrefix("/")}"
         }
     }
 }

@@ -4,9 +4,6 @@ import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.JavaRecursiveElementWalkingVisitor
-import com.intellij.psi.PsiAnnotation
-import com.intellij.psi.PsiAnnotationArrayInitializerMemberValue
-import com.intellij.psi.PsiAnnotationMemberValue
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiFile
@@ -21,21 +18,6 @@ import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 
 object ArmeriaRouteCollector {
-    private val routeAnnotations = mapOf(
-        "com.linecorp.armeria.server.annotation.Get" to "GET",
-        "com.linecorp.armeria.server.annotation.Head" to "HEAD",
-        "com.linecorp.armeria.server.annotation.Post" to "POST",
-        "com.linecorp.armeria.server.annotation.Put" to "PUT",
-        "com.linecorp.armeria.server.annotation.Delete" to "DELETE",
-        "com.linecorp.armeria.server.annotation.Options" to "OPTIONS",
-        "com.linecorp.armeria.server.annotation.Patch" to "PATCH",
-        "com.linecorp.armeria.server.annotation.Trace" to "TRACE",
-    )
-
-    private const val pathPrefixAnnotation = "com.linecorp.armeria.server.annotation.PathPrefix"
-    private const val decoratorAnnotation = "com.linecorp.armeria.server.annotation.Decorator"
-    private const val exceptionHandlerAnnotation = "com.linecorp.armeria.server.annotation.ExceptionHandler"
-
     fun collect(project: Project): List<ArmeriaRoute> {
         val routes = mutableListOf<ArmeriaRoute>()
         val javaFiles = FileTypeIndex.getFiles(JavaFileType.INSTANCE, GlobalSearchScope.projectScope(project))
@@ -51,17 +33,14 @@ object ArmeriaRouteCollector {
         val routes = mutableListOf<ArmeriaRoute>()
         file.accept(object : JavaRecursiveElementWalkingVisitor() {
             override fun visitClass(aClass: PsiClass) {
-                val classPrefix = extractPrimaryPath(aClass.getAnnotation(pathPrefixAnnotation))
-                val classDecorators = extractNames(aClass.getAnnotation(decoratorAnnotation))
-                val classExceptionHandlers = extractNames(aClass.getAnnotation(exceptionHandlerAnnotation))
+                val classPrefix = ArmeriaRouteSupport.extractPrimaryPath(aClass.getAnnotation(ArmeriaRouteSupport.pathPrefixAnnotation))
+                val classDecorators = ArmeriaRouteSupport.extractNames(aClass.getAnnotation(ArmeriaRouteSupport.decoratorAnnotation))
+                val classExceptionHandlers = ArmeriaRouteSupport.extractNames(aClass.getAnnotation(ArmeriaRouteSupport.exceptionHandlerAnnotation))
                 for (method in aClass.methods) {
-                    val annotation = method.modifierList.annotations.firstNotNullOfOrNull { candidate ->
-                        val qualifiedName = candidate.qualifiedName ?: return@firstNotNullOfOrNull null
-                        routeAnnotations[qualifiedName]?.let { candidate to it }
-                    } ?: continue
-                    val paths = extractPaths(annotation.first).ifEmpty { listOf("/") }
-                    val methodDecorators = classDecorators + extractNames(method.getAnnotation(decoratorAnnotation))
-                    val methodExceptionHandlers = classExceptionHandlers + extractNames(method.getAnnotation(exceptionHandlerAnnotation))
+                    val annotation = ArmeriaRouteSupport.findRouteAnnotation(method) ?: continue
+                    val paths = ArmeriaRouteSupport.extractPaths(annotation.first).ifEmpty { listOf("/") }
+                    val methodDecorators = classDecorators + ArmeriaRouteSupport.extractNames(method.getAnnotation(ArmeriaRouteSupport.decoratorAnnotation))
+                    val methodExceptionHandlers = classExceptionHandlers + ArmeriaRouteSupport.extractNames(method.getAnnotation(ArmeriaRouteSupport.exceptionHandlerAnnotation))
                     val target = buildMethodTarget(aClass, method)
                     for (path in paths) {
                         routes += ArmeriaRoute.create(
@@ -69,7 +48,7 @@ object ArmeriaRouteCollector {
                             kind = "Annotated service",
                             protocol = "HTTP",
                             httpMethod = annotation.second,
-                            path = combinePaths(classPrefix, path),
+                            path = ArmeriaRouteSupport.combinePaths(classPrefix, path),
                             target = target,
                             decorators = methodDecorators.distinct(),
                             exceptionHandlers = methodExceptionHandlers.distinct(),
@@ -95,15 +74,7 @@ object ArmeriaRouteCollector {
                     return
                 }
                 val arguments = expression.argumentList.expressions
-                val path = when (methodName) {
-                    "service", "serviceUnder" -> extractString(arguments.getOrNull(0)) ?: return
-                    "annotatedService" -> if (arguments.size > 1) {
-                        extractString(arguments.getOrNull(0)) ?: return
-                    } else {
-                        "/"
-                    }
-                    else -> return
-                }
+                val path = extractRegistrationPath(methodName, arguments) ?: return
                 val implementationExpression = when (methodName) {
                     "annotatedService" -> arguments.getOrNull(1) ?: arguments.getOrNull(0)
                     else -> arguments.getOrNull(1)
@@ -121,7 +92,7 @@ object ArmeriaRouteCollector {
                     kind = kind,
                     protocol = protocol,
                     httpMethod = if (methodName == "serviceUnder") "UNDER" else "ANY",
-                    path = normalizePath(path),
+                    path = ArmeriaRouteSupport.normalizePath(path),
                     target = target,
                 )
             }
@@ -138,70 +109,17 @@ object ArmeriaRouteCollector {
         return qualifierText.contains("Server.builder()") || qualifierText.contains("serverBuilder")
     }
 
-    private fun extractPaths(annotation: PsiAnnotation): List<String> {
-        val values = extractStrings(annotation.findDeclaredAttributeValue("value"))
-        if (values.isNotEmpty()) {
-            return values.map(::normalizePath)
-        }
-        val pathValues = extractStrings(annotation.findDeclaredAttributeValue("path"))
-        if (pathValues.isNotEmpty()) {
-            return pathValues.map(::normalizePath)
-        }
-        return emptyList()
-    }
-
-    private fun extractPrimaryPath(annotation: PsiAnnotation?): String {
-        if (annotation == null) {
-            return ""
-        }
-        return extractPaths(annotation).firstOrNull().orEmpty()
-    }
-
-    private fun extractNames(annotation: PsiAnnotation?): List<String> {
-        if (annotation == null) {
-            return emptyList()
-        }
-        return extractStrings(annotation.findDeclaredAttributeValue("value"))
-            .ifEmpty { listOf(renderMemberValue(annotation.findDeclaredAttributeValue("value"))) }
-            .mapNotNull { it.takeIf(String::isNotBlank) }
-    }
-
-    private fun extractStrings(value: PsiAnnotationMemberValue?): List<String> {
-        return when (value) {
-            null -> emptyList()
-            is PsiLiteralExpression -> listOfNotNull(value.value as? String)
-            is PsiAnnotationArrayInitializerMemberValue -> value.initializers.flatMap(::extractStrings)
-            else -> listOf(renderMemberValue(value)).filter(String::isNotBlank)
-        }
-    }
-
-    private fun renderMemberValue(value: PsiAnnotationMemberValue?): String {
-        return value?.text?.removePrefix("\"")?.removeSuffix("\"").orEmpty()
-    }
-
-    private fun combinePaths(prefix: String, path: String): String {
-        val normalizedPrefix = normalizePath(prefix)
-        val normalizedPath = normalizePath(path)
-        if (normalizedPrefix == "/") {
-            return normalizedPath
-        }
-        if (normalizedPath == "/") {
-            return normalizedPrefix
-        }
-        return "${normalizedPrefix.removeSuffix("/")}/${normalizedPath.removePrefix("/")}"
-    }
-
-    private fun normalizePath(path: String): String {
-        if (path.isBlank()) {
-            return "/"
-        }
-        val candidate = path.trim()
-        return if (candidate.startsWith("/")) candidate else "/$candidate"
-    }
-
     private fun buildMethodTarget(psiClass: PsiClass, method: PsiMethod): String {
         val className = psiClass.qualifiedName ?: psiClass.name ?: "<anonymous>"
         return "$className#${method.name}()"
+    }
+
+    private fun extractRegistrationPath(methodName: String, arguments: Array<PsiExpression>): String? {
+        return when (methodName) {
+            "service", "serviceUnder" -> extractString(arguments.getOrNull(0))
+            "annotatedService" -> if (arguments.size > 1) extractString(arguments.getOrNull(0)) else "/"
+            else -> null
+        }
     }
 
     private fun extractString(expression: PsiExpression?): String? {
