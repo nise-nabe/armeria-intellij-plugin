@@ -1,8 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.intellij.psi.PsiAnnotation
-import com.intellij.psi.PsiAnnotationArrayInitializerMemberValue
 import com.intellij.psi.PsiAnnotationMemberValue
+import com.intellij.psi.PsiArrayInitializerMemberValue
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethod
 
@@ -62,7 +62,7 @@ object ArmeriaRouteSupport {
         return when (value) {
             null -> emptyList()
             is PsiLiteralExpression -> listOfNotNull(value.value as? String)
-            is PsiAnnotationArrayInitializerMemberValue -> value.initializers.flatMap(::extractStrings)
+            is PsiArrayInitializerMemberValue -> value.initializers.flatMap(::extractStrings)
             else -> listOf(renderMemberValue(value)).filter(String::isNotBlank)
         }
     }

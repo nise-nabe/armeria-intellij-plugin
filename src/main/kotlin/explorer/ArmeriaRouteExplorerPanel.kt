@@ -11,12 +11,12 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
 import com.intellij.pom.Navigatable
 import com.intellij.ui.ColoredListCellRenderer
+import com.intellij.ui.ListSpeedSearch
 import com.intellij.ui.ScrollingUtil
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.panels.VerticalLayout
-import com.intellij.ui.speedSearch.ListSpeedSearch
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
 import javax.swing.DefaultListModel
