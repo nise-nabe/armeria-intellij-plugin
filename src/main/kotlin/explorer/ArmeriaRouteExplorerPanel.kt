@@ -14,6 +14,7 @@ import com.intellij.ui.ColoredListCellRenderer
 import com.intellij.ui.ListSpeedSearch
 import com.intellij.ui.ScrollingUtil
 import com.intellij.ui.SimpleTextAttributes
+import com.intellij.ui.TreeUIHelper
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.panels.VerticalLayout
@@ -58,7 +59,7 @@ class ArmeriaRouteExplorerPanel(
                 append(value.secondaryPresentation, SimpleTextAttributes.GRAYED_ATTRIBUTES)
             }
         }
-        ListSpeedSearch(routeList) { it.presentation }
+        TreeUIHelper.getInstance().installListSpeedSearch(routeList) { it.presentation }
         ScrollingUtil.installActions(routeList)
         routeList.addListSelectionListener {
             if (!it.valueIsAdjusting) {
