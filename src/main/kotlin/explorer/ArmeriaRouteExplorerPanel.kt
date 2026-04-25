@@ -92,12 +92,13 @@ class ArmeriaRouteExplorerPanel(
         statusLabel.text = "Refreshing Armeria routes..."
         ReadAction.nonBlocking<List<ArmeriaRoute>> {
             ArmeriaRouteCollector.collect(project)
-        }.finishOnUiThread(ModalityState.any()) { collectedRoutes ->
-            currentRoutes = collectedRoutes
-            routes.clear()
-            collectedRoutes.forEach(routes::addElement)
-            statusLabel.text = summary(collectedRoutes)
-        }.submit(AppExecutorUtil.getAppExecutorService())
+        }.inSmartMode(project)
+            .finishOnUiThread(ModalityState.any()) { collectedRoutes ->
+                currentRoutes = collectedRoutes
+                routes.clear()
+                collectedRoutes.forEach(routes::addElement)
+                statusLabel.text = summary(collectedRoutes)
+            }.submit(AppExecutorUtil.getAppExecutorService())
     }
 
     private fun summary(collectedRoutes: List<ArmeriaRoute> = currentRoutes): String {
