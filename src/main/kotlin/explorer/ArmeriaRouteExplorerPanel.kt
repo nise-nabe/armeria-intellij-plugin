@@ -76,7 +76,7 @@ class ArmeriaRouteExplorerPanel(
         routeList.registerKeyboardAction(
             { navigateToSelection() },
             javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ENTER, 0),
-            javax.swing.JComponent.WHEN_FOCUSED,
+            WHEN_FOCUSED,
         )
 
         val contentPanel = JPanel(VerticalLayout(JBUI.scale(8))).apply {
