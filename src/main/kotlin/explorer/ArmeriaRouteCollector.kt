@@ -16,31 +16,46 @@ import com.intellij.psi.PsiTypeCastExpression
 import com.intellij.psi.PsiVariable
 import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.util.CachedValueProvider
+import com.intellij.psi.util.CachedValuesManager
+import com.intellij.psi.util.PsiModificationTracker
 
 object ArmeriaRouteCollector {
     fun collect(project: Project): List<ArmeriaRoute> {
-        val routes = mutableListOf<ArmeriaRoute>()
-        val javaFiles = FileTypeIndex.getFiles(JavaFileType.INSTANCE, GlobalSearchScope.projectScope(project))
-        for (virtualFile in javaFiles) {
-            val psiFile = com.intellij.psi.PsiManager.getInstance(project).findFile(virtualFile) as? PsiJavaFile ?: continue
-            routes += collectAnnotatedRoutes(psiFile)
-            routes += collectServiceRegistrations(psiFile)
+        return CachedValuesManager.getManager(project).getCachedValue(project) {
+            val routes = mutableListOf<ArmeriaRoute>()
+            val javaFiles = FileTypeIndex.getFiles(JavaFileType.INSTANCE, GlobalSearchScope.projectScope(project))
+            for (virtualFile in javaFiles) {
+                val psiFile =
+                    com.intellij.psi.PsiManager.getInstance(project).findFile(virtualFile) as? PsiJavaFile ?: continue
+                routes += collectAnnotatedRoutes(psiFile)
+                routes += collectServiceRegistrations(psiFile)
+            }
+            CachedValueProvider.Result.create(
+                routes.sortedWith(compareBy(ArmeriaRoute::path, ArmeriaRoute::httpMethod, ArmeriaRoute::target)),
+                PsiModificationTracker.MODIFICATION_COUNT,
+            )
         }
-        return routes.sortedWith(compareBy(ArmeriaRoute::path, ArmeriaRoute::httpMethod, ArmeriaRoute::target))
     }
 
     private fun collectAnnotatedRoutes(file: PsiJavaFile): List<ArmeriaRoute> {
         val routes = mutableListOf<ArmeriaRoute>()
         file.accept(object : JavaRecursiveElementWalkingVisitor() {
             override fun visitClass(aClass: PsiClass) {
-                val classPrefix = ArmeriaRouteSupport.extractPrimaryPath(aClass.getAnnotation(ArmeriaRouteSupport.pathPrefixAnnotation))
-                val classDecorators = ArmeriaRouteSupport.extractNames(aClass.getAnnotation(ArmeriaRouteSupport.decoratorAnnotation))
-                val classExceptionHandlers = ArmeriaRouteSupport.extractNames(aClass.getAnnotation(ArmeriaRouteSupport.exceptionHandlerAnnotation))
+                val classPrefix =
+                    ArmeriaRouteSupport.extractPrimaryPath(aClass.getAnnotation(ArmeriaRouteSupport.pathPrefixAnnotation))
+                val classDecorators =
+                    ArmeriaRouteSupport.extractNames(aClass.getAnnotation(ArmeriaRouteSupport.decoratorAnnotation))
+                val classExceptionHandlers =
+                    ArmeriaRouteSupport.extractNames(aClass.getAnnotation(ArmeriaRouteSupport.exceptionHandlerAnnotation))
                 for (method in aClass.methods) {
                     val annotation = ArmeriaRouteSupport.findRouteAnnotation(method) ?: continue
                     val paths = ArmeriaRouteSupport.extractPaths(annotation.first).ifEmpty { listOf("/") }
-                    val methodDecorators = classDecorators + ArmeriaRouteSupport.extractNames(method.getAnnotation(ArmeriaRouteSupport.decoratorAnnotation))
-                    val methodExceptionHandlers = classExceptionHandlers + ArmeriaRouteSupport.extractNames(method.getAnnotation(ArmeriaRouteSupport.exceptionHandlerAnnotation))
+                    val methodDecorators =
+                        classDecorators + ArmeriaRouteSupport.extractNames(method.getAnnotation(ArmeriaRouteSupport.decoratorAnnotation))
+                    val methodExceptionHandlers = classExceptionHandlers + ArmeriaRouteSupport.extractNames(
+                        method.getAnnotation(ArmeriaRouteSupport.exceptionHandlerAnnotation)
+                    )
                     val target = buildMethodTarget(aClass, method)
                     for (path in paths) {
                         routes += ArmeriaRoute.create(
@@ -149,6 +164,7 @@ object ArmeriaRouteCollector {
                 val classReference = unwrapped.classReference?.qualifiedName ?: unwrapped.classReference?.referenceName
                 classReference ?: expression.text
             }
+
             is PsiMethodCallExpression -> unwrapped.methodExpression.referenceName ?: expression.text
             is PsiReferenceExpression -> {
                 val resolved = unwrapped.resolve()
@@ -158,6 +174,7 @@ object ArmeriaRouteCollector {
                     else -> unwrapped.text
                 }
             }
+
             else -> expression.text
         }
     }
