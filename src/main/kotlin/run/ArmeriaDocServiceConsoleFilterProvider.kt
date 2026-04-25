@@ -1,8 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.run
 
-import com.intellij.ide.browsers.OpenUrlHyperlinkInfo
 import com.intellij.execution.filters.ConsoleFilterProvider
 import com.intellij.execution.filters.Filter
+import com.intellij.ide.browsers.OpenUrlHyperlinkInfo
 import com.intellij.openapi.project.Project
 
 class ArmeriaDocServiceConsoleFilterProvider : ConsoleFilterProvider {

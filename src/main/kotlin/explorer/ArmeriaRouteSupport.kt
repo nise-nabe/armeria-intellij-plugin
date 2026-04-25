@@ -1,10 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
-import com.intellij.psi.PsiAnnotation
-import com.intellij.psi.PsiAnnotationMemberValue
-import com.intellij.psi.PsiArrayInitializerMemberValue
-import com.intellij.psi.PsiLiteralExpression
-import com.intellij.psi.PsiMethod
+import com.intellij.psi.*
 
 object ArmeriaRouteSupport {
     const val pathPrefixAnnotation = "com.linecorp.armeria.server.annotation.PathPrefix"

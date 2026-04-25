@@ -3,17 +3,7 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
-import com.intellij.psi.JavaRecursiveElementWalkingVisitor
-import com.intellij.psi.PsiClass
-import com.intellij.psi.PsiExpression
-import com.intellij.psi.PsiFile
-import com.intellij.psi.PsiJavaFile
-import com.intellij.psi.PsiLiteralExpression
-import com.intellij.psi.PsiMethod
-import com.intellij.psi.PsiMethodCallExpression
-import com.intellij.psi.PsiReferenceExpression
-import com.intellij.psi.PsiTypeCastExpression
-import com.intellij.psi.PsiVariable
+import com.intellij.psi.*
 import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.CachedValueProvider
@@ -27,7 +17,7 @@ object ArmeriaRouteCollector {
             val javaFiles = FileTypeIndex.getFiles(JavaFileType.INSTANCE, GlobalSearchScope.projectScope(project))
             for (virtualFile in javaFiles) {
                 val psiFile =
-                    com.intellij.psi.PsiManager.getInstance(project).findFile(virtualFile) as? PsiJavaFile ?: continue
+                    PsiManager.getInstance(project).findFile(virtualFile) as? PsiJavaFile ?: continue
                 routes += collectAnnotatedRoutes(psiFile)
                 routes += collectServiceRegistrations(psiFile)
             }
@@ -160,15 +150,14 @@ object ArmeriaRouteCollector {
             else -> expression
         } ?: return expression.text
         return when (unwrapped) {
-            is com.intellij.psi.PsiNewExpression -> {
+            is PsiNewExpression -> {
                 val classReference = unwrapped.classReference?.qualifiedName ?: unwrapped.classReference?.referenceName
                 classReference ?: expression.text
             }
 
             is PsiMethodCallExpression -> unwrapped.methodExpression.referenceName ?: expression.text
             is PsiReferenceExpression -> {
-                val resolved = unwrapped.resolve()
-                when (resolved) {
+                when (val resolved = unwrapped.resolve()) {
                     is PsiVariable -> resolved.type.presentableText
                     is PsiClass -> resolved.qualifiedName ?: resolved.name ?: expression.text
                     else -> unwrapped.text
