@@ -68,18 +68,18 @@ object ArmeriaRouteCollector {
         file.accept(object : JavaRecursiveElementWalkingVisitor() {
             override fun visitClass(aClass: PsiClass) {
                 val classPrefix =
-                    ArmeriaRouteSupport.extractPrimaryPath(aClass.getAnnotation(ArmeriaRouteSupport.pathPrefixAnnotation))
+                    ArmeriaRouteSupport.extractPrimaryPath(aClass.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION))
                 val classDecorators =
-                    ArmeriaRouteSupport.extractNames(aClass.getAnnotation(ArmeriaRouteSupport.decoratorAnnotation))
+                    ArmeriaRouteSupport.extractNames(aClass.getAnnotation(ArmeriaRouteSupport.DECORATOR_ANNOTATION))
                 val classExceptionHandlers =
-                    ArmeriaRouteSupport.extractNames(aClass.getAnnotation(ArmeriaRouteSupport.exceptionHandlerAnnotation))
+                    ArmeriaRouteSupport.extractNames(aClass.getAnnotation(ArmeriaRouteSupport.EXCEPTION_HANDLER_ANNOTATION))
                 for (method in aClass.methods) {
                     val annotation = ArmeriaRouteSupport.findRouteAnnotation(method) ?: continue
                     val paths = ArmeriaRouteSupport.extractPaths(annotation.first).ifEmpty { listOf("/") }
                     val methodDecorators =
-                        classDecorators + ArmeriaRouteSupport.extractNames(method.getAnnotation(ArmeriaRouteSupport.decoratorAnnotation))
+                        classDecorators + ArmeriaRouteSupport.extractNames(method.getAnnotation(ArmeriaRouteSupport.DECORATOR_ANNOTATION))
                     val methodExceptionHandlers = classExceptionHandlers + ArmeriaRouteSupport.extractNames(
-                        method.getAnnotation(ArmeriaRouteSupport.exceptionHandlerAnnotation)
+                        method.getAnnotation(ArmeriaRouteSupport.EXCEPTION_HANDLER_ANNOTATION)
                     )
                     val target = buildMethodTarget(aClass, method)
                     for (path in paths) {

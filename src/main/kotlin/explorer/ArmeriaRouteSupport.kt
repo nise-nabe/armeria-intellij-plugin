@@ -8,9 +8,10 @@ import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethod
 
 object ArmeriaRouteSupport {
-    const val pathPrefixAnnotation = "com.linecorp.armeria.server.annotation.PathPrefix"
-    const val decoratorAnnotation = "com.linecorp.armeria.server.annotation.Decorator"
-    const val exceptionHandlerAnnotation = "com.linecorp.armeria.server.annotation.ExceptionHandler"
+    const val PATH_PREFIX_ANNOTATION = "com.linecorp.armeria.server.annotation.PathPrefix"
+    const val DECORATOR_ANNOTATION = "com.linecorp.armeria.server.annotation.Decorator"
+    const val EXCEPTION_HANDLER_ANNOTATION = "com.linecorp.armeria.server.annotation.ExceptionHandler"
+
 
     val routeAnnotations = mapOf(
         "com.linecorp.armeria.server.annotation.Get" to "GET",

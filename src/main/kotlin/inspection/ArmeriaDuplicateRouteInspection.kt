@@ -48,7 +48,7 @@ private data class ArmeriaMethodRoute(
         fun from(method: PsiMethod): ArmeriaMethodRoute? {
             val annotation = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return null
             val classPrefix = ArmeriaRouteSupport.extractPrimaryPath(
-                method.containingClass?.getAnnotation(ArmeriaRouteSupport.pathPrefixAnnotation),
+                method.containingClass?.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION),
             )
             val paths = ArmeriaRouteSupport.extractPaths(annotation.first).ifEmpty { listOf("/") }
             return ArmeriaMethodRoute(annotation.second, classPrefix, paths)
