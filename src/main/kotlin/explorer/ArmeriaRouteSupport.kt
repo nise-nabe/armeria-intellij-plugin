@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiAnnotationMemberValue
 import com.intellij.psi.PsiArrayInitializerMemberValue
@@ -63,8 +64,16 @@ object ArmeriaRouteSupport {
             null -> emptyList()
             is PsiLiteralExpression -> listOfNotNull(value.value as? String)
             is PsiArrayInitializerMemberValue -> value.initializers.flatMap(::extractStrings)
-            else -> listOf(renderMemberValue(value)).filter(String::isNotBlank)
+            else -> evaluateConstant(value)?.let { listOf(it) } ?: emptyList()
         }
+    }
+
+    private fun evaluateConstant(value: PsiAnnotationMemberValue): String? {
+        val helper = JavaPsiFacade.getInstance(value.project).constantEvaluationHelper
+
+        val result = helper.computeConstantExpression(value)
+
+        return result as? String
     }
 
     fun renderMemberValue(value: PsiAnnotationMemberValue?): String {
