@@ -39,7 +39,7 @@ object ArmeriaRouteCollector {
             ?.any { statement ->
                 statement.importReference?.qualifiedName?.startsWith(armeriaPackagePrefix) == true
             } == true
-        return importsArmeria || file.viewProvider.contents.contains(armeriaPackagePrefix)
+        return importsArmeria || file.viewProvider.contents.indexOf(armeriaPackagePrefix) >= 0
     }
 
     private fun collectAnnotatedRoutes(file: PsiJavaFile): List<ArmeriaRoute> {
