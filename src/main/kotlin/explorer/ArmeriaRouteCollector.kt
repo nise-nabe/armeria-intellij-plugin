@@ -40,9 +40,12 @@ object ArmeriaRouteCollector {
             ?.any { statement ->
                 statement.importReference?.qualifiedName?.startsWith(ARMERIA_PACKAGE_PREFIX) == true
             } ?: false
+        if (hasArmeriaImports) {
+            return true
+        }
         val contents = file.viewProvider.contents
         val searchWindow = contents.subSequence(0, minOf(contents.length, ARMERIA_HEADER_SCAN_LIMIT))
-        return hasArmeriaImports || searchWindow.indexOf(ARMERIA_PACKAGE_PREFIX) >= 0
+        return searchWindow.indexOf(ARMERIA_PACKAGE_PREFIX) >= 0
     }
 
     private fun collectAnnotatedRoutes(file: PsiJavaFile): List<ArmeriaRoute> {
