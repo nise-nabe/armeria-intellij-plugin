@@ -27,16 +27,6 @@ import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.psi.KtFile
 
 object ArmeriaRouteCollector {
-    private enum class RouteProtocol(private val messageKey: String) {
-        HTTP("route.explorer.protocol.http"),
-        GRPC("route.explorer.protocol.grpc"),
-        DOC_SERVICE("route.explorer.protocol.docService"),
-        THRIFT("route.explorer.protocol.thrift"),
-        ;
-
-        fun presentableName(): String = message(messageKey)
-    }
-
     private const val ARMERIA_PACKAGE_PREFIX = "com.linecorp.armeria"
     private const val ARMERIA_HEADER_SCAN_LIMIT = 4096
     private val ARMERIA_REFERENCE_PATTERN =
@@ -105,7 +95,7 @@ object ArmeriaRouteCollector {
                         routes += ArmeriaRoute.create(
                             element = method,
                             kind = message("route.explorer.kind.annotatedService"),
-                            protocol = RouteProtocol.HTTP.presentableName(),
+                            protocol = ArmeriaRouteProtocol.HTTP.presentableName(),
                             httpMethod = annotation.second,
                             path = ArmeriaRouteSupport.combinePaths(classPrefix, path),
                             target = target,
@@ -141,9 +131,9 @@ object ArmeriaRouteCollector {
                 val protocol = detectProtocol(implementationExpression.text)
                 val target = extractTarget(implementationExpression)
                 val kind = when (protocol) {
-                    RouteProtocol.DOC_SERVICE -> message("route.explorer.kind.docService")
-                    RouteProtocol.GRPC -> message("route.explorer.kind.grpcService")
-                    RouteProtocol.THRIFT -> message("route.explorer.kind.thriftService")
+                    ArmeriaRouteProtocol.DOC_SERVICE -> message("route.explorer.kind.docService")
+                    ArmeriaRouteProtocol.GRPC -> message("route.explorer.kind.grpcService")
+                    ArmeriaRouteProtocol.THRIFT -> message("route.explorer.kind.thriftService")
                     else -> if (methodName == "annotatedService") {
                         message("route.explorer.kind.annotatedServiceRegistration")
                     } else {
@@ -215,12 +205,12 @@ object ArmeriaRouteCollector {
         }
     }
 
-    private fun detectProtocol(expressionText: String): RouteProtocol {
+    private fun detectProtocol(expressionText: String): ArmeriaRouteProtocol {
         return when {
-            expressionText.contains("GrpcService") -> RouteProtocol.GRPC
-            expressionText.contains("DocService") -> RouteProtocol.DOC_SERVICE
-            expressionText.contains("Thrift", ignoreCase = true) -> RouteProtocol.THRIFT
-            else -> RouteProtocol.HTTP
+            expressionText.contains("GrpcService") -> ArmeriaRouteProtocol.GRPC
+            expressionText.contains("DocService") -> ArmeriaRouteProtocol.DOC_SERVICE
+            expressionText.contains("Thrift", ignoreCase = true) -> ArmeriaRouteProtocol.THRIFT
+            else -> ArmeriaRouteProtocol.HTTP
         }
     }
 
