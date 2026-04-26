@@ -13,17 +13,25 @@ object ArmeriaRouteSupport {
     const val EXCEPTION_HANDLER_ANNOTATION = "com.linecorp.armeria.server.annotation.ExceptionHandler"
 
 
-    val routeAnnotations = mapOf(
-        "com.linecorp.armeria.server.annotation.Get" to "GET",
-        "com.linecorp.armeria.server.annotation.Head" to "HEAD",
-        "com.linecorp.armeria.server.annotation.Post" to "POST",
-        "com.linecorp.armeria.server.annotation.Put" to "PUT",
-        "com.linecorp.armeria.server.annotation.Delete" to "DELETE",
-        "com.linecorp.armeria.server.annotation.Options" to "OPTIONS",
-        "com.linecorp.armeria.server.annotation.Patch" to "PATCH",
-        "com.linecorp.armeria.server.annotation.Trace" to "TRACE",
-    )
+    const val GET_ANNOTATION = "com.linecorp.armeria.server.annotation.Get"
+    const val HEAD_ANNOTATION = "com.linecorp.armeria.server.annotation.Head"
+    const val POST_ANNOTATION = "com.linecorp.armeria.server.annotation.Post"
+    const val PUT_ANNOTATION = "com.linecorp.armeria.server.annotation.Put"
+    const val DELETE_ANNOTATION = "com.linecorp.armeria.server.annotation.Delete"
+    const val OPTIONS_ANNOTATION = "com.linecorp.armeria.server.annotation.Options"
+    const val PATCH_ANNOTATION = "com.linecorp.armeria.server.annotation.Patch"
+    const val TRACE_ANNOTATION = "com.linecorp.armeria.server.annotation.Trace"
 
+    val routeAnnotations = mapOf(
+        GET_ANNOTATION to "GET",
+        HEAD_ANNOTATION to "HEAD",
+        POST_ANNOTATION to "POST",
+        PUT_ANNOTATION to "PUT",
+        DELETE_ANNOTATION to "DELETE",
+        OPTIONS_ANNOTATION to "OPTIONS",
+        PATCH_ANNOTATION to "PATCH",
+        TRACE_ANNOTATION to "TRACE",
+    )
     fun findRouteAnnotation(method: PsiMethod): Pair<PsiAnnotation, String>? {
         return method.modifierList.annotations.firstNotNullOfOrNull { candidate ->
             val qualifiedName = candidate.qualifiedName ?: return@firstNotNullOfOrNull null
@@ -55,9 +63,15 @@ object ArmeriaRouteSupport {
             return emptyList()
         }
         val value = annotation.findDeclaredAttributeValue("value")
-        return extractStrings(value)
-            .ifEmpty { listOf(renderMemberValue(value)) }
-            .mapNotNull { it.takeIf(String::isNotBlank) }
+        val names = when (value) {
+            is PsiArrayInitializerMemberValue -> {
+                extractStrings(value).ifEmpty {
+                    value.initializers.map(::renderMemberValue)
+                }
+            }
+            else -> extractStrings(value).ifEmpty { listOf(renderMemberValue(value)) }
+        }
+        return names.mapNotNull { it.takeIf(String::isNotBlank) }
     }
 
     fun extractStrings(value: PsiAnnotationMemberValue?): List<String> {
