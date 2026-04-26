@@ -215,14 +215,14 @@ object ArmeriaKotlinRouteCollector {
         } else {
             emptyList()
         }
-        return targetArguments.mapNotNull(KtValueArgument::getArgumentExpression)
+        return targetArguments.mapNotNull { it.getArgumentExpression() }
     }
 
     private fun extractStringValues(expression: KtExpression): List<String> {
         return when (expression) {
             is KtCollectionLiteralExpression -> expression.innerExpressions.flatMap(::extractStringValues)
             is KtCallExpression -> if (expression.calleeExpression?.text in setOf("arrayOf", "listOf")) {
-                expression.valueArguments.mapNotNull(KtValueArgument::getArgumentExpression).flatMap(::extractStringValues)
+                expression.valueArguments.mapNotNull { it.getArgumentExpression() }.flatMap(::extractStringValues)
             } else {
                 listOf(expression.text).filter(String::isNotBlank)
             }
@@ -235,7 +235,7 @@ object ArmeriaKotlinRouteCollector {
         return when (expression) {
             is KtCollectionLiteralExpression -> expression.innerExpressions.flatMap(::extractRenderableValues)
             is KtCallExpression -> if (expression.calleeExpression?.text in setOf("arrayOf", "listOf")) {
-                expression.valueArguments.mapNotNull(KtValueArgument::getArgumentExpression).flatMap(::extractRenderableValues)
+                expression.valueArguments.mapNotNull { it.getArgumentExpression() }.flatMap(::extractRenderableValues)
             } else {
                 listOf(expression.text)
             }
