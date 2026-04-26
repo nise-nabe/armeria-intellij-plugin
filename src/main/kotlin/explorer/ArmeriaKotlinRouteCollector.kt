@@ -208,11 +208,7 @@ object ArmeriaKotlinRouteCollector {
     private fun extractStringValues(expression: KtExpression): List<String> {
         return when (expression) {
             is KtCollectionLiteralExpression -> expression.innerExpressions.flatMap(::extractStringValues)
-            is KtCallExpression -> if (expression.calleeExpression?.text in setOf("arrayOf", "listOf")) {
-                expression.valueArguments.mapNotNull { it.getArgumentExpression() }.flatMap(::extractStringValues)
-            } else {
-                listOf(expression.text).filter(String::isNotBlank)
-            }
+            is KtCallExpression -> extractCallExpressionValues(expression, ::extractStringValues)
             is KtStringTemplateExpression -> listOf(renderStringTemplate(expression))
             else -> listOf(expression.text).filter(String::isNotBlank)
         }
@@ -221,13 +217,20 @@ object ArmeriaKotlinRouteCollector {
     private fun extractRenderableValues(expression: KtExpression): List<String> {
         return when (expression) {
             is KtCollectionLiteralExpression -> expression.innerExpressions.flatMap(::extractRenderableValues)
-            is KtCallExpression -> if (expression.calleeExpression?.text in setOf("arrayOf", "listOf")) {
-                expression.valueArguments.mapNotNull { it.getArgumentExpression() }.flatMap(::extractRenderableValues)
-            } else {
-                listOf(expression.text)
-            }
+            is KtCallExpression -> extractCallExpressionValues(expression, ::extractRenderableValues)
             is KtStringTemplateExpression -> listOf(renderStringTemplate(expression))
             else -> listOf(expression.text)
+        }
+    }
+
+    private fun extractCallExpressionValues(
+        expression: KtCallExpression,
+        nestedExtractor: (KtExpression) -> List<String>,
+    ): List<String> {
+        return if (expression.calleeExpression?.text in setOf("arrayOf", "listOf")) {
+            expression.valueArguments.mapNotNull { it.getArgumentExpression() }.flatMap(nestedExtractor)
+        } else {
+            listOf(expression.text).filter(String::isNotBlank)
         }
     }
 
@@ -262,8 +265,7 @@ object ArmeriaKotlinRouteCollector {
 
     private fun extractRegistrationPath(methodName: String, arguments: List<KtValueArgument>): String? {
         return when (methodName) {
-            "service" -> extractString(arguments.getOrNull(0)?.getArgumentExpression())
-            "serviceUnder" -> extractString(arguments.getOrNull(0)?.getArgumentExpression())
+            "service", "serviceUnder" -> extractString(arguments.getOrNull(0)?.getArgumentExpression())
             "annotatedService" -> if (arguments.size > 1) {
                 extractString(arguments.getOrNull(0)?.getArgumentExpression())
             } else {
