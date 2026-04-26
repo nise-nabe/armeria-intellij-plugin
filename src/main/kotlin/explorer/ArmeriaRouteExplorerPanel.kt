@@ -92,7 +92,10 @@ class ArmeriaRouteExplorerPanel(
         statusLabel.text = "Refreshing Armeria routes..."
         ReadAction.nonBlocking<List<ArmeriaRoute>> {
             ArmeriaRouteCollector.collect(project)
-        }.inSmartMode(project)
+        }
+            .inSmartMode(project)
+            .expireWith(this)
+            .coalesceBy(this)
             .finishOnUiThread(ModalityState.any()) { collectedRoutes ->
                 currentRoutes = collectedRoutes
                 routes.clear()
