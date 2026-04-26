@@ -11,8 +11,8 @@ import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
 
 object ArmeriaRouteCollector {
-    private const val armeriaPackagePrefix = "com.linecorp.armeria"
-    private const val armeriaReferenceScanLimit = 4096
+    private const val ARMERIA_PACKAGE_PREFIX = "com.linecorp.armeria"
+    private const val ARMERIA_REFERENCE_SCAN_LIMIT = 4096
 
     fun collect(project: Project): List<ArmeriaRoute> {
         return CachedValuesManager.getManager(project).getCachedValue(project) {
@@ -38,11 +38,11 @@ object ArmeriaRouteCollector {
         val importsArmeria = file.importList
             ?.allImportStatements
             ?.any { statement ->
-                statement.importReference?.qualifiedName?.startsWith(armeriaPackagePrefix) == true
-            } == true
+                statement.importReference?.qualifiedName?.startsWith(ARMERIA_PACKAGE_PREFIX) == true
+            } ?: false
         val contents = file.viewProvider.contents
-        val searchWindow = contents.subSequence(0, minOf(contents.length, armeriaReferenceScanLimit))
-        return importsArmeria || searchWindow.indexOf(armeriaPackagePrefix) >= 0
+        val searchWindow = contents.subSequence(0, minOf(contents.length, ARMERIA_REFERENCE_SCAN_LIMIT))
+        return importsArmeria || searchWindow.indexOf(ARMERIA_PACKAGE_PREFIX) >= 0
     }
 
     private fun collectAnnotatedRoutes(file: PsiJavaFile): List<ArmeriaRoute> {
