@@ -11,6 +11,8 @@ import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
 
 object ArmeriaRouteCollector {
+    private const val armeriaPackagePrefix = "com.linecorp.armeria"
+
     fun collect(project: Project): List<ArmeriaRoute> {
         return CachedValuesManager.getManager(project).getCachedValue(project) {
             val routes = mutableListOf<ArmeriaRoute>()
@@ -18,6 +20,9 @@ object ArmeriaRouteCollector {
             for (virtualFile in javaFiles) {
                 val psiFile =
                     PsiManager.getInstance(project).findFile(virtualFile) as? PsiJavaFile ?: continue
+                if (!referencesArmeria(psiFile)) {
+                    continue
+                }
                 routes += collectAnnotatedRoutes(psiFile)
                 routes += collectServiceRegistrations(psiFile)
             }
@@ -26,6 +31,15 @@ object ArmeriaRouteCollector {
                 PsiModificationTracker.MODIFICATION_COUNT,
             )
         }
+    }
+
+    private fun referencesArmeria(file: PsiJavaFile): Boolean {
+        val importsArmeria = file.importList
+            ?.allImportStatements
+            ?.any { statement ->
+                statement.importReference?.qualifiedName?.startsWith(armeriaPackagePrefix) == true
+            } == true
+        return importsArmeria || file.viewProvider.contents.contains(armeriaPackagePrefix)
     }
 
     private fun collectAnnotatedRoutes(file: PsiJavaFile): List<ArmeriaRoute> {
