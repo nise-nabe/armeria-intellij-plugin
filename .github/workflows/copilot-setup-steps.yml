@@ -23,9 +23,9 @@ jobs:
 
       - uses: actions/setup-java@v5
         with:
-          distribution: temurin
-          java-version: 25
+          distribution: jetbrains
+          java-version: 21
 
       - uses: gradle/actions/setup-gradle@v6
 
-      - run: ./gradlew assemble
+      - run: ./gradlew --no-daemon compileKotlin test
