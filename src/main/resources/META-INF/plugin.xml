@@ -13,6 +13,20 @@
         <framework.type implementation="com.linecorp.intellij.plugins.armeria.framework.ArmeriaFrameworkEx" />
         <spellchecker.bundledDictionaryProvider implementation="com.linecorp.intellij.plugins.armeria.ArmeriaDictionaryProvider" />
         <deadCode implementation="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaMethodEntryPoint" />
+        <toolWindow id="Armeria Services"
+                    factoryClass="com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteExplorerToolWindowFactory"
+                    anchor="right"
+                    icon="/icons/armeria.svg" />
+        <localInspection language="JAVA"
+                         bundle="messages.ArmeriaBundle"
+                         key="inspection.duplicate.route.display.name"
+                         groupBundle="messages.ArmeriaBundle"
+                         groupKey="inspection.group.armeria"
+                         shortName="ArmeriaDuplicateRoute"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaDuplicateRouteInspection" />
+        <consoleFilterProvider implementation="com.linecorp.intellij.plugins.armeria.run.ArmeriaDocServiceConsoleFilterProvider" />
 
         <!-- Run configuration -->
         <configurationType implementation="com.linecorp.intellij.plugins.armeria.run.ArmeriaRunConfigurationType" />
