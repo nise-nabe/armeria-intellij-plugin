@@ -39,7 +39,9 @@ class ArmeriaRouteExplorerPanel(
                 }
             })
         }
-        toolbar = ActionManager.getInstance().createActionToolbar("ArmeriaRouteExplorer", actionGroup, true).component
+        toolbar = ActionManager.getInstance().createActionToolbar("ArmeriaRouteExplorer", actionGroup, true).also {
+            it.targetComponent = this
+        }.component
 
         routeList.emptyText.text = "No Armeria routes found"
         routeList.cellRenderer = object : ColoredListCellRenderer<ArmeriaRoute>() {
