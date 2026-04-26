@@ -24,7 +24,7 @@ idea {
 
 dependencies {
     intellijPlatform {
-        intellijIdeaUltimate("2026.1")
+        intellijIdeaUltimate("2026.1.1")
         bundledPlugin("com.intellij.java")
         bundledPlugin("org.jetbrains.plugins.gradle")
     }
