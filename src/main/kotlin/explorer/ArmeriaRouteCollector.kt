@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
+import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.JavaRecursiveElementWalkingVisitor
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiExpression
@@ -165,7 +166,12 @@ object ArmeriaRouteCollector {
         return when (expression) {
             null -> null
             is PsiLiteralExpression -> expression.value as? String
-            else -> expression.text.takeIf { StringUtil.isNotEmpty(it) }
+            else -> {
+                val constantValue = JavaPsiFacade.getInstance(expression.project)
+                    .constantEvaluationHelper
+                    .computeConstantExpression(expression) as? String
+                constantValue ?: expression.text.takeIf { StringUtil.isNotEmpty(it) }
+            }
         }
     }
 
