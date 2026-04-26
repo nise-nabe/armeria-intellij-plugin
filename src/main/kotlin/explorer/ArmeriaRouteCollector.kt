@@ -23,6 +23,8 @@ import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
 import com.linecorp.intellij.plugins.armeria.message
+import org.jetbrains.kotlin.idea.KotlinFileType
+import org.jetbrains.kotlin.psi.KtFile
 
 object ArmeriaRouteCollector {
     private enum class RouteProtocol(private val messageKey: String) {
@@ -52,6 +54,12 @@ object ArmeriaRouteCollector {
                 }
                 routes += collectAnnotatedRoutes(psiFile)
                 routes += collectServiceRegistrations(psiFile)
+            }
+            val kotlinFiles = FileTypeIndex.getFiles(KotlinFileType.INSTANCE, GlobalSearchScope.projectScope(project))
+            for (virtualFile in kotlinFiles) {
+                val psiFile =
+                    PsiManager.getInstance(project).findFile(virtualFile) as? KtFile ?: continue
+                routes += ArmeriaKotlinRouteCollector.collect(psiFile)
             }
             CachedValueProvider.Result.create(
                 routes.sortedWith(compareBy(ArmeriaRoute::path, ArmeriaRoute::httpMethod, ArmeriaRoute::target)),
