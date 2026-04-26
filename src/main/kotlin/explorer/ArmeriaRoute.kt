@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.intellij.psi.PsiElement
 import com.intellij.psi.SmartPointerManager
 import com.intellij.psi.SmartPsiElementPointer
+import com.linecorp.intellij.plugins.armeria.message
 
 data class ArmeriaRoute(
     val kind: String,
@@ -25,15 +26,13 @@ data class ArmeriaRoute(
     val secondaryPresentation: String
         get() = buildString {
             append(kind)
-            append(" · ")
+            append(message("route.explorer.secondary.separator"))
             append(protocol)
             if (decorators.isNotEmpty()) {
-                append(" · decorators: ")
-                append(decorators.joinToString())
+                append(message("route.explorer.secondary.decorators", decorators.joinToString()))
             }
             if (exceptionHandlers.isNotEmpty()) {
-                append(" · handlers: ")
-                append(exceptionHandlers.joinToString())
+                append(message("route.explorer.secondary.handlers", exceptionHandlers.joinToString()))
             }
         }
 

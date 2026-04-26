@@ -22,13 +22,17 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
+import com.linecorp.intellij.plugins.armeria.message
 
 object ArmeriaRouteCollector {
-    private enum class RouteProtocol(val value: String) {
-        HTTP("HTTP"),
-        GRPC("gRPC"),
-        DOC_SERVICE("DocService"),
-        THRIFT("Thrift"),
+    private enum class RouteProtocol(private val messageKey: String) {
+        HTTP("route.explorer.protocol.http"),
+        GRPC("route.explorer.protocol.grpc"),
+        DOC_SERVICE("route.explorer.protocol.docService"),
+        THRIFT("route.explorer.protocol.thrift"),
+        ;
+
+        fun presentableName(): String = message(messageKey)
     }
 
     private const val ARMERIA_PACKAGE_PREFIX = "com.linecorp.armeria"
@@ -92,8 +96,8 @@ object ArmeriaRouteCollector {
                     for (path in paths) {
                         routes += ArmeriaRoute.create(
                             element = method,
-                            kind = "Annotated service",
-                            protocol = "HTTP",
+                            kind = message("route.explorer.kind.annotatedService"),
+                            protocol = RouteProtocol.HTTP.presentableName(),
                             httpMethod = annotation.second,
                             path = ArmeriaRouteSupport.combinePaths(classPrefix, path),
                             target = target,
@@ -129,15 +133,19 @@ object ArmeriaRouteCollector {
                 val protocol = detectProtocol(implementationExpression.text)
                 val target = extractTarget(implementationExpression)
                 val kind = when (protocol) {
-                    RouteProtocol.DOC_SERVICE -> "Doc service"
-                    RouteProtocol.GRPC -> "gRPC service"
-                    RouteProtocol.THRIFT -> "Thrift service"
-                    else -> if (methodName == "annotatedService") "Annotated service registration" else "Service registration"
+                    RouteProtocol.DOC_SERVICE -> message("route.explorer.kind.docService")
+                    RouteProtocol.GRPC -> message("route.explorer.kind.grpcService")
+                    RouteProtocol.THRIFT -> message("route.explorer.kind.thriftService")
+                    else -> if (methodName == "annotatedService") {
+                        message("route.explorer.kind.annotatedServiceRegistration")
+                    } else {
+                        message("route.explorer.kind.serviceRegistration")
+                    }
                 }
                 routes += ArmeriaRoute.create(
                     element = expression,
                     kind = kind,
-                    protocol = protocol.value,
+                    protocol = protocol.presentableName(),
                     httpMethod = if (methodName == "serviceUnder") "UNDER" else "ANY",
                     path = ArmeriaRouteSupport.normalizePath(path),
                     target = target,
