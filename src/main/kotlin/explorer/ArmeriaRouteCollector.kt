@@ -24,6 +24,13 @@ import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
 
 object ArmeriaRouteCollector {
+    private enum class RouteProtocol(val value: String) {
+        HTTP("HTTP"),
+        GRPC("gRPC"),
+        DOC_SERVICE("DocService"),
+        THRIFT("Thrift"),
+    }
+
     private const val ARMERIA_PACKAGE_PREFIX = "com.linecorp.armeria"
     private const val ARMERIA_HEADER_SCAN_LIMIT = 4096
     private val ARMERIA_REFERENCE_PATTERN =
@@ -122,15 +129,15 @@ object ArmeriaRouteCollector {
                 val protocol = detectProtocol(implementationExpression.text)
                 val target = extractTarget(implementationExpression)
                 val kind = when (protocol) {
-                    "DocService" -> "Doc service"
-                    "gRPC" -> "gRPC service"
-                    "Thrift" -> "Thrift service"
+                    RouteProtocol.DOC_SERVICE -> "Doc service"
+                    RouteProtocol.GRPC -> "gRPC service"
+                    RouteProtocol.THRIFT -> "Thrift service"
                     else -> if (methodName == "annotatedService") "Annotated service registration" else "Service registration"
                 }
                 routes += ArmeriaRoute.create(
                     element = expression,
                     kind = kind,
-                    protocol = protocol,
+                    protocol = protocol.value,
                     httpMethod = if (methodName == "serviceUnder") "UNDER" else "ANY",
                     path = ArmeriaRouteSupport.normalizePath(path),
                     target = target,
@@ -154,11 +161,28 @@ object ArmeriaRouteCollector {
         return "$className#${method.name}()"
     }
 
+    private enum class RegistrationMethod {
+        SERVICE,
+        SERVICE_UNDER,
+        ANNOTATED_SERVICE;
+
+        companion object {
+            fun fromMethodName(name: String): RegistrationMethod? {
+                return when (name) {
+                    "service" -> SERVICE
+                    "serviceUnder" -> SERVICE_UNDER
+                    "annotatedService" -> ANNOTATED_SERVICE
+                    else -> null
+                }
+            }
+        }
+    }
+
     private fun extractRegistrationPath(methodName: String, arguments: Array<PsiExpression>): String? {
-        return when (methodName) {
-            "service", "serviceUnder" -> extractString(arguments.getOrNull(0))
-            "annotatedService" -> if (arguments.size > 1) extractString(arguments.getOrNull(0)) else "/"
-            else -> null
+        val method = RegistrationMethod.fromMethodName(methodName) ?: return null
+        return when (method) {
+            RegistrationMethod.SERVICE, RegistrationMethod.SERVICE_UNDER -> extractString(arguments.getOrNull(0))
+            RegistrationMethod.ANNOTATED_SERVICE -> if (arguments.size > 1) extractString(arguments.getOrNull(0)) else "/"
         }
     }
 
@@ -175,12 +199,12 @@ object ArmeriaRouteCollector {
         }
     }
 
-    private fun detectProtocol(expressionText: String): String {
+    private fun detectProtocol(expressionText: String): RouteProtocol {
         return when {
-            expressionText.contains("GrpcService") -> "gRPC"
-            expressionText.contains("DocService") -> "DocService"
-            expressionText.contains("Thrift", ignoreCase = true) -> "Thrift"
-            else -> "HTTP"
+            expressionText.contains("GrpcService") -> RouteProtocol.GRPC
+            expressionText.contains("DocService") -> RouteProtocol.DOC_SERVICE
+            expressionText.contains("Thrift", ignoreCase = true) -> RouteProtocol.THRIFT
+            else -> RouteProtocol.HTTP
         }
     }
 
