@@ -95,10 +95,7 @@ object ArmeriaKotlinRouteCollector {
                 }
                 val arguments = expression.valueArguments
                 val path = extractRegistrationPath(methodName, arguments) ?: return
-                val implementationExpression = when (methodName) {
-                    "annotatedService" -> arguments.getOrNull(1)?.getArgumentExpression() ?: arguments.getOrNull(0)?.getArgumentExpression()
-                    else -> arguments.getOrNull(1)?.getArgumentExpression()
-                } ?: return
+                val implementationExpression = extractImplementationExpression(methodName, arguments) ?: return
                 val protocol = detectProtocol(implementationExpression.text)
                 val target = extractTarget(implementationExpression)
                 val kind = when (protocol) {
@@ -243,8 +240,19 @@ object ArmeriaKotlinRouteCollector {
     }
 
     private fun looksLikeArmeriaBuilderCall(expression: KtCallExpression): Boolean {
-        val qualifierText = (expression.parent as? KtDotQualifiedExpression)?.receiverExpression?.text ?: return false
-        return qualifierText.contains("Server.builder()") || qualifierText.contains("serverBuilder")
+        val qualifier = (expression.parent as? KtDotQualifiedExpression)?.receiverExpression ?: return false
+        return containsArmeriaBuilderPattern(qualifier)
+    }
+
+    private fun containsArmeriaBuilderPattern(expression: KtExpression): Boolean {
+        if (expression.text.contains("Server.builder()") || expression.text.contains("serverBuilder")) {
+            return true
+        }
+        return when (expression) {
+            is KtDotQualifiedExpression -> containsArmeriaBuilderPattern(expression.receiverExpression)
+            is KtCallExpression -> (expression.parent as? KtDotQualifiedExpression)?.receiverExpression?.let(::containsArmeriaBuilderPattern) == true
+            else -> false
+        }
     }
 
     private fun buildMethodTarget(classOrObject: KtClassOrObject, function: KtNamedFunction): String {
@@ -262,6 +270,13 @@ object ArmeriaKotlinRouteCollector {
                 "/"
             }
             else -> null
+        }
+    }
+
+    private fun extractImplementationExpression(methodName: String, arguments: List<KtValueArgument>): KtExpression? {
+        return when (methodName) {
+            "annotatedService" -> arguments.getOrNull(1)?.getArgumentExpression() ?: arguments.getOrNull(0)?.getArgumentExpression()
+            else -> arguments.getOrNull(1)?.getArgumentExpression()
         }
     }
 
