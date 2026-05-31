@@ -14,6 +14,7 @@ data class ArmeriaRoute(
     val moduleName: String,
     val targetUnresolved: Boolean,
     val isDocService: Boolean,
+    val annotatedServiceHasPathPrefix: Boolean = false,
     val decorators: List<String>,
     val exceptionHandlers: List<String>,
     val pointer: SmartPsiElementPointer<PsiElement>,
@@ -72,6 +73,7 @@ data class ArmeriaRoute(
             routeMatch: RouteMatch,
             targetUnresolved: Boolean = false,
             isDocService: Boolean = false,
+            annotatedServiceHasPathPrefix: Boolean = false,
             decorators: List<String> = emptyList(),
             exceptionHandlers: List<String> = emptyList(),
         ): ArmeriaRoute {
@@ -84,6 +86,7 @@ data class ArmeriaRoute(
                 moduleName = ArmeriaRouteMetadata.moduleName(element),
                 targetUnresolved = targetUnresolved,
                 isDocService = isDocService,
+                annotatedServiceHasPathPrefix = annotatedServiceHasPathPrefix,
                 decorators = decorators,
                 exceptionHandlers = exceptionHandlers,
                 pointer = SmartPointerManager.createPointer(element),

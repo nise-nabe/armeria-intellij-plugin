@@ -35,7 +35,11 @@ object ArmeriaRouteDetailFormatter {
                 route.httpMethod,
                 route.path,
             )
-            RouteMatch.ANNOTATED_SERVICE -> message("route.explorer.registration.annotatedService", route.path)
+            RouteMatch.ANNOTATED_SERVICE -> if (route.annotatedServiceHasPathPrefix) {
+                message("route.explorer.registration.builderCall", "annotatedService", route.path)
+            } else {
+                message("route.explorer.registration.annotatedService")
+            }
             RouteMatch.SERVICE -> message("route.explorer.registration.service", route.path)
             RouteMatch.SERVICE_UNDER -> message("route.explorer.registration.serviceUnder", route.path)
             RouteMatch.NON_HTTP -> message("route.explorer.registration.nonHttp", route.protocol, route.path)

@@ -231,6 +231,8 @@ object ArmeriaRouteCollector {
         val targetUnresolved = ArmeriaRouteTargetExtractor.isUnresolvedTarget(implementationExpression, target)
         val registrationMethod = RegistrationMethod.fromMethodName(methodName) ?: return
         val routeMatch = resolveRouteMatch(registrationMethod, protocol)
+        val annotatedServiceHasPathPrefix =
+            registrationMethod == RegistrationMethod.ANNOTATED_SERVICE && arguments.size > 1
         routes += ArmeriaRoute.create(
             element = expression,
             protocol = protocol.presentableName(),
@@ -240,6 +242,7 @@ object ArmeriaRouteCollector {
             routeMatch = routeMatch,
             targetUnresolved = targetUnresolved,
             isDocService = protocol == RouteProtocol.DOC_SERVICE,
+            annotatedServiceHasPathPrefix = annotatedServiceHasPathPrefix,
         )
     }
 

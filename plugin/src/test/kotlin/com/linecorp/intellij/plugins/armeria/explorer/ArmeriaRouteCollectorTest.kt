@@ -283,6 +283,11 @@ class ArmeriaRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         val registrationRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ANNOTATED_SERVICE }
         assertNotNull(registrationRoute)
         assertEquals("/", registrationRoute!!.path)
+        assertFalse(registrationRoute.annotatedServiceHasPathPrefix)
+        assertEquals(
+            "Server.builder().annotatedService(…)",
+            ArmeriaRouteDetailFormatter.registrationSummary(registrationRoute),
+        )
 
         val annotatedMethodRoute = routes.firstOrNull { it.path == "/hello" }
         assertNotNull(annotatedMethodRoute)

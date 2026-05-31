@@ -1,5 +1,11 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.TextRange
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
+import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 
 class ArmeriaRouteDetailFormatterTest : LightJavaCodeInsightFixtureTestCase() {
@@ -61,6 +67,48 @@ class ArmeriaRouteDetailFormatterTest : LightJavaCodeInsightFixtureTestCase() {
         assertTrue(attachments.contains("handlers:"))
         assertTrue(attachments.contains("MyDecorator"))
         assertTrue(attachments.contains("MyHandler"))
+    }
+
+    fun testRegistrationSummary_annotatedServiceWithoutPathPrefix() {
+        val route = ArmeriaRoute(
+            protocol = "HTTP",
+            httpMethod = "",
+            path = "/",
+            target = "example.HelloService",
+            routeMatch = RouteMatch.ANNOTATED_SERVICE,
+            moduleName = "app",
+            targetUnresolved = false,
+            isDocService = false,
+            annotatedServiceHasPathPrefix = false,
+            decorators = emptyList(),
+            exceptionHandlers = emptyList(),
+            pointer = TestPsiPointer,
+        )
+        assertEquals(
+            "Server.builder().annotatedService(…)",
+            ArmeriaRouteDetailFormatter.registrationSummary(route),
+        )
+    }
+
+    fun testRegistrationSummary_annotatedServiceWithPathPrefix() {
+        val route = ArmeriaRoute(
+            protocol = "HTTP",
+            httpMethod = "",
+            path = "/api",
+            target = "example.HelloService",
+            routeMatch = RouteMatch.ANNOTATED_SERVICE,
+            moduleName = "app",
+            targetUnresolved = false,
+            isDocService = false,
+            annotatedServiceHasPathPrefix = true,
+            decorators = emptyList(),
+            exceptionHandlers = emptyList(),
+            pointer = TestPsiPointer,
+        )
+        assertEquals(
+            "Server.builder().annotatedService(\"/api\", …)",
+            ArmeriaRouteDetailFormatter.registrationSummary(route),
+        )
     }
 
     fun testRegisteredInHint_serviceRegistration() {
@@ -136,5 +184,19 @@ class ArmeriaRouteDetailFormatterTest : LightJavaCodeInsightFixtureTestCase() {
             }
             """.trimIndent(),
         )
+    }
+
+    private object TestPsiPointer : SmartPsiElementPointer<PsiElement> {
+        override fun getElement(): PsiElement? = null
+
+        override fun getContainingFile(): PsiFile? = null
+
+        override fun getRange(): TextRange? = null
+
+        override fun getProject(): Project = throw UnsupportedOperationException()
+
+        override fun getVirtualFile(): VirtualFile = throw UnsupportedOperationException()
+
+        override fun getPsiRange(): TextRange? = null
     }
 }
