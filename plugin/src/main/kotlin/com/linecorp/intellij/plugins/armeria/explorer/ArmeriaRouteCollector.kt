@@ -63,10 +63,14 @@ object ArmeriaRouteCollector {
         val routes = mutableListOf<ArmeriaRoute>()
         val fallbackScannedFiles = linkedSetOf<VirtualFile>()
         val seenServiceRegistrations = mutableSetOf<String>()
+        val psiFacade = JavaPsiFacade.getInstance(project)
+        val serverBuilderOnClasspath = psiFacade.findClass(SERVER_BUILDER_CLASS, scope) != null
 
         collectAnnotatedRoutesIndexed(project, scope, routes)
         collectServiceRegistrationsIndexed(project, scope, routes, seenServiceRegistrations)
-        collectServiceRegistrationsFallback(project, scope, routes, fallbackScannedFiles, seenServiceRegistrations)
+        if (!serverBuilderOnClasspath) {
+            collectServiceRegistrationsFallback(project, scope, routes, fallbackScannedFiles, seenServiceRegistrations)
+        }
 
         return CachedValueProvider.Result.create(
             routes.sortedWith(
