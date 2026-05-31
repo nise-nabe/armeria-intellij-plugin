@@ -1,0 +1,17 @@
+[versions]
+jdk = "21"
+kotlin = "2.3.21"
+intellij-platform-plugin = "2.16.0"
+intellij-platform = "2026.1.1"
+changelog = "2.5.0"
+
+[libraries]
+kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+intellij-platform-gradle-plugin = { module = "org.jetbrains.intellij.platform:org.jetbrains.intellij.platform.gradle.plugin", version.ref = "intellij-platform-plugin" }
+changelog-gradle-plugin = { module = "org.jetbrains.changelog:org.jetbrains.changelog.gradle.plugin", version.ref = "changelog" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+intellij-platform = { id = "org.jetbrains.intellij.platform", version.ref = "intellij-platform-plugin" }
+intellij-platform-settings = { id = "org.jetbrains.intellij.platform.settings", version.ref = "intellij-platform-plugin" }
+changelog = { id = "org.jetbrains.changelog", version.ref = "changelog" }

@@ -1,0 +1,40 @@
+import org.jetbrains.changelog.Changelog
+
+plugins {
+    id("com.linecorp.intellij.platform-plugin")
+}
+
+group = "com.linecorp.intellij"
+version = providers.gradleProperty("pluginVersion").get()
+
+dependencies {
+    intellijPlatform {
+        intellijIdeaUltimate(providers.gradleProperty("platformVersion").get())
+        bundledPlugin("com.intellij.java")
+        bundledPlugin("org.jetbrains.plugins.gradle")
+    }
+}
+
+intellijPlatform {
+    pluginConfiguration {
+        id = "com.linecorp.intellij.armeria-intellij-plugin"
+        name = "Armeria"
+        version = project.version.toString()
+        vendor {
+            name = "nise_nabe"
+            email = "nise.nabe@gmail.com"
+            url = "https://github.com/nise-nabe/armeria-intellij-plugin"
+        }
+        val changelog = project.changelog
+        changeNotes = providers.gradleProperty("pluginVersion").map { pluginVersion ->
+            with(changelog) {
+                renderItem(
+                    (getOrNull(pluginVersion) ?: getUnreleased())
+                        .withHeader(false)
+                        .withEmptySections(false),
+                    Changelog.OutputType.HTML,
+                )
+            }
+        }
+    }
+}

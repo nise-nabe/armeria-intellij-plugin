@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.linecorp.intellij.armeria-intellij-plugin</id>
     <name>Armeria</name>
-    <vendor email="nise.nabe@gmail.com" url="https://www.nisecoder.com">nise_nabe</vendor>
+    <vendor email="nise.nabe@gmail.com" url="https://github.com/nise-nabe/armeria-intellij-plugin">nise_nabe</vendor>
 
     <depends>com.intellij.java</depends>
     <depends>org.jetbrains.plugins.gradle</depends>
