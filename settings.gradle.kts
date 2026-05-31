@@ -1,18 +1,8 @@
 import org.jetbrains.intellij.platform.gradle.extensions.intellijPlatform
 
-rootProject.name = "armeria-intellij-plugin"
-
-
 pluginManagement {
     repositories {
         gradlePluginPortal()
-    }
-
-    plugins {
-        kotlin("jvm") version "2.3.21"
-        id("org.jetbrains.intellij.platform") version "2.16.0"
-        id("org.jetbrains.gradle.plugin.idea-ext") version "1.4.1"
-        id("org.jetbrains.changelog") version "2.5.0"
     }
 }
 
@@ -24,12 +14,14 @@ plugins {
 @Suppress("UnstableApiUsage")
 dependencyResolutionManagement {
     repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
-
     repositories {
         mavenCentral()
-
         intellijPlatform {
             defaultRepositories()
         }
     }
 }
+
+rootProject.name = "armeria-intellij-plugin"
+includeBuild("build-logic")
+include("plugin")
