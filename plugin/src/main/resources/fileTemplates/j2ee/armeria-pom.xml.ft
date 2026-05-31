@@ -161,6 +161,45 @@
             <artifactId>armeria-saml</artifactId>
         </dependency>
 #end
+#if ($context.hasLibrary("armeria-scala_2.12"))
+#if ($context.hasLanguage("scala"))
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <version>2.12.15</version>
+        </dependency>
+#end
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-scala_2.12</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-scala_2.13"))
+#if ($context.hasLanguage("scala"))
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <version>2.13.8</version>
+        </dependency>
+#end
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-scala_2.13</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-scala_3"))
+#if ($context.hasLanguage("scala"))
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala3-library_3</artifactId>
+            <version>3.1.2</version>
+        </dependency>
+#end
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-scala_3</artifactId>
+        </dependency>
+#end
 #if ($context.hasLibrary("armeria-scalapb_2.12"))
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
@@ -225,6 +264,12 @@
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria-thrift0.18</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-tomcat8"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-tomcat8</artifactId>
         </dependency>
 #end
 #if ($context.hasLibrary("armeria-tomcat9"))
@@ -307,6 +352,10 @@
         <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
         <testSourceDirectory>${project.basedir}/src/test/kotlin</testSourceDirectory>
 #end
+#if ($context.hasLanguage("scala"))
+        <sourceDirectory>${project.basedir}/src/main/scala</sourceDirectory>
+        <testSourceDirectory>${project.basedir}/src/test/scala</testSourceDirectory>
+#end
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -340,9 +389,21 @@
                 </executions>
             </plugin>
 #end
-        </plugins>
-#if ($context.hasLanguage("kotlin"))
-
+#if ($context.hasLanguage("scala"))
+            <plugin>
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
+                <version>4.9.2</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>testCompile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
 #end
+        </plugins>
     </build>
 </project>
