@@ -13,10 +13,6 @@ import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
-import com.intellij.psi.PsiNewExpression
-import com.intellij.psi.PsiReferenceExpression
-import com.intellij.psi.PsiTypeCastExpression
-import com.intellij.psi.PsiVariable
 import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.searches.AnnotatedElementsSearch
@@ -26,16 +22,17 @@ import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
 import com.linecorp.intellij.plugins.armeria.message
 
-object ArmeriaRouteCollector {
-    private enum class RouteProtocol(private val messageKey: String) {
-        HTTP("route.explorer.protocol.http"),
-        GRPC("route.explorer.protocol.grpc"),
-        DOC_SERVICE("route.explorer.protocol.docService"),
-        THRIFT("route.explorer.protocol.thrift"),
-        ;
+internal enum class RouteProtocol(private val messageKey: String) {
+    HTTP("route.explorer.protocol.http"),
+    GRPC("route.explorer.protocol.grpc"),
+    DOC_SERVICE("route.explorer.protocol.docService"),
+    THRIFT("route.explorer.protocol.thrift"),
+    ;
 
-        fun presentableName(): String = message(messageKey)
-    }
+    fun presentableName(): String = message(messageKey)
+}
+
+object ArmeriaRouteCollector {
 
     private const val ARMERIA_PACKAGE_PREFIX = "com.linecorp.armeria"
     private const val ARMERIA_SERVER_PACKAGE_PREFIX = "com.linecorp.armeria.server"
@@ -227,9 +224,9 @@ object ArmeriaRouteCollector {
             "annotatedService" -> arguments.getOrNull(1) ?: arguments.getOrNull(0)
             else -> arguments.getOrNull(1)
         } ?: return
-        val protocol = detectProtocol(implementationExpression.text)
-        val target = extractTarget(implementationExpression)
-        val targetUnresolved = isUnresolvedTarget(implementationExpression, target)
+        val protocol = ArmeriaRouteTargetExtractor.detectProtocol(implementationExpression.text)
+        val target = ArmeriaRouteTargetExtractor.extractTarget(implementationExpression)
+        val targetUnresolved = ArmeriaRouteTargetExtractor.isUnresolvedTarget(implementationExpression, target)
         val registrationMethod = RegistrationMethod.fromMethodName(methodName) ?: return
         val routeMatch = resolveRouteMatch(registrationMethod, protocol)
         routes += ArmeriaRoute.create(
@@ -317,119 +314,4 @@ object ArmeriaRouteCollector {
         }
     }
 
-    private fun detectProtocol(expressionText: String): RouteProtocol {
-        return when {
-            expressionText.contains("GrpcService") -> RouteProtocol.GRPC
-            expressionText.contains("DocService") -> RouteProtocol.DOC_SERVICE
-            expressionText.contains("Thrift", ignoreCase = true) -> RouteProtocol.THRIFT
-            else -> RouteProtocol.HTTP
-        }
-    }
-
-    private fun isUnresolvedTarget(expression: PsiExpression, extractedTarget: String): Boolean {
-        val rawTarget = expression.text.trim()
-        val unwrapped = unwrapCast(expression) ?: return true
-        return when (unwrapped) {
-            is PsiNewExpression -> {
-                ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
-                unwrapped.classReference?.resolve() == null
-            }
-            is PsiReferenceExpression -> {
-                if (extractedTarget != rawTarget) {
-                    return false
-                }
-                ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
-                unwrapped.resolve() == null
-            }
-            is PsiMethodCallExpression -> false
-            else -> extractedTarget == rawTarget
-        }
-    }
-
-    private fun extractTarget(expression: PsiExpression): String {
-        val unwrapped = unwrapCast(expression) ?: return expression.text
-        return when (unwrapped) {
-            is PsiNewExpression -> {
-                val classReference = unwrapped.classReference?.qualifiedName ?: unwrapped.classReference?.referenceName
-                classReference ?: expression.text
-            }
-
-            is PsiMethodCallExpression -> extractMethodCallTarget(unwrapped, expression)
-            is PsiReferenceExpression -> {
-                ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
-                when (val resolved = unwrapped.resolve()) {
-                    is PsiVariable -> resolved.type.presentableText
-                    is PsiClass -> resolved.qualifiedName ?: resolved.name ?: expression.text
-                    else -> unwrapped.text
-                }
-            }
-
-            else -> expression.text
-        }
-    }
-
-    private fun unwrapCast(expression: PsiExpression): PsiExpression? {
-        return when (expression) {
-            is PsiTypeCastExpression -> expression.operand
-            else -> expression
-        }
-    }
-
-    private fun extractMethodCallTarget(call: PsiMethodCallExpression, fallbackExpression: PsiExpression): String {
-        val methodName = call.methodExpression.referenceName
-        if (methodName == "build") {
-            val qualifier = call.methodExpression.qualifierExpression
-            if (qualifier != null) {
-                return extractTarget(qualifier)
-            }
-        }
-        if (methodName == "builder") {
-            extractBuilderSeed(call)?.let { return it }
-        }
-        val qualifier = call.methodExpression.qualifierExpression
-        if (qualifier != null) {
-            val fromQualifier = extractTarget(qualifier)
-            if (fromQualifier != methodName && fromQualifier != "build" && fromQualifier != qualifier.text) {
-                return fromQualifier
-            }
-        }
-        ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
-        val resolvedClass = call.resolveMethod()?.containingClass
-        val serviceClassName = resolvedClass?.qualifiedName?.let(::builderTypeToServiceName)
-            ?: resolvedClass?.name?.let(::builderTypeToServiceName)
-        if (serviceClassName != null) {
-            return serviceClassName
-        }
-        return methodName ?: fallbackExpression.text
-    }
-
-    private fun extractBuilderSeed(builderCall: PsiMethodCallExpression): String? {
-        val firstArgument = builderCall.argumentList.expressions.firstOrNull() ?: return null
-        val argumentTarget = extractTarget(firstArgument)
-        if (argumentTarget.isNotBlank() && argumentTarget != firstArgument.text) {
-            return argumentTarget
-        }
-        val builderClass = builderCall.resolveMethod()?.containingClass ?: return null
-        val serviceName = builderClass.qualifiedName?.let(::builderTypeToServiceName)
-            ?: builderClass.name?.let(::builderTypeToServiceName)
-        return if (argumentTarget.isNotBlank()) {
-            "$serviceName($argumentTarget)"
-        } else {
-            serviceName
-        }
-    }
-
-    private fun builderTypeToServiceName(qualifiedOrSimpleName: String): String {
-        val simpleName = qualifiedOrSimpleName.substringAfterLast('.')
-        if (!simpleName.endsWith("Builder")) {
-            return qualifiedOrSimpleName
-        }
-        val serviceSimpleName = simpleName.removeSuffix("Builder")
-        val packagePrefix = qualifiedOrSimpleName.substringBeforeLast('.', missingDelimiterValue = "")
-        return if (packagePrefix.isEmpty()) {
-            serviceSimpleName
-        } else {
-            "$packagePrefix.$serviceSimpleName"
-        }
-    }
 }
