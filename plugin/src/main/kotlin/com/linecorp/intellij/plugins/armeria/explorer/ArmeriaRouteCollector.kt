@@ -273,30 +273,17 @@ object ArmeriaRouteCollector {
     }
 
     private fun looksLikeArmeriaBuilderCall(expression: PsiMethodCallExpression): Boolean {
-        val qualifier = expression.methodExpression.qualifierExpression ?: return false
-        val qualifierText = qualifier.text
-        if (qualifierText.contains("Server.builder()") || qualifierText.contains("serverBuilder")) {
-            return resolvesToArmeriaServerBuilder(expression)
+        if (resolvesToArmeriaServerBuilder(expression)) {
+            return true
         }
-        if (mightBeArmeriaBuilderQualifier(qualifierText)) {
-            return resolvesToArmeriaServerBuilder(expression)
-        }
-        if (qualifier is PsiReferenceExpression) {
-            return resolvesToArmeriaServerBuilder(expression)
-        }
-        return false
+        val qualifierText = expression.methodExpression.qualifierExpression?.text ?: return false
+        return qualifierText.contains("Server.builder()") || qualifierText.contains("serverBuilder")
     }
 
     private fun resolvesToArmeriaServerBuilder(expression: PsiMethodCallExpression): Boolean {
         ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
         val resolvedClass = expression.resolveMethod()?.containingClass?.qualifiedName
         return resolvedClass?.startsWith(ARMERIA_SERVER_PACKAGE_PREFIX) == true
-    }
-
-    private fun mightBeArmeriaBuilderQualifier(qualifierText: String): Boolean {
-        return qualifierText.contains("Server") ||
-            qualifierText.contains("serverBuilder") ||
-            qualifierText.contains("armeria", ignoreCase = true)
     }
 
     private fun buildMethodTarget(psiClass: PsiClass, method: PsiMethod): String {
