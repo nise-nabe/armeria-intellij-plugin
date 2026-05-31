@@ -20,6 +20,7 @@ import com.intellij.psi.search.searches.ReferencesSearch
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
+import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.message
 
 internal enum class RouteProtocol(private val messageKey: String) {
@@ -139,7 +140,8 @@ object ArmeriaRouteCollector {
         for (methodName in REGISTRATION_METHOD_NAMES) {
             for (method in builderClass.findMethodsByName(methodName, false)) {
                 ReferencesSearch.search(method, scope).forEach { reference ->
-                    val call = reference.element.parent as? PsiMethodCallExpression ?: return@forEach
+                    val call = PsiTreeUtil.getParentOfType(reference.element, PsiMethodCallExpression::class.java)
+                        ?: return@forEach
                     if (call.methodExpression.referenceName != methodName) {
                         return@forEach
                     }
