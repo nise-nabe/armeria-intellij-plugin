@@ -11,32 +11,68 @@ data class ArmeriaRoute(
     val httpMethod: String,
     val path: String,
     val target: String,
+    val routeMatch: RouteMatch,
+    val moduleName: String,
+    val targetUnresolved: Boolean,
+    val isDocService: Boolean,
     val decorators: List<String>,
     val exceptionHandlers: List<String>,
     val pointer: SmartPsiElementPointer<PsiElement>,
 ) {
-    val presentation: String
-        get() = buildString {
-            append("[$httpMethod] ")
-            append(path)
-            append("  ")
-            append(target)
+    fun resolveSourceHint(): String {
+        val element = pointer.element ?: return ""
+        return ArmeriaRouteMetadata.sourceHint(element)
+    }
+
+    fun resolveRegisteredInHint(): String {
+        val element = pointer.element ?: return ""
+        return ArmeriaRouteMetadata.registeredInHint(element)
+    }
+
+    fun resolveRegistrationSummary(): String = ArmeriaRouteDetailFormatter.registrationSummary(this)
+
+    val methodLabel: String
+        get() = when (routeMatch) {
+            RouteMatch.ANNOTATED_HTTP -> httpMethod
+            RouteMatch.ANNOTATED_SERVICE -> message("route.explorer.method.annotatedService")
+            RouteMatch.SERVICE -> message("route.explorer.method.allHttp")
+            RouteMatch.SERVICE_UNDER -> message("route.explorer.method.prefix")
+            RouteMatch.NON_HTTP -> protocol
         }
 
-    val secondaryPresentation: String
+    val shortTarget: String
+        get() = truncateTarget(target)
+
+    val speedSearchText: String
         get() = buildString {
-            append(kind)
-            append(message("route.explorer.secondary.separator"))
-            append(protocol)
-            if (decorators.isNotEmpty()) {
-                append(message("route.explorer.secondary.decorators", decorators.joinToString()))
-            }
-            if (exceptionHandlers.isNotEmpty()) {
-                append(message("route.explorer.secondary.handlers", exceptionHandlers.joinToString()))
-            }
+            append(methodLabel)
+            append(' ')
+            append(path)
+            append(' ')
+            append(target)
+            append(' ')
+            append(moduleName)
+        }
+
+    val descriptionText: String
+        get() = when (routeMatch) {
+            RouteMatch.ANNOTATED_HTTP -> message("route.explorer.description.annotatedHttp")
+            RouteMatch.ANNOTATED_SERVICE -> message("route.explorer.description.annotatedService")
+            RouteMatch.SERVICE -> message("route.explorer.description.service")
+            RouteMatch.SERVICE_UNDER -> message("route.explorer.description.serviceUnder")
+            RouteMatch.NON_HTTP -> message("route.explorer.description.nonHttp", protocol)
+        }
+
+    val detailHandlerLabel: String
+        get() = if (targetUnresolved) {
+            message("route.explorer.label.unresolvedExpression")
+        } else {
+            message("route.explorer.detail.handler")
         }
 
     companion object {
+        private const val TARGET_DISPLAY_LIMIT = 60
+
         fun create(
             element: PsiElement,
             kind: String,
@@ -44,6 +80,9 @@ data class ArmeriaRoute(
             httpMethod: String,
             path: String,
             target: String,
+            routeMatch: RouteMatch,
+            targetUnresolved: Boolean = false,
+            isDocService: Boolean = false,
             decorators: List<String> = emptyList(),
             exceptionHandlers: List<String> = emptyList(),
         ): ArmeriaRoute {
@@ -53,10 +92,21 @@ data class ArmeriaRoute(
                 httpMethod = httpMethod,
                 path = path,
                 target = target,
+                routeMatch = routeMatch,
+                moduleName = ArmeriaRouteMetadata.moduleName(element),
+                targetUnresolved = targetUnresolved,
+                isDocService = isDocService,
                 decorators = decorators,
                 exceptionHandlers = exceptionHandlers,
                 pointer = SmartPointerManager.createPointer(element),
             )
+        }
+
+        fun truncateTarget(value: String, limit: Int = TARGET_DISPLAY_LIMIT): String {
+            if (value.length <= limit) {
+                return value
+            }
+            return value.take(limit) + "…"
         }
     }
 }
