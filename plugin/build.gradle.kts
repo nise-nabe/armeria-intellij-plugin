@@ -15,6 +15,17 @@ dependencies {
     }
 }
 
+testing {
+    suites {
+        val test by getting(JvmTestSuite::class) {
+            dependencies {
+                implementation(libs.velocity.engine.core)
+                implementation(libs.junit4)
+            }
+        }
+    }
+}
+
 intellijPlatform {
     pluginConfiguration {
         id = "com.linecorp.intellij.armeria-intellij-plugin"

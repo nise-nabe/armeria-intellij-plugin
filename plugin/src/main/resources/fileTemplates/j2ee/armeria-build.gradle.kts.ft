@@ -122,6 +122,9 @@ dependencies {
 #if ($context.hasLibrary("armeria-thrift0.18"))
     implementation("com.linecorp.armeria:armeria-thrift0.18")
 #end
+#if ($context.hasLibrary("armeria-tomcat8"))
+    implementation("com.linecorp.armeria:armeria-tomcat8")
+#end
 #if ($context.hasLibrary("armeria-tomcat9"))
     implementation("com.linecorp.armeria:armeria-tomcat9")
 #end

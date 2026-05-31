@@ -14,7 +14,7 @@ This plugin is evolving toward an Armeria cockpit inside IntelliJ IDEA:
 
 | Path | Role |
 | --- | --- |
-| `plugin/` | Plugin sources, resources, and `CHANGELOG.md` |
+| `plugin/` | **Canonical** plugin sources, file templates, starters, resources, tests, and `CHANGELOG.md` |
 | `build-logic/` | Generic IntelliJ Platform convention (`com.linecorp.intellij.platform-plugin`) |
 | `gradle/libs.versions.toml` | Kotlin, IntelliJ Platform Gradle Plugin, and IDE version pins |
 
