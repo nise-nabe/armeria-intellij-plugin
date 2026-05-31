@@ -27,6 +27,9 @@
                          level="WARNING"
                          implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaDuplicateRouteInspection" />
         <consoleFilterProvider implementation="com.linecorp.intellij.plugins.armeria.run.ArmeriaDocServiceConsoleFilterProvider" />
+        <registryKey key="armeria.route.explorer.metrics"
+                     defaultValue="false"
+                     description="Log Armeria Route Explorer collection metrics at INFO level"/>
 
         <!-- Run configuration -->
         <configurationType implementation="com.linecorp.intellij.plugins.armeria.run.ArmeriaRunConfigurationType" />
