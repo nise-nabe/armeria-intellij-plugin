@@ -9,7 +9,7 @@ version = providers.gradleProperty("pluginVersion").get()
 
 dependencies {
     intellijPlatform {
-        intellijIdeaUltimate(providers.gradleProperty("platformVersion").get())
+        intellijIdeaUltimate(libs.versions.idea.platform.get())
         bundledPlugin("com.intellij.java")
         bundledPlugin("org.jetbrains.plugins.gradle")
     }
