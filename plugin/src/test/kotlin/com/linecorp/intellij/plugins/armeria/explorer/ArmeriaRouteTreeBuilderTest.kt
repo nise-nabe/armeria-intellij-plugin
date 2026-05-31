@@ -43,7 +43,6 @@ class ArmeriaRouteTreeBuilderTest {
 
     private fun testRoute(moduleName: String, path: String): ArmeriaRoute {
         return ArmeriaRoute(
-            kind = "kind",
             protocol = "HTTP",
             httpMethod = "GET",
             path = path,

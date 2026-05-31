@@ -45,7 +45,6 @@ class ArmeriaHttpMethodPillTest {
         routeMatch: RouteMatch = RouteMatch.ANNOTATED_HTTP,
     ): ArmeriaRoute {
         return ArmeriaRoute(
-            kind = "kind",
             protocol = protocol,
             httpMethod = httpMethod,
             path = "/api",

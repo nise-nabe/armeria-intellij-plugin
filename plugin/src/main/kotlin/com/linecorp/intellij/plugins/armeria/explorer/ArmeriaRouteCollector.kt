@@ -120,7 +120,6 @@ object ArmeriaRouteCollector {
         for (path in paths) {
             routes += ArmeriaRoute.create(
                 element = method,
-                kind = message("route.explorer.kind.annotatedService"),
                 protocol = RouteProtocol.HTTP.presentableName(),
                 httpMethod = annotation.second,
                 path = ArmeriaRouteSupport.combinePaths(classPrefix, path),
@@ -233,19 +232,8 @@ object ArmeriaRouteCollector {
         val targetUnresolved = isUnresolvedTarget(implementationExpression, target)
         val registrationMethod = RegistrationMethod.fromMethodName(methodName) ?: return
         val routeMatch = resolveRouteMatch(registrationMethod, protocol)
-        val kind = when (protocol) {
-            RouteProtocol.DOC_SERVICE -> message("route.explorer.kind.docService")
-            RouteProtocol.GRPC -> message("route.explorer.kind.grpcService")
-            RouteProtocol.THRIFT -> message("route.explorer.kind.thriftService")
-            else -> if (methodName == "annotatedService") {
-                message("route.explorer.kind.annotatedServiceRegistration")
-            } else {
-                message("route.explorer.kind.serviceRegistration")
-            }
-        }
         routes += ArmeriaRoute.create(
             element = expression,
-            kind = kind,
             protocol = protocol.presentableName(),
             httpMethod = "",
             path = ArmeriaRouteSupport.normalizePath(path),

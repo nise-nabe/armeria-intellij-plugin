@@ -6,7 +6,6 @@ import com.intellij.psi.SmartPsiElementPointer
 import com.linecorp.intellij.plugins.armeria.message
 
 data class ArmeriaRoute(
-    val kind: String,
     val protocol: String,
     val httpMethod: String,
     val path: String,
@@ -54,15 +53,6 @@ data class ArmeriaRoute(
             append(moduleName)
         }
 
-    val descriptionText: String
-        get() = when (routeMatch) {
-            RouteMatch.ANNOTATED_HTTP -> message("route.explorer.description.annotatedHttp")
-            RouteMatch.ANNOTATED_SERVICE -> message("route.explorer.description.annotatedService")
-            RouteMatch.SERVICE -> message("route.explorer.description.service")
-            RouteMatch.SERVICE_UNDER -> message("route.explorer.description.serviceUnder")
-            RouteMatch.NON_HTTP -> message("route.explorer.description.nonHttp", protocol)
-        }
-
     val detailHandlerLabel: String
         get() = if (targetUnresolved) {
             message("route.explorer.label.unresolvedExpression")
@@ -75,7 +65,6 @@ data class ArmeriaRoute(
 
         fun create(
             element: PsiElement,
-            kind: String,
             protocol: String,
             httpMethod: String,
             path: String,
@@ -87,7 +76,6 @@ data class ArmeriaRoute(
             exceptionHandlers: List<String> = emptyList(),
         ): ArmeriaRoute {
             return ArmeriaRoute(
-                kind = kind,
                 protocol = protocol,
                 httpMethod = httpMethod,
                 path = path,
