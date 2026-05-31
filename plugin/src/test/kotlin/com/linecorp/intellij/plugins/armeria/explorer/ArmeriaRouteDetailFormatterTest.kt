@@ -1,0 +1,140 @@
+package com.linecorp.intellij.plugins.armeria.explorer
+
+import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+
+class ArmeriaRouteDetailFormatterTest : LightJavaCodeInsightFixtureTestCase() {
+    override fun setUp() {
+        super.setUp()
+        registerArmeriaStubs()
+    }
+
+    fun testRegistrationSummary_annotatedRoute() {
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class HelloService {
+                @Get("/users/{id}")
+                public String getUser() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+        val route = ArmeriaRouteCollector.collect(project).single()
+        assertTrue(ArmeriaRouteDetailFormatter.registrationSummary(route).contains("@GET"))
+        assertTrue(ArmeriaRouteDetailFormatter.registrationSummary(route).contains("/users/{id}"))
+    }
+
+    fun testAttachmentsLine_omitsSecondarySeparator() {
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Decorator;
+            import com.linecorp.armeria.server.annotation.ExceptionHandler;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            @Decorator(MyDecorator.class)
+            @ExceptionHandler(MyHandler.class)
+            public class HelloService {
+                @Get("/hello")
+                public String hello() {
+                    return "hello";
+                }
+            }
+
+            class MyDecorator {}
+            class MyHandler {}
+            """.trimIndent(),
+        )
+
+        val route = ArmeriaRouteCollector.collect(project).single()
+        val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
+
+        assertFalse(attachments.startsWith(" · "))
+        assertTrue(attachments.contains("decorators:"))
+        assertTrue(attachments.contains("handlers:"))
+        assertTrue(attachments.contains("MyDecorator"))
+        assertTrue(attachments.contains("MyHandler"))
+    }
+
+    fun testRegisteredInHint_serviceRegistration() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                void configure() {
+                    Server.builder().service("/api", new HelloService());
+                }
+            }
+
+            class HelloService {}
+            """.trimIndent(),
+        )
+        val route = ArmeriaRouteCollector.collect(project).single()
+        assertEquals("example.Main#configure()", route.resolveRegisteredInHint())
+        assertEquals("Server.builder().service(\"/api\", …)", ArmeriaRouteDetailFormatter.registrationSummary(route))
+    }
+
+    private fun registerArmeriaStubs() {
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation;
+
+            public @interface Get {
+                String value() default "";
+                String path() default "";
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation;
+
+            public @interface Decorator {
+                Class<?>[] value();
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation;
+
+            public @interface ExceptionHandler {
+                Class<?>[] value();
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server;
+
+            public final class Server {
+                public static ServerBuilder builder() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server;
+
+            public final class ServerBuilder {
+                public ServerBuilder service(String path, Object service) {
+                    return this;
+                }
+            }
+            """.trimIndent(),
+        )
+    }
+}
