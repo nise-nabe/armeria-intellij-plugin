@@ -18,8 +18,6 @@ dependencies {
     intellijPlatform {
         testFramework(TestFrameworkType.Platform)
     }
-    testImplementation("org.apache.velocity:velocity-engine-core:2.4.1")
-    testImplementation("junit:junit:4.13.2")
 }
 
 intellijPlatform {
