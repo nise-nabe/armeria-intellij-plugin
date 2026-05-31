@@ -186,7 +186,7 @@ class ArmeriaRouteExplorerPanel(
         ) {
             message("route.explorer.summary.moduleFilterNoEditor")
         } else {
-            summary(collectedRoutes)
+            summary(filterRoutes(collectedRoutes))
         }
     }
 
