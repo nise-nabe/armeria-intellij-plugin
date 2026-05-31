@@ -195,6 +195,56 @@ class ArmeriaRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         assertTrue(serviceRoute!!.targetUnresolved)
     }
 
+    fun testCollectUnresolvedParenthesizedNewExpressionTarget() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/api", (new MissingService()))
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val serviceRoute = ArmeriaRouteCollector.collect(project).firstOrNull { it.path == "/api" }
+        assertNotNull(serviceRoute)
+        assertTrue(serviceRoute!!.targetUnresolved)
+    }
+
+    fun testCollectUnresolvedFactoryMethodTarget() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/api", createMissingService())
+                        .build();
+                }
+
+                private static Object createMissingService() {
+                    return new MissingService();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val serviceRoute = ArmeriaRouteCollector.collect(project).firstOrNull { it.path == "/api" }
+        assertNotNull(serviceRoute)
+        assertTrue(serviceRoute!!.targetUnresolved)
+    }
+
     fun testCollectAnnotatedServiceRegistration() {
         myFixture.configureByText(
             "HelloService.java",

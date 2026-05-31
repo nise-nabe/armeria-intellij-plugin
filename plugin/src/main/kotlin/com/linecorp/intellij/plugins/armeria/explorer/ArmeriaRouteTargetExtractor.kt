@@ -4,6 +4,7 @@ import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiNewExpression
+import com.intellij.psi.PsiParenthesizedExpression
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiTypeCastExpression
 import com.intellij.psi.PsiVariable
@@ -27,15 +28,23 @@ internal object ArmeriaRouteTargetExtractor {
                 unwrapped.classReference?.resolve() == null
             }
             is PsiReferenceExpression -> {
-                if (extractedTarget != rawTarget) {
-                    return false
-                }
                 ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
                 unwrapped.resolve() == null
             }
-            is PsiMethodCallExpression -> false
+            is PsiMethodCallExpression -> isUnresolvedMethodCallTarget(unwrapped, extractedTarget)
             else -> extractedTarget == rawTarget
         }
+    }
+
+    private fun isUnresolvedMethodCallTarget(call: PsiMethodCallExpression, extractedTarget: String): Boolean {
+        ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
+        val resolvedMethod = call.resolveMethod() ?: return true
+        val methodName = call.methodExpression.referenceName
+        if (methodName != null && extractedTarget == methodName) {
+            return true
+        }
+        val declaringClass = resolvedMethod.containingClass?.qualifiedName
+        return declaringClass != null && extractedTarget == declaringClass
     }
 
     fun extractTarget(expression: PsiExpression): String {
@@ -61,9 +70,13 @@ internal object ArmeriaRouteTargetExtractor {
     }
 
     private fun unwrapCast(expression: PsiExpression): PsiExpression? {
-        return when (expression) {
-            is PsiTypeCastExpression -> expression.operand
-            else -> expression
+        var current: PsiExpression = expression
+        while (true) {
+            current = when (current) {
+                is PsiTypeCastExpression -> current.operand ?: return null
+                is PsiParenthesizedExpression -> current.expression ?: return null
+                else -> return current
+            }
         }
     }
 
