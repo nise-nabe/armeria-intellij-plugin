@@ -1,4 +1,5 @@
 import org.jetbrains.changelog.Changelog
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 
 plugins {
     id("com.linecorp.intellij.platform-plugin")
@@ -12,6 +13,7 @@ dependencies {
         intellijIdeaUltimate(libs.versions.idea.platform.get())
         bundledPlugin("com.intellij.java")
         bundledPlugin("org.jetbrains.plugins.gradle")
+        testFramework(TestFrameworkType.Plugin.Java)
     }
 }
 
