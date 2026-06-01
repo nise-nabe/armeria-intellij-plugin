@@ -78,12 +78,7 @@ class ArmeriaRouteDetailPanel : JPanel(BorderLayout()) {
         detailProtocol.text = route.protocol
         detailPath.text = route.path
         detailModule.text = route.moduleName
-        val handlerText = if (route.targetUnresolved) {
-            "${message("route.explorer.label.unresolvedExpression")} ${route.shortTarget}"
-        } else {
-            route.target
-        }
-        setWrappingText(detailHandler, handlerText, route.target)
+        setWrappingText(detailHandler, route.target, route.target)
         setWrappingText(detailStatus, ArmeriaRouteDetailFormatter.statusLine(route))
         WriteIntentReadAction.run {
             setWrappingText(detailRegistration, route.resolveRegistrationSummary())
