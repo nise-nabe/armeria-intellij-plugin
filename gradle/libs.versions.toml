@@ -1,6 +1,6 @@
 [versions]
 jdk = "21"
-kotlin = "2.3.21"
+kotlin = "2.4.0"
 intellij-platform-plugin = "2.16.0"
 idea-platform = "2026.1.2"
 changelog = "2.5.0"
