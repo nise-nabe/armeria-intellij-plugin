@@ -9,6 +9,7 @@ import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiMethodUtil
 import com.intellij.psi.util.PsiTreeUtil
+import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
 
 class ArmeriaRunConfigurationProducer : LazyRunConfigurationProducer<ArmeriaRunConfiguration>() {
     override fun getConfigurationFactory(): ConfigurationFactory {
@@ -56,8 +57,7 @@ class ArmeriaRunConfigurationProducer : LazyRunConfigurationProducer<ArmeriaRunC
     }
 
     private fun referencesArmeria(source: String): Boolean {
-        return source.contains("com.linecorp.armeria") ||
-            source.contains("Server.builder") ||
-            source.contains("ServerBuilder")
+        return ArmeriaRouteSupport.referencesArmeriaInText(source) ||
+            source.contains("Server.builder")
     }
 }
