@@ -20,7 +20,7 @@ class ArmeriaRunProfileState(
         params.mainClass = mainClass
         val module = configuration.getConfigurationModule().module
             ?: throw ExecutionException(message("armeria.run.configuration.module.not.specified"))
-        JavaParametersUtil.configureModule(module, params, JavaParameters.CLASSES_ONLY, null)
+        JavaParametersUtil.configureModule(module, params, JavaParameters.JDK_AND_CLASSES, null)
         params.workingDirectory = params.workingDirectory
             ?: ModuleRootManager.getInstance(module).contentRoots.firstOrNull()?.path
             ?: configuration.project.basePath
