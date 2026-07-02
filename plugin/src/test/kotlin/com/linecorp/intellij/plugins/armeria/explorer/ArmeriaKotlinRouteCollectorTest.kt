@@ -798,7 +798,7 @@ class ArmeriaKotlinRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
             fun main() {
                 val sb: ServerBuilder? = Server.builder()
                 sb!!.service("/api", HelloService())
-                sb.build()
+                sb!!.build()
             }
             """.trimIndent(),
         )

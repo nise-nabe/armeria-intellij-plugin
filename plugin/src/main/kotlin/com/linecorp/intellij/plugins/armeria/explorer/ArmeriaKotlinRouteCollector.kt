@@ -355,9 +355,6 @@ internal object ArmeriaKotlinRouteCollector {
         return expression
     }
 
-    private fun extractKotlinTarget(expression: KtExpression): String =
-        renderKotlinTarget(extractKotlinTargetExpression(expression))
-
     private fun renderKotlinTarget(expression: KtExpression): String {
         if (expression is KtCallExpression) {
             val callee = expression.calleeExpression
