@@ -41,7 +41,9 @@ class ArmeriaRunConfigurationEditor(private val project: Project) : SettingsEdit
     }
 
     override fun resetEditorFrom(configuration: ArmeriaRunConfiguration) {
-        moduleComboBox.selectedItem = configuration.getConfigurationModule().module
+        val configuredModule = configuration.getConfigurationModule().module
+            ?: ModuleManager.getInstance(project).sortedModules.firstOrNull()
+        moduleComboBox.selectedItem = configuredModule
         mainClassField.text = configuration.getMainClass().orEmpty()
     }
 
