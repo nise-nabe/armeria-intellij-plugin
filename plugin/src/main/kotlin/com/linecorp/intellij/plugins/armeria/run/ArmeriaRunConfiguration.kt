@@ -37,7 +37,7 @@ class ArmeriaRunConfiguration(
 
     fun getConfigurationModule(): RunConfigurationModule = runConfigurationModule
 
-    fun setModuleModule(module: Module?) {
+    fun setModule(module: Module?) {
         runConfigurationModule.module = module
         options.moduleName.setValue(options, module?.name)
     }

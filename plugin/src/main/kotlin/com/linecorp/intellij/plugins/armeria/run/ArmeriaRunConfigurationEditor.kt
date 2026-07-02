@@ -46,7 +46,7 @@ class ArmeriaRunConfigurationEditor(private val project: Project) : SettingsEdit
     }
 
     override fun applyEditorTo(configuration: ArmeriaRunConfiguration) {
-        configuration.setModuleModule(moduleComboBox.selectedItem as? Module)
+        configuration.setModule(moduleComboBox.selectedItem as? Module)
         configuration.setMainClass(mainClassField.text.takeIf { it.isNotBlank() })
     }
 

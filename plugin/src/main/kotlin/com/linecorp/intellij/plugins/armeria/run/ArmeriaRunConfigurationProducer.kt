@@ -7,7 +7,6 @@ import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.util.Ref
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiMethodUtil
 import com.intellij.psi.util.PsiTreeUtil
 
@@ -24,7 +23,7 @@ class ArmeriaRunConfigurationProducer : LazyRunConfigurationProducer<ArmeriaRunC
         val mainClass = findArmeriaMainClass(sourceElement.get()) ?: return false
         val qualifiedName = mainClass.qualifiedName ?: return false
         configuration.setMainClass(qualifiedName)
-        ModuleUtilCore.findModuleForPsiElement(mainClass)?.let(configuration::setModuleModule)
+        ModuleUtilCore.findModuleForPsiElement(mainClass)?.let(configuration::setModule)
         configuration.name = configuration.suggestedName()
         return true
     }
@@ -44,7 +43,7 @@ class ArmeriaRunConfigurationProducer : LazyRunConfigurationProducer<ArmeriaRunC
         if (!PsiMethodUtil.hasMainInClass(containingClass)) {
             return null
         }
-        val file = element.containingFile as? PsiFile ?: return null
+        val file = element.containingFile ?: return null
         if (!referencesArmeria(file.text)) {
             return null
         }
