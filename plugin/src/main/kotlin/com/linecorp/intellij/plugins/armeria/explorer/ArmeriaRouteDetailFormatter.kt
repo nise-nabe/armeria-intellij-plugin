@@ -24,6 +24,9 @@ object ArmeriaRouteDetailFormatter {
             if (route.exceptionHandlers.isNotEmpty()) {
                 add(message("route.explorer.detail.handlers", route.exceptionHandlers.joinToString()))
             }
+            if (route.timeoutHints.isNotEmpty()) {
+                add(message("route.explorer.detail.timeouts", route.timeoutHints.joinToString()))
+            }
         }
         return parts.joinToString("\n")
     }

@@ -139,6 +139,7 @@ object ArmeriaRouteCollector {
                 routeMatch = RouteMatch.ANNOTATED_HTTP,
                 decorators = methodDecorators.distinct(),
                 exceptionHandlers = methodExceptionHandlers.distinct(),
+                timeoutHints = ArmeriaTimeoutSupport.collectTimeoutHints(method),
             )
         }
     }
