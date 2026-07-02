@@ -23,8 +23,9 @@ class ArmeriaRunConfigurationProducer : LazyRunConfigurationProducer<ArmeriaRunC
     ): Boolean {
         val mainClass = findArmeriaMainClass(context.psiLocation) ?: return false
         val qualifiedName = mainClass.qualifiedName ?: return false
+        val module = ModuleUtilCore.findModuleForPsiElement(mainClass) ?: return false
         configuration.setMainClass(qualifiedName)
-        ModuleUtilCore.findModuleForPsiElement(mainClass)?.let(configuration::setModule)
+        configuration.setModule(module)
         configuration.name = configuration.suggestedName()
         sourceElement.set(mainClass)
         return true
@@ -58,6 +59,6 @@ class ArmeriaRunConfigurationProducer : LazyRunConfigurationProducer<ArmeriaRunC
 
     private fun referencesArmeria(source: String): Boolean {
         return ArmeriaRouteSupport.referencesArmeriaInText(source) ||
-            source.contains("Server.builder")
+            ArmeriaRouteSupport.looksLikeServerBuilderReceiverText(source)
     }
 }

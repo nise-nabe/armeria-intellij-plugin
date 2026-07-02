@@ -2,6 +2,7 @@ package com.linecorp.intellij.plugins.armeria.run
 
 import com.intellij.execution.Executor
 import com.intellij.execution.configurations.ConfigurationFactory
+import com.intellij.execution.configurations.RuntimeConfigurationError
 import com.intellij.execution.configurations.JavaRunConfigurationModule
 import com.intellij.execution.configurations.LocatableConfigurationBase
 import com.intellij.execution.configurations.RunConfigurationModule
@@ -40,6 +41,15 @@ class ArmeriaRunConfiguration(
     fun setModule(module: Module?) {
         runConfigurationModule.module = module
         options.moduleName.setValue(options, module?.name)
+    }
+
+    override fun checkConfiguration() {
+        if (getConfigurationModule().module == null) {
+            throw RuntimeConfigurationError(message("armeria.run.configuration.module.not.specified"))
+        }
+        if (getMainClass().isNullOrBlank()) {
+            throw RuntimeConfigurationError(message("armeria.run.configuration.main.class.not.specified"))
+        }
     }
 
     override fun readExternal(element: Element) {
