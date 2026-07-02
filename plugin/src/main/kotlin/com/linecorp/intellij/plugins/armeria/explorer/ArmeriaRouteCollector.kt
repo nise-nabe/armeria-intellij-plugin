@@ -374,6 +374,6 @@ object ArmeriaRouteCollector {
     }
 
     private fun isKotlinPluginAvailable(): Boolean =
-        PluginManagerCore.isPluginInstalled(KOTLIN_PLUGIN_ID)
+        PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
 
 }

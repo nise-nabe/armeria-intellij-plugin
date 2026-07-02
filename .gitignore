@@ -93,6 +93,8 @@ gradle-app.setting
 # Avoid ignore Gradle wrappper properties
 !gradle-wrapper.properties
 
+# Cache of project
+.gradletasknamecache
 .kotlin/
 
 # Eclipse Gradle plugin generated files
