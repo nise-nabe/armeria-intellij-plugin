@@ -261,6 +261,7 @@ internal object ArmeriaKotlinRouteCollector {
         val targetExpression = extractKotlinTargetExpression(unwrappedImplementation)
         val target = renderKotlinTarget(targetExpression)
         val targetUnresolved = isUnresolvedKotlinTarget(targetExpression, target)
+        val programmaticDecorators = ArmeriaDecoratorSupport.collectKotlinDecoratorsInScope(call)
         ArmeriaRouteCollector.addServiceRegistrationRoute(
             element = call,
             registrationKey = registrationKey,
@@ -272,6 +273,7 @@ internal object ArmeriaKotlinRouteCollector {
             argumentCount = arguments.size,
             routes = routes,
             seenServiceRegistrations = seenServiceRegistrations,
+            decorators = programmaticDecorators,
         )
     }
 
