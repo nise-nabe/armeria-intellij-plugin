@@ -1,0 +1,16 @@
+package ${PACKAGE_NAME}
+
+import com.linecorp.armeria.server.Server
+import com.linecorp.armeria.server.annotation.Get
+
+fun main() {
+    Server.builder()
+        .http(8080)
+        .annotatedService(object {
+            @Get("/hello")
+            fun hello(): String = "Hello, Armeria"
+        })
+        .build()
+        .start()
+        .join()
+}

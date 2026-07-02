@@ -75,6 +75,22 @@ class ArmeriaModuleBuilder: StarterModuleBuilder() {
             else -> "java"
         }
         val packageDir = starterContext.group.split(".")
+        val mainFileName = when (starterContext.language) {
+            KOTLIN_STARTER_LANGUAGE -> "Main.kt"
+            else -> "Main.java"
+        }
+        val mainTemplate = when (starterContext.language) {
+            KOTLIN_STARTER_LANGUAGE -> "armeria-main.kt"
+            else -> "armeria-main.java"
+        }
+        assets.add(GeneratorTemplateFile(
+            (listOf("src", "main", languageDir) + packageDir + mainFileName).joinToString("/"),
+            ftManager.getJ2eeTemplate(mainTemplate),
+        ))
+        assets.add(GeneratorTemplateFile(
+            "src/main/resources/logback.xml",
+            ftManager.getJ2eeTemplate("armeria-logback.xml"),
+        ))
         assets.add(GeneratorEmptyDirectory((listOf("src", "main", languageDir) + packageDir).joinToString("/")))
         assets.add(GeneratorEmptyDirectory((listOf("src", "test", languageDir) + packageDir).joinToString("/")))
 
