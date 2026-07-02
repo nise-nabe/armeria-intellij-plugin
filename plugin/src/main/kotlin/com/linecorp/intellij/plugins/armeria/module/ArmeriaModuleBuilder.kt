@@ -91,6 +91,14 @@ class ArmeriaModuleBuilder: StarterModuleBuilder() {
             "src/main/resources/logback.xml",
             ftManager.getJ2eeTemplate("armeria-logback.xml"),
         ))
+        if (starterContext.language != SCALA_STARTER_LANGUAGE) {
+            val testFileName = if (starterContext.language == KOTLIN_STARTER_LANGUAGE) "MainTest.kt" else "MainTest.java"
+            val testTemplate = if (starterContext.language == KOTLIN_STARTER_LANGUAGE) "armeria-service-test.kt" else "armeria-service-test.java"
+            assets.add(GeneratorTemplateFile(
+                (listOf("src", "test", languageDir) + packageDir + testFileName).joinToString("/"),
+                ftManager.getJ2eeTemplate(testTemplate),
+            ))
+        }
         assets.add(GeneratorEmptyDirectory((listOf("src", "main", languageDir) + packageDir).joinToString("/")))
         assets.add(GeneratorEmptyDirectory((listOf("src", "test", languageDir) + packageDir).joinToString("/")))
 

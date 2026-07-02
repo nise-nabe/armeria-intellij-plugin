@@ -1,0 +1,23 @@
+package ${PACKAGE_NAME};
+
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.annotation.Get;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+class MainTest {
+    @Test
+    void serverStarts() {
+        Server server = Server.builder()
+            .http(0)
+            .annotatedService(new Object() {
+                @Get("/ping")
+                public String ping() {
+                    return "pong";
+                }
+            })
+            .build();
+        assertNotNull(server);
+    }
+}
