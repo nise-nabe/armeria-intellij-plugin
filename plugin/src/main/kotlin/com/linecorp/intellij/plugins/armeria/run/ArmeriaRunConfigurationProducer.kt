@@ -20,11 +20,12 @@ class ArmeriaRunConfigurationProducer : LazyRunConfigurationProducer<ArmeriaRunC
         context: ConfigurationContext,
         sourceElement: Ref<PsiElement>,
     ): Boolean {
-        val mainClass = findArmeriaMainClass(sourceElement.get()) ?: return false
+        val mainClass = findArmeriaMainClass(context.psiLocation) ?: return false
         val qualifiedName = mainClass.qualifiedName ?: return false
         configuration.setMainClass(qualifiedName)
         ModuleUtilCore.findModuleForPsiElement(mainClass)?.let(configuration::setModule)
         configuration.name = configuration.suggestedName()
+        sourceElement.set(mainClass)
         return true
     }
 
