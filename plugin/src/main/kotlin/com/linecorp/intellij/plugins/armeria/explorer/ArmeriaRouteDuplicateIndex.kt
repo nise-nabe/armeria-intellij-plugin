@@ -1,6 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.lang.java.JavaLanguage
 import com.intellij.openapi.project.Project
+import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiMethod
@@ -15,7 +17,7 @@ import com.intellij.psi.util.PsiModificationTracker
  * `.annotatedService` registrations. Excludes non-HTTP protocols such as gRPC.
  *
  * Cross-registration conflicts are detected, for example `@Get("/foo")` versus
- * `.service("/foo", …)`. In-class annotated duplicate HTTP routes are excluded because
+ * `.service("/foo", …)`. Java in-class annotated duplicate HTTP routes are excluded because
  * [com.linecorp.intellij.plugins.armeria.inspection.ArmeriaDuplicateRouteInspection] covers them.
  */
 internal object ArmeriaRouteDuplicateIndex {
@@ -41,7 +43,7 @@ internal object ArmeriaRouteDuplicateIndex {
                 continue
             }
             for (component in findConnectedComponents(bucketRoutes)) {
-                if (component.size < 2 || isInClassAnnotatedHttpOnly(component)) {
+                if (component.size < 2 || isJavaInClassAnnotatedHttpOnly(component)) {
                     continue
                 }
                 groups += DuplicateRegistrationGroup(component)
@@ -96,14 +98,24 @@ internal object ArmeriaRouteDuplicateIndex {
             .map { indices -> indices.map { routes[it] } }
     }
 
-    private fun isInClassAnnotatedHttpOnly(routes: List<ArmeriaRoute>): Boolean {
+    private fun isJavaInClassAnnotatedHttpOnly(routes: List<ArmeriaRoute>): Boolean {
         if (routes.any { it.routeMatch != RouteMatch.ANNOTATED_HTTP }) {
             return false
         }
-        val containingClasses = routes.mapNotNull { route ->
-            (route.pointer.element as? PsiMethod)?.containingClass
-        }.toSet()
-        return containingClasses.size == 1
+        var containingClass: PsiClass? = null
+        for (route in routes) {
+            val method = route.pointer.element as? PsiMethod ?: return false
+            if (!method.language.isKindOf(JavaLanguage.INSTANCE)) {
+                return false
+            }
+            val routeClass = method.containingClass ?: return false
+            if (containingClass == null) {
+                containingClass = routeClass
+            } else if (containingClass != routeClass) {
+                return false
+            }
+        }
+        return true
     }
 
     private fun httpMethodsOverlap(first: ArmeriaRoute, second: ArmeriaRoute): Boolean {
@@ -133,13 +145,16 @@ internal object ArmeriaRouteDuplicateIndex {
                     DuplicateRegistrationHit(
                         element = element,
                         registrationLabel = registrationLabel(route),
-                        registrationCount = group.routes.size,
+                        registrationCount = overlappingRouteCount(route, group.routes),
                     ),
                 )
             }
         }
         return hitsByFile
     }
+
+    private fun overlappingRouteCount(route: ArmeriaRoute, routes: List<ArmeriaRoute>): Int =
+        routes.count { httpMethodsOverlap(route, it) }
 
     private fun registrationLabel(route: ArmeriaRoute): String =
         when (route.routeMatch) {

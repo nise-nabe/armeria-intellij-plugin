@@ -4,6 +4,7 @@ import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiMethod
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteDuplicateIndex
 import com.linecorp.intellij.plugins.armeria.message
 
@@ -21,8 +22,9 @@ class ArmeriaDuplicateRegistrationInspection : LocalInspectionTool() {
                     return
                 }
                 for (hit in hits) {
+                    val highlightElement = (hit.element as? PsiMethod)?.nameIdentifier ?: hit.element
                     holder.registerProblem(
-                        hit.element,
+                        highlightElement,
                         message(
                             "inspection.duplicate.registration.problem",
                             hit.registrationLabel,

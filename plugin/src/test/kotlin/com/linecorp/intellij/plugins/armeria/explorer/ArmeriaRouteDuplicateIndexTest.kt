@@ -111,7 +111,7 @@ class ArmeriaRouteDuplicateIndexTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals(2, groups.single().routes.size)
     }
 
-    fun testInClassAnnotatedDuplicatesAreExcluded() {
+    fun testInClassJavaAnnotatedDuplicatesAreExcluded() {
         myFixture.configureByText(
             "BadService.java",
             """
@@ -134,6 +134,97 @@ class ArmeriaRouteDuplicateIndexTest : LightJavaCodeInsightFixtureTestCase() {
         )
 
         assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
+    }
+
+    fun testInClassKotlinAnnotatedDuplicatesAreReported() {
+        myFixture.configureByText(
+            "BadService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+
+            class BadService {
+                @Get("/dup")
+                fun first(): String = "first"
+
+                @Get("/dup")
+                fun second(): String = "second"
+            }
+            """.trimIndent(),
+        )
+
+        val groups = ArmeriaRouteDuplicateIndex.duplicateGroups(project)
+
+        assertEquals(1, groups.size)
+        assertEquals(2, groups.single().routes.size)
+    }
+
+    fun testCatchAllServiceCountsOverlapsPerRoute() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/shared", new ServiceHandler())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.Post;
+
+            public class AnnotatedHandler {
+                @Get("/shared")
+                public String read() {
+                    return "read";
+                }
+
+                @Post("/shared")
+                public String write() {
+                    return "write";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class ServiceHandler {}")
+
+        val groups = ArmeriaRouteDuplicateIndex.duplicateGroups(project)
+        assertEquals(1, groups.size)
+
+        val routes = groups.single().routes
+        val getRoute = routes.single { it.httpMethod == "GET" }
+        val postRoute = routes.single { it.httpMethod == "POST" }
+        val serviceRoute = routes.single { it.routeMatch == RouteMatch.SERVICE }
+
+        assertEquals(
+            2,
+            ArmeriaRouteDuplicateIndex.duplicateHitsInFile(project, getRoute.pointer.element!!.containingFile)
+                .single { it.registrationLabel == "GET /shared" }
+                .registrationCount,
+        )
+        assertEquals(
+            2,
+            ArmeriaRouteDuplicateIndex.duplicateHitsInFile(project, postRoute.pointer.element!!.containingFile)
+                .single { it.registrationLabel == "POST /shared" }
+                .registrationCount,
+        )
+        assertEquals(
+            3,
+            ArmeriaRouteDuplicateIndex.duplicateHitsInFile(project, serviceRoute.pointer.element!!.containingFile)
+                .single()
+                .registrationCount,
+        )
     }
 
     fun testAnnotatedRouteConflictsWithServiceRegistration() {
