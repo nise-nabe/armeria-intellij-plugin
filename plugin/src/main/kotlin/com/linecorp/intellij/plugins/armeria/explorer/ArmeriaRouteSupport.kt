@@ -209,6 +209,7 @@ object ArmeriaRouteSupport {
     }
 
     fun referencesArmeriaApplicationInSource(contents: CharSequence): Boolean {
-        return referencesArmeriaInText(contents) || FQCN_SERVER_BUILDER_CALL.containsMatchIn(contents)
+        return referencesArmeriaInText(contents, contents.length) ||
+            FQCN_SERVER_BUILDER_CALL.containsMatchIn(contents)
     }
 }
