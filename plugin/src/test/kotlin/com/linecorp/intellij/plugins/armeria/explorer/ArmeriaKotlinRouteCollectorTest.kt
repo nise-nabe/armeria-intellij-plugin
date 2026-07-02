@@ -641,6 +641,29 @@ class ArmeriaKotlinRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         assertNull(routes.firstOrNull { it.path == "/oops" })
     }
 
+    fun testCollectServiceRegistrationFromFullyQualifiedServerBuilder() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            fun main() {
+                com.linecorp.armeria.server.Server.builder()
+                    .service("/api", Any())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val serviceRoute = ArmeriaRouteCollector.collect(project)
+            .firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
+        assertNotNull(serviceRoute)
+        assertEquals(
+            "Server.builder().service(\"/api\", …)",
+            ArmeriaRouteDetailFormatter.registrationSummary(serviceRoute!!),
+        )
+    }
+
     fun testResolvedConstructorTargetIsNotMarkedUnresolved() {
         myFixture.configureByText(
             "Main.kt",

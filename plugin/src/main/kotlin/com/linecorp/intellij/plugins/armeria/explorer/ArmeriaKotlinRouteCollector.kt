@@ -202,7 +202,8 @@ internal object ArmeriaKotlinRouteCollector {
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
     ) {
-        val registrationKey = "${call.containingKtFile.virtualFile.path}:${call.textRange.startOffset}"
+        val virtualFile = call.containingKtFile.virtualFile ?: return
+        val registrationKey = "${virtualFile.path}:${call.textRange.startOffset}"
         val arguments = call.valueArguments
         val path = extractRegistrationPath(methodName, arguments) ?: return
         val implementationExpression = resolveServiceExpression(methodName, arguments) ?: return

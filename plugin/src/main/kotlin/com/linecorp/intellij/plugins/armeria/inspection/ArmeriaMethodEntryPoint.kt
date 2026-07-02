@@ -20,7 +20,7 @@ class ArmeriaMethodEntryPoint(
     override fun isEntryPoint(psiElement: PsiElement): Boolean {
         return psiElement is PsiMethod && AnnotationUtil.isAnnotated(
             psiElement,
-            ArmeriaRouteSupport.routeAnnotations.keys.toList(),
+            ArmeriaRouteSupport.routeAnnotations.keys,
             AnnotationUtil.CHECK_TYPE,
         )
     }
