@@ -42,7 +42,7 @@ class ArmeriaRunConfigurationProducer : LazyRunConfigurationProducer<ArmeriaRunC
 
     private fun findArmeriaMainClass(element: PsiElement?): PsiClass? {
         element ?: return null
-        val containingClass = PsiTreeUtil.getParentOfType(element, PsiClass::class.java)
+        val containingClass = PsiTreeUtil.getParentOfType(element, false, PsiClass::class.java)
             ?: return null
         if (!PsiMethodUtil.hasMainInClass(containingClass)) {
             return null
