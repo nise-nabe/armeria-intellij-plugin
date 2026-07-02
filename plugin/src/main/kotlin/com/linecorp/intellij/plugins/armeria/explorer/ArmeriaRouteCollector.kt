@@ -86,6 +86,7 @@ object ArmeriaRouteCollector {
         }
         ArmeriaGraphqlRouteCollector.collect(project, scope, routes)
         ArmeriaThriftRouteCollector.collect(project, scope, routes)
+        ArmeriaGrpcRouteCollector.collect(project, scope, routes)
 
         return CachedValueProvider.Result.create(
             routes.sortedWith(
