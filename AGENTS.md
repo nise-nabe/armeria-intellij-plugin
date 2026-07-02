@@ -6,12 +6,13 @@ IntelliJ Platform plugin for Armeria. Gradle multi-project build (`build-logic` 
 
 ### Prerequisites
 
-- **JDK 25** (JetBrains toolchain via `gradle/gradle-daemon-jvm.properties` and Foojay resolver).
+- **Gradle daemon JVM**: Adoptium 25 (pinned in `gradle/gradle-daemon-jvm.properties`; Foojay resolver downloads it).
+- **Compile toolchain**: Java 21 JetBrains (configured in `build-logic/.../com.linecorp.intellij.platform-plugin.gradle.kts` and inherited by `plugin/`).
 - Gradle wrapper (`./gradlew`) downloads the distribution and dependencies on first use.
 
 ### MCP: Gradle Tooling API
 
-The `gradle` MCP server (`nise-nabe/gradle-tapi-mcp-server` v0.2.2) is configured in `.cursor/mcp.json`. The install script downloads the release JAR to `~/.local/share/gradle-tapi-mcp-server/` and sets `GRADLE_PROJECT_DIR` to the workspace root.
+The `gradle` MCP server (`nise-nabe/gradle-tapi-mcp-server` v0.2.2) is configured in `.cursor/mcp.json`. The install script downloads the release JAR to `~/.local/share/gradle-tapi-mcp-server/`, verifies its SHA-256, and exposes it via a stable `gradle-tapi-mcp-server.jar` symlink. `GRADLE_PROJECT_DIR` is set to the workspace root.
 
 Prefer token-efficient MCP workflows documented in `.cursor/skills/gradle-tapi-mcp/SKILL.md`:
 
