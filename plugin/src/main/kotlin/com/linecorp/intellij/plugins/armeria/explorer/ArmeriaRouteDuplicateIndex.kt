@@ -1,0 +1,169 @@
+package com.linecorp.intellij.plugins.armeria.explorer
+
+import com.intellij.openapi.project.Project
+import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiMethod
+import com.intellij.psi.util.CachedValueProvider
+import com.intellij.psi.util.CachedValuesManager
+import com.intellij.psi.util.PsiModificationTracker
+
+/**
+ * Detects duplicate HTTP route registrations within the same module.
+ *
+ * Includes annotated HTTP methods and ServerBuilder `.service`, `.serviceUnder`, and
+ * `.annotatedService` registrations. Excludes non-HTTP protocols such as gRPC.
+ *
+ * Cross-registration conflicts are detected, for example `@Get("/foo")` versus
+ * `.service("/foo", …)`. In-class annotated duplicate HTTP routes are excluded because
+ * [com.linecorp.intellij.plugins.armeria.inspection.ArmeriaDuplicateRouteInspection] covers them.
+ */
+internal object ArmeriaRouteDuplicateIndex {
+    private val CHECKED_MATCHES = setOf(
+        RouteMatch.ANNOTATED_HTTP,
+        RouteMatch.ANNOTATED_SERVICE,
+        RouteMatch.SERVICE,
+        RouteMatch.SERVICE_UNDER,
+    )
+
+    fun duplicateHitsInFile(project: Project, file: PsiFile): List<DuplicateRegistrationHit> {
+        return getIndex(project).hitsByFile[file].orEmpty()
+    }
+
+    internal fun duplicateGroups(project: Project): List<DuplicateRegistrationGroup> {
+        return getIndex(project).groups
+    }
+
+    internal fun findDuplicateGroups(routes: List<ArmeriaRoute>): List<DuplicateRegistrationGroup> {
+        val groups = mutableListOf<DuplicateRegistrationGroup>()
+        for ((_, bucketRoutes) in routes.filter { it.routeMatch in CHECKED_MATCHES }.groupBy { BucketKey(it.moduleName, it.path) }) {
+            if (bucketRoutes.size < 2) {
+                continue
+            }
+            for (component in findConnectedComponents(bucketRoutes)) {
+                if (component.size < 2 || isInClassAnnotatedHttpOnly(component)) {
+                    continue
+                }
+                groups += DuplicateRegistrationGroup(component)
+            }
+        }
+        return groups
+    }
+
+    private fun getIndex(project: Project): DuplicateRegistrationIndex {
+        return CachedValuesManager.getManager(project).getCachedValue(project) {
+            val groups = findDuplicateGroups(ArmeriaRouteCollector.collect(project))
+            CachedValueProvider.Result.create(
+                DuplicateRegistrationIndex(
+                    groups = groups,
+                    hitsByFile = buildHitsByFile(groups),
+                ),
+                PsiModificationTracker.MODIFICATION_COUNT,
+            )
+        }
+    }
+
+    private fun findConnectedComponents(routes: List<ArmeriaRoute>): List<List<ArmeriaRoute>> {
+        val parent = IntArray(routes.size) { it }
+
+        fun find(index: Int): Int {
+            var root = index
+            while (parent[root] != root) {
+                root = parent[root]
+            }
+            return root
+        }
+
+        fun union(first: Int, second: Int) {
+            val firstRoot = find(first)
+            val secondRoot = find(second)
+            if (firstRoot != secondRoot) {
+                parent[secondRoot] = firstRoot
+            }
+        }
+
+        for (first in routes.indices) {
+            for (second in first + 1 until routes.size) {
+                if (httpMethodsOverlap(routes[first], routes[second])) {
+                    union(first, second)
+                }
+            }
+        }
+
+        return routes.indices
+            .groupBy(::find)
+            .values
+            .map { indices -> indices.map { routes[it] } }
+    }
+
+    private fun isInClassAnnotatedHttpOnly(routes: List<ArmeriaRoute>): Boolean {
+        if (routes.any { it.routeMatch != RouteMatch.ANNOTATED_HTTP }) {
+            return false
+        }
+        val containingClasses = routes.mapNotNull { route ->
+            (route.pointer.element as? PsiMethod)?.containingClass
+        }.toSet()
+        return containingClasses.size == 1
+    }
+
+    private fun httpMethodsOverlap(first: ArmeriaRoute, second: ArmeriaRoute): Boolean {
+        if (matchesAllHttpMethods(first) || matchesAllHttpMethods(second)) {
+            return true
+        }
+        return first.httpMethod.equals(second.httpMethod, ignoreCase = true)
+    }
+
+    private fun matchesAllHttpMethods(route: ArmeriaRoute): Boolean =
+        when (route.routeMatch) {
+            RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.ANNOTATED_SERVICE -> true
+            RouteMatch.ANNOTATED_HTTP, RouteMatch.NON_HTTP -> false
+        }
+
+    private fun buildHitsByFile(groups: List<DuplicateRegistrationGroup>): Map<PsiFile, List<DuplicateRegistrationHit>> {
+        val hitsByFile = mutableMapOf<PsiFile, MutableList<DuplicateRegistrationHit>>()
+        for (group in groups) {
+            val seenElements = mutableSetOf<PsiElement>()
+            for (route in group.routes) {
+                val element = route.pointer.element ?: continue
+                if (!seenElements.add(element)) {
+                    continue
+                }
+                val file = element.containingFile ?: continue
+                hitsByFile.getOrPut(file) { mutableListOf() }.add(
+                    DuplicateRegistrationHit(
+                        element = element,
+                        registrationLabel = registrationLabel(route),
+                        registrationCount = group.routes.size,
+                    ),
+                )
+            }
+        }
+        return hitsByFile
+    }
+
+    private fun registrationLabel(route: ArmeriaRoute): String =
+        when (route.routeMatch) {
+            RouteMatch.ANNOTATED_HTTP -> "${route.httpMethod} ${route.path}"
+            else -> route.path
+        }
+}
+
+private data class BucketKey(
+    val moduleName: String,
+    val path: String,
+)
+
+internal data class DuplicateRegistrationGroup(
+    val routes: List<ArmeriaRoute>,
+)
+
+internal data class DuplicateRegistrationHit(
+    val element: PsiElement,
+    val registrationLabel: String,
+    val registrationCount: Int,
+)
+
+private data class DuplicateRegistrationIndex(
+    val groups: List<DuplicateRegistrationGroup>,
+    val hitsByFile: Map<PsiFile, List<DuplicateRegistrationHit>>,
+)
