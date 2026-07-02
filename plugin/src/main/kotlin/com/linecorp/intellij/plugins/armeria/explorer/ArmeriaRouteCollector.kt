@@ -69,6 +69,9 @@ object ArmeriaRouteCollector {
         if (!serverBuilderOnClasspath) {
             collectServiceRegistrationsFallback(project, scope, routes, fallbackScannedFiles, seenServiceRegistrations)
         }
+        if (isKotlinPluginAvailable()) {
+            ArmeriaKotlinRouteCollector.collect(project, scope, routes, seenServiceRegistrations)
+        }
 
         return CachedValueProvider.Result.create(
             routes.sortedWith(
@@ -94,12 +97,12 @@ object ArmeriaRouteCollector {
                 if (!seenMethods.add(method)) {
                     return@forEach
                 }
-                addAnnotatedRoute(method, routes)
+                addAnnotatedRouteFromMethod(method, routes)
             }
         }
     }
 
-    private fun addAnnotatedRoute(method: PsiMethod, routes: MutableList<ArmeriaRoute>) {
+    internal fun addAnnotatedRouteFromMethod(method: PsiMethod, routes: MutableList<ArmeriaRoute>) {
         val annotation = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return
         val containingClass = method.containingClass ?: return
         val classPrefix =
@@ -145,7 +148,7 @@ object ArmeriaRouteCollector {
                     if (call.methodExpression.referenceName != methodName) {
                         return@forEach
                     }
-                    addServiceRegistration(call, routes, seenServiceRegistrations)
+                    addServiceRegistrationFromCall(call, routes, seenServiceRegistrations)
                 }
             }
         }
@@ -204,13 +207,13 @@ object ArmeriaRouteCollector {
                     super.visitMethodCallExpression(expression)
                     return
                 }
-                addServiceRegistration(expression, routes, seenServiceRegistrations)
+                addServiceRegistrationFromCall(expression, routes, seenServiceRegistrations)
                 super.visitMethodCallExpression(expression)
             }
         })
     }
 
-    private fun addServiceRegistration(
+    internal fun addServiceRegistrationFromCall(
         expression: PsiMethodCallExpression,
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
@@ -316,6 +319,15 @@ object ArmeriaRouteCollector {
                     .computeConstantExpression(expression) as? String
                 constantValue ?: expression.text.takeIf { StringUtil.isNotEmpty(it) }
             }
+        }
+    }
+
+    private fun isKotlinPluginAvailable(): Boolean {
+        return try {
+            Class.forName("org.jetbrains.kotlin.idea.KotlinFileType")
+            true
+        } catch (_: ClassNotFoundException) {
+            false
         }
     }
 
