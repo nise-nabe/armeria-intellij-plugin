@@ -206,4 +206,8 @@ object ArmeriaRouteSupport {
     fun looksLikeServerBuilderReceiverText(text: String): Boolean {
         return SERVER_BUILDER_CALL.containsMatchIn(text) || SERVER_BUILDER_IDENTIFIER.containsMatchIn(text)
     }
+
+    fun referencesArmeriaApplicationInSource(contents: CharSequence): Boolean {
+        return referencesArmeriaInText(contents) || SERVER_BUILDER_CALL.containsMatchIn(contents)
+    }
 }

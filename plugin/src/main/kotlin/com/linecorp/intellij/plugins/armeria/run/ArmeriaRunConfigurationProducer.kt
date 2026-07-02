@@ -51,14 +51,9 @@ class ArmeriaRunConfigurationProducer : LazyRunConfigurationProducer<ArmeriaRunC
             return null
         }
         val file = element.containingFile ?: return null
-        if (!referencesArmeria(file.text)) {
+        if (!ArmeriaRouteSupport.referencesArmeriaApplicationInSource(file.viewProvider.contents)) {
             return null
         }
         return containingClass
-    }
-
-    private fun referencesArmeria(source: String): Boolean {
-        return ArmeriaRouteSupport.referencesArmeriaInText(source) ||
-            ArmeriaRouteSupport.looksLikeServerBuilderReceiverText(source)
     }
 }
