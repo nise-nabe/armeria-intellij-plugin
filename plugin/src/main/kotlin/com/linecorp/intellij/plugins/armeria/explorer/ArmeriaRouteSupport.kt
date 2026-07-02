@@ -141,9 +141,22 @@ object ArmeriaRouteSupport {
     }
 
     fun isServerBuilderType(typeText: String): Boolean {
-        return typeText == SERVER_BUILDER_SIMPLE_NAME ||
-            typeText == SERVER_BUILDER_CLASS ||
-            typeText.endsWith(".$SERVER_BUILDER_SIMPLE_NAME")
+        val normalized = normalizeServerBuilderTypeText(typeText)
+        return normalized == SERVER_BUILDER_SIMPLE_NAME ||
+            normalized == SERVER_BUILDER_CLASS ||
+            normalized.endsWith(".$SERVER_BUILDER_SIMPLE_NAME")
+    }
+
+    private fun normalizeServerBuilderTypeText(typeText: String): String {
+        var normalized = typeText.trim().replace(Regex("""/\*.*?\*/"""), "").trim()
+        if (normalized.endsWith('?')) {
+            normalized = normalized.dropLast(1).trim()
+        }
+        val genericStart = normalized.indexOf('<')
+        if (genericStart >= 0) {
+            normalized = normalized.substring(0, genericStart).trim()
+        }
+        return normalized
     }
 
     fun referencesArmeriaInText(contents: CharSequence, scanLimit: Int = ARMERIA_HEADER_SCAN_LIMIT): Boolean {

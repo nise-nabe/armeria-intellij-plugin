@@ -20,6 +20,8 @@
 - Fixed false-positive route detection for unqualified `service` calls inside `also`/`let` blocks on `Server.builder()`.
 - Fixed FQCN `com.linecorp.armeria.server.Server.builder()` detection in Kotlin fallback scanning.
 - Fixed potential NPE when building Kotlin service registration keys for non-physical PSI files.
+- Fixed unresolved-target detection for Kotlin `build()`/`builder()` wrapper expressions.
+- Fixed Kotlin `ServerBuilder?` and generic type spellings not recognized as server-builder receivers.
 - Aligned Kotlin service registration discovery with the Java collector via shared PSI delegation.
 - New Project Wizard: emit `armeria-tomcat8` in Gradle and Maven templates when selected.
 - New Project Wizard: align Scala optional dependencies and Scala build setup in Gradle (Groovy) and Maven templates with Gradle (Kotlin DSL).

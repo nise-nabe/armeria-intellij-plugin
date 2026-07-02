@@ -764,6 +764,59 @@ class ArmeriaKotlinRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         assertTrue(serviceRoute!!.targetUnresolved)
     }
 
+    fun testCollectUnresolvedGrpcServiceBuilderTarget() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.grpc.GrpcService
+
+            fun main() {
+                Server.builder()
+                    .service("/grpc", GrpcService.builder(MissingService()).build())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val serviceRoute = ArmeriaRouteCollector.collect(project).firstOrNull { it.path == "/grpc" }
+        assertNotNull(serviceRoute)
+        assertTrue(serviceRoute!!.targetUnresolved)
+    }
+
+    fun testCollectServiceRegistrationFromNullableServerBuilderVariable() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.ServerBuilder
+
+            fun main() {
+                val sb: ServerBuilder? = Server.builder()
+                sb!!.service("/api", HelloService())
+                sb.build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val serviceRoute = ArmeriaRouteCollector.collect(project)
+            .firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
+        assertNotNull(serviceRoute)
+        assertEquals("example.HelloService", serviceRoute!!.target)
+    }
+
     private fun registerArmeriaStubs() {
         myFixture.addClass(
             """

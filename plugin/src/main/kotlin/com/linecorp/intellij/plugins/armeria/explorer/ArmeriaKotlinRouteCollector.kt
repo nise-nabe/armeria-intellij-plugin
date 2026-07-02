@@ -14,10 +14,11 @@ import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtParenthesizedExpression
+import org.jetbrains.kotlin.psi.KtUnaryExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 import org.jetbrains.kotlin.psi.KtValueArgument
-import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
+import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 internal object ArmeriaKotlinRouteCollector {
@@ -62,16 +63,29 @@ internal object ArmeriaKotlinRouteCollector {
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
     ) {
-        for (call in file.collectDescendantsOfType<KtCallExpression>()) {
+        file.forEachDescendant { element ->
+            val call = element as? KtCallExpression ?: return@forEachDescendant
             ArmeriaRouteCollectionMetrics.current()?.methodCallsVisited?.incrementAndGet()
-            val methodName = resolveCallName(call) ?: continue
+            val methodName = resolveCallName(call) ?: return@forEachDescendant
             if (methodName !in ServiceRegistrationMethod.METHOD_NAMES) {
-                continue
+                return@forEachDescendant
             }
             if (!looksLikeArmeriaBuilderCall(call)) {
-                continue
+                return@forEachDescendant
             }
             addKotlinServiceRegistration(call, methodName, routes, seenServiceRegistrations)
+        }
+    }
+
+    private inline fun PsiElement.forEachDescendant(action: (PsiElement) -> Unit) {
+        val queue = ArrayDeque<PsiElement>()
+        queue.add(this)
+        while (queue.isNotEmpty()) {
+            val element = queue.removeFirst()
+            action(element)
+            for (child in element.children) {
+                queue.add(child)
+            }
         }
     }
 
@@ -112,12 +126,13 @@ internal object ArmeriaKotlinRouteCollector {
     }
 
     private fun isServerBuilderReceiver(receiver: KtExpression): Boolean {
-        val receiverText = receiver.text
+        val receiverExpression = unwrapReceiverExpression(receiver)
+        val receiverText = receiverExpression.text
         if (ArmeriaRouteSupport.looksLikeServerBuilderReceiverText(receiverText)) {
             return true
         }
-        if (receiver is KtNameReferenceExpression) {
-            when (val resolved = receiver.references.firstOrNull()?.resolve()) {
+        if (receiverExpression is KtNameReferenceExpression) {
+            when (val resolved = receiverExpression.references.firstOrNull()?.resolve()) {
                 is com.intellij.psi.PsiVariable -> {
                     if (ArmeriaRouteSupport.isServerBuilderType(resolved.type.canonicalText)) {
                         return true
@@ -132,6 +147,13 @@ internal object ArmeriaKotlinRouteCollector {
             }
         }
         return false
+    }
+
+    private fun unwrapReceiverExpression(receiver: KtExpression): KtExpression {
+        return when (receiver) {
+            is KtUnaryExpression -> receiver.baseExpression?.let(::unwrapReceiverExpression) ?: receiver
+            else -> receiver
+        }
     }
 
     private fun hasServerBuilderImplicitReceiver(call: KtCallExpression): Boolean {
@@ -208,8 +230,9 @@ internal object ArmeriaKotlinRouteCollector {
         val path = extractRegistrationPath(methodName, arguments) ?: return
         val implementationExpression = resolveServiceExpression(methodName, arguments) ?: return
         val unwrappedImplementation = unwrapKotlinExpression(implementationExpression) ?: return
-        val target = extractKotlinTarget(unwrappedImplementation)
-        val targetUnresolved = isUnresolvedKotlinTarget(implementationExpression, target)
+        val targetExpression = extractKotlinTargetExpression(unwrappedImplementation)
+        val target = renderKotlinTarget(targetExpression)
+        val targetUnresolved = isUnresolvedKotlinTarget(targetExpression, target)
         ArmeriaRouteCollector.addServiceRegistrationRoute(
             element = call,
             registrationKey = registrationKey,
@@ -299,11 +322,11 @@ internal object ArmeriaKotlinRouteCollector {
         }
     }
 
-    private fun extractKotlinTarget(expression: KtExpression): String {
+    private fun extractKotlinTargetExpression(expression: KtExpression): KtExpression {
         if (expression is KtDotQualifiedExpression) {
             val selector = expression.selectorExpression
             if (selector is KtCallExpression) {
-                return extractKotlinTarget(selector)
+                return extractKotlinTargetExpression(selector)
             }
         }
         if (expression is KtCallExpression) {
@@ -313,21 +336,31 @@ internal object ArmeriaKotlinRouteCollector {
                 else -> callee?.text
             }
             if (methodName == "build") {
-                val receiver = dotQualifiedReceiver(callee, expression) ?: return expression.text
-                return extractKotlinTarget(receiver)
+                val receiver = dotQualifiedReceiver(callee, expression) ?: return expression
+                return extractKotlinTargetExpression(receiver)
             }
             if (methodName == "builder") {
                 expression.valueArguments.firstOrNull()?.getArgumentExpression()?.let { serviceArg ->
-                    return extractKotlinTarget(serviceArg)
+                    return extractKotlinTargetExpression(serviceArg)
                 }
                 val receiver = dotQualifiedReceiver(callee, expression)
                 if (receiver is KtNameReferenceExpression) {
                     val resolved = receiver.references.firstOrNull()?.resolve()
                     if (resolved is com.intellij.psi.PsiClass) {
-                        return resolved.qualifiedName ?: receiver.text
+                        return receiver
                     }
                 }
             }
+        }
+        return expression
+    }
+
+    private fun extractKotlinTarget(expression: KtExpression): String =
+        renderKotlinTarget(extractKotlinTargetExpression(expression))
+
+    private fun renderKotlinTarget(expression: KtExpression): String {
+        if (expression is KtCallExpression) {
+            val callee = expression.calleeExpression
             val reference = callee as? KtNameReferenceExpression ?: callee?.let {
                 if (it is KtDotQualifiedExpression) it.selectorExpression as? KtNameReferenceExpression else null
             }
@@ -363,9 +396,7 @@ internal object ArmeriaKotlinRouteCollector {
                     is KtDotQualifiedExpression -> callee.selectorExpression?.text
                     else -> callee?.text
                 }
-                if (methodName == "build" || methodName == "builder") {
-                    false
-                } else if (methodName != null && extractedTarget == methodName) {
+                if (methodName != null && extractedTarget == methodName) {
                     true
                 } else {
                     val reference = callee as? KtNameReferenceExpression ?: callee?.let {
