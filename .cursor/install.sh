@@ -25,8 +25,14 @@ download_jar() {
   mkdir -p "${INSTALL_DIR}"
   local tmp
   tmp="$(mktemp "${INSTALL_DIR}/.${VERSIONED_JAR_NAME}.XXXXXX")"
-  curl -fsSL -o "${tmp}" \
-    "https://github.com/nise-nabe/gradle-tapi-mcp-server/releases/download/v${GRADLE_TAPI_MCP_VERSION}/${VERSIONED_JAR_NAME}"
+
+  if ! curl -fsSL -o "${tmp}" \
+    "https://github.com/nise-nabe/gradle-tapi-mcp-server/releases/download/v${GRADLE_TAPI_MCP_VERSION}/${VERSIONED_JAR_NAME}"; then
+    rm -f "${tmp}"
+    echo "curl failed to download ${VERSIONED_JAR_NAME}" >&2
+    return 1
+  fi
+
   mv -f "${tmp}" "${VERSIONED_JAR_PATH}"
 }
 
@@ -42,11 +48,10 @@ ensure_jar() {
 
   local attempt
   for attempt in $(seq 1 "${MAX_DOWNLOAD_ATTEMPTS}"); do
-    download_jar
-    if verify_jar_sha256 "${VERSIONED_JAR_PATH}"; then
+    if download_jar && verify_jar_sha256 "${VERSIONED_JAR_PATH}"; then
       return 0
     fi
-    echo "Download attempt ${attempt}/${MAX_DOWNLOAD_ATTEMPTS} failed checksum verification." >&2
+    echo "Download attempt ${attempt}/${MAX_DOWNLOAD_ATTEMPTS} failed." >&2
     rm -f "${VERSIONED_JAR_PATH}"
   done
 
