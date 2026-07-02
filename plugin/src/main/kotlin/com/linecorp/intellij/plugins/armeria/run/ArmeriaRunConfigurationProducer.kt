@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.run
 import com.intellij.execution.actions.ConfigurationContext
 import com.intellij.execution.actions.LazyRunConfigurationProducer
 import com.intellij.execution.configurations.ConfigurationFactory
+import com.intellij.execution.configurations.ConfigurationType
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.util.Ref
 import com.intellij.psi.PsiClass
@@ -13,7 +14,10 @@ import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
 
 class ArmeriaRunConfigurationProducer : LazyRunConfigurationProducer<ArmeriaRunConfiguration>() {
     override fun getConfigurationFactory(): ConfigurationFactory {
-        return ArmeriaRunConfigurationType().configurationFactories[0]
+        return ConfigurationType.CONFIGURATION_TYPE_EP.findExtension(ArmeriaRunConfigurationType::class.java)
+            ?.configurationFactories
+            ?.first()
+            ?: ArmeriaRunConfigurationType().configurationFactories[0]
     }
 
     override fun setupConfigurationFromContext(

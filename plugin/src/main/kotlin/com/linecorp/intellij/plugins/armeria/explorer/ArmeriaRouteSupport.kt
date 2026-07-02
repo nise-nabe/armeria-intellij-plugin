@@ -33,6 +33,7 @@ object ArmeriaRouteSupport {
     private val ARMERIA_REFERENCE_PATTERN =
         Regex("""(?<![\w"])com\.linecorp\.armeria(?:\.[A-Za-z_][A-Za-z0-9_]*)+""")
     private val SERVER_BUILDER_IDENTIFIER = Regex("""(?<![\w"])serverBuilder(?![\w"])""")
+    private val FQCN_SERVER_BUILDER_CALL = Regex("""com\.linecorp\.armeria\.server\.Server\.builder\(\)""")
     private val SERVER_BUILDER_CALL =
         Regex("""(?:com\.linecorp\.armeria\.server\.Server\.builder\(\)|(?<![.\w"])Server\.builder\(\))""")
 
@@ -208,6 +209,6 @@ object ArmeriaRouteSupport {
     }
 
     fun referencesArmeriaApplicationInSource(contents: CharSequence): Boolean {
-        return referencesArmeriaInText(contents) || SERVER_BUILDER_CALL.containsMatchIn(contents)
+        return referencesArmeriaInText(contents) || FQCN_SERVER_BUILDER_CALL.containsMatchIn(contents)
     }
 }
