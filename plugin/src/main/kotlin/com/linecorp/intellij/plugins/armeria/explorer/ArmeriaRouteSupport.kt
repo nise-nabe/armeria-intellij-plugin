@@ -7,7 +7,26 @@ import com.intellij.psi.PsiArrayInitializerMemberValue
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethod
 
+internal enum class ServiceRegistrationMethod(val methodName: String) {
+    SERVICE("service"),
+    SERVICE_UNDER("serviceUnder"),
+    ANNOTATED_SERVICE("annotatedService"),
+    ;
+
+    companion object {
+        val METHOD_NAMES: Set<String> = entries.mapTo(linkedSetOf()) { it.methodName }
+
+        fun fromMethodName(name: String): ServiceRegistrationMethod? =
+            entries.firstOrNull { it.methodName == name }
+    }
+}
+
 object ArmeriaRouteSupport {
+    const val ARMERIA_PACKAGE_PREFIX = "com.linecorp.armeria"
+    const val ARMERIA_SERVER_PACKAGE_PREFIX = "com.linecorp.armeria.server"
+    const val SERVER_BUILDER_CLASS = "com.linecorp.armeria.server.ServerBuilder"
+    const val SERVER_BUILDER_SIMPLE_NAME = "ServerBuilder"
+
     const val PATH_PREFIX_ANNOTATION = "com.linecorp.armeria.server.annotation.PathPrefix"
     const val DECORATOR_ANNOTATION = "com.linecorp.armeria.server.annotation.Decorator"
     const val EXCEPTION_HANDLER_ANNOTATION = "com.linecorp.armeria.server.annotation.ExceptionHandler"
@@ -113,5 +132,11 @@ object ArmeriaRouteSupport {
         }
         val candidate = path.trim()
         return if (candidate.startsWith("/")) candidate else "/$candidate"
+    }
+
+    fun isServerBuilderType(typeText: String): Boolean {
+        return typeText == SERVER_BUILDER_SIMPLE_NAME ||
+            typeText == SERVER_BUILDER_CLASS ||
+            typeText.endsWith(".$SERVER_BUILDER_SIMPLE_NAME")
     }
 }
