@@ -36,6 +36,10 @@ download_jar() {
   mv -f "${tmp}" "${VERSIONED_JAR_PATH}"
 }
 
+remove_jar_artifacts() {
+  rm -f "${VERSIONED_JAR_PATH}" "${STABLE_JAR_PATH}"
+}
+
 ensure_jar() {
   if [[ -f "${VERSIONED_JAR_PATH}" ]] && verify_jar_sha256 "${VERSIONED_JAR_PATH}"; then
     return 0
@@ -43,8 +47,8 @@ ensure_jar() {
 
   if [[ -f "${VERSIONED_JAR_PATH}" ]]; then
     echo "Removing corrupted MCP server JAR for re-download..." >&2
-    rm -f "${VERSIONED_JAR_PATH}"
   fi
+  remove_jar_artifacts
 
   local attempt
   for attempt in $(seq 1 "${MAX_DOWNLOAD_ATTEMPTS}"); do
@@ -52,7 +56,7 @@ ensure_jar() {
       return 0
     fi
     echo "Download attempt ${attempt}/${MAX_DOWNLOAD_ATTEMPTS} failed." >&2
-    rm -f "${VERSIONED_JAR_PATH}"
+    remove_jar_artifacts
   done
 
   echo "Failed to download a valid MCP server JAR after ${MAX_DOWNLOAD_ATTEMPTS} attempts." >&2
