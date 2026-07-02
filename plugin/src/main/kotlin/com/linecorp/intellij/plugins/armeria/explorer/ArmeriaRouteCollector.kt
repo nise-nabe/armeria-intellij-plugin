@@ -75,6 +75,7 @@ object ArmeriaRouteCollector {
                 seenServiceRegistrations,
             )
         }
+        ArmeriaSpringBootRouteCollector.collect(project, scope, routes)
 
         return CachedValueProvider.Result.create(
             routes.sortedWith(
