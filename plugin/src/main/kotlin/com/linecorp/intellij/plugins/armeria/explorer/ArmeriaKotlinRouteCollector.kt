@@ -23,6 +23,16 @@ import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 internal object ArmeriaKotlinRouteCollector {
     private val BUILDER_SCOPE_METHOD_NAMES = setOf("apply", "run", "also", "let")
 
+    internal fun referencesArmeriaKotlinContent(file: KtFile): Boolean {
+        val hasArmeriaImports = file.importList?.imports?.any { import ->
+            import.importedFqName?.asString()?.startsWith(ArmeriaRouteSupport.ARMERIA_PACKAGE_PREFIX) == true
+        } ?: false
+        if (hasArmeriaImports) {
+            return true
+        }
+        return ArmeriaRouteSupport.referencesArmeriaInText(file.viewProvider.contents)
+    }
+
     fun collectServiceRegistrationsFallback(
         project: Project,
         scope: GlobalSearchScope,
@@ -36,7 +46,7 @@ internal object ArmeriaKotlinRouteCollector {
             }
             ArmeriaRouteCollectionMetrics.current()?.filesScanned?.incrementAndGet()
             val ktFile = PsiManager.getInstance(project).findFile(virtualFile) as? KtFile ?: continue
-            if (!ArmeriaRouteCollector.referencesArmeriaContent(ktFile)) {
+            if (!referencesArmeriaKotlinContent(ktFile)) {
                 continue
             }
             fallbackScannedFiles += virtualFile
@@ -101,7 +111,7 @@ internal object ArmeriaKotlinRouteCollector {
 
     private fun isServerBuilderReceiver(receiver: KtExpression): Boolean {
         val receiverText = receiver.text
-        if (receiverText.contains("Server.builder()") || receiverText.contains("serverBuilder")) {
+        if (ArmeriaRouteSupport.looksLikeServerBuilderReceiverText(receiverText)) {
             return true
         }
         if (receiver is KtNameReferenceExpression) {

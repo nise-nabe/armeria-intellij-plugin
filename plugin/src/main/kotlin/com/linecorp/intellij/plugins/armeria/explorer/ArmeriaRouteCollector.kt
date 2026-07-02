@@ -11,7 +11,6 @@ import com.intellij.psi.JavaRecursiveElementWalkingVisitor
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiExpression
-import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiManager
@@ -26,7 +25,6 @@ import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.message
-import org.jetbrains.kotlin.psi.KtFile
 
 internal enum class RouteProtocol(private val messageKey: String) {
     HTTP("route.explorer.protocol.http"),
@@ -40,10 +38,7 @@ internal enum class RouteProtocol(private val messageKey: String) {
 
 object ArmeriaRouteCollector {
 
-    private const val ARMERIA_HEADER_SCAN_LIMIT = 4096
     private val KOTLIN_PLUGIN_ID = PluginId.getId("org.jetbrains.kotlin")
-    private val ARMERIA_REFERENCE_PATTERN =
-        Regex("""(?<![\w"])com\.linecorp\.armeria(?:\.[A-Za-z_][A-Za-z0-9_]*)+""")
 
     fun collect(project: Project): List<ArmeriaRoute> {
         val metrics = ArmeriaRouteCollectionMetrics()
@@ -175,7 +170,7 @@ object ArmeriaRouteCollector {
             }
             ArmeriaRouteCollectionMetrics.current()?.filesScanned?.incrementAndGet()
             val psiFile = PsiManager.getInstance(project).findFile(virtualFile) as? PsiJavaFile ?: continue
-            if (!referencesArmeriaContent(psiFile)) {
+            if (!referencesArmeriaJavaContent(psiFile)) {
                 continue
             }
             fallbackScannedFiles += virtualFile
@@ -184,26 +179,16 @@ object ArmeriaRouteCollector {
         }
     }
 
-    internal fun referencesArmeriaContent(file: PsiFile): Boolean {
-        val hasArmeriaImports = when (file) {
-            is PsiJavaFile -> file.importList
-                ?.allImportStatements
-                ?.any { statement ->
-                    statement.importReference?.qualifiedName?.startsWith(ArmeriaRouteSupport.ARMERIA_PACKAGE_PREFIX) == true
-                } ?: false
-
-            is KtFile -> file.importList?.imports?.any { import ->
-                import.importedFqName?.asString()?.startsWith(ArmeriaRouteSupport.ARMERIA_PACKAGE_PREFIX) == true
+    internal fun referencesArmeriaJavaContent(file: PsiJavaFile): Boolean {
+        val hasArmeriaImports = file.importList
+            ?.allImportStatements
+            ?.any { statement ->
+                statement.importReference?.qualifiedName?.startsWith(ArmeriaRouteSupport.ARMERIA_PACKAGE_PREFIX) == true
             } ?: false
-
-            else -> false
-        }
         if (hasArmeriaImports) {
             return true
         }
-        val contents = file.viewProvider.contents
-        val searchWindow = contents.subSequence(0, minOf(contents.length, ARMERIA_HEADER_SCAN_LIMIT))
-        return ARMERIA_REFERENCE_PATTERN.containsMatchIn(searchWindow)
+        return ArmeriaRouteSupport.referencesArmeriaInText(file.viewProvider.contents)
     }
 
     internal fun collectServiceRegistrationsFromJavaFile(
@@ -318,7 +303,7 @@ object ArmeriaRouteCollector {
             return true
         }
         val qualifierText = expression.methodExpression.qualifierExpression?.text ?: return false
-        return qualifierText.contains("Server.builder()") || qualifierText.contains("serverBuilder")
+        return ArmeriaRouteSupport.looksLikeServerBuilderReceiverText(qualifierText)
     }
 
     private fun resolvesToArmeriaServerBuilder(expression: PsiMethodCallExpression): Boolean {

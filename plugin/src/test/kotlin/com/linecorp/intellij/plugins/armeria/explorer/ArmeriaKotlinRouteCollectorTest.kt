@@ -464,6 +464,31 @@ class ArmeriaKotlinRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         assertNull(routes.firstOrNull { it.path == "/oops" })
     }
 
+    fun testNoFalsePositiveForServerBuilderNamedNonArmeriaVariable() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                Server.builder().build()
+                val serverBuilderHelper = FakeBuilder()
+                serverBuilderHelper.service("/oops", Any())
+            }
+
+            class FakeBuilder {
+                fun service(path: String, handler: Any) {}
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertNull(routes.firstOrNull { it.path == "/oops" })
+    }
+
     fun testCollectUnresolvedParenthesizedNewExpressionTarget() {
         myFixture.configureByText(
             "Main.kt",
@@ -553,6 +578,10 @@ class ArmeriaKotlinRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
                 }
 
                 public ServerBuilder annotatedService(Object service) {
+                    return this;
+                }
+
+                public ServerBuilder annotatedService(String prefix, Object service) {
                     return this;
                 }
 

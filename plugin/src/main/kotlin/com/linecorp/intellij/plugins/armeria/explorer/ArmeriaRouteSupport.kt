@@ -26,6 +26,11 @@ object ArmeriaRouteSupport {
     const val ARMERIA_SERVER_PACKAGE_PREFIX = "com.linecorp.armeria.server"
     const val SERVER_BUILDER_CLASS = "com.linecorp.armeria.server.ServerBuilder"
     const val SERVER_BUILDER_SIMPLE_NAME = "ServerBuilder"
+    const val ARMERIA_HEADER_SCAN_LIMIT = 4096
+
+    private val ARMERIA_REFERENCE_PATTERN =
+        Regex("""(?<![\w"])com\.linecorp\.armeria(?:\.[A-Za-z_][A-Za-z0-9_]*)+""")
+    private val SERVER_BUILDER_IDENTIFIER = Regex("""(?<![\w"])serverBuilder(?![\w"])""")
 
     const val PATH_PREFIX_ANNOTATION = "com.linecorp.armeria.server.annotation.PathPrefix"
     const val DECORATOR_ANNOTATION = "com.linecorp.armeria.server.annotation.Decorator"
@@ -138,5 +143,14 @@ object ArmeriaRouteSupport {
         return typeText == SERVER_BUILDER_SIMPLE_NAME ||
             typeText == SERVER_BUILDER_CLASS ||
             typeText.endsWith(".$SERVER_BUILDER_SIMPLE_NAME")
+    }
+
+    fun referencesArmeriaInText(contents: CharSequence, scanLimit: Int = ARMERIA_HEADER_SCAN_LIMIT): Boolean {
+        val searchWindow = contents.subSequence(0, minOf(contents.length, scanLimit))
+        return ARMERIA_REFERENCE_PATTERN.containsMatchIn(searchWindow)
+    }
+
+    fun looksLikeServerBuilderReceiverText(text: String): Boolean {
+        return text.contains("Server.builder()") || SERVER_BUILDER_IDENTIFIER.containsMatchIn(text)
     }
 }
