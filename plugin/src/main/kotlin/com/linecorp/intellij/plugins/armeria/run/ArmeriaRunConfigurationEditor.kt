@@ -23,7 +23,7 @@ class ArmeriaRunConfigurationEditor(private val project: Project) : SettingsEdit
         ModuleManager.getInstance(project).sortedModules.forEach(moduleComboBox::addItem)
         mainClassField.addActionListener {
             val chooser = TreeClassChooserFactory.getInstance(project).createWithInnerClassesScopeChooser(
-                message("armeria.run.configuration.main.class"),
+                message("armeria.run.configuration.main.class.chooser.title"),
                 GlobalSearchScope.projectScope(project),
                 { PsiMethodUtil.hasMainInClass(it) },
                 null,

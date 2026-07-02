@@ -33,7 +33,11 @@ class ArmeriaRunConfigurationProducer : LazyRunConfigurationProducer<ArmeriaRunC
         context: ConfigurationContext,
     ): Boolean {
         val mainClass = findArmeriaMainClass(context.psiLocation) ?: return false
-        return mainClass.qualifiedName == configuration.getMainClass()
+        if (mainClass.qualifiedName != configuration.getMainClass()) {
+            return false
+        }
+        val contextModule = ModuleUtilCore.findModuleForPsiElement(mainClass)
+        return contextModule == configuration.getConfigurationModule().module
     }
 
     private fun findArmeriaMainClass(element: PsiElement?): PsiClass? {
