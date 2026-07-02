@@ -7,7 +7,7 @@ IntelliJ Platform plugin for Armeria. Gradle multi-project build (`build-logic` 
 ### Prerequisites
 
 - **Gradle daemon JVM**: Adoptium 25 (pinned in `gradle/gradle-daemon-jvm.properties`; Foojay resolver downloads it).
-- **Compile toolchain**: Java 21 JetBrains (configured in `build-logic/.../com.linecorp.intellij.platform-plugin.gradle.kts` and inherited by `plugin/`).
+- **Compile toolchain**: Java 21 JetBrains (configured in `build-logic/src/main/kotlin/com.linecorp.intellij.platform-plugin.gradle.kts` and inherited by `plugin/`).
 - Gradle wrapper (`./gradlew`) downloads the distribution and dependencies on first use.
 
 ### MCP: Gradle Tooling API

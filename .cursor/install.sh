@@ -20,13 +20,30 @@ verify_jar_sha256() {
   fi
 }
 
-if [[ ! -f "${VERSIONED_JAR_PATH}" ]]; then
+download_jar() {
   mkdir -p "${INSTALL_DIR}"
-  curl -fsSL -o "${VERSIONED_JAR_PATH}" \
+  local tmp
+  tmp="$(mktemp "${INSTALL_DIR}/.${VERSIONED_JAR_NAME}.XXXXXX")"
+  curl -fsSL -o "${tmp}" \
     "https://github.com/nise-nabe/gradle-tapi-mcp-server/releases/download/v${GRADLE_TAPI_MCP_VERSION}/${VERSIONED_JAR_NAME}"
-fi
+  mv -f "${tmp}" "${VERSIONED_JAR_PATH}"
+}
 
-verify_jar_sha256 "${VERSIONED_JAR_PATH}"
+ensure_jar() {
+  if [[ -f "${VERSIONED_JAR_PATH}" ]] && verify_jar_sha256 "${VERSIONED_JAR_PATH}"; then
+    return 0
+  fi
+
+  if [[ -f "${VERSIONED_JAR_PATH}" ]]; then
+    echo "Removing corrupted MCP server JAR for re-download..." >&2
+    rm -f "${VERSIONED_JAR_PATH}"
+  fi
+
+  download_jar
+  verify_jar_sha256 "${VERSIONED_JAR_PATH}"
+}
+
+ensure_jar
 ln -sfn "${VERSIONED_JAR_NAME}" "${STABLE_JAR_PATH}"
 
 ./gradlew --no-daemon build
