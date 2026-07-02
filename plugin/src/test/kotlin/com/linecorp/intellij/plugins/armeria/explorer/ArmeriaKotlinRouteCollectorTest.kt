@@ -988,6 +988,78 @@ class ArmeriaKotlinRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals("example.HelloService", serviceRoute!!.target)
     }
 
+    fun testCollectServiceRegistrationFromParenthesizedServerBuilderReceiver() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.ServerBuilder
+
+            fun main() {
+                val sb: ServerBuilder = Server.builder()
+                (sb).service("/api", HelloService())
+                sb.build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val serviceRoute = ArmeriaRouteCollector.collect(project)
+            .firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
+        assertNotNull(serviceRoute)
+        assertEquals("example.HelloService", serviceRoute!!.target)
+    }
+
+    fun testNoFalsePositiveForNonArmeriaQualifiedServerBuilder() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                Server.builder().build()
+                com.foo.Server.builder()
+                    .service("/oops", Any())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.foo;
+
+            public final class Server {
+                public static FakeBuilder builder() {
+                    return null;
+                }
+            }
+
+            class FakeBuilder {
+                public FakeBuilder service(String path, Object handler) {
+                    return this;
+                }
+
+                public void build() {}
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertNull(routes.firstOrNull { it.path == "/oops" })
+    }
+
     private fun registerArmeriaStubs() {
         myFixture.addClass(
             """

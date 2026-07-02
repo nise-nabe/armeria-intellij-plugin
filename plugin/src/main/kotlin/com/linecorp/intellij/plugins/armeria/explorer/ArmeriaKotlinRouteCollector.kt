@@ -165,6 +165,7 @@ internal object ArmeriaKotlinRouteCollector {
     private fun unwrapReceiverExpression(receiver: KtExpression): KtExpression {
         return when (receiver) {
             is KtUnaryExpression -> receiver.baseExpression?.let(::unwrapReceiverExpression) ?: receiver
+            is KtParenthesizedExpression -> receiver.expression?.let(::unwrapReceiverExpression) ?: receiver
             else -> receiver
         }
     }

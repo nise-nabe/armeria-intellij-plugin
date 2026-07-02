@@ -37,7 +37,8 @@ object ArmeriaRouteSupport {
     private val ARMERIA_REFERENCE_PATTERN =
         Regex("""(?<![\w"])com\.linecorp\.armeria(?:\.[A-Za-z_][A-Za-z0-9_]*)+""")
     private val SERVER_BUILDER_IDENTIFIER = Regex("""(?<![\w"])serverBuilder(?![\w"])""")
-    private val SERVER_BUILDER_CALL = Regex("""(?<![\w"])Server\.builder\(\)""")
+    private val SERVER_BUILDER_CALL =
+        Regex("""(?:com\.linecorp\.armeria\.server\.Server\.builder\(\)|(?<![.\w"])Server\.builder\(\))""")
 
     const val PATH_PREFIX_ANNOTATION = "com.linecorp.armeria.server.annotation.PathPrefix"
     const val DECORATOR_ANNOTATION = "com.linecorp.armeria.server.annotation.Decorator"
