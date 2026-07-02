@@ -149,6 +149,7 @@ object ArmeriaRouteSupport {
 
     private fun normalizeServerBuilderTypeText(typeText: String): String {
         var normalized = typeText.trim().replace(Regex("""/\*.*?\*/"""), "").trim()
+        normalized = stripLeadingKotlinTypeAnnotations(normalized)
         if (normalized.endsWith('?')) {
             normalized = normalized.dropLast(1).trim()
         }
@@ -157,6 +158,32 @@ object ArmeriaRouteSupport {
             normalized = normalized.substring(0, genericStart).trim()
         }
         return normalized
+    }
+
+    private fun stripLeadingKotlinTypeAnnotations(typeText: String): String {
+        var remaining = typeText.trimStart()
+        while (remaining.startsWith('@')) {
+            var index = 1
+            var depth = 0
+            while (index < remaining.length) {
+                when (val char = remaining[index]) {
+                    '(' -> depth++
+                    ')' -> {
+                        depth--
+                        if (depth == 0) {
+                            index++
+                            break
+                        }
+                    }
+                    ' ', '\t', '\n' -> if (depth == 0) {
+                        break
+                    }
+                }
+                index++
+            }
+            remaining = remaining.substring(index).trimStart()
+        }
+        return remaining
     }
 
     fun referencesArmeriaInText(contents: CharSequence, scanLimit: Int = ARMERIA_HEADER_SCAN_LIMIT): Boolean {

@@ -2,11 +2,14 @@ package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiManager
 import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import org.jetbrains.kotlin.idea.KotlinFileType
+import org.jetbrains.kotlin.psi.KtClassOrObject
+import org.jetbrains.kotlin.psi.KtConstructor
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
@@ -18,7 +21,6 @@ import org.jetbrains.kotlin.psi.KtUnaryExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 import org.jetbrains.kotlin.psi.KtValueArgument
-import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 internal object ArmeriaKotlinRouteCollector {
@@ -346,7 +348,7 @@ internal object ArmeriaKotlinRouteCollector {
                 val receiver = dotQualifiedReceiver(callee, expression)
                 if (receiver is KtNameReferenceExpression) {
                     val resolved = receiver.references.firstOrNull()?.resolve()
-                    if (resolved is com.intellij.psi.PsiClass) {
+                    if (isResolvedKotlinClass(resolved)) {
                         return receiver
                     }
                 }
@@ -362,21 +364,12 @@ internal object ArmeriaKotlinRouteCollector {
                 if (it is KtDotQualifiedExpression) it.selectorExpression as? KtNameReferenceExpression else null
             }
             val resolved = reference?.references?.firstOrNull()?.resolve()
-            val qualifiedName = when (resolved) {
-                is com.intellij.psi.PsiClass -> resolved.qualifiedName
-                is PsiMethod -> resolved.containingClass?.qualifiedName
-                else -> null
-            }
-            if (qualifiedName != null) {
-                return qualifiedName
-            }
+            resolveQualifiedClassName(resolved)?.let { return it }
             return reference?.getReferencedName() ?: expression.text
         }
         if (expression is KtNameReferenceExpression) {
             val resolved = expression.references.firstOrNull()?.resolve()
-            when (resolved) {
-                is com.intellij.psi.PsiClass -> return resolved.qualifiedName ?: expression.text
-            }
+            resolveQualifiedClassName(resolved)?.let { return it }
             return expression.text
         }
         return expression.text
@@ -400,9 +393,9 @@ internal object ArmeriaKotlinRouteCollector {
                         if (it is KtDotQualifiedExpression) it.selectorExpression as? KtNameReferenceExpression else null
                     }
                     val resolved = reference?.references?.firstOrNull()?.resolve()
-                    when (resolved) {
-                        is com.intellij.psi.PsiClass -> false
-                        is PsiMethod -> {
+                    when {
+                        isResolvedKotlinClass(resolved) -> false
+                        resolved is PsiMethod -> {
                             if (resolved.isConstructor) {
                                 false
                             } else {
@@ -410,6 +403,7 @@ internal object ArmeriaKotlinRouteCollector {
                                     extractedTarget == resolved.containingClass?.qualifiedName
                             }
                         }
+                        isResolvedKotlinConstructor(resolved) -> false
                         else -> extractedTarget == rawTarget
                     }
                 }
@@ -427,5 +421,23 @@ internal object ArmeriaKotlinRouteCollector {
             is KtDotQualifiedExpression -> callee.receiverExpression
             else -> (expression.parent as? KtDotQualifiedExpression)?.receiverExpression
         }
+    }
+
+    private fun resolveQualifiedClassName(resolved: PsiElement?): String? {
+        return when (resolved) {
+            is com.intellij.psi.PsiClass -> resolved.qualifiedName
+            is PsiMethod -> resolved.containingClass?.qualifiedName
+            is KtClassOrObject -> resolved.fqName?.asString()
+            is KtConstructor<*> -> resolved.getContainingClassOrObject().fqName?.asString()
+            else -> null
+        }
+    }
+
+    private fun isResolvedKotlinClass(resolved: PsiElement?): Boolean {
+        return resolved is com.intellij.psi.PsiClass || resolved is KtClassOrObject
+    }
+
+    private fun isResolvedKotlinConstructor(resolved: PsiElement?): Boolean {
+        return resolved is PsiMethod && resolved.isConstructor || resolved is KtConstructor<*>
     }
 }
