@@ -7,6 +7,7 @@
 - Added programmatic `ServerBuilder.decorator()` detection in Route Explorer.
 - Added HTTP Request file generation from Route Explorer routes.
 - Added Spring Boot `@Bean` Server registration discovery.
+- Added timeout and blocking annotation hints in Route Explorer details.
 - Added Kotlin source support to Route Explorer for annotated services and Server.builder registrations.
 - Added Velocity-based regression tests for New Project Wizard file templates.
 - Added `plugin/src/test/resources/wizard-verification-matrix.md` documenting representative wizard scenarios.
