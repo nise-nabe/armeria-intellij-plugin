@@ -1,0 +1,20 @@
+package ${PACKAGE_NAME};
+
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.annotation.Get;
+
+public class Main {
+    public static void main(String[] args) {
+        Server.builder()
+              .http(8080)
+              .annotatedService(new Object() {
+                  @Get("/hello")
+                  public String hello() {
+                      return "Hello, Armeria";
+                  }
+              })
+              .build()
+              .start()
+              .join();
+    }
+}
