@@ -4,8 +4,14 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiAnnotationMemberValue
 import com.intellij.psi.PsiArrayInitializerMemberValue
+import com.intellij.psi.PsiField
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiVariable
+import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtTypeAlias
+import org.jetbrains.kotlin.psi.KtTypeReference
+import org.jetbrains.kotlin.psi.KtUserType
 
 internal enum class ServiceRegistrationMethod(val methodName: String) {
     SERVICE("service"),
@@ -145,6 +151,28 @@ object ArmeriaRouteSupport {
         return normalized == SERVER_BUILDER_SIMPLE_NAME ||
             normalized == SERVER_BUILDER_CLASS ||
             normalized.endsWith(".$SERVER_BUILDER_SIMPLE_NAME")
+    }
+
+    fun resolveKotlinTypeReferenceText(typeReference: KtTypeReference?): String? {
+        if (typeReference == null) {
+            return null
+        }
+        val userType = typeReference.typeElement as? KtUserType
+        val resolved = userType?.referenceExpression?.references?.firstOrNull()?.resolve()
+        return when (resolved) {
+            is KtTypeAlias -> resolved.getTypeReference()?.text ?: typeReference.text
+            is KtClass -> resolved.fqName?.asString() ?: typeReference.text
+            else -> typeReference.text
+        }
+    }
+
+    fun evaluateJavaStringConstant(variable: PsiVariable): String? {
+        (variable as? PsiField)?.initializer?.let { initializer ->
+            if (initializer is PsiLiteralExpression) {
+                return initializer.value as? String
+            }
+        }
+        return variable.computeConstantValue() as? String
     }
 
     private fun normalizeServerBuilderTypeText(typeText: String): String {

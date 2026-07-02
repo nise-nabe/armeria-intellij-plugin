@@ -5,6 +5,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiManager
+import com.intellij.psi.PsiVariable
 import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import org.jetbrains.kotlin.idea.KotlinFileType
@@ -115,16 +116,26 @@ internal object ArmeriaKotlinRouteCollector {
 
     private fun resolvesToArmeriaServerBuilder(call: KtCallExpression): Boolean {
         ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
-        val dotQualified = call.parent as? KtDotQualifiedExpression ?: return false
-        for (reference in dotQualified.references) {
-            val resolved = reference.resolve()
-            if (resolved is PsiMethod &&
-                resolved.containingClass?.qualifiedName?.startsWith(ArmeriaRouteSupport.ARMERIA_SERVER_PACKAGE_PREFIX) == true
-            ) {
-                return true
+        val dotQualified = call.parent as? KtDotQualifiedExpression
+        if (dotQualified != null) {
+            for (reference in dotQualified.references) {
+                if (isArmeriaServerBuilderMethod(reference.resolve())) {
+                    return true
+                }
             }
         }
-        return false
+        val callee = call.calleeExpression ?: return false
+        val references = when (callee) {
+            is KtNameReferenceExpression -> callee.references.toList()
+            is KtDotQualifiedExpression -> callee.references.toList()
+            else -> emptyList()
+        }
+        return references.any { isArmeriaServerBuilderMethod(it.resolve()) }
+    }
+
+    private fun isArmeriaServerBuilderMethod(resolved: PsiElement?): Boolean {
+        return resolved is PsiMethod &&
+            resolved.containingClass?.qualifiedName?.startsWith(ArmeriaRouteSupport.ARMERIA_SERVER_PACKAGE_PREFIX) == true
     }
 
     private fun isServerBuilderReceiver(receiver: KtExpression): Boolean {
@@ -135,13 +146,13 @@ internal object ArmeriaKotlinRouteCollector {
         }
         if (receiverExpression is KtNameReferenceExpression) {
             when (val resolved = receiverExpression.references.firstOrNull()?.resolve()) {
-                is com.intellij.psi.PsiVariable -> {
+                is PsiVariable -> {
                     if (ArmeriaRouteSupport.isServerBuilderType(resolved.type.canonicalText)) {
                         return true
                     }
                 }
                 is KtProperty -> {
-                    val typeText = resolved.typeReference?.text
+                    val typeText = ArmeriaRouteSupport.resolveKotlinTypeReferenceText(resolved.typeReference)
                     if (typeText != null && ArmeriaRouteSupport.isServerBuilderType(typeText)) {
                         return true
                     }
@@ -303,15 +314,29 @@ internal object ArmeriaKotlinRouteCollector {
                     unwrapped.text.trim('"')
                 }
             }
-            is KtNameReferenceExpression -> {
-                val resolved = unwrapped.references.firstOrNull()?.resolve()
-                if (resolved is KtProperty) {
-                    extractKotlinString(resolved.initializer)?.let { return it }
-                }
-                unwrapped.text.trim('"').takeIf { it.isNotEmpty() }
-            }
+            is KtDotQualifiedExpression -> extractKotlinStringFromReference(unwrapped)
+            is KtNameReferenceExpression -> extractKotlinStringFromReference(unwrapped)
             else -> unwrapped.text.trim('"').takeIf { it.isNotEmpty() }
         }
+    }
+
+    private fun extractKotlinStringFromReference(expression: KtExpression): String? {
+        val resolved = expression.references.firstOrNull()?.resolve()
+        when (resolved) {
+            is KtProperty -> extractKotlinString(resolved.initializer)?.let { return it }
+            is PsiVariable -> ArmeriaRouteSupport.evaluateJavaStringConstant(resolved)?.let { return it }
+        }
+        if (expression is KtDotQualifiedExpression) {
+            val selector = expression.selectorExpression as? KtNameReferenceExpression ?: return null
+            val receiver = expression.receiverExpression as? KtNameReferenceExpression ?: return null
+            val containingClass = receiver.references.firstOrNull()?.resolve() as? com.intellij.psi.PsiClass
+                ?: return null
+            val field = containingClass.findFieldByName(selector.getReferencedName(), true)
+            if (field != null) {
+                ArmeriaRouteSupport.evaluateJavaStringConstant(field)?.let { return it }
+            }
+        }
+        return expression.text.trim('"').takeIf { it.isNotEmpty() }
     }
 
     private fun unwrapKotlinExpression(expression: KtExpression?): KtExpression? {

@@ -882,6 +882,112 @@ class ArmeriaKotlinRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         assertFalse(serviceRoute.targetUnresolved)
     }
 
+    fun testCollectServiceRegistrationWithJavaStaticFinalPath() {
+        myFixture.addClass(
+            """
+            package example;
+
+            public final class Routes {
+                public static final String API_PATH = "/api";
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                Server.builder()
+                    .service(Routes.API_PATH, HelloService())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val serviceRoute = ArmeriaRouteCollector.collect(project)
+            .firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
+        assertNotNull(serviceRoute)
+    }
+
+    fun testCollectServiceRegistrationFromServerBuilderExtensionFunction() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.ServerBuilder
+
+            fun ServerBuilder.configure() {
+                service("/api", HelloService())
+            }
+
+            fun main() {
+                Server.builder()
+                    .configure()
+                    .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val serviceRoute = ArmeriaRouteCollector.collect(project)
+            .firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
+        assertNotNull(serviceRoute)
+        assertEquals("example.HelloService", serviceRoute!!.target)
+    }
+
+    fun testCollectServiceRegistrationFromServerBuilderTypeAlias() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.ServerBuilder
+
+            typealias SB = ServerBuilder
+
+            fun main() {
+                val sb: SB = Server.builder()
+                sb.service("/api", HelloService())
+                sb.build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val serviceRoute = ArmeriaRouteCollector.collect(project)
+            .firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
+        assertNotNull(serviceRoute)
+        assertEquals("example.HelloService", serviceRoute!!.target)
+    }
+
     private fun registerArmeriaStubs() {
         myFixture.addClass(
             """

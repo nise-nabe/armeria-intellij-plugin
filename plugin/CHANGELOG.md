@@ -22,6 +22,8 @@
 - Fixed potential NPE when building Kotlin service registration keys for non-physical PSI files.
 - Fixed unresolved-target detection for Kotlin `build()`/`builder()` wrapper expressions.
 - Fixed Kotlin `ServerBuilder?` and generic type spellings not recognized as server-builder receivers.
+- Fixed Kotlin path extraction for Java `static final` constants and `ServerBuilder` extension functions.
+- Fixed Kotlin `ServerBuilder` typealias variables not recognized as server-builder receivers.
 - Aligned Kotlin service registration discovery with the Java collector via shared PSI delegation.
 - New Project Wizard: emit `armeria-tomcat8` in Gradle and Maven templates when selected.
 - New Project Wizard: align Scala optional dependencies and Scala build setup in Gradle (Groovy) and Maven templates with Gradle (Kotlin DSL).
