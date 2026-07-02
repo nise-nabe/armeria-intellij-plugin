@@ -9,6 +9,7 @@ import com.intellij.psi.PsiVariable
 import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import org.jetbrains.kotlin.idea.KotlinFileType
+import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtConstructor
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -21,6 +22,9 @@ import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtUnaryExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
+import org.jetbrains.kotlin.psi.KtTypeAlias
+import org.jetbrains.kotlin.psi.KtTypeReference
+import org.jetbrains.kotlin.psi.KtUserType
 import org.jetbrains.kotlin.psi.KtValueArgument
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
@@ -152,7 +156,7 @@ internal object ArmeriaKotlinRouteCollector {
                     }
                 }
                 is KtProperty -> {
-                    val typeText = ArmeriaRouteSupport.resolveKotlinTypeReferenceText(resolved.typeReference)
+                    val typeText = resolveKotlinTypeReferenceText(resolved.typeReference)
                     if (typeText != null && ArmeriaRouteSupport.isServerBuilderType(typeText)) {
                         return true
                     }
@@ -160,6 +164,19 @@ internal object ArmeriaKotlinRouteCollector {
             }
         }
         return false
+    }
+
+    private fun resolveKotlinTypeReferenceText(typeReference: KtTypeReference?): String? {
+        if (typeReference == null) {
+            return null
+        }
+        val userType = typeReference.typeElement as? KtUserType
+        val resolved = userType?.referenceExpression?.references?.firstOrNull()?.resolve()
+        return when (resolved) {
+            is KtTypeAlias -> resolved.getTypeReference()?.text ?: typeReference.text
+            is KtClass -> resolved.fqName?.asString() ?: typeReference.text
+            else -> typeReference.text
+        }
     }
 
     private fun unwrapReceiverExpression(receiver: KtExpression): KtExpression {
