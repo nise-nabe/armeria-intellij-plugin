@@ -21,7 +21,9 @@ import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 internal object ArmeriaKotlinRouteCollector {
-    private val BUILDER_SCOPE_METHOD_NAMES = setOf("apply", "run", "also", "let")
+    private val IMPLICIT_RECEIVER_SCOPE_METHODS = setOf("apply", "run")
+    private val EXPLICIT_PARAMETER_SCOPE_METHODS = setOf("also", "let")
+    private val BUILDER_SCOPE_METHOD_NAMES = IMPLICIT_RECEIVER_SCOPE_METHODS + EXPLICIT_PARAMETER_SCOPE_METHODS
 
     internal fun referencesArmeriaKotlinContent(file: KtFile): Boolean {
         val hasArmeriaImports = file.importList?.imports?.any { import ->
@@ -144,8 +146,34 @@ internal object ArmeriaKotlinRouteCollector {
             is KtDotQualifiedExpression -> callee.receiverExpression
             else -> (scopeCall.parent as? KtDotQualifiedExpression)?.receiverExpression
         } ?: return false
-        return isServerBuilderReceiver(scopeReceiver) ||
-            receiverChainContainsServerBuilder(scopeReceiver)
+        if (!isServerBuilderReceiver(scopeReceiver) && !receiverChainContainsServerBuilder(scopeReceiver)) {
+            return false
+        }
+        return when (scopeMethod) {
+            in IMPLICIT_RECEIVER_SCOPE_METHODS -> true
+            in EXPLICIT_PARAMETER_SCOPE_METHODS -> isRegistrationOnScopeLambdaParameter(call, lambda)
+            else -> false
+        }
+    }
+
+    private fun isRegistrationOnScopeLambdaParameter(
+        call: KtCallExpression,
+        scopeLambda: KtLambdaExpression,
+    ): Boolean {
+        val dotQualified = when (val callee = call.calleeExpression) {
+            is KtDotQualifiedExpression -> callee
+            else -> call.parent as? KtDotQualifiedExpression
+        } ?: return false
+
+        val receiver = dotQualified.receiverExpression
+        if (isServerBuilderReceiver(receiver)) {
+            return true
+        }
+        val receiverName = (receiver as? KtNameReferenceExpression)?.getReferencedName() ?: return false
+        if (scopeLambda.valueParameters.any { it.name == receiverName }) {
+            return true
+        }
+        return scopeLambda.valueParameters.isEmpty() && receiverName == "it"
     }
 
     private fun receiverChainContainsServerBuilder(receiver: KtExpression): Boolean {

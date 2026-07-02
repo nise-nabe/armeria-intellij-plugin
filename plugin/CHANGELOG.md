@@ -17,6 +17,7 @@
 
 ### Fixed
 - Fixed duplicate Kotlin annotated routes and false-positive service registrations in Route Explorer.
+- Fixed false-positive route detection for unqualified `service` calls inside `also`/`let` blocks on `Server.builder()`.
 - Aligned Kotlin service registration discovery with the Java collector via shared PSI delegation.
 - New Project Wizard: emit `armeria-tomcat8` in Gradle and Maven templates when selected.
 - New Project Wizard: align Scala optional dependencies and Scala build setup in Gradle (Groovy) and Maven templates with Gradle (Kotlin DSL).

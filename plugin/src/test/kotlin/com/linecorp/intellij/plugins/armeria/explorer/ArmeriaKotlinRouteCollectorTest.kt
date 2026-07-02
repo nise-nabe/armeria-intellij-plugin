@@ -338,6 +338,83 @@ class ArmeriaKotlinRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals("example.HelloService", serviceRoute!!.target)
     }
 
+    fun testCollectServiceRegistrationInAlsoBlockWithExplicitReceiver() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                Server.builder().also {
+                    it.service("/api", HelloService())
+                }.build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
+        assertNotNull(serviceRoute)
+        assertEquals("example.HelloService", serviceRoute!!.target)
+    }
+
+    fun testNoFalsePositiveForUnqualifiedServiceCallInAlsoBlock() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                Server.builder().also {
+                    service("/oops", Any())
+                }.build()
+            }
+
+            private fun service(path: String, handler: Any) {}
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertNull(routes.firstOrNull { it.path == "/oops" })
+    }
+
+    fun testNoFalsePositiveForUnqualifiedServiceCallInLetBlock() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                Server.builder().let {
+                    service("/oops", Any())
+                }.build()
+            }
+
+            private fun service(path: String, handler: Any) {}
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertNull(routes.firstOrNull { it.path == "/oops" })
+    }
+
     fun testCollectServiceRegistrationWithConstValPath() {
         myFixture.configureByText(
             "Main.kt",
