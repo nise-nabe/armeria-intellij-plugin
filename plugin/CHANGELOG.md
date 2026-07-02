@@ -28,6 +28,7 @@
 - Added gRPC route discovery from `.proto` service definitions with brace-aware parsing and a registry kill-switch.
 - Added New Project Wizard sample `Main` and `logback.xml` generation.
 - Added JUnit 5 Armeria service test template generation in New Project Wizard.
+- Added DocService runtime route sync action in Route Explorer.
 - Added Kotlin source support to Route Explorer for annotated services and Server.builder registrations.
 - Added Velocity-based regression tests for New Project Wizard file templates.
 - Added `plugin/src/test/resources/wizard-verification-matrix.md` documenting representative wizard scenarios.
