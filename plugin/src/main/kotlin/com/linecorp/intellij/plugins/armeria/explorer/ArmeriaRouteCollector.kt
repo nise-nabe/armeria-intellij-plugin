@@ -1,12 +1,15 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.intellij.ide.highlighter.JavaFileType
+import com.intellij.ide.plugins.PluginManagerCore
+import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.JavaRecursiveElementWalkingVisitor
 import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiLiteralExpression
@@ -35,13 +38,7 @@ internal enum class RouteProtocol(private val messageKey: String) {
 
 object ArmeriaRouteCollector {
 
-    private const val ARMERIA_PACKAGE_PREFIX = "com.linecorp.armeria"
-    private const val ARMERIA_SERVER_PACKAGE_PREFIX = "com.linecorp.armeria.server"
-    private const val SERVER_BUILDER_CLASS = "com.linecorp.armeria.server.ServerBuilder"
-    private const val ARMERIA_HEADER_SCAN_LIMIT = 4096
-    private val REGISTRATION_METHOD_NAMES = setOf("service", "serviceUnder", "annotatedService")
-    private val ARMERIA_REFERENCE_PATTERN =
-        Regex("""(?<![\w"])com\.linecorp\.armeria(?:\.[A-Za-z_][A-Za-z0-9_]*)+""")
+    private val KOTLIN_PLUGIN_ID = PluginId.getId("org.jetbrains.kotlin")
 
     fun collect(project: Project): List<ArmeriaRoute> {
         val metrics = ArmeriaRouteCollectionMetrics()
@@ -62,12 +59,21 @@ object ArmeriaRouteCollector {
         val fallbackScannedFiles = linkedSetOf<VirtualFile>()
         val seenServiceRegistrations = mutableSetOf<String>()
         val psiFacade = JavaPsiFacade.getInstance(project)
-        val serverBuilderOnClasspath = psiFacade.findClass(SERVER_BUILDER_CLASS, scope) != null
+        val serverBuilderOnClasspath = psiFacade.findClass(ArmeriaRouteSupport.SERVER_BUILDER_CLASS, scope) != null
 
         collectAnnotatedRoutesIndexed(project, scope, routes)
         collectServiceRegistrationsIndexed(project, scope, routes, seenServiceRegistrations)
         if (!serverBuilderOnClasspath) {
             collectServiceRegistrationsFallback(project, scope, routes, fallbackScannedFiles, seenServiceRegistrations)
+        }
+        if (isKotlinPluginAvailable()) {
+            ArmeriaKotlinRouteCollector.collectServiceRegistrationsFallback(
+                project,
+                scope,
+                routes,
+                fallbackScannedFiles,
+                seenServiceRegistrations,
+            )
         }
 
         return CachedValueProvider.Result.create(
@@ -94,12 +100,12 @@ object ArmeriaRouteCollector {
                 if (!seenMethods.add(method)) {
                     return@forEach
                 }
-                addAnnotatedRoute(method, routes)
+                addAnnotatedRouteFromMethod(method, routes)
             }
         }
     }
 
-    private fun addAnnotatedRoute(method: PsiMethod, routes: MutableList<ArmeriaRoute>) {
+    internal fun addAnnotatedRouteFromMethod(method: PsiMethod, routes: MutableList<ArmeriaRoute>) {
         val annotation = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return
         val containingClass = method.containingClass ?: return
         val classPrefix =
@@ -136,8 +142,8 @@ object ArmeriaRouteCollector {
         seenServiceRegistrations: MutableSet<String>,
     ) {
         val psiFacade = JavaPsiFacade.getInstance(project)
-        val builderClass = psiFacade.findClass(SERVER_BUILDER_CLASS, scope) ?: return
-        for (methodName in REGISTRATION_METHOD_NAMES) {
+        val builderClass = psiFacade.findClass(ArmeriaRouteSupport.SERVER_BUILDER_CLASS, scope) ?: return
+        for (methodName in ServiceRegistrationMethod.METHOD_NAMES) {
             for (method in builderClass.findMethodsByName(methodName, false)) {
                 ReferencesSearch.search(method, scope).forEach { reference ->
                     val call = PsiTreeUtil.getParentOfType(reference.element, PsiMethodCallExpression::class.java)
@@ -145,7 +151,7 @@ object ArmeriaRouteCollector {
                     if (call.methodExpression.referenceName != methodName) {
                         return@forEach
                     }
-                    addServiceRegistration(call, routes, seenServiceRegistrations)
+                    addServiceRegistrationFromCall(call, routes, seenServiceRegistrations)
                 }
             }
         }
@@ -164,77 +170,107 @@ object ArmeriaRouteCollector {
             }
             ArmeriaRouteCollectionMetrics.current()?.filesScanned?.incrementAndGet()
             val psiFile = PsiManager.getInstance(project).findFile(virtualFile) as? PsiJavaFile ?: continue
-            if (!referencesArmeria(psiFile)) {
+            if (!referencesArmeriaJavaContent(psiFile)) {
                 continue
             }
             fallbackScannedFiles += virtualFile
             ArmeriaRouteCollectionMetrics.current()?.armeriaFiles?.incrementAndGet()
-            collectRoutesFromFile(psiFile, routes, seenServiceRegistrations)
+            collectServiceRegistrationsFromJavaFile(psiFile, routes, seenServiceRegistrations)
         }
     }
 
-    private fun referencesArmeria(file: PsiJavaFile): Boolean {
+    internal fun referencesArmeriaJavaContent(file: PsiJavaFile): Boolean {
         val hasArmeriaImports = file.importList
             ?.allImportStatements
             ?.any { statement ->
-                statement.importReference?.qualifiedName?.startsWith(ARMERIA_PACKAGE_PREFIX) == true
+                statement.importReference?.qualifiedName?.startsWith(ArmeriaRouteSupport.ARMERIA_PACKAGE_PREFIX) == true
             } ?: false
         if (hasArmeriaImports) {
             return true
         }
-        val contents = file.viewProvider.contents
-        val searchWindow = contents.subSequence(0, minOf(contents.length, ARMERIA_HEADER_SCAN_LIMIT))
-        return ARMERIA_REFERENCE_PATTERN.containsMatchIn(searchWindow)
+        return ArmeriaRouteSupport.referencesArmeriaInText(file.viewProvider.contents)
     }
 
-    private fun collectRoutesFromFile(
+    internal fun collectServiceRegistrationsFromJavaFile(
         file: PsiJavaFile,
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
     ) {
         file.accept(object : JavaRecursiveElementWalkingVisitor() {
             override fun visitMethodCallExpression(expression: PsiMethodCallExpression) {
-                ArmeriaRouteCollectionMetrics.current()?.methodCallsVisited?.incrementAndGet()
-                val methodName = expression.methodExpression.referenceName
-                if (methodName !in REGISTRATION_METHOD_NAMES) {
-                    super.visitMethodCallExpression(expression)
-                    return
-                }
-                if (!looksLikeArmeriaBuilderCall(expression)) {
-                    super.visitMethodCallExpression(expression)
-                    return
-                }
-                addServiceRegistration(expression, routes, seenServiceRegistrations)
+                collectServiceRegistrationFromMethodCall(expression, routes, seenServiceRegistrations)
                 super.visitMethodCallExpression(expression)
             }
         })
     }
 
-    private fun addServiceRegistration(
+    private fun collectServiceRegistrationFromMethodCall(
+        expression: PsiMethodCallExpression,
+        routes: MutableList<ArmeriaRoute>,
+        seenServiceRegistrations: MutableSet<String>,
+    ) {
+        ArmeriaRouteCollectionMetrics.current()?.methodCallsVisited?.incrementAndGet()
+        val methodName = expression.methodExpression.referenceName
+        if (methodName !in ServiceRegistrationMethod.METHOD_NAMES) {
+            return
+        }
+        if (!looksLikeArmeriaBuilderCall(expression)) {
+            return
+        }
+        addServiceRegistrationFromCall(expression, routes, seenServiceRegistrations)
+    }
+
+    internal fun addServiceRegistrationFromCall(
         expression: PsiMethodCallExpression,
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
     ) {
         val registrationKey = serviceRegistrationKey(expression) ?: return
-        if (!seenServiceRegistrations.add(registrationKey)) {
-            return
-        }
         val methodName = expression.methodExpression.referenceName ?: return
         val arguments = expression.argumentList.expressions
         val path = extractRegistrationPath(methodName, arguments) ?: return
-        val implementationExpression = when (methodName) {
-            "annotatedService" -> arguments.getOrNull(1) ?: arguments.getOrNull(0)
-            else -> arguments.getOrNull(1)
+        val implementationExpression = when (ServiceRegistrationMethod.fromMethodName(methodName)) {
+            ServiceRegistrationMethod.ANNOTATED_SERVICE -> arguments.getOrNull(1) ?: arguments.getOrNull(0)
+            ServiceRegistrationMethod.SERVICE, ServiceRegistrationMethod.SERVICE_UNDER -> arguments.getOrNull(1)
+            null -> null
         } ?: return
-        val protocol = ArmeriaRouteTargetExtractor.detectProtocol(implementationExpression.text)
         val target = ArmeriaRouteTargetExtractor.extractTarget(implementationExpression)
-        val targetUnresolved = ArmeriaRouteTargetExtractor.isUnresolvedTarget(implementationExpression, target)
-        val registrationMethod = RegistrationMethod.fromMethodName(methodName) ?: return
+        addServiceRegistrationRoute(
+            element = expression,
+            registrationKey = registrationKey,
+            methodName = methodName,
+            path = path,
+            target = target,
+            targetUnresolved = ArmeriaRouteTargetExtractor.isUnresolvedTarget(implementationExpression, target),
+            implementationText = implementationExpression.text,
+            argumentCount = arguments.size,
+            routes = routes,
+            seenServiceRegistrations = seenServiceRegistrations,
+        )
+    }
+
+    internal fun addServiceRegistrationRoute(
+        element: PsiElement,
+        registrationKey: String,
+        methodName: String,
+        path: String,
+        target: String,
+        targetUnresolved: Boolean,
+        implementationText: String,
+        argumentCount: Int,
+        routes: MutableList<ArmeriaRoute>,
+        seenServiceRegistrations: MutableSet<String>,
+    ) {
+        if (!seenServiceRegistrations.add(registrationKey)) {
+            return
+        }
+        val registrationMethod = ServiceRegistrationMethod.fromMethodName(methodName) ?: return
+        val protocol = ArmeriaRouteTargetExtractor.detectProtocol(implementationText)
         val routeMatch = resolveRouteMatch(registrationMethod, protocol)
         val annotatedServiceHasPathPrefix =
-            registrationMethod == RegistrationMethod.ANNOTATED_SERVICE && arguments.size > 1
+            registrationMethod == ServiceRegistrationMethod.ANNOTATED_SERVICE && argumentCount > 1
         routes += ArmeriaRoute.create(
-            element = expression,
+            element = element,
             protocol = protocol.presentableName(),
             httpMethod = "",
             path = ArmeriaRouteSupport.normalizePath(path),
@@ -246,14 +282,14 @@ object ArmeriaRouteCollector {
         )
     }
 
-    private fun resolveRouteMatch(registrationMethod: RegistrationMethod, protocol: RouteProtocol): RouteMatch {
+    private fun resolveRouteMatch(registrationMethod: ServiceRegistrationMethod, protocol: RouteProtocol): RouteMatch {
         if (protocol != RouteProtocol.HTTP) {
             return RouteMatch.NON_HTTP
         }
         return when (registrationMethod) {
-            RegistrationMethod.SERVICE -> RouteMatch.SERVICE
-            RegistrationMethod.ANNOTATED_SERVICE -> RouteMatch.ANNOTATED_SERVICE
-            RegistrationMethod.SERVICE_UNDER -> RouteMatch.SERVICE_UNDER
+            ServiceRegistrationMethod.SERVICE -> RouteMatch.SERVICE
+            ServiceRegistrationMethod.ANNOTATED_SERVICE -> RouteMatch.ANNOTATED_SERVICE
+            ServiceRegistrationMethod.SERVICE_UNDER -> RouteMatch.SERVICE_UNDER
         }
     }
 
@@ -267,13 +303,13 @@ object ArmeriaRouteCollector {
             return true
         }
         val qualifierText = expression.methodExpression.qualifierExpression?.text ?: return false
-        return qualifierText.contains("Server.builder()") || qualifierText.contains("serverBuilder")
+        return ArmeriaRouteSupport.looksLikeServerBuilderReceiverText(qualifierText)
     }
 
     private fun resolvesToArmeriaServerBuilder(expression: PsiMethodCallExpression): Boolean {
         ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
         val resolvedClass = expression.resolveMethod()?.containingClass?.qualifiedName
-        return resolvedClass?.startsWith(ARMERIA_SERVER_PACKAGE_PREFIX) == true
+        return resolvedClass?.startsWith(ArmeriaRouteSupport.ARMERIA_SERVER_PACKAGE_PREFIX) == true
     }
 
     private fun buildMethodTarget(psiClass: PsiClass, method: PsiMethod): String {
@@ -281,28 +317,13 @@ object ArmeriaRouteCollector {
         return "$className#${method.name}()"
     }
 
-    private enum class RegistrationMethod {
-        SERVICE,
-        SERVICE_UNDER,
-        ANNOTATED_SERVICE;
-
-        companion object {
-            fun fromMethodName(name: String): RegistrationMethod? {
-                return when (name) {
-                    "service" -> SERVICE
-                    "serviceUnder" -> SERVICE_UNDER
-                    "annotatedService" -> ANNOTATED_SERVICE
-                    else -> null
-                }
-            }
-        }
-    }
-
     private fun extractRegistrationPath(methodName: String, arguments: Array<PsiExpression>): String? {
-        val method = RegistrationMethod.fromMethodName(methodName) ?: return null
-        return when (method) {
-            RegistrationMethod.SERVICE, RegistrationMethod.SERVICE_UNDER -> extractString(arguments.getOrNull(0))
-            RegistrationMethod.ANNOTATED_SERVICE -> if (arguments.size > 1) extractString(arguments.getOrNull(0)) else "/"
+        return when (ServiceRegistrationMethod.fromMethodName(methodName)) {
+            ServiceRegistrationMethod.SERVICE, ServiceRegistrationMethod.SERVICE_UNDER ->
+                extractString(arguments.getOrNull(0))
+            ServiceRegistrationMethod.ANNOTATED_SERVICE ->
+                if (arguments.size > 1) extractString(arguments.getOrNull(0)) else "/"
+            null -> null
         }
     }
 
@@ -318,5 +339,8 @@ object ArmeriaRouteCollector {
             }
         }
     }
+
+    private fun isKotlinPluginAvailable(): Boolean =
+        PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
 
 }
