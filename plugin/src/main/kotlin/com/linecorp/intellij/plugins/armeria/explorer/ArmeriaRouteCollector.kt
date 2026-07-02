@@ -116,7 +116,8 @@ object ArmeriaRouteCollector {
             ArmeriaRouteSupport.extractNames(containingClass.getAnnotation(ArmeriaRouteSupport.EXCEPTION_HANDLER_ANNOTATION))
         val paths = ArmeriaRouteSupport.extractPaths(annotation.first).ifEmpty { listOf("/") }
         val methodDecorators =
-            classDecorators + ArmeriaRouteSupport.extractNames(method.getAnnotation(ArmeriaRouteSupport.DECORATOR_ANNOTATION))
+            classDecorators + ArmeriaRouteSupport.extractNames(method.getAnnotation(ArmeriaRouteSupport.DECORATOR_ANNOTATION)) +
+                ArmeriaDecoratorSupport.collectDecoratorsInScope(method)
         val methodExceptionHandlers = classExceptionHandlers + ArmeriaRouteSupport.extractNames(
             method.getAnnotation(ArmeriaRouteSupport.EXCEPTION_HANDLER_ANNOTATION),
         )
@@ -260,6 +261,7 @@ object ArmeriaRouteCollector {
         argumentCount: Int,
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
+        decorators: List<String> = emptyList(),
     ) {
         if (!seenServiceRegistrations.add(registrationKey)) {
             return
@@ -269,6 +271,9 @@ object ArmeriaRouteCollector {
         val routeMatch = resolveRouteMatch(registrationMethod, protocol)
         val annotatedServiceHasPathPrefix =
             registrationMethod == ServiceRegistrationMethod.ANNOTATED_SERVICE && argumentCount > 1
+        val programmaticDecorators = decorators.ifEmpty {
+            ArmeriaDecoratorSupport.collectDecoratorsInScope(element)
+        }
         routes += ArmeriaRoute.create(
             element = element,
             protocol = protocol.presentableName(),
@@ -279,6 +284,7 @@ object ArmeriaRouteCollector {
             targetUnresolved = targetUnresolved,
             isDocService = protocol == RouteProtocol.DOC_SERVICE,
             annotatedServiceHasPathPrefix = annotatedServiceHasPathPrefix,
+            decorators = programmaticDecorators,
         )
     }
 
