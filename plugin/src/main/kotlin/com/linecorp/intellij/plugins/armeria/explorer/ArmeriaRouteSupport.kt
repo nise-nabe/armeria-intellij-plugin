@@ -30,12 +30,18 @@ object ArmeriaRouteSupport {
     const val SERVER_BUILDER_SIMPLE_NAME = "ServerBuilder"
     const val ARMERIA_HEADER_SCAN_LIMIT = 4096
 
+    private const val FQCN_SERVER_BUILDER_CALL_PATTERN =
+        """(?<![\w"])com\.linecorp\.armeria\.server\.Server\.builder\(\)"""
+    private const val UNQUALIFIED_SERVER_BUILDER_CALL_PATTERN =
+        """(?<![.\w"])Server\.builder\(\)"""
+
     private val ARMERIA_REFERENCE_PATTERN =
         Regex("""(?<![\w"])com\.linecorp\.armeria(?:\.[A-Za-z_][A-Za-z0-9_]*)+""")
     private val SERVER_BUILDER_IDENTIFIER = Regex("""(?<![\w"])serverBuilder(?![\w"])""")
-    private val FQCN_SERVER_BUILDER_CALL = Regex("""com\.linecorp\.armeria\.server\.Server\.builder\(\)""")
+    private val FQCN_SERVER_BUILDER_CALL = Regex(FQCN_SERVER_BUILDER_CALL_PATTERN)
+    private val UNQUALIFIED_SERVER_BUILDER_CALL = Regex(UNQUALIFIED_SERVER_BUILDER_CALL_PATTERN)
     private val SERVER_BUILDER_CALL =
-        Regex("""(?:com\.linecorp\.armeria\.server\.Server\.builder\(\)|(?<![.\w"])Server\.builder\(\))""")
+        Regex("""(?:$FQCN_SERVER_BUILDER_CALL_PATTERN|$UNQUALIFIED_SERVER_BUILDER_CALL_PATTERN)""")
 
     const val PATH_PREFIX_ANNOTATION = "com.linecorp.armeria.server.annotation.PathPrefix"
     const val DECORATOR_ANNOTATION = "com.linecorp.armeria.server.annotation.Decorator"
@@ -209,7 +215,10 @@ object ArmeriaRouteSupport {
     }
 
     fun referencesArmeriaApplicationInSource(contents: CharSequence): Boolean {
-        return referencesArmeriaInText(contents, contents.length) ||
-            FQCN_SERVER_BUILDER_CALL.containsMatchIn(contents)
+        if (FQCN_SERVER_BUILDER_CALL.containsMatchIn(contents)) {
+            return true
+        }
+        return referencesArmeriaInText(contents) &&
+            UNQUALIFIED_SERVER_BUILDER_CALL.containsMatchIn(contents)
     }
 }

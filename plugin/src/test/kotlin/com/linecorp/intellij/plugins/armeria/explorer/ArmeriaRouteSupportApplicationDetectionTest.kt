@@ -85,6 +85,38 @@ class ArmeriaRouteSupportApplicationDetectionTest {
     }
 
     @Test
+    fun referencesArmeriaApplicationInSource_doesNotMatchFqcnServerBuilderCallInStringLiteral() {
+        val source = """
+            package example;
+
+            public class Main {
+                public static void main(String[] args) {
+                    System.out.println("com.linecorp.armeria.server.Server.builder()");
+                }
+            }
+        """.trimIndent()
+
+        assertFalse(ArmeriaRouteSupport.referencesArmeriaApplicationInSource(source))
+    }
+
+    @Test
+    fun referencesArmeriaApplicationInSource_doesNotMatchArmeriaClientWithoutServerBuilder() {
+        val source = """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+
+            public class Main {
+                public static void main(String[] args) {
+                    WebClient.of("https://example.com");
+                }
+            }
+        """.trimIndent()
+
+        assertFalse(ArmeriaRouteSupport.referencesArmeriaApplicationInSource(source))
+    }
+
+    @Test
     fun referencesArmeriaApplicationInSource_doesNotMatchOtherServerBuilderCalls() {
         val source = """
             package example;
