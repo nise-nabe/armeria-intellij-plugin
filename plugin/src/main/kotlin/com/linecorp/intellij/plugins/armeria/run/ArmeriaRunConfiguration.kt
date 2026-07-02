@@ -2,18 +2,25 @@ package com.linecorp.intellij.plugins.armeria.run
 
 import com.intellij.execution.Executor
 import com.intellij.execution.configurations.ConfigurationFactory
+import com.intellij.execution.configurations.RuntimeConfigurationError
+import com.intellij.execution.configurations.JavaRunConfigurationModule
 import com.intellij.execution.configurations.LocatableConfigurationBase
+import com.intellij.execution.configurations.RunConfigurationModule
 import com.intellij.execution.configurations.RunProfileState
 import com.intellij.execution.runners.ExecutionEnvironment
+import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.NlsActions
 import com.linecorp.intellij.plugins.armeria.message
+import org.jdom.Element
 
 class ArmeriaRunConfiguration(
     project: Project,
     factory: ConfigurationFactory,
-    name: String
+    name: String,
 ) : LocatableConfigurationBase<ArmeriaRunConfigurationOptions>(project, factory, name) {
+
+    private val runConfigurationModule = JavaRunConfigurationModule(project, true)
 
     override fun getOptions(): ArmeriaRunConfigurationOptions {
         return super.getOptions() as ArmeriaRunConfigurationOptions
@@ -29,10 +36,44 @@ class ArmeriaRunConfiguration(
         options.setMainClass(mainClass)
     }
 
+    fun getConfigurationModule(): RunConfigurationModule = runConfigurationModule
+
+    fun setModule(module: Module?) {
+        runConfigurationModule.module = module
+        options.moduleName.setValue(options, module?.name)
+    }
+
+    override fun checkConfiguration() {
+        if (getConfigurationModule().module == null) {
+            throw RuntimeConfigurationError(message("armeria.run.configuration.module.not.specified"))
+        }
+        if (getMainClass().isNullOrBlank()) {
+            throw RuntimeConfigurationError(message("armeria.run.configuration.main.class.not.specified"))
+        }
+    }
+
+    override fun readExternal(element: Element) {
+        super.readExternal(element)
+        val moduleName = options.moduleName.getValue(options)
+        if (!moduleName.isNullOrBlank()) {
+            runConfigurationModule.setModuleName(moduleName)
+        }
+    }
+
+    override fun writeExternal(element: Element) {
+        options.moduleName.setValue(options, runConfigurationModule.moduleName)
+        super.writeExternal(element)
+    }
+
     override fun getConfigurationEditor() = ArmeriaRunConfigurationEditor(project)
 
     @NlsActions.ActionText
-    override fun suggestedName(): String? {
-        return message("armeria.run.configuration.name")
+    override fun suggestedName(): String {
+        val mainClass = getMainClass()?.substringAfterLast('.')
+        return if (mainClass.isNullOrBlank()) {
+            message("armeria.run.configuration.name")
+        } else {
+            message("armeria.run.configuration.suggested.name", mainClass)
+        }
     }
 }

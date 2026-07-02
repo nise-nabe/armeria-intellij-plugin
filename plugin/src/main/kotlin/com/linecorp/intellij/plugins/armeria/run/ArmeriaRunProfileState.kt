@@ -1,52 +1,29 @@
 package com.linecorp.intellij.plugins.armeria.run
 
-import com.intellij.execution.DefaultExecutionResult
 import com.intellij.execution.ExecutionException
-import com.intellij.execution.ExecutionResult
-import com.intellij.execution.configurations.CommandLineState
-import com.intellij.execution.process.ProcessHandler
-import com.intellij.execution.process.ProcessHandlerFactory
-import com.intellij.execution.process.ProcessTerminatedListener
+import com.intellij.execution.configurations.JavaCommandLineState
+import com.intellij.execution.configurations.JavaParameters
 import com.intellij.execution.runners.ExecutionEnvironment
-import com.intellij.execution.runners.ProgramRunner
+import com.intellij.execution.util.JavaParametersUtil
+import com.intellij.openapi.roots.ModuleRootManager
+import com.linecorp.intellij.plugins.armeria.message
 
 class ArmeriaRunProfileState(
     environment: ExecutionEnvironment,
-    private val configuration: ArmeriaRunConfiguration
-) : CommandLineState(environment) {
-    override fun startProcess(): ProcessHandler {
-        // In a real implementation, this would start the Armeria application
-        // For now, we'll just create a dummy process handler
-        val commandLine = createCommandLine()
-        val processHandler = ProcessHandlerFactory.getInstance().createColoredProcessHandler(commandLine)
-        ProcessTerminatedListener.attach(processHandler)
-        return processHandler
-    }
+    private val configuration: ArmeriaRunConfiguration,
+) : JavaCommandLineState(environment) {
 
-    private fun createCommandLine(): com.intellij.execution.configurations.GeneralCommandLine {
-        val commandLine = com.intellij.execution.configurations.GeneralCommandLine()
-        commandLine.exePath = "java"
-
-        // Set working directory to project base path
-        commandLine.workDirectory = java.io.File(configuration.project.basePath ?: ".")
-
-        // Add main class
-        val mainClass = configuration.getMainClass()
-        if (!mainClass.isNullOrEmpty()) {
-            commandLine.addParameter(mainClass)
-        } else {
-            throw ExecutionException("Main class is not specified")
-        }
-
-        return commandLine
-    }
-
-    override fun execute(executor: com.intellij.execution.Executor, runner: ProgramRunner<*>): ExecutionResult {
-        val processHandler = startProcess()
-        val console = createConsole(executor)
-        if (console != null) {
-            console.attachToProcess(processHandler)
-        }
-        return DefaultExecutionResult(console, processHandler)
+    override fun createJavaParameters(): JavaParameters {
+        val params = JavaParameters()
+        val mainClass = configuration.getMainClass()?.takeIf { it.isNotBlank() }
+            ?: throw ExecutionException(message("armeria.run.configuration.main.class.not.specified"))
+        params.mainClass = mainClass
+        val module = configuration.getConfigurationModule().module
+            ?: throw ExecutionException(message("armeria.run.configuration.module.not.specified"))
+        JavaParametersUtil.configureModule(module, params, JavaParameters.JDK_AND_CLASSES, null)
+        params.workingDirectory = params.workingDirectory
+            ?: ModuleRootManager.getInstance(module).contentRoots.firstOrNull()?.path
+            ?: configuration.project.basePath
+        return params
     }
 }

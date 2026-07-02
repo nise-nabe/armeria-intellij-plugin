@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 ### Added
+- Implemented Armeria run configuration with module classpath and main class selection.
 - Added Kotlin source support to Route Explorer for annotated services and Server.builder registrations.
 - Added Velocity-based regression tests for New Project Wizard file templates.
 - Added `plugin/src/test/resources/wizard-verification-matrix.md` documenting representative wizard scenarios.
