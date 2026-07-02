@@ -7,6 +7,7 @@ readonly INSTALL_DIR="${HOME}/.local/share/gradle-tapi-mcp-server"
 readonly VERSIONED_JAR_NAME="gradle-tapi-mcp-server-${GRADLE_TAPI_MCP_VERSION}.jar"
 readonly VERSIONED_JAR_PATH="${INSTALL_DIR}/${VERSIONED_JAR_NAME}"
 readonly STABLE_JAR_PATH="${INSTALL_DIR}/gradle-tapi-mcp-server.jar"
+readonly MAX_DOWNLOAD_ATTEMPTS=2
 
 verify_jar_sha256() {
   local jar_path="$1"
@@ -39,8 +40,18 @@ ensure_jar() {
     rm -f "${VERSIONED_JAR_PATH}"
   fi
 
-  download_jar
-  verify_jar_sha256 "${VERSIONED_JAR_PATH}"
+  local attempt
+  for attempt in $(seq 1 "${MAX_DOWNLOAD_ATTEMPTS}"); do
+    download_jar
+    if verify_jar_sha256 "${VERSIONED_JAR_PATH}"; then
+      return 0
+    fi
+    echo "Download attempt ${attempt}/${MAX_DOWNLOAD_ATTEMPTS} failed checksum verification." >&2
+    rm -f "${VERSIONED_JAR_PATH}"
+  done
+
+  echo "Failed to download a valid MCP server JAR after ${MAX_DOWNLOAD_ATTEMPTS} attempts." >&2
+  return 1
 }
 
 ensure_jar
