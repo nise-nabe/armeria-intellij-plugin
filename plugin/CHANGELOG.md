@@ -10,6 +10,7 @@
 - Added timeout and blocking annotation hints in Route Explorer details.
 - Added Armeria Clients tool window for WebClient, GrpcClient, and ThriftClient discovery.
 - Added GraphQL schema and Thrift IDL route discovery with classpath gating and operation-level targets.
+- Added DocService runtime route sync action in Route Explorer.
 - Added Kotlin source support to Route Explorer for annotated services and Server.builder registrations.
 - Added Velocity-based regression tests for New Project Wizard file templates.
 - Added `plugin/src/test/resources/wizard-verification-matrix.md` documenting representative wizard scenarios.
