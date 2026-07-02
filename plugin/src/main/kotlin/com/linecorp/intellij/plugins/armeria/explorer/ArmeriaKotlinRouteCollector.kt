@@ -21,10 +21,6 @@ import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 internal object ArmeriaKotlinRouteCollector {
-    private const val ARMERIA_SERVER_PACKAGE_PREFIX = "com.linecorp.armeria.server"
-    private const val SERVER_BUILDER_FQN = "com.linecorp.armeria.server.ServerBuilder"
-    private const val SERVER_BUILDER_SIMPLE = "ServerBuilder"
-    private val REGISTRATION_METHOD_NAMES = setOf("service", "serviceUnder", "annotatedService")
     private val BUILDER_SCOPE_METHOD_NAMES = setOf("apply", "run", "also", "let")
 
     fun collectServiceRegistrationsFallback(
@@ -57,7 +53,7 @@ internal object ArmeriaKotlinRouteCollector {
         for (call in file.collectDescendantsOfType<KtCallExpression>()) {
             ArmeriaRouteCollectionMetrics.current()?.methodCallsVisited?.incrementAndGet()
             val methodName = resolveCallName(call) ?: continue
-            if (methodName !in REGISTRATION_METHOD_NAMES) {
+            if (methodName !in ServiceRegistrationMethod.METHOD_NAMES) {
                 continue
             }
             if (!looksLikeArmeriaBuilderCall(call)) {
@@ -95,7 +91,7 @@ internal object ArmeriaKotlinRouteCollector {
         for (reference in dotQualified.references) {
             val resolved = reference.resolve()
             if (resolved is PsiMethod &&
-                resolved.containingClass?.qualifiedName?.startsWith(ARMERIA_SERVER_PACKAGE_PREFIX) == true
+                resolved.containingClass?.qualifiedName?.startsWith(ArmeriaRouteSupport.ARMERIA_SERVER_PACKAGE_PREFIX) == true
             ) {
                 return true
             }
@@ -111,25 +107,19 @@ internal object ArmeriaKotlinRouteCollector {
         if (receiver is KtNameReferenceExpression) {
             when (val resolved = receiver.references.firstOrNull()?.resolve()) {
                 is com.intellij.psi.PsiVariable -> {
-                    if (isServerBuilderType(resolved.type.canonicalText)) {
+                    if (ArmeriaRouteSupport.isServerBuilderType(resolved.type.canonicalText)) {
                         return true
                     }
                 }
                 is KtProperty -> {
                     val typeText = resolved.typeReference?.text
-                    if (typeText != null && isServerBuilderType(typeText)) {
+                    if (typeText != null && ArmeriaRouteSupport.isServerBuilderType(typeText)) {
                         return true
                     }
                 }
             }
         }
         return false
-    }
-
-    private fun isServerBuilderType(typeText: String): Boolean {
-        return typeText == SERVER_BUILDER_SIMPLE ||
-            typeText == SERVER_BUILDER_FQN ||
-            typeText.endsWith(".$SERVER_BUILDER_SIMPLE")
     }
 
     private fun hasServerBuilderImplicitReceiver(call: KtCallExpression): Boolean {
@@ -196,11 +186,13 @@ internal object ArmeriaKotlinRouteCollector {
     }
 
     private fun resolveServiceExpression(methodName: String, arguments: List<KtValueArgument>): KtExpression? {
-        return when (methodName) {
-            "annotatedService" ->
+        return when (ServiceRegistrationMethod.fromMethodName(methodName)) {
+            ServiceRegistrationMethod.ANNOTATED_SERVICE ->
                 findArgumentExpression(arguments, "service", 1)
                     ?: findArgumentExpression(arguments, "service", 0)
-            else -> findArgumentExpression(arguments, "service", 1)
+            ServiceRegistrationMethod.SERVICE, ServiceRegistrationMethod.SERVICE_UNDER ->
+                findArgumentExpression(arguments, "service", 1)
+            null -> null
         }
     }
 
@@ -216,17 +208,19 @@ internal object ArmeriaKotlinRouteCollector {
     }
 
     private fun extractRegistrationPath(methodName: String, arguments: List<KtValueArgument>): String? {
-        return when (methodName) {
-            "service" -> extractKotlinString(findArgumentExpression(arguments, "path", 0))
-            "serviceUnder" -> extractKotlinString(findArgumentExpression(arguments, "prefix", 0))
-            "annotatedService" -> {
+        return when (ServiceRegistrationMethod.fromMethodName(methodName)) {
+            ServiceRegistrationMethod.SERVICE ->
+                extractKotlinString(findArgumentExpression(arguments, "path", 0))
+            ServiceRegistrationMethod.SERVICE_UNDER ->
+                extractKotlinString(findArgumentExpression(arguments, "prefix", 0))
+            ServiceRegistrationMethod.ANNOTATED_SERVICE -> {
                 if (arguments.size > 1) {
                     extractKotlinString(findArgumentExpression(arguments, "prefix", 0))
                 } else {
                     "/"
                 }
             }
-            else -> null
+            null -> null
         }
     }
 
