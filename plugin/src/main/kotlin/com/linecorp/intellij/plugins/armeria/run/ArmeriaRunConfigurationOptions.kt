@@ -5,6 +5,7 @@ import com.intellij.openapi.components.StoredProperty
 
 class ArmeriaRunConfigurationOptions : LocatableRunConfigurationOptions() {
     private val mainClass: StoredProperty<String?> = string("").provideDelegate(this, "mainClass")
+    val moduleName: StoredProperty<String?> = string("").provideDelegate(this, "moduleName")
 
     fun getMainClass(): String? = mainClass.getValue(this)
 
