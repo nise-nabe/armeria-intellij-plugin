@@ -217,15 +217,20 @@ internal object ArmeriaKotlinRouteCollector {
         return arguments.getOrNull(positionalIndex)?.getArgumentExpression()
     }
 
+    private fun findPathPrefixArgument(arguments: List<KtValueArgument>, positionalIndex: Int): KtExpression? {
+        return findArgumentExpression(arguments, "pathPrefix", positionalIndex)
+            ?: findArgumentExpression(arguments, "prefix", positionalIndex)
+    }
+
     private fun extractRegistrationPath(methodName: String, arguments: List<KtValueArgument>): String? {
         return when (ServiceRegistrationMethod.fromMethodName(methodName)) {
             ServiceRegistrationMethod.SERVICE ->
                 extractKotlinString(findArgumentExpression(arguments, "path", 0))
             ServiceRegistrationMethod.SERVICE_UNDER ->
-                extractKotlinString(findArgumentExpression(arguments, "prefix", 0))
+                extractKotlinString(findPathPrefixArgument(arguments, 0))
             ServiceRegistrationMethod.ANNOTATED_SERVICE -> {
                 if (arguments.size > 1) {
-                    extractKotlinString(findArgumentExpression(arguments, "prefix", 0))
+                    extractKotlinString(findPathPrefixArgument(arguments, 0))
                 } else {
                     "/"
                 }
@@ -340,7 +345,14 @@ internal object ArmeriaKotlinRouteCollector {
                     val resolved = reference?.references?.firstOrNull()?.resolve()
                     when (resolved) {
                         is com.intellij.psi.PsiClass -> false
-                        is PsiMethod -> extractedTarget == methodName || extractedTarget == resolved.containingClass?.qualifiedName
+                        is PsiMethod -> {
+                            if (resolved.isConstructor) {
+                                false
+                            } else {
+                                extractedTarget == methodName ||
+                                    extractedTarget == resolved.containingClass?.qualifiedName
+                            }
+                        }
                         else -> extractedTarget == rawTarget
                     }
                 }
