@@ -3,8 +3,13 @@ package com.linecorp.intellij.plugins.armeria.run
 import com.intellij.execution.actions.ConfigurationContext
 import com.intellij.execution.actions.LazyRunConfigurationProducer
 import com.intellij.execution.configurations.ConfigurationFactory
+import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.util.Ref
+import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
+import com.intellij.psi.util.PsiMethodUtil
+import com.intellij.psi.util.PsiTreeUtil
 
 class ArmeriaRunConfigurationProducer : LazyRunConfigurationProducer<ArmeriaRunConfiguration>() {
     override fun getConfigurationFactory(): ConfigurationFactory {
@@ -14,34 +19,41 @@ class ArmeriaRunConfigurationProducer : LazyRunConfigurationProducer<ArmeriaRunC
     override fun setupConfigurationFromContext(
         configuration: ArmeriaRunConfiguration,
         context: ConfigurationContext,
-        sourceElement: Ref<PsiElement>
+        sourceElement: Ref<PsiElement>,
     ): Boolean {
-        // Determine if the context can be used to create an Armeria run configuration
-        // For example, check if the file is an Armeria application class
-        val element = sourceElement.get() ?: return false
-        
-        // Check if the element is an Armeria application
-        if (isArmeriaApplication(element)) {
-            configuration.suggestedName()?.let { configuration.name = it }
-            return true
-        }
-        
-        return false
+        val mainClass = findArmeriaMainClass(sourceElement.get()) ?: return false
+        val qualifiedName = mainClass.qualifiedName ?: return false
+        configuration.setMainClass(qualifiedName)
+        ModuleUtilCore.findModuleForPsiElement(mainClass)?.let(configuration::setModuleModule)
+        configuration.name = configuration.suggestedName()
+        return true
     }
 
     override fun isConfigurationFromContext(
         configuration: ArmeriaRunConfiguration,
-        context: ConfigurationContext
+        context: ConfigurationContext,
     ): Boolean {
-        // Check if the configuration matches the context
-        val element = context.psiLocation ?: return false
-        return isArmeriaApplication(element)
+        val mainClass = findArmeriaMainClass(context.psiLocation) ?: return false
+        return mainClass.qualifiedName == configuration.getMainClass()
     }
-    
-    private fun isArmeriaApplication(element: PsiElement): Boolean {
-        // Check if the element is an Armeria application
-        // This is a simplified implementation - in a real plugin, you would check
-        // if the class extends or implements Armeria-specific classes or interfaces
-        return element.text.contains("Armeria") || element.text.contains("armeria")
+
+    private fun findArmeriaMainClass(element: PsiElement?): PsiClass? {
+        element ?: return null
+        val containingClass = PsiTreeUtil.getParentOfType(element, PsiClass::class.java)
+            ?: return null
+        if (!PsiMethodUtil.hasMainInClass(containingClass)) {
+            return null
+        }
+        val file = element.containingFile as? PsiFile ?: return null
+        if (!referencesArmeria(file.text)) {
+            return null
+        }
+        return containingClass
+    }
+
+    private fun referencesArmeria(source: String): Boolean {
+        return source.contains("com.linecorp.armeria") ||
+            source.contains("Server.builder") ||
+            source.contains("ServerBuilder")
     }
 }

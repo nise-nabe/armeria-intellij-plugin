@@ -1,52 +1,50 @@
 package com.linecorp.intellij.plugins.armeria.run
 
-import com.intellij.execution.DefaultExecutionResult
 import com.intellij.execution.ExecutionException
-import com.intellij.execution.ExecutionResult
 import com.intellij.execution.configurations.CommandLineState
+import com.intellij.execution.configurations.GeneralCommandLine
+import com.intellij.execution.configurations.JavaParameters
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.process.ProcessHandlerFactory
 import com.intellij.execution.process.ProcessTerminatedListener
 import com.intellij.execution.runners.ExecutionEnvironment
-import com.intellij.execution.runners.ProgramRunner
+import com.intellij.execution.util.JavaParametersUtil
+import com.intellij.openapi.roots.ModuleRootManager
+import java.io.File
 
 class ArmeriaRunProfileState(
     environment: ExecutionEnvironment,
-    private val configuration: ArmeriaRunConfiguration
+    private val configuration: ArmeriaRunConfiguration,
 ) : CommandLineState(environment) {
+
     override fun startProcess(): ProcessHandler {
-        // In a real implementation, this would start the Armeria application
-        // For now, we'll just create a dummy process handler
-        val commandLine = createCommandLine()
+        val params = createJavaParameters()
+        val module = configuration.getConfigurationModule().module
+        val commandLine = GeneralCommandLine()
+        commandLine.exePath = params.jdk?.homePath?.let { java.io.File(it, "bin/java").path } ?: "java"
+        commandLine.addParameters(params.vmParametersList.parameters)
+        if (params.classPath.pathList.isNotEmpty()) {
+            commandLine.addParameters("-classpath", params.classPath.pathList.joinToString(File.pathSeparator))
+        }
+        commandLine.addParameters(params.mainClass)
+        commandLine.addParameters(params.programParametersList.parameters)
+        commandLine.workDirectory = params.workingDirectory?.let(::File)
+            ?: module?.let { ModuleRootManager.getInstance(it).contentRoots.firstOrNull()?.path?.let(::File) }
+            ?: File(configuration.project.basePath ?: ".")
         val processHandler = ProcessHandlerFactory.getInstance().createColoredProcessHandler(commandLine)
         ProcessTerminatedListener.attach(processHandler)
         return processHandler
     }
 
-    private fun createCommandLine(): com.intellij.execution.configurations.GeneralCommandLine {
-        val commandLine = com.intellij.execution.configurations.GeneralCommandLine()
-        commandLine.exePath = "java"
-
-        // Set working directory to project base path
-        commandLine.workDirectory = java.io.File(configuration.project.basePath ?: ".")
-
-        // Add main class
+    private fun createJavaParameters(): JavaParameters {
+        val params = JavaParameters()
         val mainClass = configuration.getMainClass()
-        if (!mainClass.isNullOrEmpty()) {
-            commandLine.addParameter(mainClass)
-        } else {
-            throw ExecutionException("Main class is not specified")
+            ?: throw ExecutionException("Main class is not specified")
+        params.mainClass = mainClass
+        val module = configuration.getConfigurationModule().module
+        if (module != null) {
+            JavaParametersUtil.configureModule(module, params, JavaParameters.CLASSES_AND_TESTS, null)
         }
-
-        return commandLine
-    }
-
-    override fun execute(executor: com.intellij.execution.Executor, runner: ProgramRunner<*>): ExecutionResult {
-        val processHandler = startProcess()
-        val console = createConsole(executor)
-        if (console != null) {
-            console.attachToProcess(processHandler)
-        }
-        return DefaultExecutionResult(console, processHandler)
+        return params
     }
 }
