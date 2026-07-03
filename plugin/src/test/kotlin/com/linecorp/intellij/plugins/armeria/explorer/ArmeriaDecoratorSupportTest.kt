@@ -19,4 +19,24 @@ class ArmeriaDecoratorSupportTest : TestCase() {
     fun testLabelDecoratorKotlinClassReference() {
         assertEquals("Logging", ArmeriaDecoratorSupport.labelDecorator("LoggingService::class"))
     }
+
+    fun testDecoratorPathPatternExactMatch() {
+        assertTrue(ArmeriaRouteSupport.decoratorPathPatternAppliesToRoute("/api", "/api"))
+        assertFalse(ArmeriaRouteSupport.decoratorPathPatternAppliesToRoute("/api", "/api/v1"))
+        assertFalse(ArmeriaRouteSupport.decoratorPathPatternAppliesToRoute("/api", "/other"))
+    }
+
+    fun testDecoratorPathPatternDoubleStarMatch() {
+        assertTrue(ArmeriaRouteSupport.decoratorPathPatternAppliesToRoute("/api/**", "/api"))
+        assertTrue(ArmeriaRouteSupport.decoratorPathPatternAppliesToRoute("/api/**", "/api/v1"))
+        assertTrue(ArmeriaRouteSupport.decoratorPathPatternAppliesToRoute("/api/**", "/api/v1/users"))
+        assertFalse(ArmeriaRouteSupport.decoratorPathPatternAppliesToRoute("/api/**", "/other"))
+    }
+
+    fun testDecoratorPathPatternSingleStarMatch() {
+        assertFalse(ArmeriaRouteSupport.decoratorPathPatternAppliesToRoute("/api/*", "/api"))
+        assertTrue(ArmeriaRouteSupport.decoratorPathPatternAppliesToRoute("/api/*", "/api/v1"))
+        assertFalse(ArmeriaRouteSupport.decoratorPathPatternAppliesToRoute("/api/*", "/api/v1/users"))
+        assertFalse(ArmeriaRouteSupport.decoratorPathPatternAppliesToRoute("/api/*", "/other"))
+    }
 }

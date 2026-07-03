@@ -442,6 +442,43 @@ class ArmeriaRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals(emptyList<String>(), otherRoute!!.decorators)
     }
 
+    fun testCollectPathScopedDecoratorWithStaticFinalPathPattern() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.logging.LoggingService;
+
+            public class Main {
+                private static final String API_PATH = "/api/**";
+
+                public static void main(String[] args) {
+                    Server.builder()
+                        .decorator(API_PATH, LoggingService.class)
+                        .service("/api", new HelloService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
+        assertNotNull(serviceRoute)
+        assertEquals(listOf("Logging"), serviceRoute!!.decorators)
+    }
+
     fun testCollectPathPrefix() {
         myFixture.configureByText(
             "PrefixedService.java",

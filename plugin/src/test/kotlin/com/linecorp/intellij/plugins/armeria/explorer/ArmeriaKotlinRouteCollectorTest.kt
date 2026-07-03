@@ -575,6 +575,74 @@ class ArmeriaKotlinRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals(listOf("Logging"), serviceRoute!!.decorators)
     }
 
+    fun testCollectProgrammaticDecoratorInChainedApplyBlocks() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.logging.LoggingService
+
+            fun main() {
+                Server.builder()
+                    .apply { decorator(LoggingService::class.java) }
+                    .apply { service("/api", HelloService()) }
+                    .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
+        assertNotNull(serviceRoute)
+        assertEquals(listOf("Logging"), serviceRoute!!.decorators)
+    }
+
+    fun testCollectPathScopedDecoratorWithConstValPathPattern() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.logging.LoggingService
+
+            private const val API_PATH = "/api/**"
+
+            fun main() {
+                Server.builder()
+                    .decorator(API_PATH, LoggingService::class.java)
+                    .service("/api", HelloService())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
+        assertNotNull(serviceRoute)
+        assertEquals(listOf("Logging"), serviceRoute!!.decorators)
+    }
+
     fun testCollectProgrammaticDecoratorInApplyBlockStopsAfterRegistrationStatement() {
         myFixture.configureByText(
             "Main.kt",

@@ -159,9 +159,16 @@ object ArmeriaRouteSupport {
         }
         if (normalizedPattern.endsWith("/*")) {
             val prefix = normalizedPattern.removeSuffix("/*")
-            return normalizedRoute == prefix || normalizedRoute.startsWith("$prefix/")
+            if (normalizedRoute == prefix) {
+                return false
+            }
+            if (!normalizedRoute.startsWith("$prefix/")) {
+                return false
+            }
+            val remainder = normalizedRoute.removePrefix("$prefix/").trimStart('/')
+            return remainder.isNotEmpty() && !remainder.contains('/')
         }
-        return normalizedRoute == normalizedPattern || normalizedRoute.startsWith("$normalizedPattern/")
+        return normalizedRoute == normalizedPattern
     }
 
     fun isServerBuilderType(typeText: String): Boolean {

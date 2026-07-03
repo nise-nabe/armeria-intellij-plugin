@@ -260,7 +260,7 @@ object ArmeriaRouteCollector {
         argumentCount: Int,
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
-        decorators: List<String> = emptyList(),
+        decorators: List<String>? = null,
     ) {
         if (!seenServiceRegistrations.add(registrationKey)) {
             return
@@ -271,9 +271,7 @@ object ArmeriaRouteCollector {
         val annotatedServiceHasPathPrefix =
             registrationMethod == ServiceRegistrationMethod.ANNOTATED_SERVICE && argumentCount > 1
         val normalizedPath = ArmeriaRouteSupport.normalizePath(path)
-        val programmaticDecorators = decorators.ifEmpty {
-            collectProgrammaticDecorators(element, normalizedPath)
-        }
+        val programmaticDecorators = decorators ?: collectProgrammaticDecorators(element, normalizedPath)
         routes += ArmeriaRoute.create(
             element = element,
             protocol = protocol.presentableName(),

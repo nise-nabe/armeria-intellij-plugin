@@ -6,6 +6,7 @@ import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiVariable
+import com.intellij.psi.JavaPsiFacade
 
 internal object ArmeriaDecoratorSupport {
     internal data class DecoratorCandidate(val label: String, val pathPattern: String?)
@@ -122,7 +123,20 @@ internal object ArmeriaDecoratorSupport {
     private fun extractJavaPathPattern(expression: PsiExpression): String? {
         return when (expression) {
             is PsiLiteralExpression -> expression.value as? String
-            else -> expression.text.trim().trim('"').takeIf { it.isNotEmpty() }
+            is PsiReferenceExpression -> {
+                when (val resolved = expression.resolve()) {
+                    is PsiVariable -> ArmeriaRouteSupport.evaluateJavaStringConstant(resolved)
+                    else -> computeJavaPathPatternConstant(expression)
+                }
+            }
+            else -> computeJavaPathPatternConstant(expression)
         }
+    }
+
+    private fun computeJavaPathPatternConstant(expression: PsiExpression): String? {
+        val constantValue = JavaPsiFacade.getInstance(expression.project)
+            .constantEvaluationHelper
+            .computeConstantExpression(expression) as? String
+        return constantValue ?: expression.text.trim().trim('"').takeIf { it.isNotEmpty() }
     }
 }

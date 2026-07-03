@@ -33,6 +33,9 @@ internal object ArmeriaKotlinDecoratorSupport {
         collectKotlinDecoratorsFromReceiver(registrationCall, candidates)
         collectKotlinDecoratorsFromPrecedingScopeBlocks(registrationCall, candidates)
         collectKotlinDecoratorsInScopeLambda(registrationCall, candidates)
+        enclosingBuilderScopeCall(registrationCall)?.let { scopeCall ->
+            collectKotlinDecoratorsFromPrecedingScopeBlocks(scopeCall, candidates)
+        }
         return ArmeriaDecoratorSupport.filterDecoratorCandidates(candidates, registrationPath)
     }
 
@@ -212,8 +215,36 @@ internal object ArmeriaKotlinDecoratorSupport {
                     unwrapped.text.trim('"')
                 }
             }
+            is KtDotQualifiedExpression -> extractKotlinPathPatternFromReference(unwrapped)
+            is KtNameReferenceExpression -> extractKotlinPathPatternFromReference(unwrapped)
             else -> unwrapped.text.trim().trim('"').takeIf { it.isNotEmpty() }
         }
+    }
+
+    private fun extractKotlinPathPatternFromReference(expression: KtExpression): String? {
+        val resolved = expression.references.firstOrNull()?.resolve()
+        when (resolved) {
+            is KtProperty -> extractKotlinPathPattern(resolved.initializer)?.let { return it }
+            is PsiVariable -> ArmeriaRouteSupport.evaluateJavaStringConstant(resolved)?.let { return it }
+        }
+        if (expression is KtDotQualifiedExpression) {
+            val selector = expression.selectorExpression as? KtNameReferenceExpression ?: return null
+            val receiver = expression.receiverExpression as? KtNameReferenceExpression ?: return null
+            val containingClass = receiver.references.firstOrNull()?.resolve() as? com.intellij.psi.PsiClass
+                ?: return null
+            val field = containingClass.findFieldByName(selector.getReferencedName(), true)
+            if (field != null) {
+                ArmeriaRouteSupport.evaluateJavaStringConstant(field)?.let { return it }
+            }
+        }
+        return expression.text.trim().trim('"').takeIf { it.isNotEmpty() }
+    }
+
+    private fun enclosingBuilderScopeCall(registrationCall: KtCallExpression): KtCallExpression? {
+        val lambda = registrationCall.getParentOfType<KtLambdaExpression>(strict = true) ?: return null
+        val scopeCall = (lambda.parent as? KtValueArgument)?.parent as? KtCallExpression ?: return null
+        val scopeMethod = resolveKotlinCallName(scopeCall) ?: return null
+        return scopeCall.takeIf { scopeMethod in BUILDER_SCOPE_METHODS }
     }
 
     private fun hasScopeBuilderReceiver(call: KtCallExpression): Boolean {
