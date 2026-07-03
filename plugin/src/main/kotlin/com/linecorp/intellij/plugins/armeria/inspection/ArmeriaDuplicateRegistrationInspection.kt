@@ -8,7 +8,6 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiMethod
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteDuplicateIndex
 import com.linecorp.intellij.plugins.armeria.message
-import org.jetbrains.kotlin.psi.KtNamedFunction
 
 open class ArmeriaDuplicateRegistrationInspection : LocalInspectionTool() {
     override fun getDisplayName(): String = message("inspection.duplicate.registration.display.name")
@@ -20,9 +19,6 @@ open class ArmeriaDuplicateRegistrationInspection : LocalInspectionTool() {
         }
         return object : PsiElementVisitor() {
             override fun visitFile(visitedFile: PsiFile) {
-                if (visitedFile != holder.file) {
-                    return
-                }
                 for (hit in hits) {
                     holder.registerProblem(
                         highlightElement(hit.element),
@@ -37,11 +33,11 @@ open class ArmeriaDuplicateRegistrationInspection : LocalInspectionTool() {
         }
     }
 
-    private fun highlightElement(element: PsiElement): PsiElement {
-        return when (val source = element.navigationElement) {
-            is PsiMethod -> source.nameIdentifier ?: source
-            is KtNamedFunction -> source.nameIdentifier ?: source
-            else -> source
+    protected open fun highlightElement(element: PsiElement): PsiElement {
+        val source = element.navigationElement
+        if (source is PsiMethod) {
+            return source.nameIdentifier ?: source
         }
+        return source
     }
 }
