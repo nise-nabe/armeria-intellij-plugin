@@ -5,7 +5,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAwareAction
 import com.linecorp.intellij.plugins.armeria.message
 
-class ArmeriaGenerateHttpRequestAction(
+internal class ArmeriaGenerateHttpRequestAction(
     private val selectedRouteProvider: () -> ArmeriaRoute?,
 ) : DumbAwareAction(
     message("route.explorer.action.generateHttpRequest"),

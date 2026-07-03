@@ -15,7 +15,8 @@ internal object ArmeriaHttpRequestGenerator {
         return when (route.routeMatch) {
             RouteMatch.ANNOTATED_HTTP -> route.httpMethod
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER -> "GET"
-            else -> "GET"
+            RouteMatch.ANNOTATED_SERVICE, RouteMatch.NON_HTTP ->
+                error("Unsupported route match: ${route.routeMatch}")
         }
     }
 

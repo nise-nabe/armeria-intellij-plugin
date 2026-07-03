@@ -252,7 +252,7 @@ class ArmeriaRouteExplorerPanel(
     }
 
     private fun navigateToSelection() {
-        val route = ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent) ?: return
+        val route = selectedRouteFromTree() ?: return
         ReadAction.nonBlocking<Navigatable?> {
             val element = route.pointer.element as? Navigatable
             element?.takeIf { it.canNavigate() }
