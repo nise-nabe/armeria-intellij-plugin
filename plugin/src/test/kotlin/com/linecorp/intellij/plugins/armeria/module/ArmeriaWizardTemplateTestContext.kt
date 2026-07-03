@@ -1,5 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.module
 
+import com.intellij.ide.starters.local.StarterModuleBuilder
+
 /**
  * Minimal stand-in for [com.intellij.ide.starters.local.GeneratorContext] used by J2EE file templates.
  */
@@ -13,6 +15,8 @@ class ArmeriaWizardTemplateTestContext(
     private val libraries: Set<String> = emptySet(),
     private val versions: Map<Pair<String, String>, String> = defaultVersions(),
 ) {
+    val rootPackage: String = StarterModuleBuilder.suggestPackageName(group, artifact)
+
     fun hasLibrary(libraryId: String): Boolean = libraryId in libraries
 
     fun hasLanguage(languageId: String): Boolean = language == languageId

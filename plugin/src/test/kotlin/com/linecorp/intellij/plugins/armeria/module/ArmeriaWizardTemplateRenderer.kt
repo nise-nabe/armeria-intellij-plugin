@@ -24,7 +24,6 @@ object ArmeriaWizardTemplateRenderer {
 
         val velocityContext = VelocityContext().apply {
             put("context", context)
-            put("PACKAGE_NAME", context.group)
             // Maven POM templates also reference ${project.basedir} and ${kotlin.version}.
             put("project", mapOf("basedir" to "."))
             put(

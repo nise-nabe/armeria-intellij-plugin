@@ -1,9 +1,9 @@
-package ${PACKAGE_NAME}
+package ${context.rootPackage}
 
 import com.linecorp.armeria.server.Server
 import com.linecorp.armeria.server.annotation.Get
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
-import kotlin.test.assertNotNull
 
 class MainTest {
     @Test
