@@ -1,7 +1,2 @@
 <idea-plugin>
-    <extensions defaultExtensionNs="com.intellij">
-        <registryKey key="armeria.grpc.proto.routes.enabled"
-                     defaultValue="true"
-                     description="Include gRPC routes parsed from .proto files in Route Explorer"/>
-    </extensions>
 </idea-plugin>

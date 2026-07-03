@@ -77,6 +77,94 @@ class ArmeriaGrpcRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
     assertEquals("com.example.Greeter.SayHello", protoRoute!!.target)
   }
 
+  fun testCollectGrpcRoutesFromMultipleServicesInOneProto() {
+    myFixture.configureByText(
+      "services.proto",
+      """
+      syntax = "proto3";
+      package com.example;
+
+      service Greeter {
+        rpc SayHello(HelloRequest) returns (HelloResponse);
+      }
+
+      service Admin {
+        rpc Ping(PingRequest) returns (PingResponse);
+      }
+      """.trimIndent(),
+    )
+
+    val routes = ArmeriaRouteCollector.collect(project).map { it.path }.sorted()
+
+    assertEquals(
+      listOf("/com.example.Admin/Ping", "/com.example.Greeter/SayHello"),
+      routes,
+    )
+  }
+
+  fun testCommentedRpcIsIgnored() {
+    myFixture.configureByText(
+      "greeter.proto",
+      """
+      syntax = "proto3";
+      package com.example;
+
+      service Greeter {
+        // rpc Deprecated(HelloRequest) returns (HelloResponse);
+        rpc SayHello(HelloRequest) returns (HelloResponse);
+      }
+      """.trimIndent(),
+    )
+
+    val routes = ArmeriaRouteCollector.collect(project)
+
+    assertEquals(listOf("/com.example.Greeter/SayHello"), routes.map { it.path })
+  }
+
+  fun testUnbalancedBraceDoesNotSkipLaterServices() {
+    val file = myFixture.configureByText(
+      "broken.proto",
+      """
+      syntax = "proto3";
+      package com.example;
+
+      service Broken {
+        rpc MissingBrace(HelloRequest) returns (HelloResponse) {
+      }
+
+      service Greeter {
+        rpc SayHello(HelloRequest) returns (HelloResponse);
+      }
+      """.trimIndent(),
+    )
+    val routes = mutableListOf<ArmeriaRoute>()
+    ArmeriaGrpcRouteCollector.collectFromProtoText(file.text, file, routes)
+
+    assertEquals(listOf("/com.example.Greeter/SayHello"), routes.map { it.path })
+  }
+
+  fun testDuplicateProtoRoutesAreDeduplicated() {
+    val file = myFixture.configureByText(
+      "greeter.proto",
+      """
+      syntax = "proto3";
+      package com.example;
+
+      service Greeter {
+        rpc SayHello(HelloRequest) returns (HelloResponse);
+      }
+      """.trimIndent(),
+    )
+    val routes = mutableListOf<ArmeriaRoute>()
+    val seenProtoRoutes = mutableSetOf<String>()
+    val element = file
+    ArmeriaGrpcRouteCollector.collectFromProtoText(file.text, element, routes, seenProtoRoutes)
+    ArmeriaGrpcRouteCollector.collectFromProtoText(file.text, element, routes, seenProtoRoutes)
+
+    assertEquals(1, routes.size)
+    assertEquals("/com.example.Greeter/SayHello", routes.single().path)
+  }
+
   fun testProtoRoutesCoexistWithGrpcServiceRegistration() {
     myFixture.configureByText(
       "greeter.proto",

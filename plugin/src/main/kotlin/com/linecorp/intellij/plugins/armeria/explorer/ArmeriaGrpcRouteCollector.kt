@@ -18,24 +18,35 @@ internal object ArmeriaGrpcRouteCollector {
         if (!isProtoRouteDiscoveryEnabled()) {
             return
         }
+        val seenProtoRoutes = mutableSetOf<String>()
         for (virtualFile in FilenameIndex.getAllFilesByExt(project, "proto", scope)) {
             ArmeriaRouteCollectionMetrics.current()?.filesScanned?.incrementAndGet()
             val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: continue
-            collectFromProtoText(psiFile.text, psiFile, routes)
+            collectFromProtoText(psiFile.text, psiFile, routes, seenProtoRoutes)
         }
     }
 
-    internal fun collectFromProtoText(text: String, element: PsiElement, routes: MutableList<ArmeriaRoute>) {
-        val packageName = PACKAGE_PATTERN.find(text)?.groupValues?.get(1).orEmpty()
-        for ((serviceName, body) in findServiceBodies(text)) {
+    internal fun collectFromProtoText(
+        text: String,
+        element: PsiElement,
+        routes: MutableList<ArmeriaRoute>,
+        seenProtoRoutes: MutableSet<String> = mutableSetOf(),
+    ) {
+        val strippedText = stripProtoComments(text)
+        val packageName = PACKAGE_PATTERN.find(strippedText)?.groupValues?.get(1).orEmpty()
+        for ((serviceName, body) in findServiceBodies(strippedText)) {
             val fqService = if (packageName.isBlank()) serviceName else "$packageName.$serviceName"
             for (rpc in RPC_PATTERN.findAll(body)) {
                 val methodName = rpc.groupValues[1]
+                val path = "/$fqService/$methodName"
+                if (!seenProtoRoutes.add(path)) {
+                    continue
+                }
                 routes += ArmeriaRoute.create(
                     element = element,
                     protocol = message("route.explorer.protocol.grpc"),
                     httpMethod = "RPC",
-                    path = "/$fqService/$methodName",
+                    path = path,
                     target = "$fqService.$methodName",
                     routeMatch = RouteMatch.NON_HTTP,
                 )
@@ -57,7 +68,11 @@ internal object ArmeriaGrpcRouteCollector {
             val match = SERVICE_HEADER_PATTERN.find(text, searchFrom) ?: break
             val serviceName = match.groupValues[1]
             val openBraceIndex = match.range.last
-            val closeBraceIndex = findMatchingCloseBrace(text, openBraceIndex) ?: break
+            val closeBraceIndex = findMatchingCloseBrace(text, openBraceIndex)
+            if (closeBraceIndex == null) {
+                searchFrom = openBraceIndex + 1
+                continue
+            }
             val body = text.substring(openBraceIndex + 1, closeBraceIndex)
             results += serviceName to body
             searchFrom = closeBraceIndex + 1
@@ -82,5 +97,27 @@ internal object ArmeriaGrpcRouteCollector {
             }
         }
         return null
+    }
+
+    private fun stripProtoComments(text: String): String {
+        val result = StringBuilder(text.length)
+        var index = 0
+        while (index < text.length) {
+            when {
+                text.startsWith("//", index) -> {
+                    val lineEnd = text.indexOf('\n', index)
+                    index = if (lineEnd < 0) text.length else lineEnd
+                }
+                text.startsWith("/*", index) -> {
+                    val blockEnd = text.indexOf("*/", index + 2)
+                    index = if (blockEnd < 0) text.length else blockEnd + 2
+                }
+                else -> {
+                    result.append(text[index])
+                    index++
+                }
+            }
+        }
+        return result.toString()
     }
 }
