@@ -105,10 +105,12 @@ internal object ArmeriaGrpcRouteCollector {
         while (index < text.length) {
             when {
                 text.startsWith("//", index) -> {
+                    ensureTrailingWhitespace(result)
                     val lineEnd = text.indexOf('\n', index)
                     index = if (lineEnd < 0) text.length else lineEnd
                 }
                 text.startsWith("/*", index) -> {
+                    ensureTrailingWhitespace(result)
                     val blockEnd = text.indexOf("*/", index + 2)
                     index = if (blockEnd < 0) text.length else blockEnd + 2
                 }
@@ -119,5 +121,11 @@ internal object ArmeriaGrpcRouteCollector {
             }
         }
         return result.toString()
+    }
+
+    private fun ensureTrailingWhitespace(result: StringBuilder) {
+        if (result.isNotEmpty() && !result.last().isWhitespace()) {
+            result.append(' ')
+        }
     }
 }
