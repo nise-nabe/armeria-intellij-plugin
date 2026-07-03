@@ -48,17 +48,21 @@ internal object ArmeriaKotlinDecoratorSupport {
     }
 
     private fun kotlinChainReceiver(expression: KtExpression): KtExpression? {
-        val parent = expression.parent
-        if (parent is KtDotQualifiedExpression && parent.selectorExpression == expression) {
-            return parent.receiverExpression
-        }
-        if (expression is KtCallExpression) {
-            val callee = expression.calleeExpression
-            if (callee is KtDotQualifiedExpression) {
-                return callee.receiverExpression
+        return when (expression) {
+            is KtDotQualifiedExpression -> expression.receiverExpression
+            is KtCallExpression -> {
+                val parent = expression.parent
+                if (parent is KtDotQualifiedExpression && parent.selectorExpression == expression) {
+                    parent.receiverExpression
+                } else {
+                    when (val callee = expression.calleeExpression) {
+                        is KtDotQualifiedExpression -> callee.receiverExpression
+                        else -> null
+                    }
+                }
             }
+            else -> null
         }
-        return null
     }
 
     private fun isKotlinArmeriaDecoratorCall(call: KtCallExpression): Boolean {

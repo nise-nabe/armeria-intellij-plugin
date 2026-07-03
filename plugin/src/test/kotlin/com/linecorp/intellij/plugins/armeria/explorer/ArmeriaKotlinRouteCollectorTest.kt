@@ -345,11 +345,13 @@ class ArmeriaKotlinRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
             package example
 
             import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.cors.CorsService
             import com.linecorp.armeria.server.logging.LoggingService
 
             fun main() {
                 Server.builder()
                     .decorator(LoggingService::class.java)
+                    .decorator(CorsService::class.java)
                     .service("/api", HelloService())
                     .build()
             }
@@ -368,7 +370,7 @@ class ArmeriaKotlinRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
 
         val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
         assertNotNull(serviceRoute)
-        assertEquals(listOf("Logging"), serviceRoute!!.decorators)
+        assertEquals(listOf("CORS", "Logging"), serviceRoute!!.decorators)
     }
 
     fun testCollectProgrammaticDecoratorInApplyBlock() {
@@ -1230,6 +1232,14 @@ class ArmeriaKotlinRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
             package com.linecorp.armeria.server.logging;
 
             public final class LoggingService {
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.cors;
+
+            public final class CorsService {
             }
             """.trimIndent(),
         )
