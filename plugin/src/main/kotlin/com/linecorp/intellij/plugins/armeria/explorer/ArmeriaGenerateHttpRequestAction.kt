@@ -13,10 +13,12 @@ internal class ArmeriaGenerateHttpRequestAction(
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
 
     override fun update(e: AnActionEvent) {
+        if (e.project == null) {
+            e.presentation.isEnabled = false
+            return
+        }
         val route = selectedRouteProvider()
-        e.presentation.isEnabled = e.project != null &&
-            route != null &&
-            ArmeriaHttpRequestGenerator.supports(route)
+        e.presentation.isEnabled = route != null && ArmeriaHttpRequestGenerator.supports(route)
     }
 
     override fun actionPerformed(e: AnActionEvent) {
