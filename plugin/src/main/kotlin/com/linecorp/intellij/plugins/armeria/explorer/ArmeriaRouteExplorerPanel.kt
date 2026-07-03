@@ -73,6 +73,7 @@ class ArmeriaRouteExplorerPanel(
                     updateStatusLabel()
                 }
             })
+            add(ArmeriaGenerateHttpRequestAction { selectedRouteFromTree() })
         }
         toolbar = ActionManager.getInstance().createActionToolbar("ArmeriaRouteExplorer", actionGroup, true).also {
             it.targetComponent = this
@@ -92,7 +93,7 @@ class ArmeriaRouteExplorerPanel(
             true,
         )
         routeTree.addTreeSelectionListener { _: TreeSelectionEvent ->
-            routeDetailPanel.setRoute(ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent))
+            routeDetailPanel.setRoute(selectedRouteFromTree())
         }
         routeTree.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(event: MouseEvent) {
@@ -251,7 +252,7 @@ class ArmeriaRouteExplorerPanel(
     }
 
     private fun navigateToSelection() {
-        val route = ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent) ?: return
+        val route = selectedRouteFromTree() ?: return
         ReadAction.nonBlocking<Navigatable?> {
             val element = route.pointer.element as? Navigatable
             element?.takeIf { it.canNavigate() }
@@ -262,6 +263,10 @@ class ArmeriaRouteExplorerPanel(
                 navigatable?.navigate(true)
             }
             .submit(AppExecutorUtil.getAppExecutorService())
+    }
+
+    private fun selectedRouteFromTree(): ArmeriaRoute? {
+        return ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent)
     }
 
     override fun dispose() = Unit
