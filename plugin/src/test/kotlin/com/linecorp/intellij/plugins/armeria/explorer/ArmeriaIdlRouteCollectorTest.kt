@@ -86,6 +86,49 @@ class ArmeriaIdlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals(ThriftOperation("HelloService", "ping"), operations.single())
     }
 
+    fun testParseThriftServiceWithExtends() {
+        val operations = ArmeriaThriftRouteCollector.parseOperations(
+            """
+            service DerivedService extends BaseService {
+                void ping(),
+            }
+            """.trimIndent(),
+        )
+
+        assertEquals(1, operations.size)
+        assertEquals(ThriftOperation("DerivedService", "ping"), operations.single())
+    }
+
+    fun testParseGraphqlIgnoresHashComments() {
+        val operations = ArmeriaGraphqlRouteCollector.parseOperations(
+            """
+            # Query type
+            type Query {
+                # user field
+                user: User
+            }
+            """.trimIndent(),
+        )
+
+        assertEquals(1, operations.size)
+        assertEquals(GraphqlOperation("Query", "user"), operations.single())
+    }
+
+    fun testParseThriftIgnoresHashComments() {
+        val operations = ArmeriaThriftRouteCollector.parseOperations(
+            """
+            # Hello service
+            service HelloService {
+                # ping method
+                void ping(),
+            }
+            """.trimIndent(),
+        )
+
+        assertEquals(1, operations.size)
+        assertEquals(ThriftOperation("HelloService", "ping"), operations.single())
+    }
+
     fun testCollectGraphqlRoutesWhenGraphqlOnClasspath() {
         registerIdlStubs()
         myFixture.configureByText(

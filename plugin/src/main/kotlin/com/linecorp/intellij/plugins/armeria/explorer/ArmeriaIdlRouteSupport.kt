@@ -21,7 +21,7 @@ internal object ArmeriaIdlRouteSupport {
 
     fun stripLineComments(text: String): String {
         return text.lineSequence()
-            .map { line -> line.substringBefore("//") }
+            .map { line -> line.substringBefore("//").substringBefore("#") }
             .joinToString("\n")
     }
 

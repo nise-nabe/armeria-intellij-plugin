@@ -11,7 +11,7 @@ internal data class ThriftOperation(
 )
 
 internal object ArmeriaThriftRouteCollector {
-    private val SERVICE_HEADER_PATTERN = Regex("""service\s+(\w+)\s*\{""")
+    private val SERVICE_HEADER_PATTERN = Regex("""service\s+(\w+)(?:\s+extends\s+[\w.]+)?\s*\{""")
     private val METHOD_PATTERN = Regex("""^\s*[\w.<>,\s]+\s+(\w+)\s*\(""", RegexOption.MULTILINE)
     private val THRIFT_KEYWORDS = setOf("oneway", "throws", "extends", "performs")
 
