@@ -13,7 +13,8 @@ internal class ArmeriaGenerateHttpRequestAction(
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
 
     override fun update(e: AnActionEvent) {
-        if (e.project == null) {
+        val project = e.project
+        if (project == null || project.basePath == null) {
             e.presentation.isEnabled = false
             return
         }

@@ -29,16 +29,27 @@ internal object ArmeriaHttpRequestFileWriter {
                     try {
                         val parentDir = filePath.parent.toFile()
                         when {
-                            parentDir.exists() && !parentDir.isDirectory -> return@runWriteCommandAction
-                            !parentDir.exists() && !parentDir.mkdirs() -> return@runWriteCommandAction
+                            parentDir.exists() && !parentDir.isDirectory -> {
+                                LOG.warn("HTTP request parent path exists but is not a directory: $parentDir")
+                                return@runWriteCommandAction
+                            }
+                            !parentDir.exists() && !parentDir.mkdirs() -> {
+                                LOG.warn("Failed to create HTTP request directory: $parentDir")
+                                return@runWriteCommandAction
+                            }
                         }
                         val parent = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(parentDir)
-                            ?: return@runWriteCommandAction
+                        if (parent == null) {
+                            LOG.warn("Failed to resolve HTTP request directory in VFS: $parentDir")
+                            return@runWriteCommandAction
+                        }
                         if (!parent.isDirectory) {
+                            LOG.warn("HTTP request parent path is not a directory in VFS: $parentDir")
                             return@runWriteCommandAction
                         }
                         val existing = parent.findChild(fileName)
                         if (existing != null && existing.isDirectory) {
+                            LOG.warn("Cannot create HTTP request file because path exists as a directory: ${existing.path}")
                             return@runWriteCommandAction
                         }
                         val virtualFile = existing ?: parent.createChildData(this, fileName)
