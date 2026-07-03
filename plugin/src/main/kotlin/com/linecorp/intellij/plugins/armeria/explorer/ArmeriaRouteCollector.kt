@@ -271,7 +271,7 @@ object ArmeriaRouteCollector {
         val annotatedServiceHasPathPrefix =
             registrationMethod == ServiceRegistrationMethod.ANNOTATED_SERVICE && argumentCount > 1
         val programmaticDecorators = decorators.ifEmpty {
-            ArmeriaDecoratorSupport.collectProgrammaticDecorators(element)
+            collectProgrammaticDecorators(element)
         }
         routes += ArmeriaRoute.create(
             element = element,
@@ -347,5 +347,15 @@ object ArmeriaRouteCollector {
 
     private fun isKotlinPluginAvailable(): Boolean =
         PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
+
+    private fun collectProgrammaticDecorators(element: PsiElement): List<String> {
+        if (element is PsiMethodCallExpression) {
+            return ArmeriaDecoratorSupport.collectProgrammaticDecorators(element)
+        }
+        if (isKotlinPluginAvailable()) {
+            return ArmeriaKotlinDecoratorSupport.collectProgrammaticDecorators(element)
+        }
+        return emptyList()
+    }
 
 }

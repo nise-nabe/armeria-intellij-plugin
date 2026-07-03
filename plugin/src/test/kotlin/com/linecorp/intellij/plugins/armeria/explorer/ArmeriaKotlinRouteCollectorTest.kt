@@ -404,6 +404,39 @@ class ArmeriaKotlinRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals(listOf("Logging"), serviceRoute!!.decorators)
     }
 
+    fun testCollectProgrammaticPathScopedDecoratorOnKotlinServiceRegistration() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.logging.LoggingService
+
+            fun main() {
+                Server.builder()
+                    .decorator("/api/**", LoggingService::class.java)
+                    .service("/api", HelloService())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
+        assertNotNull(serviceRoute)
+        assertEquals(listOf("Logging"), serviceRoute!!.decorators)
+    }
+
     fun testCollectServiceRegistrationInAlsoBlockWithExplicitReceiver() {
         myFixture.configureByText(
             "Main.kt",
