@@ -128,6 +128,7 @@ object ArmeriaRouteCollector {
             method.getAnnotation(ArmeriaRouteSupport.EXCEPTION_HANDLER_ANNOTATION),
         )
         val target = buildMethodTarget(containingClass, method)
+        val executionHints = ArmeriaTimeoutSupport.collectExecutionHints(method)
         for (path in paths) {
             routes += ArmeriaRoute.create(
                 element = method,
@@ -138,7 +139,7 @@ object ArmeriaRouteCollector {
                 routeMatch = RouteMatch.ANNOTATED_HTTP,
                 decorators = methodDecorators.distinct(),
                 exceptionHandlers = methodExceptionHandlers.distinct(),
-                timeoutHints = ArmeriaTimeoutSupport.collectTimeoutHints(method),
+                executionHints = executionHints,
             )
         }
     }
@@ -280,6 +281,9 @@ object ArmeriaRouteCollector {
             registrationMethod == ServiceRegistrationMethod.ANNOTATED_SERVICE && argumentCount > 1
         val normalizedPath = ArmeriaRouteSupport.normalizePath(path)
         val programmaticDecorators = decorators ?: collectProgrammaticDecorators(element, normalizedPath)
+        val timeoutHints = (element as? PsiMethodCallExpression)
+            ?.let(ArmeriaTimeoutSupport::collectBuilderTimeoutHints)
+            .orEmpty()
         routes += ArmeriaRoute.create(
             element = element,
             protocol = protocol.presentableName(),
@@ -291,6 +295,7 @@ object ArmeriaRouteCollector {
             isDocService = protocol == RouteProtocol.DOC_SERVICE,
             annotatedServiceHasPathPrefix = annotatedServiceHasPathPrefix,
             decorators = programmaticDecorators,
+            timeoutHints = timeoutHints,
         )
     }
 

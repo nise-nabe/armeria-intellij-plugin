@@ -69,6 +69,41 @@ class ArmeriaRouteDetailFormatterTest : LightJavaCodeInsightFixtureTestCase() {
         assertTrue(attachments.contains("MyHandler"))
     }
 
+    fun testAttachmentsLine_includesExecutionHints() {
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation;
+
+            public @interface Blocking {
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class HelloService {
+                @Blocking
+                @Get("/hello")
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val route = ArmeriaRouteCollector.collect(project).single()
+        val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
+
+        assertTrue(attachments.contains("execution:"))
+        assertTrue(attachments.contains("Blocking"))
+        assertFalse(attachments.contains("timeouts:"))
+    }
+
     fun testRegistrationSummary_annotatedServiceWithoutPathPrefix() {
         val route = ArmeriaRoute(
             protocol = "HTTP",

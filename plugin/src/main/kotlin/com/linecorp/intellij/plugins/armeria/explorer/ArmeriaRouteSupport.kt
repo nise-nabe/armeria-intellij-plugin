@@ -50,6 +50,8 @@ object ArmeriaRouteSupport {
     const val PATH_PREFIX_ANNOTATION = "com.linecorp.armeria.server.annotation.PathPrefix"
     const val DECORATOR_ANNOTATION = "com.linecorp.armeria.server.annotation.Decorator"
     const val EXCEPTION_HANDLER_ANNOTATION = "com.linecorp.armeria.server.annotation.ExceptionHandler"
+    const val BLOCKING_ANNOTATION = "com.linecorp.armeria.server.annotation.Blocking"
+    const val NON_BLOCKING_ANNOTATION = "com.linecorp.armeria.server.annotation.NonBlocking"
 
 
     const val GET_ANNOTATION = "com.linecorp.armeria.server.annotation.Get"
