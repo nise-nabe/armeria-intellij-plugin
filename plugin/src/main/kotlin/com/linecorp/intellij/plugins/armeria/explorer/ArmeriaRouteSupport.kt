@@ -2,14 +2,11 @@ package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
-import com.intellij.psi.PsiClass
-import com.intellij.psi.PsiClassType
-import com.intellij.psi.PsiMethod
-import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.PsiAnnotationMemberValue
 import com.intellij.psi.PsiArrayInitializerMemberValue
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiLiteralExpression
+import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiVariable
 
 internal enum class ServiceRegistrationMethod(val methodName: String) {
@@ -28,12 +25,8 @@ internal enum class ServiceRegistrationMethod(val methodName: String) {
 
 object ArmeriaRouteSupport {
     const val ARMERIA_PACKAGE_PREFIX = "com.linecorp.armeria"
-    const val ARMERIA_SPRING_PACKAGE_PREFIX = "com.linecorp.armeria.spring"
     const val ARMERIA_SERVER_PACKAGE_PREFIX = "com.linecorp.armeria.server"
-    const val ARMERIA_SERVER_CLASS = "com.linecorp.armeria.server.Server"
-    const val ARMERIA_SERVER_CONFIGURATOR_CLASS = "$ARMERIA_SPRING_PACKAGE_PREFIX.ArmeriaServerConfigurator"
     const val SERVER_BUILDER_CLASS = "com.linecorp.armeria.server.ServerBuilder"
-    const val SPRING_BEAN_ANNOTATION = "org.springframework.context.annotation.Bean"
     const val SERVER_BUILDER_SIMPLE_NAME = "ServerBuilder"
     const val ARMERIA_HEADER_SCAN_LIMIT = 4096
 
@@ -176,55 +169,6 @@ object ArmeriaRouteSupport {
             return remainder.isNotEmpty() && !remainder.contains('/')
         }
         return normalizedRoute == normalizedPattern
-    }
-
-    fun isSpringBootArmeriaAvailable(psiFacade: JavaPsiFacade, scope: GlobalSearchScope): Boolean {
-        if (psiFacade.findClass(SPRING_BEAN_ANNOTATION, scope) == null) {
-            return false
-        }
-        return psiFacade.findClass(ARMERIA_SERVER_CONFIGURATOR_CLASS, scope) != null ||
-            psiFacade.findClass(SERVER_BUILDER_CLASS, scope) != null ||
-            psiFacade.findClass(ARMERIA_SERVER_CLASS, scope) != null
-    }
-
-    fun isArmeriaServerBeanReturnType(method: PsiMethod, scope: GlobalSearchScope): Boolean {
-        val returnType = method.returnType ?: return false
-        val psiClass = (returnType as? PsiClassType)?.resolve()
-        if (psiClass != null) {
-            return isArmeriaServerBeanReturnType(psiClass, JavaPsiFacade.getInstance(method.project), scope)
-        }
-        return isArmeriaServerBeanReturnType(returnType.canonicalText)
-    }
-
-    fun isArmeriaServerBeanReturnType(returnType: String): Boolean {
-        if (returnType == ARMERIA_SERVER_CLASS || isServerBuilderType(returnType)) {
-            return true
-        }
-        return returnType == ARMERIA_SERVER_CONFIGURATOR_CLASS
-    }
-
-    private fun isArmeriaServerBeanReturnType(
-        psiClass: PsiClass,
-        psiFacade: JavaPsiFacade,
-        scope: GlobalSearchScope,
-    ): Boolean {
-        val qualifiedName = psiClass.qualifiedName
-        if (qualifiedName == ARMERIA_SERVER_CLASS ||
-            qualifiedName == ARMERIA_SERVER_CONFIGURATOR_CLASS ||
-            isServerBuilderType(qualifiedName.orEmpty())
-        ) {
-            return true
-        }
-        val configuratorClass = psiFacade.findClass(ARMERIA_SERVER_CONFIGURATOR_CLASS, scope)
-        if (configuratorClass != null && psiClass.isInheritor(configuratorClass, true)) {
-            return true
-        }
-        val serverClass = psiFacade.findClass(ARMERIA_SERVER_CLASS, scope)
-        if (serverClass != null && psiClass.isInheritor(serverClass, true)) {
-            return true
-        }
-        val serverBuilderClass = psiFacade.findClass(SERVER_BUILDER_CLASS, scope)
-        return serverBuilderClass != null && psiClass.isInheritor(serverBuilderClass, true)
     }
 
     fun isServerBuilderType(typeText: String): Boolean {
