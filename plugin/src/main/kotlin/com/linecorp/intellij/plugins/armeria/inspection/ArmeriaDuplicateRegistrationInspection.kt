@@ -8,7 +8,7 @@ import com.intellij.psi.PsiMethod
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteDuplicateIndex
 import com.linecorp.intellij.plugins.armeria.message
 
-class ArmeriaDuplicateRegistrationInspection : LocalInspectionTool() {
+open class ArmeriaDuplicateRegistrationInspection : LocalInspectionTool() {
     override fun getDisplayName(): String = message("inspection.duplicate.registration.display.name")
 
     override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor {
