@@ -45,7 +45,7 @@ internal object ArmeriaGrpcRouteCollector {
                 routes += ArmeriaRoute.create(
                     element = element,
                     protocol = message("route.explorer.protocol.grpc"),
-                    httpMethod = "RPC",
+                    httpMethod = "",
                     path = path,
                     target = "$fqService.$methodName",
                     routeMatch = RouteMatch.NON_HTTP,

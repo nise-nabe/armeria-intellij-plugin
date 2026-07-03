@@ -29,6 +29,7 @@ class ArmeriaGrpcRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
     assertEquals("/com.example.Greeter/SayGoodbye", protoRoutes[0].path)
     assertEquals("com.example.Greeter.SayGoodbye", protoRoutes[0].target)
     assertEquals(RouteMatch.NON_HTTP, protoRoutes[0].routeMatch)
+    assertEquals("", protoRoutes[0].httpMethod)
     assertEquals("/com.example.Greeter/SayHello", protoRoutes[1].path)
     assertEquals("com.example.Greeter.SayHello", protoRoutes[1].target)
   }
