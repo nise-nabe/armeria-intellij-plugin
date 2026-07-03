@@ -2,6 +2,7 @@ package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.intellij.lang.java.JavaLanguage
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -29,7 +30,8 @@ internal object ArmeriaRouteDuplicateIndex {
     )
 
     fun duplicateHitsInFile(project: Project, file: PsiFile): List<DuplicateRegistrationHit> {
-        return getIndex(project).hitsByFile[file].orEmpty()
+        val virtualFile = file.virtualFile ?: return emptyList()
+        return getIndex(project).hitsByVirtualFile[virtualFile].orEmpty()
     }
 
     internal fun duplicateGroups(project: Project): List<DuplicateRegistrationGroup> {
@@ -58,7 +60,7 @@ internal object ArmeriaRouteDuplicateIndex {
             CachedValueProvider.Result.create(
                 DuplicateRegistrationIndex(
                     groups = groups,
-                    hitsByFile = buildHitsByFile(groups),
+                    hitsByVirtualFile = buildHitsByVirtualFile(groups),
                 ),
                 PsiModificationTracker.MODIFICATION_COUNT,
             )
@@ -131,8 +133,8 @@ internal object ArmeriaRouteDuplicateIndex {
             RouteMatch.ANNOTATED_HTTP, RouteMatch.NON_HTTP -> false
         }
 
-    private fun buildHitsByFile(groups: List<DuplicateRegistrationGroup>): Map<PsiFile, List<DuplicateRegistrationHit>> {
-        val hitsByFile = mutableMapOf<PsiFile, MutableList<DuplicateRegistrationHit>>()
+    private fun buildHitsByVirtualFile(groups: List<DuplicateRegistrationGroup>): Map<VirtualFile, List<DuplicateRegistrationHit>> {
+        val hitsByVirtualFile = mutableMapOf<VirtualFile, MutableList<DuplicateRegistrationHit>>()
         for (group in groups) {
             val seenElements = mutableSetOf<PsiElement>()
             for (route in group.routes) {
@@ -140,8 +142,8 @@ internal object ArmeriaRouteDuplicateIndex {
                 if (!seenElements.add(element)) {
                     continue
                 }
-                val file = element.containingFile ?: continue
-                hitsByFile.getOrPut(file) { mutableListOf() }.add(
+                val virtualFile = element.containingFile?.virtualFile ?: continue
+                hitsByVirtualFile.getOrPut(virtualFile) { mutableListOf() }.add(
                     DuplicateRegistrationHit(
                         element = element,
                         registrationLabel = registrationLabel(route),
@@ -150,7 +152,7 @@ internal object ArmeriaRouteDuplicateIndex {
                 )
             }
         }
-        return hitsByFile
+        return hitsByVirtualFile
     }
 
     private fun overlappingRouteCount(route: ArmeriaRoute, routes: List<ArmeriaRoute>): Int =
@@ -180,5 +182,5 @@ internal data class DuplicateRegistrationHit(
 
 private data class DuplicateRegistrationIndex(
     val groups: List<DuplicateRegistrationGroup>,
-    val hitsByFile: Map<PsiFile, List<DuplicateRegistrationHit>>,
+    val hitsByVirtualFile: Map<VirtualFile, List<DuplicateRegistrationHit>>,
 )

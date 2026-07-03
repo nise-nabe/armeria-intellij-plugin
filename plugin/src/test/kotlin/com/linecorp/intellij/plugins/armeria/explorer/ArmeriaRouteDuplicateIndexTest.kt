@@ -158,6 +158,11 @@ class ArmeriaRouteDuplicateIndexTest : LightJavaCodeInsightFixtureTestCase() {
 
         assertEquals(1, groups.size)
         assertEquals(2, groups.single().routes.size)
+
+        val hits = ArmeriaRouteDuplicateIndex.duplicateHitsInFile(project, myFixture.file)
+        assertEquals(2, hits.size)
+        assertEquals(setOf("GET /dup"), hits.map { it.registrationLabel }.toSet())
+        assertTrue(hits.all { it.registrationCount == 2 })
     }
 
     fun testCatchAllServiceCountsOverlapsPerRoute() {
