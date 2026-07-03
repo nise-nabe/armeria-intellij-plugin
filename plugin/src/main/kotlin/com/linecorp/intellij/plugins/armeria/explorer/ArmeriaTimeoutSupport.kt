@@ -1,74 +1,104 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiClass
-import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
-import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.psi.PsiReferenceExpression
+import com.intellij.psi.PsiVariable
 import com.linecorp.intellij.plugins.armeria.message
 
 internal object ArmeriaTimeoutSupport {
-    const val BLOCKING_ANNOTATION = "com.linecorp.armeria.server.annotation.Blocking"
-    const val NON_BLOCKING_ANNOTATION = "com.linecorp.armeria.server.annotation.NonBlocking"
+    fun collectExecutionHints(method: PsiMethod): List<String> {
+        val methodHint = executionHint(method)
+        if (methodHint != null) {
+            return listOf(methodHint)
+        }
+        val containingClass = method.containingClass ?: return emptyList()
+        return executionHint(containingClass)?.let(::listOf) ?: emptyList()
+    }
 
-    fun collectExecutionHints(element: PsiElement): List<String> {
-        val method = PsiTreeUtil.getParentOfType(element, PsiMethod::class.java, false) ?: return emptyList()
-        val containingClass = method.containingClass
-        return buildList {
-            executionAnnotationHint(method, containingClass, BLOCKING_ANNOTATION, "route.explorer.timeout.blocking")?.let(::add)
-            executionAnnotationHint(method, containingClass, NON_BLOCKING_ANNOTATION, "route.explorer.timeout.nonBlocking")?.let(::add)
+    fun collectBuilderTimeoutHints(registrationCall: PsiMethodCallExpression): List<String> {
+        val hints = mutableListOf<String>()
+        collectTimeoutCallsFromQualifier(registrationCall.methodExpression.qualifierExpression, hints)
+        return hints.distinct()
+    }
+
+    private fun executionHint(element: PsiClass): String? {
+        return when {
+            element.hasAnnotation(ArmeriaRouteSupport.BLOCKING_ANNOTATION) ->
+                message("route.explorer.execution.blocking")
+            element.hasAnnotation(ArmeriaRouteSupport.NON_BLOCKING_ANNOTATION) ->
+                message("route.explorer.execution.nonBlocking")
+            else -> null
         }
     }
 
-    fun collectTimeoutHints(element: PsiElement): List<String> {
-        val method = PsiTreeUtil.getParentOfType(element, PsiMethod::class.java, false) ?: return emptyList()
-        return PsiTreeUtil.findChildrenOfType(method, PsiMethodCallExpression::class.java)
-            .mapNotNull { call ->
-                when (call.methodExpression.referenceName) {
-                    "requestTimeout" -> formatTimeoutCall("route.explorer.timeout.request", call)
-                    "responseTimeout" -> formatTimeoutCall("route.explorer.timeout.response", call)
-                    "idleTimeout" -> formatTimeoutCall("route.explorer.timeout.idle", call)
-                    else -> null
+    private fun executionHint(method: PsiMethod): String? {
+        return when {
+            method.hasAnnotation(ArmeriaRouteSupport.BLOCKING_ANNOTATION) ->
+                message("route.explorer.execution.blocking")
+            method.hasAnnotation(ArmeriaRouteSupport.NON_BLOCKING_ANNOTATION) ->
+                message("route.explorer.execution.nonBlocking")
+            else -> null
+        }
+    }
+
+    private fun collectTimeoutCallsFromQualifier(
+        qualifier: PsiExpression?,
+        hints: MutableList<String>,
+    ) {
+        var current: PsiExpression? = qualifier
+        while (current != null) {
+            when (current) {
+                is PsiMethodCallExpression -> {
+                    when (current.methodExpression.referenceName) {
+                        "requestTimeout" -> if (resolvesToArmeriaServerBuilder(current)) {
+                            hints += formatTimeoutCall("route.explorer.timeout.request", current)
+                        }
+                        "responseTimeout" -> if (resolvesToArmeriaServerBuilder(current)) {
+                            hints += formatTimeoutCall("route.explorer.timeout.response", current)
+                        }
+                        "idleTimeout" -> if (resolvesToArmeriaServerBuilder(current)) {
+                            hints += formatTimeoutCall("route.explorer.timeout.idle", current)
+                        }
+                    }
+                    current = current.methodExpression.qualifierExpression
                 }
+                is PsiReferenceExpression -> {
+                    val resolved = current.resolve()
+                    current = if (resolved is PsiVariable) {
+                        resolved.initializer
+                    } else {
+                        null
+                    }
+                }
+                else -> break
             }
-            .distinct()
+        }
     }
 
-    private fun executionAnnotationHint(
-        method: PsiMethod,
-        containingClass: PsiClass?,
-        fqn: String,
-        labelKey: String,
-    ): String? {
-        if (method.hasAnnotation(fqn)) {
-            return message(labelKey)
-        }
-        val methodHasExecutionAnnotation =
-            method.hasAnnotation(BLOCKING_ANNOTATION) || method.hasAnnotation(NON_BLOCKING_ANNOTATION)
-        if (!methodHasExecutionAnnotation && containingClass?.hasAnnotation(fqn) == true) {
-            return message(labelKey)
-        }
-        return null
-    }
-
-    private fun formatTimeoutCall(labelKey: String, call: PsiMethodCallExpression): String? {
-        if (!isArmeriaTimeoutCall(call)) {
-            return null
-        }
-        val value = call.argumentList.expressions.firstOrNull()?.text ?: return null
-        return message("route.explorer.timeout.value", message(labelKey), value)
-    }
-
-    private fun isArmeriaTimeoutCall(call: PsiMethodCallExpression): Boolean {
+    private fun resolvesToArmeriaServerBuilder(expression: PsiMethodCallExpression): Boolean {
         ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
-        val resolvedClass = call.resolveMethod()?.containingClass?.qualifiedName
-        if (resolvedClass != null) {
-            return resolvedClass.startsWith(ArmeriaRouteSupport.ARMERIA_SERVER_PACKAGE_PREFIX)
+        val resolvedClass = expression.resolveMethod()?.containingClass?.qualifiedName
+        if (resolvedClass?.startsWith(ArmeriaRouteSupport.ARMERIA_SERVER_PACKAGE_PREFIX) == true) {
+            return true
         }
-        val qualifierText = call.methodExpression.qualifierExpression?.text
-        if (qualifierText != null) {
-            return ArmeriaRouteSupport.looksLikeServerBuilderReceiverText(qualifierText)
+        val qualifierText = expression.methodExpression.qualifierExpression?.text ?: return false
+        return ArmeriaRouteSupport.looksLikeServerBuilderReceiverText(qualifierText)
+    }
+
+    private fun formatTimeoutCall(bundleKey: String, call: PsiMethodCallExpression): String {
+        val argument = call.argumentList.expressions.firstOrNull()
+        val value = when (argument) {
+            null -> "…"
+            else -> JavaPsiFacade.getInstance(call.project)
+                .constantEvaluationHelper
+                .computeConstantExpression(argument)
+                ?.toString()
+                ?: argument.text
         }
-        return false
+        return message(bundleKey, value)
     }
 }
