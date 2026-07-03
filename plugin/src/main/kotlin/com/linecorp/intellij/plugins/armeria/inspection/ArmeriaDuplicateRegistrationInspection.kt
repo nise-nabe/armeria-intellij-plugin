@@ -20,8 +20,9 @@ open class ArmeriaDuplicateRegistrationInspection : LocalInspectionTool() {
         return object : PsiElementVisitor() {
             override fun visitFile(visitedFile: PsiFile) {
                 for (hit in hits) {
+                    val element = hit.pointer.element ?: continue
                     holder.registerProblem(
-                        highlightElement(hit.element),
+                        highlightElement(element),
                         message(
                             "inspection.duplicate.registration.problem",
                             hit.registrationLabel,

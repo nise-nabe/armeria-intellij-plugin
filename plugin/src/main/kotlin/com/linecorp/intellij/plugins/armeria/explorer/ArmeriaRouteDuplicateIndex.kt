@@ -7,6 +7,7 @@ import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiMethod
+import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
@@ -69,21 +70,35 @@ internal object ArmeriaRouteDuplicateIndex {
 
     private fun findConnectedComponents(routes: List<ArmeriaRoute>): List<List<ArmeriaRoute>> {
         val parent = IntArray(routes.size) { it }
+        val size = IntArray(routes.size) { 1 }
 
         fun find(index: Int): Int {
             var root = index
             while (parent[root] != root) {
                 root = parent[root]
             }
+            var current = index
+            while (parent[current] != root) {
+                val next = parent[current]
+                parent[current] = root
+                current = next
+            }
             return root
         }
 
         fun union(first: Int, second: Int) {
-            val firstRoot = find(first)
-            val secondRoot = find(second)
-            if (firstRoot != secondRoot) {
-                parent[secondRoot] = firstRoot
+            var firstRoot = find(first)
+            var secondRoot = find(second)
+            if (firstRoot == secondRoot) {
+                return
             }
+            if (size[firstRoot] < size[secondRoot]) {
+                val smallerRoot = firstRoot
+                firstRoot = secondRoot
+                secondRoot = smallerRoot
+            }
+            parent[secondRoot] = firstRoot
+            size[firstRoot] += size[secondRoot]
         }
 
         for (first in routes.indices) {
@@ -180,7 +195,7 @@ internal object ArmeriaRouteDuplicateIndex {
                 val virtualFile = element.containingFile?.virtualFile ?: continue
                 hitsByVirtualFile.getOrPut(virtualFile) { mutableListOf() }.add(
                     DuplicateRegistrationHit(
-                        element = element,
+                        pointer = route.pointer,
                         registrationLabel = registrationLabel(route),
                         registrationCount = overlappingRouteCount(route, group.routes),
                     ),
@@ -205,7 +220,7 @@ internal data class DuplicateRegistrationGroup(
 )
 
 internal data class DuplicateRegistrationHit(
-    val element: PsiElement,
+    val pointer: SmartPsiElementPointer<PsiElement>,
     val registrationLabel: String,
     val registrationCount: Int,
 )
