@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiVariable
+import com.intellij.psi.util.PsiTreeUtil
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
@@ -155,12 +156,18 @@ internal object ArmeriaKotlinDecoratorSupport {
             }
             statement.accept(object : KtTreeVisitorVoid() {
                 override fun visitCallExpression(expression: KtCallExpression) {
+                    if (expression.textRange.startOffset >= registrationOffset) {
+                        return
+                    }
                     if (isKotlinArmeriaDecoratorCall(expression)) {
                         extractKotlinDecoratorLabel(expression)?.let { decorators += it }
                     }
                     super.visitCallExpression(expression)
                 }
             })
+            if (PsiTreeUtil.isAncestor(statement, registrationCall, false)) {
+                return
+            }
         }
     }
 
