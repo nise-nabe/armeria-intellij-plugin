@@ -74,6 +74,49 @@ class ArmeriaWizardTemplateRenderingTest {
         assertTrue(rendered.contains("""implementation("com.linecorp.armeria:armeria")"""))
     }
 
+    @Test
+    fun kotlinMainTemplateRendersAnnotatedService() {
+        val context = ArmeriaWizardTemplateTestContext(language = "kotlin", group = "com.example.demo")
+        val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-main.kt.ft", context)
+
+        assertTrue(rendered.contains("package com.example.demo"))
+        assertTrue(rendered.contains("@Get(\"/hello\")"))
+        assertTrue(rendered.contains("fun main()"))
+    }
+
+    @Test
+    fun javaServiceTestTemplateRendersJUnit5Server() {
+        val context = ArmeriaWizardTemplateTestContext(language = "java", group = "com.example.demo")
+        val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-service-test.java.ft", context)
+
+        assertTrue(rendered.contains("package com.example.demo;"))
+        assertTrue(rendered.contains("org.junit.jupiter.api.Test"))
+        assertTrue(rendered.contains("@Get(\"/ping\")"))
+        assertTrue(rendered.contains(".http(0)"))
+    }
+
+    @Test
+    fun kotlinServiceTestTemplateRendersJUnit5Server() {
+        val context = ArmeriaWizardTemplateTestContext(language = "kotlin", group = "com.example.demo")
+        val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-service-test.kt.ft", context)
+
+        assertTrue(rendered.contains("package com.example.demo"))
+        assertTrue(rendered.contains("org.junit.jupiter.api.Test"))
+        assertTrue(rendered.contains("@Get(\"/ping\")"))
+        assertTrue(rendered.contains(".http(0)"))
+    }
+
+    @Test
+    fun logbackTemplateRendersConsoleAppender() {
+        val rendered = renderBuildTemplate(
+            "fileTemplates/j2ee/armeria-logback.xml.ft",
+            ArmeriaWizardTemplateTestContext(),
+        )
+
+        assertTrue(rendered.contains("ch.qos.logback.core.ConsoleAppender"))
+        assertTrue(rendered.contains("<root level=\"INFO\">"))
+    }
+
     private fun renderBuildTemplate(resourcePath: String, context: ArmeriaWizardTemplateTestContext): String =
         ArmeriaWizardTemplateRenderer.renderClasspathTemplate(resourcePath, context)
 }
