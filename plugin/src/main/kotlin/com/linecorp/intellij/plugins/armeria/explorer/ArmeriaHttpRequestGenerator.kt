@@ -1,7 +1,11 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import java.util.Locale
+
 internal object ArmeriaHttpRequestGenerator {
     const val DEFAULT_BASE_URL = "http://localhost:8080"
+
+    private val NON_SLUG_CHARACTERS = Regex("[^a-zA-Z0-9._-]")
 
     fun supports(route: ArmeriaRoute): Boolean {
         return when (route.routeMatch) {
@@ -21,7 +25,7 @@ internal object ArmeriaHttpRequestGenerator {
     }
 
     fun fileName(route: ArmeriaRoute): String {
-        val method = httpMethod(route).lowercase()
+        val method = httpMethod(route).lowercase(Locale.ROOT)
         return "armeria-$method-${pathSlug(route.path)}.http"
     }
 
@@ -42,6 +46,6 @@ internal object ArmeriaHttpRequestGenerator {
         }
         return trimmed
             .replace('/', '-')
-            .replace(Regex("[^a-zA-Z0-9._-]"), "-")
+            .replace(NON_SLUG_CHARACTERS, "-")
     }
 }
