@@ -4,10 +4,8 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.ToggleAction
-import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -41,9 +39,8 @@ import javax.swing.tree.TreePath
 
 class ArmeriaRouteExplorerPanel(
     private val project: Project,
-) : SimpleToolWindowPanel(true, true), Disposable, UiDataProvider {
+) : SimpleToolWindowPanel(true, true), Disposable {
     private var currentRoutes: List<ArmeriaRoute> = emptyList()
-    private var selectedRoute: ArmeriaRoute? = null
     private var currentModuleOnly = false
     private var initialRefreshScheduled = false
 
@@ -76,7 +73,7 @@ class ArmeriaRouteExplorerPanel(
                     updateStatusLabel()
                 }
             })
-            add(ArmeriaGenerateHttpRequestAction())
+            add(ArmeriaGenerateHttpRequestAction { selectedRouteFromTree() })
         }
         toolbar = ActionManager.getInstance().createActionToolbar("ArmeriaRouteExplorer", actionGroup, true).also {
             it.targetComponent = this
@@ -96,8 +93,7 @@ class ArmeriaRouteExplorerPanel(
             true,
         )
         routeTree.addTreeSelectionListener { _: TreeSelectionEvent ->
-            selectedRoute = ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent)
-            routeDetailPanel.setRoute(selectedRoute)
+            routeDetailPanel.setRoute(selectedRouteFromTree())
         }
         routeTree.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(event: MouseEvent) {
@@ -269,8 +265,8 @@ class ArmeriaRouteExplorerPanel(
             .submit(AppExecutorUtil.getAppExecutorService())
     }
 
-    override fun uiDataSnapshot(sink: DataSink) {
-        selectedRoute?.let { sink[ArmeriaRouteDataKeys.SELECTED_ROUTE] = it }
+    private fun selectedRouteFromTree(): ArmeriaRoute? {
+        return ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent)
     }
 
     override fun dispose() = Unit
