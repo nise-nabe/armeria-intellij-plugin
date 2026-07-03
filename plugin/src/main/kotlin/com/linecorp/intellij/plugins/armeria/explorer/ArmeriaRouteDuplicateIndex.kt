@@ -136,27 +136,26 @@ internal object ArmeriaRouteDuplicateIndex {
     }
 
     private fun routesOverlap(first: ArmeriaRoute, second: ArmeriaRoute): Boolean =
-        pathsOverlap(first.path, first.routeMatch, second.path, second.routeMatch)
+        pathsOverlap(first, second)
 
-    private fun pathsOverlap(
-        firstPath: String,
-        firstMatch: RouteMatch,
-        secondPath: String,
-        secondMatch: RouteMatch,
-    ): Boolean {
-        val firstIsPrefixMount = isPrefixMount(firstMatch)
-        val secondIsPrefixMount = isPrefixMount(secondMatch)
+    private fun pathsOverlap(first: ArmeriaRoute, second: ArmeriaRoute): Boolean {
+        val firstIsPrefixMount = isPrefixMount(first)
+        val secondIsPrefixMount = isPrefixMount(second)
         return when {
             firstIsPrefixMount && secondIsPrefixMount ->
-                pathIsUnder(firstPath, secondPath) || pathIsUnder(secondPath, firstPath)
-            firstIsPrefixMount -> pathIsUnder(secondPath, firstPath)
-            secondIsPrefixMount -> pathIsUnder(firstPath, secondPath)
-            else -> firstPath == secondPath
+                pathIsUnder(first.path, second.path) || pathIsUnder(second.path, first.path)
+            firstIsPrefixMount -> pathIsUnder(second.path, first.path)
+            secondIsPrefixMount -> pathIsUnder(first.path, second.path)
+            else -> first.path == second.path
         }
     }
 
-    private fun isPrefixMount(routeMatch: RouteMatch): Boolean =
-        routeMatch == RouteMatch.SERVICE_UNDER || routeMatch == RouteMatch.ANNOTATED_SERVICE
+    private fun isPrefixMount(route: ArmeriaRoute): Boolean =
+        when (route.routeMatch) {
+            RouteMatch.SERVICE_UNDER -> true
+            RouteMatch.ANNOTATED_SERVICE -> route.annotatedServiceHasPathPrefix
+            else -> false
+        }
 
     private fun pathIsUnder(path: String, prefix: String): Boolean {
         val normalizedPath = ArmeriaRouteSupport.normalizePath(path)
