@@ -4,30 +4,87 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiManager
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
-import com.linecorp.intellij.plugins.armeria.message
+
+internal data class GraphqlOperation(
+    val operationType: String,
+    val fieldName: String,
+)
 
 internal object ArmeriaGraphqlRouteCollector {
-    private val FIELD_PATTERN = Regex("""^\s*(\w+)\s*:""", RegexOption.MULTILINE)
-    private val TYPE_PATTERN = Regex("""type\s+(Query|Mutation)\s*\{([^}]*)\}""", RegexOption.DOT_MATCHES_ALL)
+    private val TYPE_HEADER_PATTERN =
+        Regex("""(?:extend\s+)?type\s+(Query|Mutation|Subscription)\s*\{""")
 
     fun collect(project: Project, scope: GlobalSearchScope, routes: MutableList<ArmeriaRoute>) {
-        for (virtualFile in FilenameIndex.getAllFilesByExt(project, "graphql", scope)) {
-            val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: continue
-            for (match in TYPE_PATTERN.findAll(psiFile.text)) {
-                val operationType = match.groupValues[1]
-                val body = match.groupValues[2]
-                for (field in FIELD_PATTERN.findAll(body)) {
-                    val fieldName = field.groupValues[1]
+        if (!ArmeriaIdlRouteSupport.isGraphqlOnClasspath(project, scope)) {
+            return
+        }
+        for (extension in GRAPHQL_EXTENSIONS) {
+            for (virtualFile in FilenameIndex.getAllFilesByExt(project, extension, scope)) {
+                val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: continue
+                for (operation in parseOperations(psiFile.text)) {
                     routes += ArmeriaRoute.create(
                         element = psiFile,
-                        protocol = message("route.explorer.protocol.graphql"),
-                        httpMethod = operationType.uppercase(),
-                        path = "/graphql/$fieldName",
-                        target = "$operationType.$fieldName",
+                        protocol = RouteProtocol.GRAPHQL.presentableName(),
+                        httpMethod = "",
+                        path = ArmeriaIdlRouteSupport.DEFAULT_GRAPHQL_MOUNT_PATH,
+                        target = "${operation.operationType}.${operation.fieldName}",
                         routeMatch = RouteMatch.NON_HTTP,
                     )
                 }
             }
         }
     }
+
+    internal fun parseOperations(schemaText: String): List<GraphqlOperation> {
+        val normalized = ArmeriaIdlRouteSupport.stripComments(schemaText)
+        val operations = mutableListOf<GraphqlOperation>()
+        for (match in TYPE_HEADER_PATTERN.findAll(normalized)) {
+            val operationType = match.groupValues[1]
+            val openBraceIndex = normalized.indexOf('{', match.range.first)
+            val body = ArmeriaIdlRouteSupport.extractBracedBody(normalized, openBraceIndex) ?: continue
+            operations += parseFields(operationType, body)
+        }
+        return operations
+    }
+
+    private fun parseFields(operationType: String, body: String): List<GraphqlOperation> {
+        val fields = mutableListOf<GraphqlOperation>()
+        val lines = body.lineSequence().toList()
+        var index = 0
+        while (index < lines.size) {
+            var line = lines[index].trim()
+            if (line.isEmpty()) {
+                index++
+                continue
+            }
+            var parenthesisDepth = parenthesisDelta(line)
+            index++
+            while (parenthesisDepth > 0 && index < lines.size) {
+                line += " " + lines[index].trim()
+                parenthesisDepth += parenthesisDelta(lines[index])
+                index++
+            }
+            val fieldMatch = FIELD_LINE_PATTERN.find(line.trim())
+            if (fieldMatch != null) {
+                fields += GraphqlOperation(operationType, fieldMatch.groupValues[1])
+            }
+        }
+        return fields
+    }
+
+    private fun parenthesisDelta(line: String): Int {
+        var delta = 0
+        for (character in line) {
+            when (character) {
+                '(' -> delta++
+                ')' -> if (delta > 0) {
+                    delta--
+                }
+            }
+        }
+        return delta
+    }
+
+    private val FIELD_LINE_PATTERN = Regex("""^(\w+)\s*(?:\([^)]*\))?\s*:""")
+    private val GRAPHQL_EXTENSIONS = listOf("graphql", "graphqls")
 }

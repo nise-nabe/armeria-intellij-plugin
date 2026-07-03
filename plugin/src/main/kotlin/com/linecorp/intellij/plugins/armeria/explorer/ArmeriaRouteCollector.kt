@@ -30,6 +30,7 @@ internal enum class RouteProtocol(private val messageKey: String) {
     HTTP("route.explorer.protocol.http"),
     GRPC("route.explorer.protocol.grpc"),
     DOC_SERVICE("route.explorer.protocol.docService"),
+    GRAPHQL("route.explorer.protocol.graphql"),
     THRIFT("route.explorer.protocol.thrift"),
     ;
 
