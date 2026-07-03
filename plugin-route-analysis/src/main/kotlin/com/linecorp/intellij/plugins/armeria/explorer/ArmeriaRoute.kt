@@ -40,6 +40,7 @@ data class ArmeriaRoute(
             RouteMatch.SERVICE -> message("route.explorer.method.allHttp")
             RouteMatch.SERVICE_UNDER -> message("route.explorer.method.prefix")
             RouteMatch.NON_HTTP -> protocol
+            RouteMatch.RUNTIME -> httpMethod
         }
 
     val shortTarget: String
@@ -57,10 +58,10 @@ data class ArmeriaRoute(
         }
 
     val detailHandlerLabel: String
-        get() = if (targetUnresolved) {
-            message("route.explorer.label.unresolvedExpression")
-        } else {
-            message("route.explorer.detail.handler")
+        get() = when {
+            routeMatch == RouteMatch.RUNTIME -> message("route.explorer.detail.service")
+            targetUnresolved -> message("route.explorer.label.unresolvedExpression")
+            else -> message("route.explorer.detail.handler")
         }
 
     companion object {
@@ -96,6 +97,28 @@ data class ArmeriaRoute(
                 executionHints = executionHints,
                 timeoutHints = timeoutHints,
                 pointer = SmartPointerManager.createPointer(element),
+            )
+        }
+
+        fun createRuntime(
+            httpMethod: String,
+            path: String,
+            target: String,
+            moduleName: String,
+            protocol: String,
+        ): ArmeriaRoute {
+            return ArmeriaRoute(
+                protocol = protocol,
+                httpMethod = httpMethod,
+                path = path,
+                target = target,
+                routeMatch = RouteMatch.RUNTIME,
+                moduleName = moduleName,
+                targetUnresolved = false,
+                isDocService = false,
+                decorators = emptyList(),
+                exceptionHandlers = emptyList(),
+                pointer = ArmeriaRuntimeRoutePointer,
             )
         }
 

@@ -11,7 +11,11 @@ object ArmeriaRouteDetailFormatter {
             if (route.isDocService) {
                 add(message("route.explorer.badge.docService"))
             }
-            add(message("route.explorer.badge.staticAnalysis"))
+            if (route.routeMatch == RouteMatch.RUNTIME) {
+                add(message("route.explorer.badge.runtime"))
+            } else {
+                add(message("route.explorer.badge.staticAnalysis"))
+            }
         }
         return badges.joinToString(" · ")
     }
@@ -49,6 +53,7 @@ object ArmeriaRouteDetailFormatter {
             RouteMatch.SERVICE -> message("route.explorer.registration.service", route.path)
             RouteMatch.SERVICE_UNDER -> message("route.explorer.registration.serviceUnder", route.path)
             RouteMatch.NON_HTTP -> message("route.explorer.registration.nonHttp", route.protocol, route.path)
+            RouteMatch.RUNTIME -> message("route.explorer.registration.runtime", route.httpMethod, route.path)
         }
     }
 }
