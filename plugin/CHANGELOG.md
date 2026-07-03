@@ -23,6 +23,7 @@
 ### Removed
 
 ### Fixed
+- Fixed Kotlin client URI extraction, `GrpcClients`/`ThriftClients.newClient` discovery, and async PSI collection in Armeria Clients explorer.
 - Fixed duplicate Kotlin annotated routes and false-positive service registrations in Route Explorer.
 - Fixed false-positive route detection for unqualified `service` calls inside `also`/`let` blocks on `Server.builder()`.
 - Fixed FQCN `com.linecorp.armeria.server.Server.builder()` detection in Kotlin fallback scanning.
