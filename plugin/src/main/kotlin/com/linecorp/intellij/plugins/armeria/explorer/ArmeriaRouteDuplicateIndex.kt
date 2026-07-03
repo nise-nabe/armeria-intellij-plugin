@@ -160,14 +160,19 @@ internal object ArmeriaRouteDuplicateIndex {
 
     private fun pathIsUnder(path: String, prefix: String): Boolean {
         val normalizedPath = ArmeriaRouteSupport.normalizePath(path)
-        val normalizedPrefix = ArmeriaRouteSupport.normalizePath(prefix)
+        val normalizedPrefix = normalizePrefixMount(prefix)
         if (normalizedPrefix == "/") {
             return true
         }
-        if (normalizedPath == normalizedPrefix) {
+        if (normalizedPath == normalizedPrefix || normalizedPath.removeSuffix("/") == normalizedPrefix) {
             return true
         }
-        return normalizedPath.startsWith("${normalizedPrefix.removeSuffix("/")}/")
+        return normalizedPath.startsWith("$normalizedPrefix/")
+    }
+
+    private fun normalizePrefixMount(prefix: String): String {
+        val normalized = ArmeriaRouteSupport.normalizePath(prefix)
+        return if (normalized == "/") "/" else normalized.removeSuffix("/")
     }
 
     private fun httpMethodsOverlap(first: ArmeriaRoute, second: ArmeriaRoute): Boolean {

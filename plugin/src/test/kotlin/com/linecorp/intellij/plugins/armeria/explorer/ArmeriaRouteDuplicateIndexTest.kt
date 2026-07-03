@@ -347,6 +347,42 @@ class ArmeriaRouteDuplicateIndexTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals(2, groups.single().routes.size)
     }
 
+    fun testServiceUnderWithTrailingSlashConflictsWithAnnotatedRoute() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .serviceUnder("/api/", new ApiService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class AnnotatedHandler {
+                @Get("/api/foo")
+                public String handle() {
+                    return "foo";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class ApiService {}")
+
+        assertEquals(1, ArmeriaRouteDuplicateIndex.duplicateGroups(project).size)
+    }
+
     fun testServiceUnderConflictsWithAnnotatedRouteUnderPrefix() {
         myFixture.configureByText(
             "Main.java",
