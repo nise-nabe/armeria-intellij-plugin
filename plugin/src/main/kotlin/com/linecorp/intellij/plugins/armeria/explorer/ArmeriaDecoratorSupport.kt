@@ -2,11 +2,14 @@ package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.intellij.psi.PsiClassObjectAccessExpression
 import com.intellij.psi.PsiExpression
+import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiVariable
 
 internal object ArmeriaDecoratorSupport {
+    internal data class DecoratorCandidate(val label: String, val pathPattern: String?)
+
     private val KNOWN_DECORATOR_LABELS = mapOf(
         "LoggingService" to "Logging",
         "CorsService" to "CORS",
@@ -18,33 +21,52 @@ internal object ArmeriaDecoratorSupport {
         "WebSocketService" to "WebSocket",
     )
 
-    fun collectProgrammaticDecorators(element: PsiMethodCallExpression): List<String> {
-        return collectJavaDecoratorsOnBuilderChain(element)
+    fun collectProgrammaticDecorators(element: PsiMethodCallExpression, registrationPath: String): List<String> {
+        val candidates = linkedSetOf<DecoratorCandidate>()
+        collectJavaDecoratorsOnBuilderChain(element, candidates)
+        return filterDecoratorCandidates(candidates, registrationPath)
     }
 
     fun labelDecorator(raw: String): String {
-        val normalized = raw.removeSuffix("::class.java").removeSuffix(".class")
+        val normalized = raw.removeSuffix("::class.java").removeSuffix("::class").removeSuffix(".class")
         val simpleName = normalized.substringAfterLast('.')
         return KNOWN_DECORATOR_LABELS.entries.firstOrNull { (key, _) -> simpleName == key || simpleName.endsWith(key) }?.value
             ?: simpleName
     }
 
-    private fun collectJavaDecoratorsOnBuilderChain(registrationCall: PsiMethodCallExpression): List<String> {
-        val decorators = linkedSetOf<String>()
-        collectJavaDecoratorsFromQualifier(registrationCall.methodExpression.qualifierExpression, decorators)
-        return decorators.toList()
+    internal fun filterDecoratorCandidates(
+        candidates: Collection<DecoratorCandidate>,
+        registrationPath: String,
+    ): List<String> {
+        return candidates.mapNotNull { candidate ->
+            val pathPattern = candidate.pathPattern
+            if (pathPattern == null ||
+                ArmeriaRouteSupport.decoratorPathPatternAppliesToRoute(pathPattern, registrationPath)
+            ) {
+                candidate.label
+            } else {
+                null
+            }
+        }.distinct()
+    }
+
+    private fun collectJavaDecoratorsOnBuilderChain(
+        registrationCall: PsiMethodCallExpression,
+        candidates: LinkedHashSet<DecoratorCandidate>,
+    ) {
+        collectJavaDecoratorsFromQualifier(registrationCall.methodExpression.qualifierExpression, candidates)
     }
 
     private fun collectJavaDecoratorsFromQualifier(
         qualifier: PsiExpression?,
-        decorators: LinkedHashSet<String>,
+        candidates: LinkedHashSet<DecoratorCandidate>,
     ) {
         var current: PsiExpression? = qualifier
         while (current != null) {
             when (current) {
                 is PsiMethodCallExpression -> {
                     if (isArmeriaDecoratorCall(current)) {
-                        extractJavaDecoratorLabel(current)?.let { decorators += it }
+                        extractJavaDecoratorCandidate(current)?.let { candidates += it }
                     }
                     current = current.methodExpression.qualifierExpression
                 }
@@ -78,8 +100,13 @@ internal object ArmeriaDecoratorSupport {
         return ArmeriaRouteSupport.looksLikeServerBuilderReceiverText(qualifierText)
     }
 
-    private fun extractJavaDecoratorLabel(expression: PsiMethodCallExpression): String? {
+    private fun extractJavaDecoratorCandidate(expression: PsiMethodCallExpression): DecoratorCandidate? {
         val arguments = expression.argumentList.expressions
+        val pathPattern = if (arguments.size >= 2) {
+            extractJavaPathPattern(arguments[0])
+        } else {
+            null
+        }
         val decoratorArgument = when {
             arguments.size >= 2 -> arguments[1]
             arguments.isNotEmpty() -> arguments[0]
@@ -89,6 +116,13 @@ internal object ArmeriaDecoratorSupport {
             is PsiClassObjectAccessExpression -> decoratorArgument.text
             else -> ArmeriaRouteTargetExtractor.extractTarget(decoratorArgument)
         }
-        return labelDecorator(target)
+        return DecoratorCandidate(labelDecorator(target), pathPattern)
+    }
+
+    private fun extractJavaPathPattern(expression: PsiExpression): String? {
+        return when (expression) {
+            is PsiLiteralExpression -> expression.value as? String
+            else -> expression.text.trim().trim('"').takeIf { it.isNotEmpty() }
+        }
     }
 }

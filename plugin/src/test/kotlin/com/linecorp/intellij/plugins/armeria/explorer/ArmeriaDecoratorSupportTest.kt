@@ -15,4 +15,8 @@ class ArmeriaDecoratorSupportTest : TestCase() {
     fun testLabelDecoratorPathScopedSecondArgument() {
         assertEquals("Logging", ArmeriaDecoratorSupport.labelDecorator("LoggingService"))
     }
+
+    fun testLabelDecoratorKotlinClassReference() {
+        assertEquals("Logging", ArmeriaDecoratorSupport.labelDecorator("LoggingService::class"))
+    }
 }

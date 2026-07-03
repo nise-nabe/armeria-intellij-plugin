@@ -407,6 +407,41 @@ class ArmeriaRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals(listOf("Logging"), serviceRoute!!.decorators)
     }
 
+    fun testCollectPathScopedDecoratorFiltersByRoute() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.logging.LoggingService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .decorator("/api/**", LoggingService.class)
+                        .service("/other", new HelloService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val otherRoute = routes.firstOrNull { it.path == "/other" }
+        assertNotNull(otherRoute)
+        assertEquals(emptyList<String>(), otherRoute!!.decorators)
+    }
+
     fun testCollectPathPrefix() {
         myFixture.configureByText(
             "PrefixedService.java",

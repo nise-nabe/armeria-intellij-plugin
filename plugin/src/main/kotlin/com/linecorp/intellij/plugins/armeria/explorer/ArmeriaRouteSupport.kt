@@ -150,6 +150,20 @@ object ArmeriaRouteSupport {
         return if (candidate.startsWith("/")) candidate else "/$candidate"
     }
 
+    fun decoratorPathPatternAppliesToRoute(pattern: String, routePath: String): Boolean {
+        val normalizedPattern = normalizePath(pattern.trim().trim('"'))
+        val normalizedRoute = normalizePath(routePath)
+        if (normalizedPattern.endsWith("/**")) {
+            val prefix = normalizedPattern.removeSuffix("/**")
+            return normalizedRoute == prefix || normalizedRoute.startsWith("$prefix/")
+        }
+        if (normalizedPattern.endsWith("/*")) {
+            val prefix = normalizedPattern.removeSuffix("/*")
+            return normalizedRoute == prefix || normalizedRoute.startsWith("$prefix/")
+        }
+        return normalizedRoute == normalizedPattern || normalizedRoute.startsWith("$normalizedPattern/")
+    }
+
     fun isServerBuilderType(typeText: String): Boolean {
         val normalized = normalizeServerBuilderTypeText(typeText)
         return normalized == SERVER_BUILDER_SIMPLE_NAME ||

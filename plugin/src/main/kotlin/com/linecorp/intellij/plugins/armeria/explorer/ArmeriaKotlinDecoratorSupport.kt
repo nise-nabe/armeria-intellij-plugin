@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtProperty
+import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 import org.jetbrains.kotlin.psi.KtTreeVisitorVoid
 import org.jetbrains.kotlin.psi.KtTypeAlias
 import org.jetbrains.kotlin.psi.KtTypeReference
@@ -19,29 +20,68 @@ import org.jetbrains.kotlin.psi.KtValueArgument
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 internal object ArmeriaKotlinDecoratorSupport {
-    fun collectProgrammaticDecorators(element: PsiElement): List<String> {
+    fun collectProgrammaticDecorators(element: PsiElement, registrationPath: String): List<String> {
         val registrationCall = element as? KtCallExpression ?: return emptyList()
-        return collectKotlinDecoratorsOnBuilderChain(registrationCall)
+        return collectKotlinDecoratorsOnBuilderChain(registrationCall, registrationPath)
     }
 
-    private fun collectKotlinDecoratorsOnBuilderChain(registrationCall: KtCallExpression): List<String> {
-        val decorators = linkedSetOf<String>()
-        collectKotlinDecoratorsFromReceiver(registrationCall, decorators)
-        collectKotlinDecoratorsInApplyScope(registrationCall, decorators)
-        return decorators.toList()
+    private fun collectKotlinDecoratorsOnBuilderChain(
+        registrationCall: KtCallExpression,
+        registrationPath: String,
+    ): List<String> {
+        val candidates = linkedSetOf<ArmeriaDecoratorSupport.DecoratorCandidate>()
+        collectKotlinDecoratorsFromReceiver(registrationCall, candidates)
+        collectKotlinDecoratorsFromPrecedingScopeBlocks(registrationCall, candidates)
+        collectKotlinDecoratorsInScopeLambda(registrationCall, candidates)
+        return ArmeriaDecoratorSupport.filterDecoratorCandidates(candidates, registrationPath)
     }
 
     private fun collectKotlinDecoratorsFromReceiver(
         expression: KtExpression,
-        decorators: LinkedHashSet<String>,
+        candidates: LinkedHashSet<ArmeriaDecoratorSupport.DecoratorCandidate>,
     ) {
         var current: KtExpression? = kotlinChainReceiver(expression)
         while (current != null) {
             val decoratorCall = asKotlinCallExpression(current)
             if (decoratorCall != null && isKotlinArmeriaDecoratorCall(decoratorCall)) {
-                extractKotlinDecoratorLabel(decoratorCall)?.let { decorators += it }
+                extractKotlinDecoratorCandidate(decoratorCall)?.let { candidates += it }
             }
             current = kotlinChainReceiver(current)
+        }
+    }
+
+    private fun collectKotlinDecoratorsFromPrecedingScopeBlocks(
+        registrationCall: KtCallExpression,
+        candidates: LinkedHashSet<ArmeriaDecoratorSupport.DecoratorCandidate>,
+    ) {
+        var current: KtExpression? = kotlinChainReceiver(registrationCall)
+        while (current != null) {
+            val scopeCall = asKotlinCallExpression(current)
+            if (scopeCall != null && resolveKotlinCallName(scopeCall) in IMPLICIT_RECEIVER_SCOPE_METHODS) {
+                val scopeReceiver = extractScopeReceiver(scopeCall)
+                if (scopeReceiver != null && isKotlinServerBuilderReceiver(scopeReceiver)) {
+                    collectAllDecoratorsInScopeLambda(scopeCall, candidates)
+                }
+            }
+            current = kotlinChainReceiver(current)
+        }
+    }
+
+    private fun collectAllDecoratorsInScopeLambda(
+        scopeCall: KtCallExpression,
+        candidates: LinkedHashSet<ArmeriaDecoratorSupport.DecoratorCandidate>,
+    ) {
+        val lambda = scopeCall.valueArguments.firstOrNull()
+            ?.getArgumentExpression() as? KtLambdaExpression ?: return
+        lambda.bodyExpression?.statements?.forEach { statement ->
+            statement.accept(object : KtTreeVisitorVoid() {
+                override fun visitCallExpression(expression: KtCallExpression) {
+                    if (isKotlinArmeriaDecoratorCall(expression)) {
+                        extractKotlinDecoratorCandidate(expression)?.let { candidates += it }
+                    }
+                    super.visitCallExpression(expression)
+                }
+            })
         }
     }
 
@@ -79,7 +119,7 @@ internal object ArmeriaKotlinDecoratorSupport {
         if (dotQualifiedParent != null && isKotlinServerBuilderReceiver(dotQualifiedParent.receiverExpression)) {
             return true
         }
-        if (hasServerBuilderImplicitReceiver(call)) {
+        if (hasScopeBuilderReceiver(call)) {
             return true
         }
         ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
@@ -144,39 +184,104 @@ internal object ArmeriaKotlinDecoratorSupport {
         }
     }
 
-    private fun extractKotlinDecoratorLabel(call: KtCallExpression): String? {
+    private fun extractKotlinDecoratorCandidate(call: KtCallExpression): ArmeriaDecoratorSupport.DecoratorCandidate? {
         val arguments = call.valueArguments
+        val pathPattern = if (arguments.size >= 2) {
+            extractKotlinPathPattern(arguments[0].getArgumentExpression())
+        } else {
+            null
+        }
         val decoratorArgument = when {
             arguments.size >= 2 -> arguments[1].getArgumentExpression()
             arguments.isNotEmpty() -> arguments[0].getArgumentExpression()
             else -> return null
         } ?: return null
-        return ArmeriaDecoratorSupport.labelDecorator(decoratorArgument.text)
+        return ArmeriaDecoratorSupport.DecoratorCandidate(
+            ArmeriaDecoratorSupport.labelDecorator(decoratorArgument.text),
+            pathPattern,
+        )
     }
 
-    private fun hasServerBuilderImplicitReceiver(call: KtCallExpression): Boolean {
+    private fun extractKotlinPathPattern(expression: KtExpression?): String? {
+        val unwrapped = expression ?: return null
+        return when (unwrapped) {
+            is KtStringTemplateExpression -> {
+                if (unwrapped.entries.size == 1) {
+                    unwrapped.entries[0].text.trim('"')
+                } else {
+                    unwrapped.text.trim('"')
+                }
+            }
+            else -> unwrapped.text.trim().trim('"').takeIf { it.isNotEmpty() }
+        }
+    }
+
+    private fun hasScopeBuilderReceiver(call: KtCallExpression): Boolean {
         val lambda = call.getParentOfType<KtLambdaExpression>(strict = true) ?: return false
         val lambdaArgument = lambda.parent as? KtValueArgument ?: return false
         val scopeCall = lambdaArgument.parent as? KtCallExpression ?: return false
-        if (resolveKotlinCallName(scopeCall) !in APPLY_SCOPE_METHODS) {
+        val scopeMethod = resolveKotlinCallName(scopeCall) ?: return false
+        if (scopeMethod !in BUILDER_SCOPE_METHODS) {
             return false
         }
-        val scopeReceiver = when (val callee = scopeCall.calleeExpression) {
-            is KtDotQualifiedExpression -> callee.receiverExpression
-            else -> (scopeCall.parent as? KtDotQualifiedExpression)?.receiverExpression
-        } ?: return false
-        return isKotlinServerBuilderReceiver(scopeReceiver)
+        val scopeReceiver = extractScopeReceiver(scopeCall) ?: return false
+        if (!isKotlinServerBuilderReceiver(scopeReceiver) && !receiverChainContainsServerBuilder(scopeReceiver)) {
+            return false
+        }
+        return when (scopeMethod) {
+            in IMPLICIT_RECEIVER_SCOPE_METHODS -> true
+            in EXPLICIT_PARAMETER_SCOPE_METHODS -> isCallOnScopeLambdaParameter(call, lambda)
+            else -> false
+        }
     }
 
-    private fun collectKotlinDecoratorsInApplyScope(
+    private fun isCallOnScopeLambdaParameter(
+        call: KtCallExpression,
+        scopeLambda: KtLambdaExpression,
+    ): Boolean {
+        val dotQualified = when (val callee = call.calleeExpression) {
+            is KtDotQualifiedExpression -> callee
+            else -> call.parent as? KtDotQualifiedExpression
+        } ?: return false
+
+        val receiver = dotQualified.receiverExpression
+        if (isKotlinServerBuilderReceiver(receiver)) {
+            return true
+        }
+        val receiverName = (receiver as? KtNameReferenceExpression)?.getReferencedName() ?: return false
+        if (scopeLambda.valueParameters.any { it.name == receiverName }) {
+            return true
+        }
+        return scopeLambda.valueParameters.isEmpty() && receiverName == "it"
+    }
+
+    private fun receiverChainContainsServerBuilder(receiver: KtExpression): Boolean {
+        var current: KtExpression? = receiver
+        while (current != null) {
+            if (isKotlinServerBuilderReceiver(current)) {
+                return true
+            }
+            current = kotlinChainReceiver(current)
+        }
+        return false
+    }
+
+    private fun extractScopeReceiver(scopeCall: KtCallExpression): KtExpression? {
+        return when (val callee = scopeCall.calleeExpression) {
+            is KtDotQualifiedExpression -> callee.receiverExpression
+            else -> (scopeCall.parent as? KtDotQualifiedExpression)?.receiverExpression
+        }
+    }
+
+    private fun collectKotlinDecoratorsInScopeLambda(
         registrationCall: KtCallExpression,
-        decorators: LinkedHashSet<String>,
+        candidates: LinkedHashSet<ArmeriaDecoratorSupport.DecoratorCandidate>,
     ) {
         val lambda = registrationCall.getParentOfType<KtLambdaExpression>(strict = true) ?: return
         val lambdaArgument = lambda.parent as? KtValueArgument ?: return
         val scopeCall = lambdaArgument.parent as? KtCallExpression ?: return
         val scopeMethod = resolveKotlinCallName(scopeCall) ?: return
-        if (scopeMethod !in APPLY_SCOPE_METHODS) {
+        if (scopeMethod !in BUILDER_SCOPE_METHODS) {
             return
         }
         val registrationOffset = registrationCall.textRange.startOffset
@@ -190,7 +295,7 @@ internal object ArmeriaKotlinDecoratorSupport {
                         return
                     }
                     if (isKotlinArmeriaDecoratorCall(expression)) {
-                        extractKotlinDecoratorLabel(expression)?.let { decorators += it }
+                        extractKotlinDecoratorCandidate(expression)?.let { candidates += it }
                     }
                     super.visitCallExpression(expression)
                 }
@@ -209,5 +314,7 @@ internal object ArmeriaKotlinDecoratorSupport {
         }
     }
 
-    private val APPLY_SCOPE_METHODS = setOf("apply", "run")
+    private val IMPLICIT_RECEIVER_SCOPE_METHODS = setOf("apply", "run")
+    private val EXPLICIT_PARAMETER_SCOPE_METHODS = setOf("also", "let")
+    private val BUILDER_SCOPE_METHODS = IMPLICIT_RECEIVER_SCOPE_METHODS + EXPLICIT_PARAMETER_SCOPE_METHODS
 }
