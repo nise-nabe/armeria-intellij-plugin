@@ -5,7 +5,7 @@
 - Implemented Armeria run configuration with module classpath and main class selection via ApplicationConfigurationBase.
 - Added project-wide duplicate route registration inspection for ServerBuilder and annotated routes.
 - Added programmatic `ServerBuilder.decorator()` detection in Route Explorer.
-- Added gRPC route discovery from `.proto` service definitions.
+- Added gRPC route discovery from `.proto` service definitions with brace-aware parsing and a registry kill-switch.
 - Added Kotlin source support to Route Explorer for annotated services and Server.builder registrations.
 - Added Velocity-based regression tests for New Project Wizard file templates.
 - Added `plugin/src/test/resources/wizard-verification-matrix.md` documenting representative wizard scenarios.
