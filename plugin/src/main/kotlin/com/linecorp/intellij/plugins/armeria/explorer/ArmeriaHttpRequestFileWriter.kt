@@ -25,11 +25,15 @@ internal object ArmeriaHttpRequestFileWriter {
                 null,
                 {
                     val parentDir = filePath.parent.toFile()
-                    if (!parentDir.exists() && !parentDir.mkdirs()) {
-                        return@runWriteCommandAction
+                    when {
+                        parentDir.exists() && !parentDir.isDirectory -> return@runWriteCommandAction
+                        !parentDir.exists() && !parentDir.mkdirs() -> return@runWriteCommandAction
                     }
                     val parent = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(parentDir)
                         ?: return@runWriteCommandAction
+                    if (!parent.isDirectory) {
+                        return@runWriteCommandAction
+                    }
                     val virtualFile = parent.findChild(fileName)
                         ?: parent.createChildData(this, fileName)
                     virtualFile.setBinaryContent(content.toByteArray(StandardCharsets.UTF_8))
