@@ -50,8 +50,7 @@ internal object ArmeriaSpringBootRouteCollector {
         if (hasSpringImports) {
             return true
         }
-        val searchWindow = file.text.take(ArmeriaRouteSupport.ARMERIA_HEADER_SCAN_LIMIT)
-        return SPRING_BOOT_FILE_INDICATORS.any(searchWindow::contains)
+        return referencesSpringBootIndicatorsInText(file.viewProvider.contents)
     }
 
     private fun collectBeanServerRegistrations(
@@ -88,7 +87,11 @@ internal object ArmeriaSpringBootRouteCollector {
         ) {
             return true
         }
-        return returnType == ArmeriaRouteSupport.ARMERIA_SERVER_CONFIGURATOR_CLASS ||
-            returnType.endsWith(".ArmeriaServerConfigurator")
+        return returnType == ArmeriaRouteSupport.ARMERIA_SERVER_CONFIGURATOR_CLASS
+    }
+
+    private fun referencesSpringBootIndicatorsInText(contents: CharSequence): Boolean {
+        val searchWindow = contents.subSequence(0, minOf(contents.length, ArmeriaRouteSupport.ARMERIA_HEADER_SCAN_LIMIT))
+        return SPRING_BOOT_FILE_INDICATORS.any(searchWindow::contains)
     }
 }

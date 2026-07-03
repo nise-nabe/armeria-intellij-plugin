@@ -75,13 +75,15 @@ object ArmeriaRouteCollector {
                 seenServiceRegistrations,
             )
         }
-        ArmeriaSpringBootRouteCollector.collect(
-            project,
-            scope,
-            routes,
-            fallbackScannedFiles,
-            seenServiceRegistrations,
-        )
+        if (psiFacade.findClass(ArmeriaRouteSupport.SPRING_BEAN_ANNOTATION, scope) != null) {
+            ArmeriaSpringBootRouteCollector.collect(
+                project,
+                scope,
+                routes,
+                fallbackScannedFiles,
+                seenServiceRegistrations,
+            )
+        }
 
         return CachedValueProvider.Result.create(
             routes.sortedWith(
