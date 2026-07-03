@@ -75,7 +75,13 @@ object ArmeriaRouteCollector {
                 seenServiceRegistrations,
             )
         }
-        ArmeriaSpringBootRouteCollector.collect(project, scope, routes)
+        ArmeriaSpringBootRouteCollector.collect(
+            project,
+            scope,
+            routes,
+            fallbackScannedFiles,
+            seenServiceRegistrations,
+        )
 
         return CachedValueProvider.Result.create(
             routes.sortedWith(
@@ -205,7 +211,7 @@ object ArmeriaRouteCollector {
         })
     }
 
-    private fun collectServiceRegistrationFromMethodCall(
+    internal fun collectServiceRegistrationFromMethodCall(
         expression: PsiMethodCallExpression,
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,

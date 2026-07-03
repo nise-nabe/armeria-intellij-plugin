@@ -25,8 +25,12 @@ internal enum class ServiceRegistrationMethod(val methodName: String) {
 
 object ArmeriaRouteSupport {
     const val ARMERIA_PACKAGE_PREFIX = "com.linecorp.armeria"
+    const val ARMERIA_SPRING_PACKAGE_PREFIX = "com.linecorp.armeria.spring"
     const val ARMERIA_SERVER_PACKAGE_PREFIX = "com.linecorp.armeria.server"
+    const val ARMERIA_SERVER_CLASS = "com.linecorp.armeria.server.Server"
+    const val ARMERIA_SERVER_CONFIGURATOR_CLASS = "$ARMERIA_SPRING_PACKAGE_PREFIX.ArmeriaServerConfigurator"
     const val SERVER_BUILDER_CLASS = "com.linecorp.armeria.server.ServerBuilder"
+    const val SPRING_BEAN_ANNOTATION = "org.springframework.context.annotation.Bean"
     const val SERVER_BUILDER_SIMPLE_NAME = "ServerBuilder"
     const val ARMERIA_HEADER_SCAN_LIMIT = 4096
 
