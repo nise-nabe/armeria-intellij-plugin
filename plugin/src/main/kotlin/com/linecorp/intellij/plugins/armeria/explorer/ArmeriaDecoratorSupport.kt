@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.linecorp.intellij.plugins.armeria.message
 import com.intellij.psi.PsiClassObjectAccessExpression
 import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiLiteralExpression
@@ -11,15 +12,15 @@ import com.intellij.psi.JavaPsiFacade
 internal object ArmeriaDecoratorSupport {
     internal data class DecoratorCandidate(val label: String, val pathPattern: String?)
 
-    private val KNOWN_DECORATOR_LABELS = mapOf(
-        "LoggingService" to "Logging",
-        "CorsService" to "CORS",
-        "AuthService" to "Auth",
-        "MetricCollectingService" to "Metrics",
-        "EncodingService" to "Encoding",
-        "DecodingService" to "Decoding",
-        "CacheControlDecorator" to "Cache-Control",
-        "WebSocketService" to "WebSocket",
+    private val KNOWN_DECORATOR_BUNDLE_KEYS = mapOf(
+        "LoggingService" to "route.explorer.decorator.logging",
+        "CorsService" to "route.explorer.decorator.cors",
+        "AuthService" to "route.explorer.decorator.auth",
+        "MetricCollectingService" to "route.explorer.decorator.metrics",
+        "EncodingService" to "route.explorer.decorator.encoding",
+        "DecodingService" to "route.explorer.decorator.decoding",
+        "CacheControlDecorator" to "route.explorer.decorator.cacheControl",
+        "WebSocketService" to "route.explorer.decorator.webSocket",
     )
 
     fun collectProgrammaticDecorators(element: PsiMethodCallExpression, registrationPath: String): List<String> {
@@ -31,8 +32,8 @@ internal object ArmeriaDecoratorSupport {
     fun labelDecorator(raw: String): String {
         val normalized = raw.removeSuffix("::class.java").removeSuffix("::class").removeSuffix(".class")
         val simpleName = normalized.substringAfterLast('.')
-        return KNOWN_DECORATOR_LABELS.entries.firstOrNull { (key, _) -> simpleName == key || simpleName.endsWith(key) }?.value
-            ?: simpleName
+        val bundleKey = KNOWN_DECORATOR_BUNDLE_KEYS[simpleName]
+        return if (bundleKey != null) message(bundleKey) else simpleName
     }
 
     internal fun filterDecoratorCandidates(

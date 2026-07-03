@@ -6,10 +6,12 @@ import com.intellij.psi.PsiVariable
 import com.intellij.psi.util.PsiTreeUtil
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtClassLiteralExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
+import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 import org.jetbrains.kotlin.psi.KtTreeVisitorVoid
@@ -60,9 +62,11 @@ internal object ArmeriaKotlinDecoratorSupport {
         var current: KtExpression? = kotlinChainReceiver(registrationCall)
         while (current != null) {
             val scopeCall = asKotlinCallExpression(current)
-            if (scopeCall != null && resolveKotlinCallName(scopeCall) in IMPLICIT_RECEIVER_SCOPE_METHODS) {
+            if (scopeCall != null && resolveKotlinCallName(scopeCall) in BUILDER_SCOPE_METHODS) {
                 val scopeReceiver = extractScopeReceiver(scopeCall)
-                if (scopeReceiver != null && isKotlinServerBuilderReceiver(scopeReceiver)) {
+                if (scopeReceiver != null &&
+                    (isKotlinServerBuilderReceiver(scopeReceiver) || receiverChainContainsServerBuilder(scopeReceiver))
+                ) {
                     collectAllDecoratorsInScopeLambda(scopeCall, candidates)
                 }
             }
@@ -200,9 +204,113 @@ internal object ArmeriaKotlinDecoratorSupport {
             else -> return null
         } ?: return null
         return ArmeriaDecoratorSupport.DecoratorCandidate(
-            ArmeriaDecoratorSupport.labelDecorator(decoratorArgument.text),
+            ArmeriaDecoratorSupport.labelDecorator(extractKotlinDecoratorTarget(decoratorArgument)),
             pathPattern,
         )
+    }
+
+    private fun extractKotlinDecoratorTarget(expression: KtExpression): String {
+        val unwrapped = unwrapKotlinDecoratorExpression(expression) ?: return expression.text
+        if (unwrapped is KtClassLiteralExpression) {
+            val classReceiver = unwrapped.receiverExpression
+            if (classReceiver is KtNameReferenceExpression) {
+                resolveQualifiedClassName(classReceiver.references.firstOrNull()?.resolve())?.let { return it }
+            }
+            return unwrapped.text.removeSuffix("::class")
+        }
+        if (unwrapped is KtDotQualifiedExpression) {
+            val receiver = unwrapped.receiverExpression
+            if (receiver is KtClassLiteralExpression) {
+                val classReceiver = receiver.receiverExpression
+                if (classReceiver is KtNameReferenceExpression) {
+                    resolveQualifiedClassName(classReceiver.references.firstOrNull()?.resolve())?.let { return it }
+                }
+                return receiver.text.removeSuffix("::class")
+            }
+            val selector = unwrapped.selectorExpression
+            if (selector is KtCallExpression) {
+                return extractKotlinDecoratorTargetFromCall(selector, expression)
+            }
+            resolveQualifiedClassName(receiver.references.firstOrNull()?.resolve())?.let { return it }
+        }
+        if (unwrapped is KtCallExpression) {
+            return extractKotlinDecoratorTargetFromCall(unwrapped, expression)
+        }
+        if (unwrapped is KtNameReferenceExpression) {
+            when (val resolved = unwrapped.references.firstOrNull()?.resolve()) {
+                is KtProperty -> {
+                    resolved.initializer?.let { return extractKotlinDecoratorTarget(it) }
+                    resolveKotlinTypeReferenceText(resolved.typeReference)?.let { return it }
+                }
+                is PsiVariable -> {
+                    resolved.initializer?.let { initializer ->
+                        if (initializer is KtExpression) {
+                            return extractKotlinDecoratorTarget(initializer)
+                        }
+                        return ArmeriaRouteTargetExtractor.extractTarget(initializer)
+                    }
+                    return resolved.type.presentableText
+                }
+            }
+            resolveQualifiedClassName(unwrapped.references.firstOrNull()?.resolve())?.let { return it }
+        }
+        return expression.text
+    }
+
+    private fun extractKotlinDecoratorTargetFromCall(call: KtCallExpression, fallback: KtExpression): String {
+        val callee = call.calleeExpression
+        val methodName = when (callee) {
+            is KtDotQualifiedExpression -> callee.selectorExpression?.text
+            else -> callee?.text
+        }
+        if (methodName == "build") {
+            kotlinChainReceiver(call)?.let { receiver ->
+                return extractKotlinDecoratorTarget(receiver)
+            }
+        }
+        if (methodName == "builder" || methodName == "newDecorator") {
+            kotlinChainReceiver(call)?.let { receiver ->
+                val fromReceiver = extractKotlinDecoratorTarget(receiver)
+                if (fromReceiver != methodName && fromReceiver != receiver.text) {
+                    return fromReceiver
+                }
+            }
+            ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
+            val references = when (callee) {
+                is KtDotQualifiedExpression -> callee.references.toList()
+                is KtNameReferenceExpression -> callee.references.toList()
+                else -> emptyList()
+            }
+            references.firstOrNull()?.resolve()?.let { resolved ->
+                resolveQualifiedClassName(resolved)?.let { return it }
+            }
+        }
+        kotlinChainReceiver(call)?.let { receiver ->
+            val fromReceiver = extractKotlinDecoratorTarget(receiver)
+            if (fromReceiver != methodName && fromReceiver != "build" && fromReceiver != receiver.text) {
+                return fromReceiver
+            }
+        }
+        return methodName ?: fallback.text
+    }
+
+    private fun unwrapKotlinDecoratorExpression(expression: KtExpression?): KtExpression? {
+        var current = expression ?: return null
+        while (true) {
+            current = when (current) {
+                is KtParenthesizedExpression -> current.expression ?: return null
+                else -> return current
+            }
+        }
+    }
+
+    private fun resolveQualifiedClassName(resolved: PsiElement?): String? {
+        return when (resolved) {
+            is com.intellij.psi.PsiClass -> resolved.qualifiedName
+            is PsiMethod -> resolved.containingClass?.qualifiedName
+            is KtClass -> resolved.fqName?.asString()
+            else -> null
+        }
     }
 
     private fun extractKotlinPathPattern(expression: KtExpression?): String? {
