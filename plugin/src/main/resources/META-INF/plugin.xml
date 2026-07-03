@@ -20,6 +20,15 @@
                     icon="/icons/armeria.svg" />
         <localInspection language="JAVA"
                          bundle="messages.ArmeriaBundle"
+                         key="inspection.duplicate.registration.display.name"
+                         groupBundle="messages.ArmeriaBundle"
+                         groupKey="inspection.group.armeria"
+                         shortName="ArmeriaDuplicateRegistration"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaDuplicateRegistrationInspection" />
+        <localInspection language="JAVA"
+                         bundle="messages.ArmeriaBundle"
                          key="inspection.duplicate.route.display.name"
                          groupBundle="messages.ArmeriaBundle"
                          groupKey="inspection.group.armeria"
