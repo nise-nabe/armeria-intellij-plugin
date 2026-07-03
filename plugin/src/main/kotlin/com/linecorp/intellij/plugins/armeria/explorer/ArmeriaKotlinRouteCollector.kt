@@ -65,12 +65,12 @@ internal object ArmeriaKotlinRouteCollector {
         }
     }
 
-    private fun collectServiceRegistrationsFromFile(
-        file: KtFile,
+    internal fun collectServiceRegistrationsInScope(
+        root: PsiElement,
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
     ) {
-        file.forEachDescendant { element ->
+        root.forEachDescendant { element ->
             val call = element as? KtCallExpression ?: return@forEachDescendant
             ArmeriaRouteCollectionMetrics.current()?.methodCallsVisited?.incrementAndGet()
             val methodName = resolveCallName(call) ?: return@forEachDescendant
@@ -82,6 +82,14 @@ internal object ArmeriaKotlinRouteCollector {
             }
             addKotlinServiceRegistration(call, methodName, routes, seenServiceRegistrations)
         }
+    }
+
+    private fun collectServiceRegistrationsFromFile(
+        file: KtFile,
+        routes: MutableList<ArmeriaRoute>,
+        seenServiceRegistrations: MutableSet<String>,
+    ) {
+        collectServiceRegistrationsInScope(file, routes, seenServiceRegistrations)
     }
 
     private inline fun PsiElement.forEachDescendant(action: (PsiElement) -> Unit) {

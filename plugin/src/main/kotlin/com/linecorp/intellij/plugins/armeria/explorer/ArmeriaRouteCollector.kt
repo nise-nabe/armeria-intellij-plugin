@@ -75,6 +75,14 @@ object ArmeriaRouteCollector {
                 seenServiceRegistrations,
             )
         }
+        if (ArmeriaRouteSupport.isSpringBootArmeriaAvailable(psiFacade, scope)) {
+            ArmeriaSpringBootRouteCollector.collect(
+                project,
+                scope,
+                routes,
+                seenServiceRegistrations,
+            )
+        }
 
         return CachedValueProvider.Result.create(
             routes.sortedWith(
@@ -204,7 +212,7 @@ object ArmeriaRouteCollector {
         })
     }
 
-    private fun collectServiceRegistrationFromMethodCall(
+    internal fun collectServiceRegistrationFromMethodCall(
         expression: PsiMethodCallExpression,
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
