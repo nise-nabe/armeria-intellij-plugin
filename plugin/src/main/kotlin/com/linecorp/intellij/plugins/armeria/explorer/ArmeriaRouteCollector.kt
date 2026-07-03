@@ -75,12 +75,11 @@ object ArmeriaRouteCollector {
                 seenServiceRegistrations,
             )
         }
-        if (psiFacade.findClass(ArmeriaRouteSupport.SPRING_BEAN_ANNOTATION, scope) != null) {
+        if (ArmeriaRouteSupport.isSpringBootArmeriaAvailable(psiFacade, scope)) {
             ArmeriaSpringBootRouteCollector.collect(
                 project,
                 scope,
                 routes,
-                fallbackScannedFiles,
                 seenServiceRegistrations,
             )
         }
