@@ -2,11 +2,13 @@ package com.linecorp.intellij.plugins.armeria.inspection
 
 import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.codeInspection.ProblemsHolder
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiMethod
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteDuplicateIndex
 import com.linecorp.intellij.plugins.armeria.message
+import org.jetbrains.kotlin.psi.KtNamedFunction
 
 open class ArmeriaDuplicateRegistrationInspection : LocalInspectionTool() {
     override fun getDisplayName(): String = message("inspection.duplicate.registration.display.name")
@@ -22,9 +24,8 @@ open class ArmeriaDuplicateRegistrationInspection : LocalInspectionTool() {
                     return
                 }
                 for (hit in hits) {
-                    val highlightElement = (hit.element as? PsiMethod)?.nameIdentifier ?: hit.element
                     holder.registerProblem(
-                        highlightElement,
+                        highlightElement(hit.element),
                         message(
                             "inspection.duplicate.registration.problem",
                             hit.registrationLabel,
@@ -33,6 +34,14 @@ open class ArmeriaDuplicateRegistrationInspection : LocalInspectionTool() {
                     )
                 }
             }
+        }
+    }
+
+    private fun highlightElement(element: PsiElement): PsiElement {
+        return when (val source = element.navigationElement) {
+            is PsiMethod -> source.nameIdentifier ?: source
+            is KtNamedFunction -> source.nameIdentifier ?: source
+            else -> source
         }
     }
 }
