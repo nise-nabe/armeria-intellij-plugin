@@ -116,8 +116,7 @@ object ArmeriaRouteCollector {
             ArmeriaRouteSupport.extractNames(containingClass.getAnnotation(ArmeriaRouteSupport.EXCEPTION_HANDLER_ANNOTATION))
         val paths = ArmeriaRouteSupport.extractPaths(annotation.first).ifEmpty { listOf("/") }
         val methodDecorators =
-            classDecorators + ArmeriaRouteSupport.extractNames(method.getAnnotation(ArmeriaRouteSupport.DECORATOR_ANNOTATION)) +
-                ArmeriaDecoratorSupport.collectDecoratorsInScope(method)
+            classDecorators + ArmeriaRouteSupport.extractNames(method.getAnnotation(ArmeriaRouteSupport.DECORATOR_ANNOTATION))
         val methodExceptionHandlers = classExceptionHandlers + ArmeriaRouteSupport.extractNames(
             method.getAnnotation(ArmeriaRouteSupport.EXCEPTION_HANDLER_ANNOTATION),
         )
@@ -272,7 +271,7 @@ object ArmeriaRouteCollector {
         val annotatedServiceHasPathPrefix =
             registrationMethod == ServiceRegistrationMethod.ANNOTATED_SERVICE && argumentCount > 1
         val programmaticDecorators = decorators.ifEmpty {
-            ArmeriaDecoratorSupport.collectDecoratorsInScope(element)
+            ArmeriaDecoratorSupport.collectProgrammaticDecorators(element)
         }
         routes += ArmeriaRoute.create(
             element = element,

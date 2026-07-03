@@ -294,6 +294,119 @@ class ArmeriaRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals(RouteMatch.ANNOTATED_HTTP, annotatedMethodRoute!!.routeMatch)
     }
 
+    fun testCollectProgrammaticDecoratorOnServiceRegistration() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.logging.LoggingService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .decorator(LoggingService.class)
+                        .service("/api", new HelloService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
+        assertNotNull(serviceRoute)
+        assertEquals(listOf("Logging"), serviceRoute!!.decorators)
+    }
+
+    fun testCollectProgrammaticDecoratorDoesNotBleedAcrossRegistrations() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.logging.LoggingService;
+            import com.linecorp.armeria.server.cors.CorsService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .decorator(LoggingService.class)
+                        .service("/a", new HelloService())
+                        .build();
+                    Server.builder()
+                        .decorator(CorsService.class)
+                        .service("/b", new HelloService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val routeA = routes.firstOrNull { it.path == "/a" }
+        val routeB = routes.firstOrNull { it.path == "/b" }
+        assertNotNull(routeA)
+        assertNotNull(routeB)
+        assertEquals(listOf("Logging"), routeA!!.decorators)
+        assertEquals(listOf("CORS"), routeB!!.decorators)
+    }
+
+    fun testCollectPathScopedDecoratorUsesDecoratorArgument() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.logging.LoggingService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .decorator("/api", LoggingService.class)
+                        .service("/api", new HelloService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
+        assertNotNull(serviceRoute)
+        assertEquals(listOf("Logging"), serviceRoute!!.decorators)
+    }
+
     fun testCollectPathPrefix() {
         myFixture.configureByText(
             "PrefixedService.java",
@@ -367,9 +480,33 @@ class ArmeriaRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
                     return this;
                 }
 
+                public ServerBuilder decorator(Object decorator) {
+                    return this;
+                }
+
+                public ServerBuilder decorator(String pathPattern, Object decorator) {
+                    return this;
+                }
+
                 public com.linecorp.armeria.server.Server build() {
                     return null;
                 }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.logging;
+
+            public final class LoggingService {
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.cors;
+
+            public final class CorsService {
             }
             """.trimIndent(),
         )

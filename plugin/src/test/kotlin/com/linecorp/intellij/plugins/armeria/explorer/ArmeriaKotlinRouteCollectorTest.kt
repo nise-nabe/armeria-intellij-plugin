@@ -338,6 +338,72 @@ class ArmeriaKotlinRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals("example.HelloService", serviceRoute!!.target)
     }
 
+    fun testCollectProgrammaticDecoratorOnKotlinServiceRegistration() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.logging.LoggingService
+
+            fun main() {
+                Server.builder()
+                    .decorator(LoggingService::class.java)
+                    .service("/api", HelloService())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
+        assertNotNull(serviceRoute)
+        assertEquals(listOf("Logging"), serviceRoute!!.decorators)
+    }
+
+    fun testCollectProgrammaticDecoratorInApplyBlock() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.logging.LoggingService
+
+            fun main() {
+                Server.builder().apply {
+                    decorator(LoggingService::class.java)
+                    service("/api", HelloService())
+                }.build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
+        assertNotNull(serviceRoute)
+        assertEquals(listOf("Logging"), serviceRoute!!.decorators)
+    }
+
     fun testCollectServiceRegistrationInAlsoBlockWithExplicitReceiver() {
         myFixture.configureByText(
             "Main.kt",
@@ -1112,9 +1178,25 @@ class ArmeriaKotlinRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
                     return this;
                 }
 
+                public ServerBuilder decorator(Object decorator) {
+                    return this;
+                }
+
+                public ServerBuilder decorator(String pathPattern, Object decorator) {
+                    return this;
+                }
+
                 public com.linecorp.armeria.server.Server build() {
                     return null;
                 }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.logging;
+
+            public final class LoggingService {
             }
             """.trimIndent(),
         )
