@@ -40,11 +40,11 @@ internal object ArmeriaRouteDuplicateIndex {
 
     internal fun findDuplicateGroups(routes: List<ArmeriaRoute>): List<DuplicateRegistrationGroup> {
         val groups = mutableListOf<DuplicateRegistrationGroup>()
-        for ((_, bucketRoutes) in routes.filter { it.routeMatch in CHECKED_MATCHES }.groupBy { BucketKey(it.moduleName, it.path) }) {
-            if (bucketRoutes.size < 2) {
+        for ((_, moduleRoutes) in routes.filter { it.routeMatch in CHECKED_MATCHES }.groupBy { it.moduleName }) {
+            if (moduleRoutes.size < 2) {
                 continue
             }
-            for (component in findConnectedComponents(bucketRoutes)) {
+            for (component in findConnectedComponents(moduleRoutes)) {
                 if (component.size < 2 || isJavaInClassAnnotatedHttpOnly(component)) {
                     continue
                 }
@@ -88,7 +88,7 @@ internal object ArmeriaRouteDuplicateIndex {
 
         for (first in routes.indices) {
             for (second in first + 1 until routes.size) {
-                if (httpMethodsOverlap(routes[first], routes[second])) {
+                if (routesOverlap(routes[first], routes[second]) && httpMethodsOverlap(routes[first], routes[second])) {
                     union(first, second)
                 }
             }
@@ -118,6 +118,41 @@ internal object ArmeriaRouteDuplicateIndex {
             }
         }
         return true
+    }
+
+    private fun routesOverlap(first: ArmeriaRoute, second: ArmeriaRoute): Boolean =
+        pathsOverlap(first.path, first.routeMatch, second.path, second.routeMatch)
+
+    private fun pathsOverlap(
+        firstPath: String,
+        firstMatch: RouteMatch,
+        secondPath: String,
+        secondMatch: RouteMatch,
+    ): Boolean {
+        val firstIsPrefixMount = isPrefixMount(firstMatch)
+        val secondIsPrefixMount = isPrefixMount(secondMatch)
+        return when {
+            firstIsPrefixMount && secondIsPrefixMount ->
+                pathIsUnder(firstPath, secondPath) || pathIsUnder(secondPath, firstPath)
+            firstIsPrefixMount -> pathIsUnder(secondPath, firstPath)
+            secondIsPrefixMount -> pathIsUnder(firstPath, secondPath)
+            else -> firstPath == secondPath
+        }
+    }
+
+    private fun isPrefixMount(routeMatch: RouteMatch): Boolean =
+        routeMatch == RouteMatch.SERVICE_UNDER || routeMatch == RouteMatch.ANNOTATED_SERVICE
+
+    private fun pathIsUnder(path: String, prefix: String): Boolean {
+        val normalizedPath = ArmeriaRouteSupport.normalizePath(path)
+        val normalizedPrefix = ArmeriaRouteSupport.normalizePath(prefix)
+        if (normalizedPrefix == "/") {
+            return true
+        }
+        if (normalizedPath == normalizedPrefix) {
+            return true
+        }
+        return normalizedPath.startsWith("${normalizedPrefix.removeSuffix("/")}/")
     }
 
     private fun httpMethodsOverlap(first: ArmeriaRoute, second: ArmeriaRoute): Boolean {
@@ -156,7 +191,7 @@ internal object ArmeriaRouteDuplicateIndex {
     }
 
     private fun overlappingRouteCount(route: ArmeriaRoute, routes: List<ArmeriaRoute>): Int =
-        routes.count { httpMethodsOverlap(route, it) }
+        routes.count { routesOverlap(route, it) && httpMethodsOverlap(route, it) }
 
     private fun registrationLabel(route: ArmeriaRoute): String =
         when (route.routeMatch) {
@@ -164,11 +199,6 @@ internal object ArmeriaRouteDuplicateIndex {
             else -> route.path
         }
 }
-
-private data class BucketKey(
-    val moduleName: String,
-    val path: String,
-)
 
 internal data class DuplicateRegistrationGroup(
     val routes: List<ArmeriaRoute>,

@@ -347,6 +347,49 @@ class ArmeriaRouteDuplicateIndexTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals(2, groups.single().routes.size)
     }
 
+    fun testServiceUnderConflictsWithAnnotatedRouteUnderPrefix() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .serviceUnder("/api", new ApiService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class AnnotatedHandler {
+                @Get("/api/foo")
+                public String handle() {
+                    return "foo";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class ApiService {}")
+
+        val groups = ArmeriaRouteDuplicateIndex.duplicateGroups(project)
+
+        assertEquals(1, groups.size)
+        assertEquals(2, groups.single().routes.size)
+        assertEquals(
+            setOf(RouteMatch.SERVICE_UNDER, RouteMatch.ANNOTATED_HTTP),
+            groups.single().routes.map { it.routeMatch }.toSet(),
+        )
+    }
+
     fun testDuplicateHitsAreIndexedByFile() {
         myFixture.configureByText(
             "First.java",
@@ -427,6 +470,10 @@ class ArmeriaRouteDuplicateIndexTest : LightJavaCodeInsightFixtureTestCase() {
 
             public final class ServerBuilder {
                 public ServerBuilder service(String path, Object service) {
+                    return this;
+                }
+
+                public ServerBuilder serviceUnder(String pathPrefix, Object service) {
                     return this;
                 }
 
