@@ -1,97 +1,59 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
-import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.JavaRecursiveElementWalkingVisitor
-import com.intellij.psi.PsiJavaFile
-import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
-import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.psi.search.searches.AnnotatedElementsSearch
+import org.jetbrains.kotlin.asJava.elements.KtLightMethod
 
 internal object ArmeriaSpringBootRouteCollector {
-    private val SPRING_BOOT_FILE_INDICATORS = setOf(
-        "ArmeriaServerConfigurator",
-        "ArmeriaAutoConfiguration",
-        "spring-boot-starter-armeria",
-    )
-
     fun collect(
         project: Project,
         scope: GlobalSearchScope,
         routes: MutableList<ArmeriaRoute>,
-        fallbackScannedFiles: MutableSet<VirtualFile>,
         seenServiceRegistrations: MutableSet<String>,
     ) {
-        for (virtualFile in FileTypeIndex.getFiles(JavaFileType.INSTANCE, scope)) {
-            if (virtualFile in fallbackScannedFiles) {
-                continue
+        val psiFacade = JavaPsiFacade.getInstance(project)
+        val beanAnnotation = psiFacade.findClass(ArmeriaRouteSupport.SPRING_BEAN_ANNOTATION, scope) ?: return
+        val seenBeanMethods = mutableSetOf<PsiMethod>()
+        AnnotatedElementsSearch.searchPsiMethods(beanAnnotation, scope).forEach { method ->
+            if (!seenBeanMethods.add(method)) {
+                return@forEach
             }
-            ArmeriaRouteCollectionMetrics.current()?.filesScanned?.incrementAndGet()
-            val file = PsiManager.getInstance(project).findFile(virtualFile) as? PsiJavaFile ?: continue
-            if (!referencesSpringBootArmeria(file)) {
-                continue
+            if (!ArmeriaRouteSupport.isArmeriaServerBeanReturnType(method, scope)) {
+                return@forEach
             }
-            fallbackScannedFiles += virtualFile
             ArmeriaRouteCollectionMetrics.current()?.armeriaFiles?.incrementAndGet()
-            collectBeanServerRegistrations(file, routes, seenServiceRegistrations)
+            collectServiceRegistrationsFromBeanMethod(method, routes, seenServiceRegistrations)
         }
     }
 
-    private fun referencesSpringBootArmeria(file: PsiJavaFile): Boolean {
-        val hasSpringImports = file.importList
-            ?.allImportStatements
-            ?.any { statement ->
-                statement.importReference?.qualifiedName?.startsWith(ArmeriaRouteSupport.ARMERIA_SPRING_PACKAGE_PREFIX) == true
-            } ?: false
-        if (hasSpringImports) {
-            return true
-        }
-        return referencesSpringBootIndicatorsInText(file.viewProvider.contents)
-    }
-
-    private fun collectBeanServerRegistrations(
-        file: PsiJavaFile,
+    private fun collectServiceRegistrationsFromBeanMethod(
+        method: PsiMethod,
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
     ) {
-        file.accept(object : JavaRecursiveElementWalkingVisitor() {
-            override fun visitMethod(method: PsiMethod) {
-                if (!method.hasAnnotation(ArmeriaRouteSupport.SPRING_BEAN_ANNOTATION)) {
-                    super.visitMethod(method)
-                    return
-                }
-                if (!isArmeriaServerBeanReturnType(method)) {
-                    super.visitMethod(method)
-                    return
-                }
-                PsiTreeUtil.findChildrenOfType(method, PsiMethodCallExpression::class.java).forEach { call ->
-                    ArmeriaRouteCollector.collectServiceRegistrationFromMethodCall(
-                        call,
-                        routes,
-                        seenServiceRegistrations,
-                    )
-                }
-                super.visitMethod(method)
+        val kotlinMethod = (method as? KtLightMethod)?.kotlinOrigin
+        if (kotlinMethod != null) {
+            ArmeriaKotlinRouteCollector.collectServiceRegistrationsInScope(
+                kotlinMethod,
+                routes,
+                seenServiceRegistrations,
+            )
+            return
+        }
+        method.body?.accept(object : JavaRecursiveElementWalkingVisitor() {
+            override fun visitMethodCallExpression(expression: PsiMethodCallExpression) {
+                ArmeriaRouteCollector.collectServiceRegistrationFromMethodCall(
+                    expression,
+                    routes,
+                    seenServiceRegistrations,
+                )
+                super.visitMethodCallExpression(expression)
             }
         })
-    }
-
-    private fun isArmeriaServerBeanReturnType(method: PsiMethod): Boolean {
-        val returnType = method.returnType?.canonicalText.orEmpty()
-        if (returnType == ArmeriaRouteSupport.ARMERIA_SERVER_CLASS ||
-            ArmeriaRouteSupport.isServerBuilderType(returnType)
-        ) {
-            return true
-        }
-        return returnType == ArmeriaRouteSupport.ARMERIA_SERVER_CONFIGURATOR_CLASS
-    }
-
-    private fun referencesSpringBootIndicatorsInText(contents: CharSequence): Boolean {
-        val searchWindow = contents.subSequence(0, minOf(contents.length, ArmeriaRouteSupport.ARMERIA_HEADER_SCAN_LIMIT))
-        return SPRING_BOOT_FILE_INDICATORS.any(searchWindow::contains)
     }
 }

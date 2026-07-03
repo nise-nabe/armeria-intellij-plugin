@@ -5,11 +5,12 @@ import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 class ArmeriaSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
     override fun setUp() {
         super.setUp()
-        registerArmeriaStubs()
-        registerSpringBootStubs()
+        registerSpringAnnotationStubs()
     }
 
     fun testCollectServiceRegistrationFromBeanConfigurator() {
+        registerArmeriaStubs()
+        registerArmeriaSpringStubs()
         myFixture.configureByText(
             "ArmeriaConfig.java",
             """
@@ -46,6 +47,8 @@ class ArmeriaSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
     }
 
     fun testDoesNotDuplicateIndexedServiceRegistration() {
+        registerArmeriaStubs()
+        registerArmeriaSpringStubs()
         myFixture.configureByText(
             "ArmeriaConfig.java",
             """
@@ -81,6 +84,8 @@ class ArmeriaSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
     }
 
     fun testCollectServiceRegistrationFromBeanServer() {
+        registerArmeriaStubs()
+        registerArmeriaSpringStubs()
         myFixture.configureByText(
             "ArmeriaConfig.java",
             """
@@ -118,6 +123,8 @@ class ArmeriaSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
     }
 
     fun testIgnoresUnrelatedServiceCallInBeanMethod() {
+        registerArmeriaStubs()
+        registerArmeriaSpringStubs()
         myFixture.configureByText(
             "ArmeriaConfig.java",
             """
@@ -166,6 +173,8 @@ class ArmeriaSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
     }
 
     fun testIgnoresBeanMethodWithoutArmeriaReturnType() {
+        registerArmeriaStubs()
+        registerArmeriaSpringStubs()
         myFixture.configureByText(
             "OtherConfig.java",
             """
@@ -177,6 +186,168 @@ class ArmeriaSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
 
             @Configuration
             public class OtherConfig {
+                @Bean
+                public String unrelatedBean() {
+                    return "value";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertTrue(routes.isEmpty())
+    }
+
+    fun testCollectServiceRegistrationFromBeanServerBuilder() {
+        registerArmeriaStubs()
+        registerArmeriaSpringStubs()
+        myFixture.configureByText(
+            "ArmeriaConfig.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.ServerBuilder;
+            import org.springframework.context.annotation.Bean;
+            import org.springframework.context.annotation.Configuration;
+
+            @Configuration
+            public class ArmeriaConfig {
+                @Bean
+                public ServerBuilder armeriaServerBuilder() {
+                    return Server.builder()
+                        .service("/builder", new HelloService());
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val builderRoutes = routes.filter { it.path == "/builder" && it.routeMatch == RouteMatch.SERVICE }
+        assertEquals(1, builderRoutes.size)
+        assertEquals("example.HelloService", builderRoutes.single().target)
+    }
+
+    fun testCollectServiceUnderAndAnnotatedServiceFromBeanConfigurator() {
+        registerArmeriaStubs()
+        registerArmeriaSpringStubs()
+        myFixture.configureByText(
+            "ArmeriaConfig.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
+            import org.springframework.context.annotation.Bean;
+            import org.springframework.context.annotation.Configuration;
+
+            @Configuration
+            public class ArmeriaConfig {
+                @Bean
+                public ArmeriaServerConfigurator armeriaServerConfigurator() {
+                    return serverBuilder -> {
+                        serverBuilder.serviceUnder("/api", new HelloService());
+                        serverBuilder.annotatedService(new AnnotatedService());
+                    };
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class AnnotatedService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val serviceUnderRoutes = routes.filter { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE_UNDER }
+        assertEquals(1, serviceUnderRoutes.size)
+        val annotatedRoutes = routes.filter { it.routeMatch == RouteMatch.ANNOTATED_SERVICE }
+        assertEquals(1, annotatedRoutes.size)
+    }
+
+    fun testCollectServiceRegistrationFromConfiguratorSubtype() {
+        registerArmeriaStubs()
+        registerArmeriaSpringStubs()
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.ServerBuilder;
+            import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
+
+            public final class RoutingConfigurator implements ArmeriaServerConfigurator {
+                @Override
+                public void configure(ServerBuilder serverBuilder) {
+                    serverBuilder.service("/subtype", new HelloService());
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "ArmeriaConfig.java",
+            """
+            package example;
+
+            import org.springframework.context.annotation.Bean;
+            import org.springframework.context.annotation.Configuration;
+
+            @Configuration
+            public class ArmeriaConfig {
+                @Bean
+                public RoutingConfigurator customConfigurator() {
+                    return new RoutingConfigurator();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val subtypeRoutes = routes.filter { it.path == "/subtype" && it.routeMatch == RouteMatch.SERVICE }
+        assertEquals(1, subtypeRoutes.size)
+    }
+
+    fun testSkipsCollectionWhenArmeriaSpringTypesAbsentOnClasspath() {
+        myFixture.configureByText(
+            "SpringOnlyConfig.java",
+            """
+            package example;
+
+            import org.springframework.context.annotation.Bean;
+            import org.springframework.context.annotation.Configuration;
+
+            @Configuration
+            public class SpringOnlyConfig {
                 @Bean
                 public String unrelatedBean() {
                     return "value";
@@ -227,7 +398,7 @@ class ArmeriaSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
         )
     }
 
-    private fun registerSpringBootStubs() {
+    private fun registerSpringAnnotationStubs() {
         myFixture.addClass(
             """
             package org.springframework.context.annotation;
@@ -244,6 +415,9 @@ class ArmeriaSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
             }
             """.trimIndent(),
         )
+    }
+
+    private fun registerArmeriaSpringStubs() {
         myFixture.addClass(
             """
             package com.linecorp.armeria.spring;
