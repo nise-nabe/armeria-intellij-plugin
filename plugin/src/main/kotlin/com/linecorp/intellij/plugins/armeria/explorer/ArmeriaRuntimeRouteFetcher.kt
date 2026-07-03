@@ -1,41 +1,134 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.linecorp.intellij.plugins.armeria.message
+import java.io.ByteArrayOutputStream
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URI
 
-data class RuntimeRoute(
-    val path: String,
-    val method: String,
+data class ArmeriaDocServiceFetchRequest(
+    val host: String,
+    val port: Int,
+    val useHttps: Boolean,
+    val mountPaths: List<String>,
 )
 
-object ArmeriaRuntimeRouteFetcher {
-    private val PATH_PATTERN = Regex(""""path"\s*:\s*"([^"]+)"""")
-    private val METHOD_PATTERN = Regex(""""(get|post|put|delete|patch|head|options|trace)"\s*:\s*\{""", RegexOption.IGNORE_CASE)
+sealed interface ArmeriaDocServiceFetchResult {
+    data class Success(
+        val routes: List<ArmeriaRoute>,
+        val resolvedMountPath: String,
+        val specificationUrl: String,
+    ) : ArmeriaDocServiceFetchResult
 
-    fun fetch(host: String = "localhost", port: Int = 8080): List<RuntimeRoute> {
-        val specification = readUrl("http://$host:$port/internal/docs/specification.json") ?: return emptyList()
-        val paths = PATH_PATTERN.findAll(specification).map { it.groupValues[1] }.toList()
-        if (paths.isNotEmpty()) {
-            return paths.map { RuntimeRoute(it, "HTTP") }
+    data class Failure(val message: String) : ArmeriaDocServiceFetchResult
+}
+
+object ArmeriaRuntimeRouteFetcher {
+    private const val CONNECT_TIMEOUT_MS = 2_000
+    private const val READ_TIMEOUT_MS = 5_000
+    private const val MAX_RESPONSE_BYTES = 5 * 1024 * 1024
+
+    fun fetch(request: ArmeriaDocServiceFetchRequest): ArmeriaDocServiceFetchResult {
+        val errors = mutableListOf<String>()
+        for (mountPath in request.mountPaths.distinct()) {
+            val url = ArmeriaDocServiceEndpointValidator.buildSpecificationUrl(
+                request.host,
+                request.port,
+                request.useHttps,
+                mountPath,
+            )
+            when (val readResult = readUrl(url)) {
+                is ReadResult.Success -> {
+                    val parsed = ArmeriaDocServiceSpecificationParser.parse(readResult.body)
+                    val routes = toArmeriaRoutes(parsed.routes)
+                    if (routes.isNotEmpty()) {
+                        return ArmeriaDocServiceFetchResult.Success(
+                            routes = routes,
+                            resolvedMountPath = mountPath,
+                            specificationUrl = url,
+                        )
+                    }
+                    errors += message("route.explorer.sync.error.noRoutesAtUrl", url)
+                }
+                is ReadResult.Failure -> errors += message("route.explorer.sync.error.urlFailed", url, readResult.message)
+            }
         }
-        val methods = METHOD_PATTERN.findAll(specification).map { it.groupValues[1].uppercase() }.toList()
-        return methods.mapIndexed { index, method ->
-            RuntimeRoute(path = "/runtime/$index", method = method)
+        return ArmeriaDocServiceFetchResult.Failure(
+            if (errors.isEmpty()) {
+                message("route.explorer.sync.error.noMountPaths")
+            } else {
+                errors.joinToString("\n")
+            },
+        )
+    }
+
+    fun fetchFromSpecification(
+        specificationJson: String,
+        moduleName: String,
+        protocol: String,
+    ): List<ArmeriaRoute> {
+        return toArmeriaRoutes(
+            ArmeriaDocServiceSpecificationParser.parse(specificationJson).routes,
+            moduleName = moduleName,
+            protocol = protocol,
+        )
+    }
+
+    private fun toArmeriaRoutes(
+        routes: List<ArmeriaDocServiceSpecificationParser.ParsedRoute>,
+        moduleName: String = message("route.explorer.module.runtime"),
+        protocol: String = message("route.explorer.protocol.runtime"),
+    ): List<ArmeriaRoute> {
+        return routes.map { parsed ->
+            ArmeriaRoute.createRuntime(
+                httpMethod = parsed.httpMethod,
+                path = parsed.path,
+                target = parsed.serviceName + if (parsed.methodName.isBlank()) "" else "/${parsed.methodName}",
+                moduleName = moduleName,
+                protocol = protocol,
+            )
         }
     }
 
-    private fun readUrl(url: String): String? {
+    private sealed interface ReadResult {
+        data class Success(val body: String) : ReadResult
+        data class Failure(val message: String) : ReadResult
+    }
+
+    private fun readUrl(url: String): ReadResult {
         return try {
             val connection = URI(url).toURL().openConnection() as HttpURLConnection
-            connection.connectTimeout = 2_000
-            connection.readTimeout = 2_000
+            connection.connectTimeout = CONNECT_TIMEOUT_MS
+            connection.readTimeout = READ_TIMEOUT_MS
             connection.requestMethod = "GET"
-            if (connection.responseCode !in 200..299) {
-                return null
+            val responseCode = connection.responseCode
+            if (responseCode !in 200..299) {
+                return ReadResult.Failure(message("route.explorer.sync.error.httpStatus", responseCode))
             }
-            connection.inputStream.bufferedReader().use { it.readText() }
-        } catch (_: Exception) {
-            null
+            val body = connection.inputStream.use(::readLimitedBody)
+            ReadResult.Success(body)
+        } catch (exception: IOException) {
+            ReadResult.Failure(exception.message ?: exception.javaClass.simpleName)
+        } catch (exception: Exception) {
+            ReadResult.Failure(exception.message ?: exception.javaClass.simpleName)
         }
+    }
+
+    private fun readLimitedBody(input: java.io.InputStream): String {
+        val buffer = ByteArrayOutputStream()
+        val chunk = ByteArray(8_192)
+        var total = 0
+        while (true) {
+            val read = input.read(chunk)
+            if (read < 0) {
+                break
+            }
+            total += read
+            if (total > MAX_RESPONSE_BYTES) {
+                throw IOException("Response exceeds ${MAX_RESPONSE_BYTES} bytes")
+            }
+            buffer.write(chunk, 0, read)
+        }
+        return buffer.toString(Charsets.UTF_8)
     }
 }

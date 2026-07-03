@@ -154,7 +154,7 @@ internal object ArmeriaRouteDuplicateIndex {
         when (route.routeMatch) {
             RouteMatch.SERVICE_UNDER -> true
             RouteMatch.ANNOTATED_SERVICE -> route.annotatedServiceHasPathPrefix
-            else -> false
+            RouteMatch.RUNTIME, RouteMatch.ANNOTATED_HTTP, RouteMatch.SERVICE, RouteMatch.NON_HTTP -> false
         }
 
     private fun pathIsUnder(path: String, prefix: String): Boolean {
@@ -184,7 +184,7 @@ internal object ArmeriaRouteDuplicateIndex {
     private fun matchesAllHttpMethods(route: ArmeriaRoute): Boolean =
         when (route.routeMatch) {
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.ANNOTATED_SERVICE -> true
-            RouteMatch.ANNOTATED_HTTP, RouteMatch.NON_HTTP -> false
+            RouteMatch.ANNOTATED_HTTP, RouteMatch.NON_HTTP, RouteMatch.RUNTIME -> false
         }
 
     private fun buildHitsByVirtualFile(groups: List<DuplicateRegistrationGroup>): Map<VirtualFile, List<DuplicateRegistrationHit>> {
@@ -214,7 +214,7 @@ internal object ArmeriaRouteDuplicateIndex {
 
     private fun registrationLabel(route: ArmeriaRoute): String =
         when (route.routeMatch) {
-            RouteMatch.ANNOTATED_HTTP -> "${route.httpMethod} ${route.path}"
+            RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME -> "${route.httpMethod} ${route.path}"
             else -> route.path
         }
 }

@@ -1,6 +1,10 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.progress.ProgressIndicator
+import com.intellij.openapi.progress.ProgressManager
+import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.ui.Messages
 import com.linecorp.intellij.plugins.armeria.message
@@ -10,37 +14,71 @@ class ArmeriaSyncRuntimeRoutesAction : DumbAwareAction(
 ) {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val host = Messages.showInputDialog(
-            project,
-            message("route.explorer.sync.host.prompt"),
-            message("route.explorer.action.syncRuntime"),
-            Messages.getQuestionIcon(),
-            "localhost",
-            null,
-        ) ?: return
-        val portText = Messages.showInputDialog(
-            project,
-            message("route.explorer.sync.port.prompt"),
-            message("route.explorer.action.syncRuntime"),
-            Messages.getQuestionIcon(),
-            "8080",
-            null,
-        ) ?: return
-        val port = portText.toIntOrNull() ?: 8080
-        val routes = ArmeriaRuntimeRouteFetcher.fetch(host, port)
-        if (routes.isEmpty()) {
-            Messages.showWarningDialog(
-                project,
-                message("route.explorer.sync.empty", host, port),
-                message("route.explorer.action.syncRuntime"),
-            )
+        val panel = ArmeriaRouteExplorerAccess.findPanel(project)
+        val staticRoutes = panel?.staticRoutes().orEmpty()
+        val defaultMountPath = ArmeriaDocServiceMountResolver.candidateMountPaths(staticRoutes, userMountPath = null)
+            .firstOrNull()
+            .orEmpty()
+        val dialog = ArmeriaDocServiceSyncDialog(
+            project = project,
+            defaultHost = "localhost",
+            defaultPort = "8080",
+            defaultMountPath = defaultMountPath,
+            defaultUseHttps = false,
+        )
+        if (!dialog.showAndGet()) {
             return
         }
-        val summary = routes.joinToString("\n") { "${it.method} ${it.path}" }
-        Messages.showInfoMessage(
-            project,
-            summary,
-            message("route.explorer.sync.result", routes.size),
+        val port = ArmeriaDocServiceEndpointValidator.validatePort(dialog.portText) ?: return
+        val mountPaths = ArmeriaDocServiceMountResolver.candidateMountPaths(
+            staticRoutes = staticRoutes,
+            userMountPath = dialog.mountPath.takeIf { it.isNotBlank() },
+        )
+        val request = ArmeriaDocServiceFetchRequest(
+            host = dialog.host,
+            port = port,
+            useHttps = dialog.useHttps,
+            mountPaths = mountPaths,
+        )
+        ProgressManager.getInstance().run(
+            object : Task.Backgroundable(project, message("route.explorer.sync.progress"), true) {
+                override fun run(indicator: ProgressIndicator) {
+                    indicator.isIndeterminate = true
+                    val result = ArmeriaRuntimeRouteFetcher.fetch(request)
+                    com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater({
+                        when (result) {
+                            is ArmeriaDocServiceFetchResult.Success -> {
+                                val explorerPanel = ArmeriaRouteExplorerAccess.findPanel(project)
+                                if (explorerPanel != null) {
+                                    explorerPanel.applyRuntimeRoutes(result.routes)
+                                    Messages.showInfoMessage(
+                                        project,
+                                        message(
+                                            "route.explorer.sync.success",
+                                            result.routes.size,
+                                            result.specificationUrl,
+                                        ),
+                                        message("route.explorer.action.syncRuntime"),
+                                    )
+                                } else {
+                                    Messages.showWarningDialog(
+                                        project,
+                                        message("route.explorer.sync.panelUnavailable"),
+                                        message("route.explorer.action.syncRuntime"),
+                                    )
+                                }
+                            }
+                            is ArmeriaDocServiceFetchResult.Failure -> {
+                                Messages.showWarningDialog(
+                                    project,
+                                    result.message,
+                                    message("route.explorer.action.syncRuntime"),
+                                )
+                            }
+                        }
+                    }, ModalityState.any())
+                }
+            },
         )
     }
 }
