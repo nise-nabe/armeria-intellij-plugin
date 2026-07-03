@@ -260,6 +260,7 @@ object ArmeriaRouteCollector {
         argumentCount: Int,
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
+        decorators: List<String>? = null,
     ) {
         if (!seenServiceRegistrations.add(registrationKey)) {
             return
@@ -269,16 +270,19 @@ object ArmeriaRouteCollector {
         val routeMatch = resolveRouteMatch(registrationMethod, protocol)
         val annotatedServiceHasPathPrefix =
             registrationMethod == ServiceRegistrationMethod.ANNOTATED_SERVICE && argumentCount > 1
+        val normalizedPath = ArmeriaRouteSupport.normalizePath(path)
+        val programmaticDecorators = decorators ?: collectProgrammaticDecorators(element, normalizedPath)
         routes += ArmeriaRoute.create(
             element = element,
             protocol = protocol.presentableName(),
             httpMethod = "",
-            path = ArmeriaRouteSupport.normalizePath(path),
+            path = normalizedPath,
             target = target,
             routeMatch = routeMatch,
             targetUnresolved = targetUnresolved,
             isDocService = protocol == RouteProtocol.DOC_SERVICE,
             annotatedServiceHasPathPrefix = annotatedServiceHasPathPrefix,
+            decorators = programmaticDecorators,
         )
     }
 
@@ -342,5 +346,15 @@ object ArmeriaRouteCollector {
 
     private fun isKotlinPluginAvailable(): Boolean =
         PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
+
+    private fun collectProgrammaticDecorators(element: PsiElement, registrationPath: String): List<String> {
+        if (element is PsiMethodCallExpression) {
+            return ArmeriaDecoratorSupport.collectProgrammaticDecorators(element, registrationPath)
+        }
+        if (isKotlinPluginAvailable()) {
+            return ArmeriaKotlinDecoratorSupport.collectProgrammaticDecorators(element, registrationPath)
+        }
+        return emptyList()
+    }
 
 }
