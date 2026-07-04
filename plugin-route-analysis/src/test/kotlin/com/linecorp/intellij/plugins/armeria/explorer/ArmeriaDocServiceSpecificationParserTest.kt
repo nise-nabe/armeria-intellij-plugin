@@ -51,6 +51,75 @@ class ArmeriaDocServiceSpecificationParserTest {
     }
 
     @Test
+    fun parse_readsEscapedExamplePaths() {
+        val json = """
+            {
+              "services": [
+                {
+                  "name": "com.example.DemoService",
+                  "methods": [
+                    {
+                      "name": "quoted",
+                      "httpMethod": "GET",
+                      "examplePaths": ["/path/with\\backslash", "/plain"]
+                    }
+                  ]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val parsed = ArmeriaDocServiceSpecificationParser.parse(json)
+
+        assertEquals(
+            setOf("GET /path/with\\backslash", "GET /plain"),
+            parsed.routes.map { "${it.httpMethod} ${it.path}" }.toSet(),
+        )
+    }
+
+    @Test
+    fun parse_keepsDistinctRoutesWithSameMethodAndPath() {
+        val json = """
+            {
+              "services": [
+                {
+                  "name": "com.example.FooService",
+                  "methods": [
+                    {
+                      "name": "getUser",
+                      "httpMethod": "GET",
+                      "endpoints": [
+                        { "pathMapping": "/api/users/{id}" }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "com.example.BarService",
+                  "methods": [
+                    {
+                      "name": "lookupUser",
+                      "httpMethod": "GET",
+                      "endpoints": [
+                        { "pathMapping": "/api/users/{id}" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val parsed = ArmeriaDocServiceSpecificationParser.parse(json)
+
+        assertEquals(2, parsed.routes.size)
+        assertEquals(
+            setOf("com.example.FooService/getUser", "com.example.BarService/lookupUser"),
+            parsed.routes.map { "${it.serviceName}/${it.methodName}" }.toSet(),
+        )
+    }
+
+    @Test
     fun parse_ignoresOpenApiStylePathFields() {
         val json = """
             {

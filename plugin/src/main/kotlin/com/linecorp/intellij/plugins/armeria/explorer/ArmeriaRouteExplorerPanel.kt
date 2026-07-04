@@ -165,6 +165,7 @@ class ArmeriaRouteExplorerPanel(
             .coalesceBy(this)
             .finishOnUiThread(ModalityState.any()) { collectedRoutes ->
                 staticRoutes = collectedRoutes
+                runtimeRoutes = emptyList()
                 rebuildTree()
                 updateStatusLabel()
                 updateDetailFootnote()

@@ -42,9 +42,12 @@ object ArmeriaRuntimeRouteFetcher {
                     val parsed = ArmeriaDocServiceSpecificationParser.parse(readResult.body)
                     val routes = toArmeriaRoutes(parsed.routes)
                     if (routes.isNotEmpty()) {
+                        val resolvedMountPath = parsed.docServiceMountPath
+                            ?.let(ArmeriaDocServiceEndpointValidator::normalizeMountPath)
+                            ?: mountPath
                         return ArmeriaDocServiceFetchResult.Success(
                             routes = routes,
-                            resolvedMountPath = mountPath,
+                            resolvedMountPath = resolvedMountPath,
                             specificationUrl = url,
                         )
                     }
@@ -96,8 +99,9 @@ object ArmeriaRuntimeRouteFetcher {
     }
 
     private fun readUrl(url: String): ReadResult {
+        var connection: HttpURLConnection? = null
         return try {
-            val connection = URI(url).toURL().openConnection() as HttpURLConnection
+            connection = URI(url).toURL().openConnection() as HttpURLConnection
             connection.connectTimeout = CONNECT_TIMEOUT_MS
             connection.readTimeout = READ_TIMEOUT_MS
             connection.requestMethod = "GET"
@@ -111,6 +115,8 @@ object ArmeriaRuntimeRouteFetcher {
             ReadResult.Failure(exception.message ?: exception.javaClass.simpleName)
         } catch (exception: Exception) {
             ReadResult.Failure(exception.message ?: exception.javaClass.simpleName)
+        } finally {
+            connection?.disconnect()
         }
     }
 

@@ -69,7 +69,7 @@ internal object ArmeriaDocServiceSpecificationParser {
     }
 
     private fun deduplicate(routes: List<ParsedRoute>): List<ParsedRoute> =
-        routes.distinctBy { "${it.httpMethod.uppercase()}|${it.path}" }
+        routes.distinctBy { "${it.httpMethod.uppercase()}|${it.path}|${it.serviceName}|${it.methodName}" }
 
     private fun extractJsonObject(json: String, fieldName: String): String? {
         val fieldIndex = indexOfJsonField(json, fieldName) ?: return null
@@ -95,8 +95,10 @@ internal object ArmeriaDocServiceSpecificationParser {
         if (valueStart >= json.length || json[valueStart] != '"') {
             return null
         }
-        return readJsonString(json, valueStart)
+        return readJsonString(json, valueStart)?.value
     }
+
+    private data class ParsedJsonString(val value: String, val endIndex: Int)
 
     private fun indexOfJsonField(json: String, fieldName: String): Int? {
         val pattern = "\"$fieldName\""
@@ -158,9 +160,9 @@ internal object ArmeriaDocServiceSpecificationParser {
                 index++
                 continue
             }
-            val value = readJsonString(trimmed, index) ?: break
-            values += value
-            index = skipWhitespace(trimmed, index + value.length + 2)
+            val parsed = readJsonString(trimmed, index) ?: break
+            values += parsed.value
+            index = skipWhitespace(trimmed, parsed.endIndex)
             if (index < trimmed.length && trimmed[index] == ',') {
                 index++
             }
@@ -168,7 +170,7 @@ internal object ArmeriaDocServiceSpecificationParser {
         return values
     }
 
-    private fun readJsonString(json: String, startIndex: Int): String? {
+    private fun readJsonString(json: String, startIndex: Int): ParsedJsonString? {
         if (startIndex >= json.length || json[startIndex] != '"') {
             return null
         }
@@ -176,7 +178,7 @@ internal object ArmeriaDocServiceSpecificationParser {
         var index = startIndex + 1
         while (index < json.length) {
             when (val ch = json[index]) {
-                '"' -> return builder.toString()
+                '"' -> return ParsedJsonString(builder.toString(), index + 1)
                 '\\' -> {
                     if (index + 1 >= json.length) {
                         return null
