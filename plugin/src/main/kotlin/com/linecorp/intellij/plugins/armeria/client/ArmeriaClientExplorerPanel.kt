@@ -29,7 +29,6 @@ import javax.swing.KeyStroke
 class ArmeriaClientExplorerPanel(
     private val project: Project,
 ) : SimpleToolWindowPanel(true, true), Disposable {
-    private var currentEndpoints: List<ArmeriaClientEndpoint> = emptyList()
     private var initialRefreshScheduled = false
 
     private val listModel = DefaultListModel<ArmeriaClientEndpoint>()
@@ -114,7 +113,6 @@ class ArmeriaClientExplorerPanel(
             .expireWith(this)
             .coalesceBy(this)
             .finishOnUiThread(ModalityState.any()) { collectedEndpoints ->
-                currentEndpoints = collectedEndpoints
                 listModel.removeAllElements()
                 collectedEndpoints.forEach(listModel::addElement)
                 updateStatusLabel(collectedEndpoints)

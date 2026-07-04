@@ -19,7 +19,6 @@ import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteCollector
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
 
 object ArmeriaClientCollector {
     private val KOTLIN_PLUGIN_ID = PluginId.getId("org.jetbrains.kotlin")

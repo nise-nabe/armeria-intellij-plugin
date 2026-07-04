@@ -28,6 +28,7 @@ class ArmeriaKotlinClientCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         val endpoint = endpoints.single()
         assertEquals("HTTP", endpoint.clientType)
         assertEquals("https://example.com", endpoint.uri)
+        assertEquals("WebClient", endpoint.target)
     }
 
     fun testCollectWebClientBuilderFromKotlin() {

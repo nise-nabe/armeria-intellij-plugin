@@ -17,7 +17,6 @@ import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
-import org.jetbrains.kotlin.psi.KtValueArgument
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaKotlinRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
 
@@ -51,9 +50,18 @@ internal object ArmeriaKotlinClientCollector {
         }
         val resolvedClass = resolveContainingClass(call) ?: return
         val protocol = ArmeriaClientSupport.protocolForClass(resolvedClass) ?: return
-        val target = call.calleeExpression?.text ?: resolvedClass
+        val target = resolveTargetName(call) ?: resolvedClass
         val uri = extractUri(call, methodName) ?: target
         ArmeriaClientCollector.addEndpoint(call, protocol, target, uri, endpoints, seenEndpoints)
+    }
+
+    private fun resolveTargetName(call: KtCallExpression): String? {
+        val callee = call.calleeExpression ?: return null
+        val receiver = when (callee) {
+            is KtDotQualifiedExpression -> callee.receiverExpression
+            else -> (call.parent as? KtDotQualifiedExpression)?.receiverExpression
+        }
+        return receiver?.text ?: callee.text
     }
 
     private fun resolveCallName(call: KtCallExpression): String? {
