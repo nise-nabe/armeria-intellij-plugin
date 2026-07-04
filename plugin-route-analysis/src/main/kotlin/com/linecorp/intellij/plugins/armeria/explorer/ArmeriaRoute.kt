@@ -22,6 +22,7 @@ data class ArmeriaRoute(
     val exceptionHandlers: List<String>,
     val executionHints: List<String> = emptyList(),
     val timeoutHints: List<String> = emptyList(),
+    val contentHints: List<String> = emptyList(),
     val pointer: SmartPsiElementPointer<PsiElement>,
 ) {
     fun resolveSourceHint(): String {
@@ -92,6 +93,7 @@ data class ArmeriaRoute(
             exceptionHandlers: List<String> = emptyList(),
             executionHints: List<String> = emptyList(),
             timeoutHints: List<String> = emptyList(),
+            contentHints: List<String> = emptyList(),
         ): ArmeriaRoute {
             return ArmeriaRoute(
                 protocol = protocol,
@@ -109,6 +111,7 @@ data class ArmeriaRoute(
                 exceptionHandlers = exceptionHandlers,
                 executionHints = executionHints,
                 timeoutHints = timeoutHints,
+                contentHints = contentHints,
                 pointer = SmartPointerManager.createPointer(element),
             )
         }

@@ -199,17 +199,19 @@ object ArmeriaRouteCollector {
         val executionHints = ArmeriaTimeoutSupport.collectExecutionHints(method)
         for (rawPath in paths) {
             val (pathType, normalizedPath) = ArmeriaRouteSupport.parsePathType(rawPath)
+            val combinedPath = ArmeriaRouteSupport.combinePaths(classPrefix, normalizedPath)
             routes += ArmeriaRoute.create(
                 element = method,
                 protocol = RouteProtocol.HTTP.presentableName(),
                 httpMethod = annotation.second,
-                path = ArmeriaRouteSupport.combinePaths(classPrefix, normalizedPath),
+                path = combinedPath,
                 target = target,
                 routeMatch = RouteMatch.ANNOTATED_HTTP,
                 pathType = pathType,
                 decorators = methodDecorators.distinct(),
                 exceptionHandlers = methodExceptionHandlers.distinct(),
                 executionHints = executionHints,
+                contentHints = ArmeriaAnnotatedMetadataSupport.collectContentHints(method, combinedPath),
             )
         }
     }
