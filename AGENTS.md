@@ -40,6 +40,12 @@ If `gh` is not found or auth fails, use ManagePullRequest for PR work and Gradle
 verification instead of retrying `gh`. Set `GH_TOKEN` in Cursor Cloud Secrets when the GitHub App
 token lacks required scopes.
 
+### Plugin releases
+
+GitHub Releases distribution is documented in `.cursor/skills/release/SKILL.md`. Version lives in
+`gradle.properties` (`pluginVersion`); changelog in `plugin/CHANGELOG.md`. There is no automated
+release workflow — tag and `gh release create` after merging a version-bump PR to `main`.
+
 ### Build, test, lint
 
 | Goal | Command |
