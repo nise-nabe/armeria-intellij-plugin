@@ -30,7 +30,7 @@ internal object ArmeriaKotlinSpringBootRouteCollector {
             }
             fallbackScannedFiles += virtualFile
             ArmeriaRouteCollectionMetrics.current()?.armeriaFiles?.incrementAndGet()
-            collectBeanServerRegistrations(file, routes, seenServiceRegistrations)
+            collectBeanServerRegistrations(file, scope, routes, seenServiceRegistrations)
         }
     }
 
@@ -41,12 +41,14 @@ internal object ArmeriaKotlinSpringBootRouteCollector {
         if (hasSpringImports) {
             return true
         }
-        val searchWindow = file.text.take(ArmeriaRouteSupport.ARMERIA_HEADER_SCAN_LIMIT)
+        val contents = file.viewProvider.contents
+        val searchWindow = contents.subSequence(0, minOf(contents.length, ArmeriaRouteSupport.ARMERIA_HEADER_SCAN_LIMIT))
         return ArmeriaRouteSupport.SPRING_BOOT_ARMERIA_FILE_INDICATORS.any(searchWindow::contains)
     }
 
     private fun collectBeanServerRegistrations(
         file: KtFile,
+        scope: GlobalSearchScope,
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
     ) {
@@ -54,8 +56,7 @@ internal object ArmeriaKotlinSpringBootRouteCollector {
             if (!function.hasSpringBeanAnnotation()) {
                 continue
             }
-            val returnType = ArmeriaKotlinRouteCollector.resolveKotlinReturnTypeText(function.typeReference).orEmpty()
-            if (!ArmeriaRouteSupport.isArmeriaServerBeanReturnType(returnType)) {
+            if (!function.isArmeriaServerBeanReturnType(scope)) {
                 continue
             }
             ArmeriaKotlinRouteCollector.collectServiceRegistrationsInScope(
@@ -68,4 +69,7 @@ internal object ArmeriaKotlinSpringBootRouteCollector {
 
     private fun KtNamedFunction.hasSpringBeanAnnotation(): Boolean =
         toLightMethods().any { it.hasAnnotation(ArmeriaRouteSupport.SPRING_BEAN_ANNOTATION) }
+
+    private fun KtNamedFunction.isArmeriaServerBeanReturnType(scope: GlobalSearchScope): Boolean =
+        toLightMethods().any { ArmeriaRouteSupport.isArmeriaServerBeanReturnType(it, scope) }
 }
