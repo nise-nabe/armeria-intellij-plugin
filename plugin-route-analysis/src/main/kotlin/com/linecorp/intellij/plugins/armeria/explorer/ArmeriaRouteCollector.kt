@@ -101,6 +101,7 @@ object ArmeriaRouteCollector {
         }
         ArmeriaGraphqlRouteCollector.collect(project, scope, routes)
         ArmeriaThriftRouteCollector.collect(project, scope, routes)
+        collectExtendedRegistrations(project, scope, routes, seenServiceRegistrations)
 
         return CachedValueProvider.Result.create(
             routes.sortedWith(
@@ -120,6 +121,24 @@ object ArmeriaRouteCollector {
         return routes.sortedWith(
             compareBy(ArmeriaRoute::moduleName, ArmeriaRoute::path, ArmeriaRoute::httpMethod, ArmeriaRoute::target),
         )
+    }
+
+    private fun collectExtendedRegistrations(
+        project: Project,
+        scope: GlobalSearchScope,
+        routes: MutableList<ArmeriaRoute>,
+        seenRegistrations: MutableSet<String>,
+    ) {
+        for (virtualFile in FileTypeIndex.getFiles(JavaFileType.INSTANCE, scope)) {
+            val psiFile = PsiManager.getInstance(project).findFile(virtualFile) as? PsiJavaFile ?: continue
+            if (!referencesArmeriaJavaContent(psiFile)) {
+                continue
+            }
+            ArmeriaExtendedRegistrationCollector.collectFromJavaFile(psiFile, routes, seenRegistrations)
+        }
+        if (isKotlinPluginAvailable()) {
+            ArmeriaKotlinExtendedRegistrationCollector.collect(project, scope, routes, seenRegistrations)
+        }
     }
 
     private fun collectionScope(project: Project): GlobalSearchScope =
@@ -152,7 +171,10 @@ object ArmeriaRouteCollector {
             ArmeriaRouteSupport.extractNames(containingClass.getAnnotation(ArmeriaRouteSupport.DECORATOR_ANNOTATION))
         val classExceptionHandlers =
             ArmeriaRouteSupport.extractNames(containingClass.getAnnotation(ArmeriaRouteSupport.EXCEPTION_HANDLER_ANNOTATION))
-        val paths = ArmeriaRouteSupport.extractPaths(annotation.first).ifEmpty { listOf("/") }
+        val paths = buildList {
+            addAll(ArmeriaRouteSupport.extractPaths(annotation.first))
+            addAll(ArmeriaRouteSupport.extractPathAnnotations(method))
+        }.ifEmpty { listOf("/") }.distinct()
         val methodDecorators =
             classDecorators + ArmeriaRouteSupport.extractNames(method.getAnnotation(ArmeriaRouteSupport.DECORATOR_ANNOTATION))
         val methodExceptionHandlers = classExceptionHandlers + ArmeriaRouteSupport.extractNames(
@@ -160,14 +182,16 @@ object ArmeriaRouteCollector {
         )
         val target = buildMethodTarget(containingClass, method)
         val executionHints = ArmeriaTimeoutSupport.collectExecutionHints(method)
-        for (path in paths) {
+        for (rawPath in paths) {
+            val (pathType, normalizedPath) = ArmeriaRouteSupport.parsePathType(rawPath)
             routes += ArmeriaRoute.create(
                 element = method,
                 protocol = RouteProtocol.HTTP.presentableName(),
                 httpMethod = annotation.second,
-                path = ArmeriaRouteSupport.combinePaths(classPrefix, path),
+                path = ArmeriaRouteSupport.combinePaths(classPrefix, normalizedPath),
                 target = target,
                 routeMatch = RouteMatch.ANNOTATED_HTTP,
+                pathType = pathType,
                 decorators = methodDecorators.distinct(),
                 exceptionHandlers = methodExceptionHandlers.distinct(),
                 executionHints = executionHints,
@@ -251,7 +275,7 @@ object ArmeriaRouteCollector {
     ) {
         ArmeriaRouteCollectionMetrics.current()?.methodCallsVisited?.incrementAndGet()
         val methodName = expression.methodExpression.referenceName
-        if (methodName !in ServiceRegistrationMethod.METHOD_NAMES) {
+        if (methodName !in ServiceRegistrationMethod.METHOD_NAMES - ServiceRegistrationMethod.EXTENDED_METHOD_NAMES) {
             return
         }
         if (!looksLikeArmeriaBuilderCall(expression)) {
@@ -272,7 +296,12 @@ object ArmeriaRouteCollector {
         val implementationExpression = when (ServiceRegistrationMethod.fromMethodName(methodName)) {
             ServiceRegistrationMethod.ANNOTATED_SERVICE -> arguments.getOrNull(1) ?: arguments.getOrNull(0)
             ServiceRegistrationMethod.SERVICE, ServiceRegistrationMethod.SERVICE_UNDER -> arguments.getOrNull(1)
-            null -> null
+            ServiceRegistrationMethod.FILE_SERVICE,
+            ServiceRegistrationMethod.HEALTH_CHECK_SERVICE,
+            ServiceRegistrationMethod.VIRTUAL_HOST,
+            ServiceRegistrationMethod.ROUTE_DECORATOR,
+            null,
+            -> null
         } ?: return
         val target = ArmeriaRouteTargetExtractor.extractTarget(implementationExpression)
         addServiceRegistrationRoute(
@@ -336,6 +365,11 @@ object ArmeriaRouteCollector {
             ServiceRegistrationMethod.SERVICE -> RouteMatch.SERVICE
             ServiceRegistrationMethod.ANNOTATED_SERVICE -> RouteMatch.ANNOTATED_SERVICE
             ServiceRegistrationMethod.SERVICE_UNDER -> RouteMatch.SERVICE_UNDER
+            ServiceRegistrationMethod.FILE_SERVICE,
+            ServiceRegistrationMethod.HEALTH_CHECK_SERVICE,
+            ServiceRegistrationMethod.VIRTUAL_HOST,
+            ServiceRegistrationMethod.ROUTE_DECORATOR,
+            -> error("Extended registration handled separately: $registrationMethod")
         }
     }
 
@@ -369,7 +403,12 @@ object ArmeriaRouteCollector {
                 extractString(arguments.getOrNull(0))
             ServiceRegistrationMethod.ANNOTATED_SERVICE ->
                 if (arguments.size > 1) extractString(arguments.getOrNull(0)) else "/"
-            null -> null
+            ServiceRegistrationMethod.FILE_SERVICE,
+            ServiceRegistrationMethod.HEALTH_CHECK_SERVICE,
+            ServiceRegistrationMethod.VIRTUAL_HOST,
+            ServiceRegistrationMethod.ROUTE_DECORATOR,
+            null,
+            -> null
         }
     }
 

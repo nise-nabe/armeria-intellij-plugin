@@ -184,7 +184,10 @@ object ArmeriaRouteDuplicateIndex {
     private fun matchesAllHttpMethods(route: ArmeriaRoute): Boolean =
         when (route.routeMatch) {
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.ANNOTATED_SERVICE -> true
-            RouteMatch.ANNOTATED_HTTP, RouteMatch.NON_HTTP, RouteMatch.RUNTIME -> false
+            RouteMatch.ANNOTATED_HTTP, RouteMatch.NON_HTTP, RouteMatch.RUNTIME,
+            RouteMatch.FILE_SERVICE, RouteMatch.HEALTH_CHECK,
+            RouteMatch.VIRTUAL_HOST, RouteMatch.ROUTE_DECORATOR,
+            -> false
         }
 
     private fun buildHitsByVirtualFile(groups: List<DuplicateRegistrationGroup>): Map<VirtualFile, List<DuplicateRegistrationHit>> {

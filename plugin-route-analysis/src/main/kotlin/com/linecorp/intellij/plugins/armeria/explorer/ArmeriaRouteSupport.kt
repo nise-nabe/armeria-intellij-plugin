@@ -16,10 +16,20 @@ internal enum class ServiceRegistrationMethod(val methodName: String) {
     SERVICE("service"),
     SERVICE_UNDER("serviceUnder"),
     ANNOTATED_SERVICE("annotatedService"),
+    FILE_SERVICE("fileService"),
+    HEALTH_CHECK_SERVICE("healthCheckService"),
+    VIRTUAL_HOST("virtualHost"),
+    ROUTE_DECORATOR("routeDecorator"),
     ;
 
     companion object {
         val METHOD_NAMES: Set<String> = entries.mapTo(linkedSetOf()) { it.methodName }
+        val EXTENDED_METHOD_NAMES: Set<String> = setOf(
+            FILE_SERVICE.methodName,
+            HEALTH_CHECK_SERVICE.methodName,
+            VIRTUAL_HOST.methodName,
+            ROUTE_DECORATOR.methodName,
+        )
 
         fun fromMethodName(name: String): ServiceRegistrationMethod? =
             entries.firstOrNull { it.methodName == name }
@@ -57,6 +67,7 @@ object ArmeriaRouteSupport {
     private val SERVER_BUILDER_CALL =
         Regex("""(?:$FQCN_SERVER_BUILDER_CALL_PATTERN|$UNQUALIFIED_SERVER_BUILDER_CALL_PATTERN)""")
 
+    const val PATH_ANNOTATION = "com.linecorp.armeria.server.annotation.Path"
     const val PATH_PREFIX_ANNOTATION = "com.linecorp.armeria.server.annotation.PathPrefix"
     const val DECORATOR_ANNOTATION = "com.linecorp.armeria.server.annotation.Decorator"
     const val EXCEPTION_HANDLER_ANNOTATION = "com.linecorp.armeria.server.annotation.ExceptionHandler"
@@ -93,14 +104,25 @@ object ArmeriaRouteSupport {
     fun extractPaths(annotation: PsiAnnotation): List<String> {
         val values = extractStrings(annotation.findDeclaredAttributeValue("value"))
         if (values.isNotEmpty()) {
-            return values.map(::normalizePath)
+            return values.map(::preserveOrNormalizePath)
         }
         val pathValues = extractStrings(annotation.findDeclaredAttributeValue("path"))
         if (pathValues.isNotEmpty()) {
-            return pathValues.map(::normalizePath)
+            return pathValues.map(::preserveOrNormalizePath)
         }
         return emptyList()
     }
+
+    private fun preserveOrNormalizePath(path: String): String {
+        val trimmed = path.trim()
+        return if (hasPathTypePrefix(trimmed)) trimmed else normalizePath(trimmed)
+    }
+
+    private fun hasPathTypePrefix(path: String): Boolean =
+        path.startsWith("prefix:") ||
+            path.startsWith("regex:") ||
+            path.startsWith("glob:") ||
+            path.startsWith("exact:")
 
     fun extractPrimaryPath(annotation: PsiAnnotation?): String {
         if (annotation == null) {
@@ -164,6 +186,23 @@ object ArmeriaRouteSupport {
         }
         val candidate = path.trim()
         return if (candidate.startsWith("/")) candidate else "/$candidate"
+    }
+
+    internal fun parsePathType(rawPath: String): Pair<PathType, String> {
+        val trimmed = rawPath.trim()
+        return when {
+            trimmed.startsWith("prefix:") -> PathType.PREFIX to normalizePath(trimmed.removePrefix("prefix:"))
+            trimmed.startsWith("regex:") -> PathType.REGEX to trimmed.removePrefix("regex:")
+            trimmed.startsWith("glob:") -> PathType.GLOB to trimmed.removePrefix("glob:")
+            trimmed.startsWith("exact:") -> PathType.EXACT to normalizePath(trimmed.removePrefix("exact:"))
+            else -> PathType.EXACT to normalizePath(trimmed)
+        }
+    }
+
+    fun extractPathAnnotations(method: PsiMethod): List<String> {
+        return method.annotations
+            .filter { it.qualifiedName == PATH_ANNOTATION }
+            .flatMap(::extractPaths)
     }
 
     fun decoratorPathPatternAppliesToRoute(pattern: String, routePath: String): Boolean {
