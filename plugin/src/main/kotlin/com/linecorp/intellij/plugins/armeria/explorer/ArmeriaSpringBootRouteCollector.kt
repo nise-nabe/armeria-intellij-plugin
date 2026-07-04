@@ -14,6 +14,21 @@ import com.intellij.psi.search.searches.AnnotatedElementsSearch
 internal object ArmeriaSpringBootRouteCollector {
     private val KOTLIN_PLUGIN_ID = PluginId.getId("org.jetbrains.kotlin")
     private const val KOTLIN_LIGHT_METHOD_CLASS = "org.jetbrains.kotlin.asJava.elements.KtLightMethod"
+
+    private val ktLightMethodClass: Class<*>? by lazy {
+        if (!isKotlinPluginAvailable()) {
+            return@lazy null
+        }
+        try {
+            Class.forName(KOTLIN_LIGHT_METHOD_CLASS, false, ArmeriaSpringBootRouteCollector::class.java.classLoader)
+        } catch (_: ClassNotFoundException) {
+            null
+        }
+    }
+
+    private val getKotlinOriginMethod: java.lang.reflect.Method? by lazy {
+        ktLightMethodClass?.getMethod("getKotlinOrigin")
+    }
     fun collect(
         project: Project,
         scope: GlobalSearchScope,
@@ -39,14 +54,16 @@ internal object ArmeriaSpringBootRouteCollector {
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
     ) {
-        val kotlinMethod = resolveKotlinOrigin(method)
-        if (kotlinMethod != null && isKotlinPluginAvailable()) {
-            ArmeriaKotlinRouteCollector.collectServiceRegistrationsInScope(
-                kotlinMethod,
-                routes,
-                seenServiceRegistrations,
-            )
-            return
+        if (isKotlinPluginAvailable()) {
+            val kotlinMethod = resolveKotlinOrigin(method)
+            if (kotlinMethod != null) {
+                ArmeriaKotlinRouteCollector.collectServiceRegistrationsInScope(
+                    kotlinMethod,
+                    routes,
+                    seenServiceRegistrations,
+                )
+                return
+            }
         }
         method.body?.accept(object : JavaRecursiveElementWalkingVisitor() {
             override fun visitMethodCallExpression(expression: PsiMethodCallExpression) {
@@ -61,11 +78,13 @@ internal object ArmeriaSpringBootRouteCollector {
     }
 
     private fun resolveKotlinOrigin(method: PsiMethod): PsiElement? {
-        if (method.javaClass.name != KOTLIN_LIGHT_METHOD_CLASS) {
+        val lightMethodClass = ktLightMethodClass ?: return null
+        if (!lightMethodClass.isInstance(method)) {
             return null
         }
+        val getKotlinOrigin = getKotlinOriginMethod ?: return null
         return try {
-            method.javaClass.getMethod("getKotlinOrigin").invoke(method) as? PsiElement
+            getKotlinOrigin.invoke(method) as? PsiElement
         } catch (_: ReflectiveOperationException) {
             null
         }
