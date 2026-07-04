@@ -66,7 +66,7 @@ class ArmeriaHttpRequestGeneratorTest {
         assertFalse(ArmeriaHttpRequestGenerator.supports(route(routeMatch = RouteMatch.ANNOTATED_SERVICE)))
         assertFalse(
             ArmeriaHttpRequestGenerator.supports(
-                route(protocol = "gRPC", routeMatch = RouteMatch.NON_HTTP),
+                route(protocol = "Thrift", routeMatch = RouteMatch.NON_HTTP),
             ),
         )
     }
@@ -118,11 +118,41 @@ class ArmeriaHttpRequestGeneratorTest {
         )
     }
 
+    @Test
+    fun requestText_substitutesPathVariables() {
+        val route = route(httpMethod = "GET", path = "/users/{id}")
+
+        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("/users/1"))
+    }
+
+    @Test
+    fun supports_annotatedServiceWithPathPrefix() {
+        val route = route(routeMatch = RouteMatch.ANNOTATED_SERVICE, annotatedServiceHasPathPrefix = true, path = "/api")
+
+        assertTrue(ArmeriaHttpRequestGenerator.supports(route))
+    }
+
+    @Test
+    fun requestText_substitutesColonStylePathVariables() {
+        val route = route(httpMethod = "GET", path = "/hello/:name")
+
+        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("/hello/example"))
+    }
+
+    @Test
+    fun supports_grpcRoute() {
+        val route = route(protocol = "gRPC", path = "/example.EchoService/Echo", routeMatch = RouteMatch.NON_HTTP)
+
+        assertTrue(ArmeriaHttpRequestGenerator.supports(route))
+        assertEquals("armeria-grpc-example.EchoService-Echo.grpc", ArmeriaHttpRequestGenerator.fileName(route))
+    }
+
     private fun route(
         httpMethod: String = "GET",
         path: String = "/api",
         protocol: String = "HTTP",
         routeMatch: RouteMatch = RouteMatch.ANNOTATED_HTTP,
+        annotatedServiceHasPathPrefix: Boolean = false,
     ): ArmeriaRoute {
         return ArmeriaRoute(
             protocol = protocol,
@@ -133,6 +163,7 @@ class ArmeriaHttpRequestGeneratorTest {
             moduleName = "app",
             targetUnresolved = false,
             isDocService = false,
+            annotatedServiceHasPathPrefix = annotatedServiceHasPathPrefix,
             decorators = emptyList(),
             exceptionHandlers = emptyList(),
             pointer = TestPsiPointer,
