@@ -66,6 +66,7 @@ object ArmeriaRouteCollector {
         val seenServiceRegistrations = mutableSetOf<String>()
         val psiFacade = JavaPsiFacade.getInstance(project)
         val serverBuilderOnClasspath = psiFacade.findClass(ArmeriaRouteSupport.SERVER_BUILDER_CLASS, scope) != null
+        val springBootArmeriaAvailable = ArmeriaRouteSupport.isSpringBootArmeriaAvailable(psiFacade, scope)
 
         collectAnnotatedRoutesIndexed(project, scope, routes)
         collectServiceRegistrationsIndexed(project, scope, routes, seenServiceRegistrations)
@@ -80,8 +81,17 @@ object ArmeriaRouteCollector {
                 fallbackScannedFiles,
                 seenServiceRegistrations,
             )
+            if (springBootArmeriaAvailable) {
+                ArmeriaKotlinSpringBootRouteCollector.collect(
+                    project,
+                    scope,
+                    routes,
+                    fallbackScannedFiles,
+                    seenServiceRegistrations,
+                )
+            }
         }
-        if (ArmeriaRouteSupport.isSpringBootArmeriaAvailable(psiFacade, scope)) {
+        if (springBootArmeriaAvailable) {
             ArmeriaSpringBootRouteCollector.collect(
                 project,
                 scope,

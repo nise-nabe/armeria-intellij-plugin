@@ -34,6 +34,13 @@ object ArmeriaRouteSupport {
     const val ARMERIA_SERVER_CONFIGURATOR_CLASS = "$ARMERIA_SPRING_PACKAGE_PREFIX.ArmeriaServerConfigurator"
     const val SERVER_BUILDER_CLASS = "com.linecorp.armeria.server.ServerBuilder"
     const val SPRING_BEAN_ANNOTATION = "org.springframework.context.annotation.Bean"
+
+    val SPRING_BOOT_ARMERIA_FILE_INDICATORS = setOf(
+        "ArmeriaServerConfigurator",
+        "ArmeriaAutoConfiguration",
+        "spring-boot-starter-armeria",
+    )
+
     const val SERVER_BUILDER_SIMPLE_NAME = "ServerBuilder"
     const val ARMERIA_HEADER_SCAN_LIMIT = 4096
 
@@ -285,6 +292,24 @@ object ArmeriaRouteSupport {
     fun referencesArmeriaInText(contents: CharSequence, scanLimit: Int = ARMERIA_HEADER_SCAN_LIMIT): Boolean {
         val searchWindow = contents.subSequence(0, minOf(contents.length, scanLimit))
         return ARMERIA_REFERENCE_PATTERN.containsMatchIn(searchWindow)
+    }
+
+    fun referencesArmeriaKotlinContentInText(contents: CharSequence): Boolean {
+        val header = contents.subSequence(0, minOf(contents.length, ARMERIA_HEADER_SCAN_LIMIT))
+        if (header.contains("import $ARMERIA_PACKAGE_PREFIX")) {
+            return true
+        }
+        return referencesArmeriaInText(contents)
+    }
+
+    fun mayReferenceSpringBootArmeriaInText(contents: CharSequence): Boolean {
+        if (referencesArmeriaKotlinContentInText(contents)) {
+            return true
+        }
+        val header = contents.subSequence(0, minOf(contents.length, ARMERIA_HEADER_SCAN_LIMIT))
+        return SPRING_BOOT_ARMERIA_FILE_INDICATORS.any { indicator ->
+            header.contains(indicator)
+        }
     }
 
     fun looksLikeServerBuilderReceiverText(text: String): Boolean {

@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 
 class ArmeriaKotlinSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
@@ -171,6 +172,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTes
             """
             package example
 
+            import com.linecorp.armeria.spring.ArmeriaServerConfigurator
             import org.springframework.context.annotation.Bean
             import org.springframework.context.annotation.Configuration
 
@@ -185,6 +187,256 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTes
         val routes = ArmeriaRouteCollector.collect(project)
 
         assertTrue(routes.isEmpty())
+    }
+
+    fun testKotlinSpringBootCollectorCollectsRoutesDirectly() {
+        myFixture.configureByText(
+            "ArmeriaConfig.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.spring.ArmeriaServerConfigurator
+            import org.springframework.context.annotation.Bean
+            import org.springframework.context.annotation.Configuration
+
+            @Configuration
+            class ArmeriaConfig {
+                @Bean
+                fun armeriaServerConfigurator(): ArmeriaServerConfigurator =
+                    ArmeriaServerConfigurator { serverBuilder ->
+                        serverBuilder.service("/direct", HelloService())
+                    }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        ArmeriaKotlinSpringBootRouteCollector.collect(
+            project,
+            GlobalSearchScope.projectScope(project),
+            routes,
+            linkedSetOf(),
+            mutableSetOf(),
+        )
+
+        val directRoutes = routes.filter { it.path == "/direct" && it.routeMatch == RouteMatch.SERVICE }
+        assertEquals(1, directRoutes.size)
+        assertEquals("example.HelloService", directRoutes.single().target)
+    }
+
+    fun testKotlinSpringBootCollectorCollectsRoutesWithServerImportOnly() {
+        myFixture.configureByText(
+            "ArmeriaConfig.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import org.springframework.context.annotation.Bean
+            import org.springframework.context.annotation.Configuration
+
+            @Configuration
+            class ArmeriaConfig {
+                @Bean
+                fun armeriaServer(): Server =
+                    Server.builder()
+                        .service("/server-import", HelloService())
+                        .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        ArmeriaKotlinSpringBootRouteCollector.collect(
+            project,
+            GlobalSearchScope.projectScope(project),
+            routes,
+            linkedSetOf(),
+            mutableSetOf(),
+        )
+
+        val serverImportRoutes = routes.filter { it.path == "/server-import" && it.routeMatch == RouteMatch.SERVICE }
+        assertEquals(1, serverImportRoutes.size)
+        assertEquals("example.HelloService", serverImportRoutes.single().target)
+    }
+
+    fun testCollectServiceRegistrationFromBeanServerBuilder() {
+        myFixture.configureByText(
+            "ArmeriaConfig.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.ServerBuilder
+            import org.springframework.context.annotation.Bean
+            import org.springframework.context.annotation.Configuration
+
+            @Configuration
+            class ArmeriaConfig {
+                @Bean
+                fun armeriaServerBuilder(): ServerBuilder =
+                    Server.builder()
+                        .service("/builder", HelloService())
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val builderRoutes = routes.filter { it.path == "/builder" && it.routeMatch == RouteMatch.SERVICE }
+        assertEquals(1, builderRoutes.size)
+        assertEquals("example.HelloService", builderRoutes.single().target)
+    }
+
+    fun testCollectInferredReturnTypeFromBeanFunction() {
+        myFixture.configureByText(
+            "ArmeriaConfig.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import org.springframework.context.annotation.Bean
+            import org.springframework.context.annotation.Configuration
+
+            @Configuration
+            class ArmeriaConfig {
+                @Bean
+                fun armeriaServer() =
+                    Server.builder()
+                        .service("/inferred", HelloService())
+                        .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val inferredRoutes = routes.filter { it.path == "/inferred" && it.routeMatch == RouteMatch.SERVICE }
+        assertEquals(1, inferredRoutes.size)
+        assertEquals("example.HelloService", inferredRoutes.single().target)
+    }
+
+    fun testCollectServiceUnderAndAnnotatedServiceFromBeanConfigurator() {
+        myFixture.configureByText(
+            "ArmeriaConfig.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.spring.ArmeriaServerConfigurator
+            import org.springframework.context.annotation.Bean
+            import org.springframework.context.annotation.Configuration
+
+            @Configuration
+            class ArmeriaConfig {
+                @Bean
+                fun armeriaServerConfigurator(): ArmeriaServerConfigurator =
+                    ArmeriaServerConfigurator { serverBuilder ->
+                        serverBuilder.serviceUnder("/api", HelloService())
+                        serverBuilder.annotatedService(AnnotatedService())
+                    }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class AnnotatedService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val serviceUnderRoutes = routes.filter { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE_UNDER }
+        assertEquals(1, serviceUnderRoutes.size)
+        val annotatedRoutes = routes.filter { it.routeMatch == RouteMatch.ANNOTATED_SERVICE }
+        assertEquals(1, annotatedRoutes.size)
+    }
+
+    fun testCollectServiceRegistrationFromConfiguratorSubtype() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.ServerBuilder;
+            import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
+
+            public final class RoutingConfigurator implements ArmeriaServerConfigurator {
+                @Override
+                public void configure(ServerBuilder serverBuilder) {
+                    serverBuilder.service("/subtype", new HelloService());
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "ArmeriaConfig.kt",
+            """
+            package example
+
+            import org.springframework.context.annotation.Bean
+            import org.springframework.context.annotation.Configuration
+
+            @Configuration
+            class ArmeriaConfig {
+                @Bean
+                fun customConfigurator(): RoutingConfigurator = RoutingConfigurator()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val subtypeRoutes = routes.filter { it.path == "/subtype" && it.routeMatch == RouteMatch.SERVICE }
+        assertEquals(1, subtypeRoutes.size)
     }
 
     private fun registerArmeriaStubs() {
