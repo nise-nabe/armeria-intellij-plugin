@@ -41,14 +41,18 @@ object ArmeriaRouteCollector {
 
     private val KOTLIN_PLUGIN_ID = PluginId.getId("org.jetbrains.kotlin")
 
-    fun collect(project: Project): List<ArmeriaRoute> {
+    fun collect(project: Project, includeProtoRoutes: Boolean = false): List<ArmeriaRoute> {
         val metrics = ArmeriaRouteCollectionMetrics()
         val startedAt = System.nanoTime()
         val routes = ArmeriaRouteCollectionMetrics.runWith(metrics) {
             val cachedRoutes = CachedValuesManager.getManager(project).getCachedValue(project) {
                 computeProjectRoutes(project)
             }
-            mergeProtoRoutesIfEnabled(project, cachedRoutes)
+            if (includeProtoRoutes) {
+                mergeProtoRoutesIfEnabled(project, cachedRoutes)
+            } else {
+                cachedRoutes
+            }
         }
         metrics.elapsedMs = (System.nanoTime() - startedAt) / 1_000_000
         ArmeriaRouteCollectionMetrics.logIfEnabled(metrics.snapshot())

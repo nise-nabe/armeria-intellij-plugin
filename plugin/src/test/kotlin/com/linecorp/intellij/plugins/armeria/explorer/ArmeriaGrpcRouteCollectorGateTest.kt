@@ -18,6 +18,9 @@ class ArmeriaGrpcRouteCollectorGateTest : LightJavaCodeInsightFixtureTestCase() 
         )
 
         assertFalse(ArmeriaGrpcRouteCollector.isGrpcOnClasspath(project, GlobalSearchScope.projectScope(project)))
-        assertTrue(ArmeriaRouteCollector.collect(project).none { it.path == "/com.example.Greeter/SayHello" })
+        assertTrue(
+            ArmeriaRouteCollector.collect(project, includeProtoRoutes = true)
+                .none { it.path == "/com.example.Greeter/SayHello" },
+        )
     }
 }

@@ -26,7 +26,7 @@ class ArmeriaGrpcRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
       """.trimIndent(),
     )
 
-    val routes = ArmeriaRouteCollector.collect(project)
+    val routes = ArmeriaRouteCollector.collect(project, includeProtoRoutes = true)
 
     assertEquals(listOf("/com.example.Greeter/SayHello"), routes.map { it.path })
   }
@@ -45,7 +45,7 @@ class ArmeriaGrpcRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
       """.trimIndent(),
     )
 
-    val routes = ArmeriaRouteCollector.collect(project)
+    val routes = ArmeriaRouteCollector.collect(project, includeProtoRoutes = true)
     val protoRoutes = routes.filter { it.path.startsWith("/com.example.Greeter/") }.sortedBy { it.path }
 
     assertEquals(2, protoRoutes.size)
@@ -69,7 +69,7 @@ class ArmeriaGrpcRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
       """.trimIndent(),
     )
 
-    val routes = ArmeriaRouteCollector.collect(project)
+    val routes = ArmeriaRouteCollector.collect(project, includeProtoRoutes = true)
     val protoRoute = routes.single { it.path == "/Greeter/Ping" }
 
     assertEquals("Greeter.Ping", protoRoute.target)
@@ -94,7 +94,7 @@ class ArmeriaGrpcRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
       """.trimIndent(),
     )
 
-    val routes = ArmeriaRouteCollector.collect(project)
+    val routes = ArmeriaRouteCollector.collect(project, includeProtoRoutes = true)
     val protoRoute = routes.firstOrNull { it.path == "/com.example.Greeter/SayHello" }
 
     assertNotNull(protoRoute)
@@ -118,7 +118,7 @@ class ArmeriaGrpcRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
       """.trimIndent(),
     )
 
-    val routes = ArmeriaRouteCollector.collect(project).map { it.path }.sorted()
+    val routes = ArmeriaRouteCollector.collect(project, includeProtoRoutes = true).map { it.path }.sorted()
 
     assertEquals(
       listOf("/com.example.Admin/Ping", "/com.example.Greeter/SayHello"),
@@ -139,7 +139,7 @@ class ArmeriaGrpcRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
       """.trimIndent(),
     )
 
-    val routes = ArmeriaRouteCollector.collect(project)
+    val routes = ArmeriaRouteCollector.collect(project, includeProtoRoutes = true)
 
     assertEquals(listOf("/com.example.Greeter/SayHello"), routes.map { it.path })
   }
@@ -158,7 +158,7 @@ class ArmeriaGrpcRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
       """.trimIndent(),
     )
 
-    val routes = ArmeriaRouteCollector.collect(project)
+    val routes = ArmeriaRouteCollector.collect(project, includeProtoRoutes = true)
 
     assertEquals(listOf("/com.example.Greeter/SayHello"), routes.map { it.path })
   }
@@ -245,7 +245,7 @@ class ArmeriaGrpcRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
       """.trimIndent(),
     )
 
-    val routes = ArmeriaRouteCollector.collect(project)
+    val routes = ArmeriaRouteCollector.collect(project, includeProtoRoutes = true)
 
     assertNotNull(routes.firstOrNull { it.path == "/grpc" })
     assertNotNull(routes.firstOrNull { it.path == "/com.example.Greeter/SayHello" })
