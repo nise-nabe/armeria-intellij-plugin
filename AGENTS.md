@@ -23,8 +23,9 @@ Prefer token-efficient MCP workflows documented in `.cursor/skills/gradle-tapi-m
 ### GitHub and pull requests (Cursor Cloud)
 
 Do not rely on bare `gh` commands without checking availability. `.cursor/install.sh` symlinks
-`/exec-daemon/gh` into `~/.local/bin/gh` and `/usr/local/bin/gh`, and logs in with `GH_TOKEN` or
-`GITHUB_TOKEN` when the built-in integration token is missing.
+`/exec-daemon/gh` into `~/.local/bin/gh` and, when `/usr/local/bin` is writable, into
+`/usr/local/bin/gh`. When `gh auth status` is unauthenticated, it logs in with `GH_TOKEN` or
+`GITHUB_TOKEN` if set.
 
 | Goal | Preferred approach |
 |------|-------------------|

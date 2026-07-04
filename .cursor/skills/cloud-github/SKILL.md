@@ -8,8 +8,9 @@ description: >-
 # Cloud GitHub operations
 
 Cursor Cloud Agents in this repository must not fail because `gh` is missing from PATH.
-`.cursor/install.sh` symlinks `/exec-daemon/gh` into `~/.local/bin/gh` and `/usr/local/bin/gh`
-and configures authentication from `GH_TOKEN` or `GITHUB_TOKEN` when needed.
+`.cursor/install.sh` symlinks `/exec-daemon/gh` into `~/.local/bin/gh` and, when
+`/usr/local/bin` is writable, into `/usr/local/bin/gh`. When `gh auth status` is unauthenticated,
+it logs in with `GH_TOKEN` or `GITHUB_TOKEN` if set.
 
 ## PR create / update (preferred)
 
