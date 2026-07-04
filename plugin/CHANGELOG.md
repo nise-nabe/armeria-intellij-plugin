@@ -1,7 +1,11 @@
 # Changelog
 
-## [Unreleased]
+## Unreleased
+
+## 0.1.0 - 2026-07-04
+
 ### Added
+
 - Implemented Armeria run configuration with module classpath and main class selection.
 - Added project-wide duplicate route registration inspection for ServerBuilder and annotated routes, with module-scoped caching and cross-registration conflict detection.
 - Added programmatic `ServerBuilder.decorator()` detection in Route Explorer.
@@ -20,13 +24,8 @@
 - Added a duplicate annotated route inspection for Armeria HTTP services.
 - Added DocService URL detection in console output.
 
-### Changed
-
-### Deprecated
-
-### Removed
-
 ### Fixed
+
 - Fixed Armeria Clients explorer listing no-arg `builder()` calls and non-Armeria `WebClient` false positives in Kotlin fallback resolution.
 - Fixed Kotlin client URI extraction, `GrpcClients`/`ThriftClients.newClient` discovery, and async PSI collection in Armeria Clients explorer.
 - Fixed duplicate Kotlin annotated routes and false-positive service registrations in Route Explorer.
@@ -40,5 +39,3 @@
 - Aligned Kotlin service registration discovery with the Java collector via shared PSI delegation.
 - New Project Wizard: emit `armeria-tomcat8` in Gradle and Maven templates when selected.
 - New Project Wizard: align Scala optional dependencies and Scala build setup in Gradle (Groovy) and Maven templates with Gradle (Kotlin DSL).
-
-### Security
