@@ -5,7 +5,9 @@ import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
+import com.intellij.psi.PsiParenthesizedExpression
 import com.intellij.psi.PsiReferenceExpression
+import com.intellij.psi.PsiTypeCastExpression
 import com.intellij.psi.PsiVariable
 import com.linecorp.intellij.plugins.armeria.message
 
@@ -51,6 +53,7 @@ internal object ArmeriaTimeoutSupport {
     ) {
         var current: PsiExpression? = qualifier
         while (current != null) {
+            current = unwrapQualifierExpression(current)
             when (current) {
                 is PsiMethodCallExpression -> {
                     when (current.methodExpression.referenceName) {
@@ -100,5 +103,16 @@ internal object ArmeriaTimeoutSupport {
                 ?: argument.text
         }
         return message(bundleKey, value)
+    }
+
+    private fun unwrapQualifierExpression(expression: PsiExpression): PsiExpression {
+        var current = expression
+        while (true) {
+            current = when (current) {
+                is PsiParenthesizedExpression -> current.expression ?: return expression
+                is PsiTypeCastExpression -> current.operand ?: return expression
+                else -> return current
+            }
+        }
     }
 }

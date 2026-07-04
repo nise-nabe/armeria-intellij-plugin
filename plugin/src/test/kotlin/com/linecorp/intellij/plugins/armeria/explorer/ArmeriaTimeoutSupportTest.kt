@@ -79,7 +79,7 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
         )
     }
 
-    fun testCollectBuilderTimeoutHints_ignoresResolvedNonArmeriaTimeoutCalls() {
+    fun testCollectBuilderTimeoutHints_parenthesizedBuilderChain() {
         myFixture.addClass(
             """
             package java.time;
@@ -101,7 +101,7 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
 
             public class Main {
                 public static void main(String[] args) {
-                    Server.builder()
+                    (Server.builder().requestTimeout(Duration.ofSeconds(5)))
                         .service("/api", new HelloService());
                 }
             }
@@ -109,15 +109,30 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
             class HelloService {}
             """.trimIndent(),
         )
-        myFixture.addClass(
+
+        val serviceCall = findServiceRegistrationCall("example.Main", "main")
+        assertEquals(
+            listOf(message("route.explorer.timeout.request", "Duration.ofSeconds(5)")),
+            ArmeriaTimeoutSupport.collectBuilderTimeoutHints(serviceCall),
+        )
+    }
+
+    fun testCollectBuilderTimeoutHints_ignoresResolvedNonArmeriaTimeoutCalls() {
+        myFixture.configureByText(
+            "Main.java",
             """
             package example;
 
-            public class Config {
-                public Config requestTimeout(java.time.Duration duration) {
-                    return this;
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/api", new HelloService());
                 }
             }
+
+            class HelloService {}
             """.trimIndent(),
         )
 

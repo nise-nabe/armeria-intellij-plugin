@@ -312,9 +312,7 @@ object ArmeriaRouteCollector {
             registrationMethod == ServiceRegistrationMethod.ANNOTATED_SERVICE && argumentCount > 1
         val normalizedPath = ArmeriaRouteSupport.normalizePath(path)
         val programmaticDecorators = decorators ?: collectProgrammaticDecorators(element, normalizedPath)
-        val timeoutHints = (element as? PsiMethodCallExpression)
-            ?.let(ArmeriaTimeoutSupport::collectBuilderTimeoutHints)
-            .orEmpty()
+        val timeoutHints = collectBuilderTimeoutHints(element)
         routes += ArmeriaRoute.create(
             element = element,
             protocol = protocol.presentableName(),
@@ -397,6 +395,16 @@ object ArmeriaRouteCollector {
         }
         if (isKotlinPluginAvailable()) {
             return ArmeriaKotlinDecoratorSupport.collectProgrammaticDecorators(element, registrationPath)
+        }
+        return emptyList()
+    }
+
+    private fun collectBuilderTimeoutHints(element: PsiElement): List<String> {
+        if (element is PsiMethodCallExpression) {
+            return ArmeriaTimeoutSupport.collectBuilderTimeoutHints(element)
+        }
+        if (isKotlinPluginAvailable()) {
+            return ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(element)
         }
         return emptyList()
     }
