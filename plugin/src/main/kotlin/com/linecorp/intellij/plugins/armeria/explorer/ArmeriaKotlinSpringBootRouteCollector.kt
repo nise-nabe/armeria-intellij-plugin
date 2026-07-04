@@ -25,7 +25,7 @@ internal object ArmeriaKotlinSpringBootRouteCollector {
                 continue
             }
             ArmeriaRouteCollectionMetrics.current()?.filesScanned?.incrementAndGet()
-            val contents = loadVirtualFileText(virtualFile) ?: continue
+            val contents = loadVirtualFileHeaderText(virtualFile) ?: continue
             if (!ArmeriaRouteSupport.mayReferenceSpringBootArmeriaInText(contents)) {
                 continue
             }
@@ -53,9 +53,21 @@ internal object ArmeriaKotlinSpringBootRouteCollector {
         }
     }
 
-    private fun loadVirtualFileText(virtualFile: VirtualFile): CharSequence? =
+    private fun loadVirtualFileHeaderText(virtualFile: VirtualFile): CharSequence? =
         try {
-            String(virtualFile.contentsToByteArray(), virtualFile.charset)
+            val maxBytes = ArmeriaRouteSupport.ARMERIA_HEADER_SCAN_LIMIT * 4
+            val bytesToRead = minOf(virtualFile.length, maxBytes.toLong()).toInt()
+            if (bytesToRead <= 0) {
+                return null
+            }
+            val bytes = ByteArray(bytesToRead)
+            virtualFile.inputStream.use { input ->
+                val read = input.read(bytes)
+                if (read <= 0) {
+                    return null
+                }
+                String(bytes, 0, read, virtualFile.charset)
+            }
         } catch (_: IOException) {
             null
         }
@@ -67,6 +79,9 @@ internal object ArmeriaKotlinSpringBootRouteCollector {
         seenServiceRegistrations: MutableSet<String>,
     ) {
         for (function in file.collectDescendantsOfType<KtNamedFunction>()) {
+            if (!mayHaveSpringBeanAnnotation(function)) {
+                continue
+            }
             val lightMethods = function.toLightMethods()
             if (!lightMethods.any { it.hasAnnotation(ArmeriaRouteSupport.SPRING_BEAN_ANNOTATION) }) {
                 continue
@@ -79,6 +94,16 @@ internal object ArmeriaKotlinSpringBootRouteCollector {
                 routes,
                 seenServiceRegistrations,
             )
+        }
+    }
+
+    private fun mayHaveSpringBeanAnnotation(function: KtNamedFunction): Boolean {
+        if (function.annotationEntries.isEmpty()) {
+            return false
+        }
+        return function.annotationEntries.any { entry ->
+            entry.shortName?.asString() == "Bean" ||
+                entry.text.contains(ArmeriaRouteSupport.SPRING_BEAN_ANNOTATION)
         }
     }
 }
