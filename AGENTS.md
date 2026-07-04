@@ -31,7 +31,7 @@ Do not rely on bare `gh` commands without checking availability. `.cursor/instal
 
 | Goal | Preferred approach |
 |------|-------------------|
-| Create or update a PR | Built-in **ManagePullRequest** tool (`create_pr` / `update_pr`) |
+| Create or update a PR | Built-in **ManagePullRequest** tool (`create_pr` / `update_pr`); body format in `.cursor/rules/pr-description-format.mdc` |
 | Edit PR labels | **EditPullRequestLabels** tool |
 | Verify changes locally | `./gradlew build` (preferred for tests); MCP for compile checks — see `gradle-tapi-mcp` skill |
 | PR check status / CI logs | `gh` only after `gh auth status` succeeds (see `.cursor/skills/cloud-github/SKILL.md`) |
