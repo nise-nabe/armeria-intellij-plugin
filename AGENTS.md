@@ -6,7 +6,7 @@ IntelliJ Platform plugin for Armeria. Gradle multi-project build (`build-logic` 
 
 ### Prerequisites
 
-- **Gradle daemon JVM**: Adoptium 25 (pinned in `gradle/gradle-daemon-jvm.properties`; Foojay resolver downloads it).
+- **Gradle daemon JVM**: Adoptium 25 (pinned in `gradle/gradle-daemon-jvm.properties`; Foojay resolver downloads it). The running daemon may report a different Java until it restarts and applies the pin — see `gradle_get_build_environment`.
 - **Compile toolchain**: Java 21 JetBrains (configured in `build-logic/src/main/kotlin/com.linecorp.intellij.platform-plugin.gradle.kts` and inherited by `plugin/`).
 - Gradle wrapper (`./gradlew`) downloads the distribution and dependencies on first use.
 
@@ -18,7 +18,9 @@ Prefer token-efficient MCP workflows documented in `.cursor/skills/gradle-tapi-m
 
 1. `gradle_get_build_environment` for resolved Gradle/Java versions
 2. `gradle_get_project_overview` for module hierarchy
-3. `gradle_run_tasks` with `["build"]` or targeted `:plugin:test` when verification is needed
+3. `gradle_run_tasks` with `[":plugin:compileKotlin"]` for fast compile checks
+
+For **`:plugin:test` and `build`**, prefer `./gradlew` in Cursor Cloud — IntelliJ tests are long-running and MCP clients often time out. When using MCP for tests, pass `background: true` and poll `gradle_get_build_status`; never overlap concurrent MCP test runs. If MCP stops responding, read `.gradle/mcp-builds/<buildId>/mcp-result.json` and fall back to shell. Task discovery: query `:plugin` (root `gradle_get_build_invocations` returns few tasks).
 
 ### GitHub and pull requests (Cursor Cloud)
 
@@ -31,7 +33,7 @@ Do not rely on bare `gh` commands without checking availability. `.cursor/instal
 |------|-------------------|
 | Create or update a PR | Built-in **ManagePullRequest** tool (`create_pr` / `update_pr`) |
 | Edit PR labels | **EditPullRequestLabels** tool |
-| Verify changes locally | `./gradlew build` or Gradle MCP `gradle_run_tasks` |
+| Verify changes locally | `./gradlew build` (preferred for tests); MCP for compile checks — see `gradle-tapi-mcp` skill |
 | PR check status / CI logs | `gh` only after `gh auth status` succeeds (see `.cursor/skills/cloud-github/SKILL.md`) |
 
 If `gh` is not found or auth fails, use ManagePullRequest for PR work and Gradle for build
@@ -47,6 +49,7 @@ token lacks required scopes.
 | Unit tests | `./gradlew :plugin:test` |
 | Run IDE sandbox | `./gradlew :plugin:runIde` |
 | Fast CI-style check | `./gradlew --no-daemon :plugin:compileKotlin :plugin:test` |
+| Fix stale test sandbox | `.cursor/clean-test-sandbox.sh` |
 
 There is no separate lint task; `./gradlew build` is the compile/test gate.
 
