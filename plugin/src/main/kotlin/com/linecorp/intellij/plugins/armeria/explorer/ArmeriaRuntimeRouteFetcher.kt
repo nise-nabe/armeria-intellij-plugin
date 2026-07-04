@@ -1,6 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.ProgressManager
+import com.intellij.openapi.project.Project
 import com.linecorp.intellij.plugins.armeria.message
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -12,6 +14,7 @@ data class ArmeriaDocServiceFetchRequest(
     val port: Int,
     val useHttps: Boolean,
     val mountPaths: List<String>,
+    val project: Project,
 )
 
 sealed interface ArmeriaDocServiceFetchResult {
@@ -43,7 +46,7 @@ object ArmeriaRuntimeRouteFetcher {
             when (val readResult = readUrl(url)) {
                 is ReadResult.Success -> {
                     val parsed = ArmeriaDocServiceSpecificationParser.parse(readResult.body)
-                    val routes = toArmeriaRoutes(parsed.routes)
+                    val routes = toArmeriaRoutes(parsed.routes, project = request.project)
                     if (routes.isNotEmpty()) {
                         val resolvedMountPath = parsed.docServiceMountPath
                             ?.let(ArmeriaDocServiceEndpointValidator::normalizeMountPath)
@@ -72,11 +75,13 @@ object ArmeriaRuntimeRouteFetcher {
         specificationJson: String,
         moduleName: String,
         protocol: String,
+        project: Project? = null,
     ): List<ArmeriaRoute> {
         return toArmeriaRoutes(
             ArmeriaDocServiceSpecificationParser.parse(specificationJson).routes,
             moduleName = moduleName,
             protocol = protocol,
+            project = project,
         )
     }
 
@@ -84,6 +89,7 @@ object ArmeriaRuntimeRouteFetcher {
         routes: List<ArmeriaDocServiceSpecificationParser.ParsedRoute>,
         moduleName: String = message("route.explorer.module.runtime"),
         protocol: String = message("route.explorer.protocol.runtime"),
+        project: Project? = null,
     ): List<ArmeriaRoute> {
         return routes.map { parsed ->
             ArmeriaRoute.createRuntime(
@@ -92,6 +98,7 @@ object ArmeriaRuntimeRouteFetcher {
                 target = parsed.serviceName + if (parsed.methodName.isBlank()) "" else "/${parsed.methodName}",
                 moduleName = moduleName,
                 protocol = protocol,
+                project = project,
             )
         }
     }
@@ -114,6 +121,8 @@ object ArmeriaRuntimeRouteFetcher {
             }
             val body = connection.inputStream.use(::readLimitedBody)
             ReadResult.Success(body)
+        } catch (exception: ProcessCanceledException) {
+            throw exception
         } catch (exception: IOException) {
             ReadResult.Failure(exception.message ?: exception.javaClass.simpleName)
         } catch (exception: Exception) {
@@ -128,6 +137,7 @@ object ArmeriaRuntimeRouteFetcher {
         val chunk = ByteArray(8_192)
         var total = 0
         while (true) {
+            ProgressManager.checkCanceled()
             val read = input.read(chunk)
             if (read < 0) {
                 break

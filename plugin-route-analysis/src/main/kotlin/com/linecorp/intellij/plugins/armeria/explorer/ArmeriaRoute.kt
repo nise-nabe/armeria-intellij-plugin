@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.SmartPointerManager
 import com.intellij.psi.SmartPsiElementPointer
@@ -106,6 +107,7 @@ data class ArmeriaRoute(
             target: String,
             moduleName: String,
             protocol: String,
+            project: Project? = null,
         ): ArmeriaRoute {
             return ArmeriaRoute(
                 protocol = protocol,
@@ -118,7 +120,7 @@ data class ArmeriaRoute(
                 isDocService = false,
                 decorators = emptyList(),
                 exceptionHandlers = emptyList(),
-                pointer = ArmeriaRuntimeRoutePointer,
+                pointer = project?.let(::ArmeriaRuntimeRoutePointer) ?: ArmeriaRuntimeRoutePointer.withoutProject(),
             )
         }
 

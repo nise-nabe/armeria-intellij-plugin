@@ -41,6 +41,7 @@ class ArmeriaSyncRuntimeRoutesAction : DumbAwareAction(
             port = port,
             useHttps = dialog.useHttps,
             mountPaths = mountPaths,
+            project = project,
         )
         ProgressManager.getInstance().run(
             object : Task.Backgroundable(project, message("route.explorer.sync.progress"), true) {

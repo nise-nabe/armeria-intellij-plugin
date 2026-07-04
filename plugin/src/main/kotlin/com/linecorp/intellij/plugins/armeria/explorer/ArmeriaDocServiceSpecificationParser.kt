@@ -101,21 +101,56 @@ internal object ArmeriaDocServiceSpecificationParser {
     private data class ParsedJsonString(val value: String, val endIndex: Int)
 
     private fun indexOfJsonField(json: String, fieldName: String): Int? {
-        val pattern = "\"$fieldName\""
-        var searchFrom = 0
-        while (searchFrom < json.length) {
-            val index = json.indexOf(pattern, searchFrom)
-            if (index < 0) {
+        val trimmed = json.trim()
+        if (!trimmed.startsWith("{")) {
+            return null
+        }
+        var index = skipWhitespace(trimmed, 1)
+        while (index < trimmed.length) {
+            index = skipWhitespace(trimmed, index)
+            if (index >= trimmed.length || trimmed[index] == '}') {
+                break
+            }
+            if (trimmed[index] != '"') {
                 return null
             }
-            var cursor = index + pattern.length
-            cursor = skipWhitespace(json, cursor)
-            if (cursor < json.length && json[cursor] == ':') {
-                return skipWhitespace(json, cursor + 1)
+            val key = readJsonString(trimmed, index) ?: return null
+            index = skipWhitespace(trimmed, key.endIndex)
+            if (index >= trimmed.length || trimmed[index] != ':') {
+                return null
             }
-            searchFrom = index + pattern.length
+            val valueStart = skipWhitespace(trimmed, index + 1)
+            if (key.value == fieldName) {
+                return valueStart
+            }
+            index = skipJsonValue(trimmed, valueStart) ?: return null
+            index = skipWhitespace(trimmed, index)
+            if (index < trimmed.length && trimmed[index] == ',') {
+                index++
+            }
         }
         return null
+    }
+
+    private fun skipJsonValue(json: String, startIndex: Int): Int? {
+        if (startIndex >= json.length) {
+            return null
+        }
+        return when (val ch = json[startIndex]) {
+            '"' -> readJsonString(json, startIndex)?.endIndex
+            '{', '[' -> {
+                val closeChar = if (ch == '{') '}' else ']'
+                val balanced = extractBalanced(json, startIndex, ch, closeChar) ?: return null
+                skipWhitespace(json, startIndex + balanced.length)
+            }
+            else -> {
+                var index = startIndex
+                while (index < json.length && json[index] != ',' && json[index] != '}') {
+                    index++
+                }
+                index
+            }
+        }
     }
 
     private fun splitJsonObjects(arrayJson: String): List<String> {

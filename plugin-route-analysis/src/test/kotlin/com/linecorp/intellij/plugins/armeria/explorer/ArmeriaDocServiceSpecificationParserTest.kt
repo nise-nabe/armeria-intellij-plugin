@@ -147,6 +147,34 @@ class ArmeriaDocServiceSpecificationParserTest {
     }
 
     @Test
+    fun parse_readsServiceNameWhenMethodsAppearBeforeNameField() {
+        val json = """
+            {
+              "services": [
+                {
+                  "methods": [
+                    {
+                      "name": "getUser",
+                      "httpMethod": "GET",
+                      "endpoints": [
+                        { "pathMapping": "/api/users/{id}" }
+                      ]
+                    }
+                  ],
+                  "name": "com.example.FooService"
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val parsed = ArmeriaDocServiceSpecificationParser.parse(json)
+
+        assertEquals(1, parsed.routes.size)
+        assertEquals("com.example.FooService", parsed.routes.single().serviceName)
+        assertEquals("getUser", parsed.routes.single().methodName)
+    }
+
+    @Test
     fun parse_ignoresOpenApiStylePathFields() {
         val json = """
             {
