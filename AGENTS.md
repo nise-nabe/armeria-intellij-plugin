@@ -20,6 +20,24 @@ Prefer token-efficient MCP workflows documented in `.cursor/skills/gradle-tapi-m
 2. `gradle_get_project_overview` for module hierarchy
 3. `gradle_run_tasks` with `["build"]` or targeted `:plugin:test` when verification is needed
 
+### GitHub and pull requests (Cursor Cloud)
+
+Do not rely on bare `gh` commands without checking availability. `.cursor/install.sh` symlinks
+`/exec-daemon/gh` into `~/.local/bin/gh` and, when `/usr/local/bin` is writable, into
+`/usr/local/bin/gh`. When `gh auth status` is unauthenticated, it logs in with `GH_TOKEN` or
+`GITHUB_TOKEN` if set.
+
+| Goal | Preferred approach |
+|------|-------------------|
+| Create or update a PR | Built-in **ManagePullRequest** tool (`create_pr` / `update_pr`) |
+| Edit PR labels | **EditPullRequestLabels** tool |
+| Verify changes locally | `./gradlew build` or Gradle MCP `gradle_run_tasks` |
+| PR check status / CI logs | `gh` only after `gh auth status` succeeds (see `.cursor/skills/cloud-github/SKILL.md`) |
+
+If `gh` is not found or auth fails, use ManagePullRequest for PR work and Gradle for build
+verification instead of retrying `gh`. Set `GH_TOKEN` in Cursor Cloud Secrets when the GitHub App
+token lacks required scopes.
+
 ### Build, test, lint
 
 | Goal | Command |
