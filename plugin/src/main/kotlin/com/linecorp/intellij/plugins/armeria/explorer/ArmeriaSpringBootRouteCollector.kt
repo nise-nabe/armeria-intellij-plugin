@@ -26,7 +26,6 @@ internal object ArmeriaSpringBootRouteCollector {
             if (!ArmeriaRouteSupport.isArmeriaServerBeanReturnType(method, scope)) {
                 return@forEach
             }
-            ArmeriaRouteCollectionMetrics.current()?.armeriaFiles?.incrementAndGet()
             collectServiceRegistrationsFromBeanMethod(method, routes, seenServiceRegistrations)
         }
     }
