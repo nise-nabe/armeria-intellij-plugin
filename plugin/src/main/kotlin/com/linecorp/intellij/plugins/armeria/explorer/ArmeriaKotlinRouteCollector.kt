@@ -93,6 +93,9 @@ internal object ArmeriaKotlinRouteCollector {
         collectServiceRegistrationsInScope(file, routes, seenServiceRegistrations)
     }
 
+    internal fun resolveKotlinReturnTypeText(typeReference: KtTypeReference?): String? =
+        resolveKotlinTypeReferenceText(typeReference)
+
     private fun resolveCallName(call: KtCallExpression): String? {
         val callee = call.calleeExpression ?: return null
         return when (callee) {

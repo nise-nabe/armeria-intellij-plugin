@@ -171,6 +171,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTes
             """
             package example
 
+            import com.linecorp.armeria.spring.ArmeriaServerConfigurator
             import org.springframework.context.annotation.Bean
             import org.springframework.context.annotation.Configuration
 

@@ -80,6 +80,15 @@ object ArmeriaRouteCollector {
                 fallbackScannedFiles,
                 seenServiceRegistrations,
             )
+            if (ArmeriaRouteSupport.isSpringBootArmeriaAvailable(psiFacade, scope)) {
+                ArmeriaKotlinSpringBootRouteCollector.collect(
+                    project,
+                    scope,
+                    routes,
+                    fallbackScannedFiles,
+                    seenServiceRegistrations,
+                )
+            }
         }
         if (ArmeriaRouteSupport.isSpringBootArmeriaAvailable(psiFacade, scope)) {
             ArmeriaSpringBootRouteCollector.collect(
