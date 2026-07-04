@@ -43,8 +43,9 @@ Do not install `gh` via apt, brew, or curl in agent sessions.
 GitHub Actions runs `./gradlew build` (see `.github/workflows/main.yml`).
 For agent-side verification, prefer:
 
-1. `gradle_run_tasks` with `["build"]` or `[":plugin:test"]` (see `gradle-tapi-mcp` skill)
-2. `./gradlew --no-daemon :plugin:compileKotlin :plugin:test`
+1. `./gradlew build` or `./gradlew --no-daemon :plugin:compileKotlin :plugin:test` — matches CI; reliable for long IntelliJ tests
+2. MCP `gradle_run_tasks` with `[":plugin:compileKotlin"]` for fast compile checks (see `gradle-tapi-mcp` skill)
+3. MCP `gradle_run_tasks` / `gradle_run_tests` with `background: true` only when the MCP client stays responsive; fall back to shell on timeout or unresponsive MCP server
 
 Use `gh pr checks` only when you need GitHub-attached check status and `gh auth status` succeeds.
 
