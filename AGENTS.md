@@ -20,7 +20,7 @@ Prefer token-efficient MCP workflows documented in `.cursor/skills/gradle-tapi-m
 2. `gradle_get_project_overview` for module hierarchy
 3. `gradle_run_tasks` with `[":plugin:compileKotlin"]` for fast compile checks
 
-For **`:plugin:test` and `build`**, prefer `./gradlew` in Cursor Cloud — IntelliJ tests are long-running and MCP clients often time out. When using MCP for tests, pass `background: true` and poll `gradle_get_build_status`; never overlap concurrent MCP test runs. If MCP stops responding, read `.gradle/mcp-builds/<buildId>/mcp-result.json` and fall back to shell. Task discovery: query `:plugin` (root `gradle_get_build_invocations` returns few tasks).
+For **`:plugin:test` and `build`**, prefer `./gradlew` in Cursor Cloud — IntelliJ tests are long-running and MCP clients often time out (~60s). Use `background: true` and poll `gradle_get_build_status` for MCP builds; never overlap concurrent MCP test runs. Cold-start compile may also timeout in foreground while Gradle still succeeds — use background + poll or `gradle_list_builds`. If MCP stops responding, read `.gradle/mcp-builds/<buildId>/mcp-result.json` and fall back to shell. Task discovery: see `gradle-tapi-mcp` skill (`gradle_get_build_invocations` / `gradle_get_project_model`).
 
 ### GitHub and pull requests (Cursor Cloud)
 
