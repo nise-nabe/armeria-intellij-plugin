@@ -1,4 +1,5 @@
 import org.jetbrains.changelog.Changelog
+import org.jetbrains.changelog.date
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 
 plugins {
@@ -27,6 +28,14 @@ testing {
             }
         }
     }
+}
+
+changelog {
+    version.set(providers.gradleProperty("pluginVersion"))
+    path.set(file("CHANGELOG.md").canonicalPath)
+    header.set(provider { "[${version.get()}] - ${date()}" })
+    unreleasedTerm.set("[Unreleased]")
+    keepUnreleasedSection.set(true)
 }
 
 intellijPlatform {
