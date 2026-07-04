@@ -9,14 +9,28 @@ description: >-
 
 This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.3.0 in `.cursor/mcp.json`. The JAR is installed by `.cursor/install.sh` to `~/.local/share/gradle-tapi-mcp-server/gradle-tapi-mcp-server.jar`. At MCP server launch, `.cursor/mcp.json` sets `GRADLE_PROJECT_DIR=${workspaceFolder}`.
 
+The MCP server may report `loading` for a few seconds on first use; call `gradle_connection_status` before other tools.
+
 ## Workflow (token-efficient)
 
-1. `gradle_connection_status` — confirm connected
+1. `gradle_connection_status` — confirm connected (`connectedAny: true`)
 2. `gradle_get_build_environment` — resolved Gradle/Java versions
 3. `gradle_get_project_overview` — module hierarchy (`build-logic`, `plugin`)
-4. `gradle_run_tasks` with `["build"]` or `[":plugin:compileKotlin"]` when verification is needed
+4. `gradle_run_tasks` with `[":plugin:compileKotlin"]` when verification is needed
 
 Avoid `includeTasks=true` and heavy model queries unless necessary. `gradle_run_tasks` omits stdout/stderr by default (`includeOutput=false`). On failure, check `failedTasks` and `buildSummary.failureSummary` before setting `includeOutput=true`.
+
+### Inquiry tools (read-only, fast)
+
+| Tool | Use |
+|------|-----|
+| `gradle_get_gradle_build` | Composite builds (`build-logic` included build) |
+| `gradle_get_java_runtimes` | Daemon Java + toolchain JDKs under `~/.gradle/jdks/` |
+| `gradle_get_build_cache_status` | Build cache / parallel / config-cache settings |
+| `gradle_get_build_invocations` | Task discovery with `taskNamePrefix` / `taskGroup` filters |
+| `gradle_get_project_model` | Task lists with `taskGroup` / `taskNamePrefix` / `maxTasks` |
+| `gradle_get_project_publications` | Published artifacts |
+| `gradle_list_builds` | Recent MCP builds (recovery when a call times out) |
 
 ### Task discovery (root vs `:plugin`)
 
@@ -25,62 +39,66 @@ The workspace root is a thin aggregator; most runnable tasks live on `:plugin` o
 | Goal | Prefer |
 |------|--------|
 | Module tree / composite builds | `gradle_get_project_overview` or `gradle_get_gradle_build` |
-| List verification tasks on `:plugin` | `gradle_get_project_model` with `projectPath: ":plugin"` and `taskGroup: "verification"` |
-| Find compile/test tasks | Use `:plugin:` task paths (e.g. `:plugin:compileKotlin`, `:plugin:test`) |
+| List verification tasks on `:plugin` | `gradle_get_project_model` with `taskGroup: "verification"` and `includeTasks: true` (tasks appear on the `:plugin` child node) |
+| Find compile/test tasks | `gradle_get_build_invocations` with `taskNamePrefix: "compile"` and `includeTasks: true`, or use known paths (`:plugin:compileKotlin`, `:plugin:test`) |
 
-`gradle_get_build_invocations` at the root with `taskNamePrefix: "compile"` often returns `[]`. Query `:plugin` via `projectPath` or use `gradle_get_project_model` instead.
+There is no `projectPath` filter on model tools — they return the project tree; apply `taskGroup` / `taskNamePrefix` and read tasks from the `:plugin` child.
 
 ## When to use MCP vs shell
 
 | Scenario | Prefer |
 |----------|--------|
-| Compile check (`:plugin:compileKotlin`) | MCP `gradle_run_tasks` — fast (~15s), clean JSON |
+| Compile check (`:plugin:compileKotlin`), daemon warm | MCP `gradle_run_tasks` foreground — sub-second to ~2s, clean JSON |
+| Compile check, cold start (first MCP build in session) | MCP `gradle_run_tasks` with `background: true` + poll, or shell — foreground often hits MCP client timeout (~60s) while Gradle still runs |
 | Full `build` or `:plugin:test` in Cloud | **Shell** `./gradlew` — IntelliJ tests are long-running and MCP clients often time out (~60s) |
-| Single test class iteration (local, responsive MCP) | MCP `gradle_run_tests` with `background: true` + polling (see below) |
+| Single test class (daemon + sandbox warm) | MCP `gradle_run_tests` with `background: true` + polling |
+| Single test class (cold sandbox / first run) | **Shell** or MCP background; foreground may timeout |
 | MCP server unresponsive / all tools timeout | **Shell** `./gradlew`; Gradle daemon may still be IDLE while MCP is stuck |
 | PR / CI parity check | `./gradlew build` or `./gradlew --no-daemon :plugin:compileKotlin :plugin:test` |
 
 Do **not** start a second MCP `gradle_run_tasks` or `gradle_run_tests` while one is still running. Overlapping runs cause `InterruptedException`, can leave the IntelliJ test sandbox corrupted, and may wedge the MCP server until it is restarted.
 
-## Long-running IntelliJ tests (`:plugin:test`, `gradle_run_tests`)
+## Running builds and tests
 
-IntelliJ Platform plugin tests spin up IDE sandboxes and routinely exceed MCP client timeouts, even for a single test class.
+### Default: background + poll for anything that may exceed ~30s
 
-### Recommended pattern (when MCP is responsive)
+MCP clients commonly time out around 60s. Gradle may finish successfully even when the initiating call returns `Request timed out`.
 
 1. Start with `background: true`:
 
 ```json
 {
-  "tasks": [":plugin:test"],
+  "tasks": [":plugin:compileKotlin"],
   "background": true
 }
 ```
 
-Or for a single class:
+Or for a single test class:
 
 ```json
 {
-  "testClasses": ["com.linecorp.intellij.plugins.armeria.explorer.ArmeriaClientCollectorTest"],
+  "testClasses": ["com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteTreeBuilderTest"],
   "background": true
 }
 ```
 
 2. Poll `gradle_get_build_status` with the returned `buildId` until `status` is `succeeded`, `failed`, or `cancelled`.
 
-3. Read `outcome` and `buildSummary` from the poll response. Set `includeOutput: true` only if you need truncated logs.
+3. Read `outcome` and `buildSummary` from the poll response. Use `includeProgress: true` for task/test events; set `includeOutput: true` only if you need truncated logs.
 
-**Cursor Cloud caveat:** `background: true` should return a `buildId` immediately, but MCP clients may still time out before the first response. If that happens, fall back to shell (below).
+**If the start call times out:** run `gradle_list_builds` (if MCP responds) or `ls .gradle/mcp-builds/` and poll the most recent `buildId` with `gradle_get_build_status`.
+
+**Foreground is fine when the daemon and outputs are warm** — e.g. repeated `:plugin:compileKotlin` after a recent build often completes in under 1s.
 
 ### Shell fallback (reliable in Cloud)
 
 ```bash
+./gradlew :plugin:compileKotlin
 ./gradlew :plugin:test
 # or a single class:
-./gradlew :plugin:test --tests 'com.linecorp.intellij.plugins.armeria.explorer.ArmeriaClientCollectorTest'
+./gradlew :plugin:test --tests 'com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteTreeBuilderTest'
+./gradlew build
 ```
-
-Use `./gradlew build` for full verification (same as CI).
 
 ### Disk recovery when MCP is stuck
 
@@ -105,10 +123,10 @@ If every MCP call times out but `./gradlew` still works:
 
 | Goal | MCP tool | Example |
 |------|----------|---------|
-| Full verify | `gradle_run_tasks` or shell | `{ "tasks": ["build"] }` — prefer `./gradlew build` in Cloud |
+| Full verify | shell (preferred) | `./gradlew build` |
 | All plugin tests | shell (preferred) or MCP background | `./gradlew :plugin:test` |
-| Single test class | `gradle_run_tests` + background, or shell | See long-running section above |
-| Fast compile gate | `gradle_run_tasks` | `{ "tasks": [":plugin:compileKotlin"] }` |
+| Single test class | `gradle_run_tests` + background, or shell | See running builds section |
+| Fast compile gate | `gradle_run_tasks` | `{ "tasks": [":plugin:compileKotlin"] }` — use `background: true` on cold start |
 
 Prefer shell for `:plugin:test` and `build` in Cursor Cloud. Use MCP for lightweight queries and compile checks.
 
