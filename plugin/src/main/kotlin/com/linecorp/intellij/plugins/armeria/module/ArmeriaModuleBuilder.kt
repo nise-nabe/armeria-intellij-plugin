@@ -69,22 +69,17 @@ class ArmeriaModuleBuilder: StarterModuleBuilder() {
         }
 
 
-        val languageDir = when (starterContext.language) {
-            KOTLIN_STARTER_LANGUAGE -> "kotlin"
-            SCALA_STARTER_LANGUAGE -> "scala"
+        val isKotlin = starterContext.language == KOTLIN_STARTER_LANGUAGE
+        val languageDir = when {
+            isKotlin -> "kotlin"
+            starterContext.language == SCALA_STARTER_LANGUAGE -> "scala"
             else -> "java"
         }
         val packagePath = suggestPackageName(starterContext.group, starterContext.artifact)
             .replace('.', '/')
         if (starterContext.language != SCALA_STARTER_LANGUAGE) {
-            val mainFileName = when (starterContext.language) {
-                KOTLIN_STARTER_LANGUAGE -> "Main.kt"
-                else -> "Main.java"
-            }
-            val mainTemplate = when (starterContext.language) {
-                KOTLIN_STARTER_LANGUAGE -> "armeria-main.kt"
-                else -> "armeria-main.java"
-            }
+            val mainFileName = if (isKotlin) "Main.kt" else "Main.java"
+            val mainTemplate = if (isKotlin) "armeria-main.kt" else "armeria-main.java"
             assets.add(GeneratorTemplateFile(
                 "src/main/$languageDir/$packagePath/$mainFileName",
                 ftManager.getJ2eeTemplate(mainTemplate),
@@ -94,8 +89,8 @@ class ArmeriaModuleBuilder: StarterModuleBuilder() {
                 ftManager.getJ2eeTemplate("armeria-logback.xml"),
             ))
             if (starterContext.testFramework == JUNIT5_TEST_RUNNER) {
-                val testFileName = if (starterContext.language == KOTLIN_STARTER_LANGUAGE) "MainTest.kt" else "MainTest.java"
-                val testTemplate = if (starterContext.language == KOTLIN_STARTER_LANGUAGE) "armeria-service-test.kt" else "armeria-service-test.java"
+                val testFileName = if (isKotlin) "MainTest.kt" else "MainTest.java"
+                val testTemplate = if (isKotlin) "armeria-service-test.kt" else "armeria-service-test.java"
                 assets.add(GeneratorTemplateFile(
                     "src/test/$languageDir/$packagePath/$testFileName",
                     ftManager.getJ2eeTemplate(testTemplate),
