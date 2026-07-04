@@ -101,6 +101,63 @@ class ArmeriaKotlinClientCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals("WebClient", endpoints.single().target)
     }
 
+    fun testIgnoresNoArgWebClientBuilderFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+
+            fun main() {
+                WebClient.builder()
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+
+        assertTrue(endpoints.isEmpty())
+    }
+
+    fun testNoFalsePositiveOnNonArmeriaWebClient() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.example.WebClient
+
+            fun main() {
+                WebClient.builder("https://example.com")
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.example;
+
+            public final class WebClient {
+                public static WebClientBuilder builder(String uri) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.example;
+
+            public final class WebClientBuilder {
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+
+        assertTrue(endpoints.isEmpty())
+    }
+
     private fun registerArmeriaClientStubs() {
         myFixture.addClass(
             """

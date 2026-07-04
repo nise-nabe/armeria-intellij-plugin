@@ -119,6 +119,27 @@ class ArmeriaClientCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals("https://thrift.example.com", endpoint.uri)
     }
 
+    fun testIgnoresNoArgWebClientBuilder() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+
+            public class Main {
+                public static void main(String[] args) {
+                    WebClient.builder();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+
+        assertTrue(endpoints.isEmpty())
+    }
+
     fun testNoFalsePositiveOnUnrelatedBuilder() {
         myFixture.configureByText(
             "Main.java",

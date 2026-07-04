@@ -50,8 +50,8 @@ internal object ArmeriaKotlinClientCollector {
         }
         val resolvedClass = resolveContainingClass(call) ?: return
         val protocol = ArmeriaClientSupport.protocolForClass(resolvedClass) ?: return
+        val uri = extractUri(call, methodName) ?: return
         val target = resolveTargetName(call) ?: resolvedClass.substringAfterLast('.')
-        val uri = extractUri(call, methodName) ?: target
         ArmeriaClientCollector.addEndpoint(call, protocol, target, uri, endpoints, seenEndpoints)
     }
 
@@ -98,20 +98,14 @@ internal object ArmeriaKotlinClientCollector {
         if (qualifierText.isBlank()) {
             return null
         }
-        val simpleName = qualifierText.substringAfterLast('.')
-        return when (simpleName) {
-            "WebClient" -> "com.linecorp.armeria.client.WebClient"
-            "GrpcClient" -> "com.linecorp.armeria.client.grpc.GrpcClient"
-            "GrpcClients" -> "com.linecorp.armeria.client.grpc.GrpcClients"
-            "ThriftClient" -> "com.linecorp.armeria.client.thrift.ThriftClient"
-            "ThriftClients" -> "com.linecorp.armeria.client.thrift.ThriftClients"
-            else -> {
-                val importFqcn = file?.importList?.imports?.firstOrNull { import ->
-                    import.importedFqName?.shortName()?.asString() == simpleName
-                }?.importedFqName?.asString()
-                importFqcn?.takeIf { ArmeriaClientSupport.protocolForClass(it) != null }
-            }
+        if (qualifierText.startsWith("com.linecorp.armeria")) {
+            return qualifierText.takeIf { ArmeriaClientSupport.protocolForClass(it) != null }
         }
+        val simpleName = qualifierText.substringAfterLast('.')
+        val importFqcn = file?.importList?.imports?.firstOrNull { import ->
+            import.importedFqName?.shortName()?.asString() == simpleName
+        }?.importedFqName?.asString()
+        return importFqcn?.takeIf { ArmeriaClientSupport.protocolForClass(it) != null }
     }
 
     private fun extractUri(call: KtCallExpression, methodName: String): String? {

@@ -23,6 +23,7 @@
 ### Removed
 
 ### Fixed
+- Fixed Armeria Clients explorer listing no-arg `builder()` calls and non-Armeria `WebClient` false positives in Kotlin fallback resolution.
 - Fixed Kotlin client URI extraction, `GrpcClients`/`ThriftClients.newClient` discovery, and async PSI collection in Armeria Clients explorer.
 - Fixed duplicate Kotlin annotated routes and false-positive service registrations in Route Explorer.
 - Fixed false-positive route detection for unqualified `service` calls inside `also`/`let` blocks on `Server.builder()`.

@@ -75,9 +75,9 @@ object ArmeriaClientCollector {
         }
         val resolvedClass = expression.resolveMethod()?.containingClass?.qualifiedName ?: return
         val protocol = ArmeriaClientSupport.protocolForClass(resolvedClass) ?: return
+        val uri = extractUri(expression, methodName) ?: return
         val target = expression.methodExpression.qualifierExpression?.text
             ?: resolvedClass.substringAfterLast('.')
-        val uri = extractUri(expression, methodName) ?: target
         addEndpoint(expression, protocol, target, uri, endpoints, seenEndpoints)
     }
 
