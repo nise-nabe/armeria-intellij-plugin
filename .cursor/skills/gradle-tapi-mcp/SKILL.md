@@ -27,7 +27,7 @@ Avoid `includeTasks=true` and heavy model queries unless necessary. `gradle_run_
 | Full verify | `gradle_run_tasks` | `{ "tasks": ["build"] }` |
 | All plugin tests | `gradle_run_tasks` | `{ "tasks": [":plugin:test"] }` |
 | Single test class | `gradle_run_tests` | `{ "testClasses": ["com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteCollectorTest"] }` |
-| Single test method | `gradle_run_tests` | `{ "testMethods": { "com.example.FooTest": ["shouldWork"] } }` |
+| Single test method | `gradle_run_tests` | `{ "testMethods": { "com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteCollectorTest": ["testCollectAnnotatedRoute"] } }` |
 
 Prefer `gradle_run_tests` when iterating on a failing test; use `gradle_run_tasks` for full `:plugin:test` or `build`.
 
@@ -36,7 +36,7 @@ Prefer `gradle_run_tests` when iterating on a failing test; use `gradle_run_task
 This repo uses two JVM roles:
 
 - **Gradle daemon JVM**: Adoptium 25 (`gradle/gradle-daemon-jvm.properties`)
-- **Compile toolchain**: Java 21 JetBrains (`build-logic/.../com.linecorp.intellij.platform-plugin.gradle.kts`)
+- **Compile toolchain**: Java 21 JetBrains (`build-logic/src/main/kotlin/com.linecorp.intellij.platform-plugin.gradle.kts`)
 
 `gradle_get_build_environment` shows the daemon's Java. For all detected JDKs (including toolchain downloads under `~/.gradle/jdks/`), use `gradle_get_java_runtimes`.
 
