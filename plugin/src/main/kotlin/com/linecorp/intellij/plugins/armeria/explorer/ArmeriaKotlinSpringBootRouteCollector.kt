@@ -35,13 +35,16 @@ internal object ArmeriaKotlinSpringBootRouteCollector {
     }
 
     private fun referencesSpringBootArmeria(file: KtFile): Boolean {
-        val hasSpringImports = file.importList?.imports?.any { import ->
-            import.importedFqName?.asString()?.startsWith(ArmeriaRouteSupport.ARMERIA_SPRING_PACKAGE_PREFIX) == true
+        val hasArmeriaImports = file.importList?.imports?.any { import ->
+            import.importedFqName?.asString()?.startsWith(ArmeriaRouteSupport.ARMERIA_PACKAGE_PREFIX) == true
         } ?: false
-        if (hasSpringImports) {
+        if (hasArmeriaImports) {
             return true
         }
         val contents = file.viewProvider.contents
+        if (ArmeriaRouteSupport.referencesArmeriaInText(contents)) {
+            return true
+        }
         val searchWindow = contents.subSequence(0, minOf(contents.length, ArmeriaRouteSupport.ARMERIA_HEADER_SCAN_LIMIT))
         return ArmeriaRouteSupport.SPRING_BOOT_ARMERIA_FILE_INDICATORS.any(searchWindow::contains)
     }
@@ -53,10 +56,11 @@ internal object ArmeriaKotlinSpringBootRouteCollector {
         seenServiceRegistrations: MutableSet<String>,
     ) {
         for (function in file.collectDescendantsOfType<KtNamedFunction>()) {
-            if (!function.hasSpringBeanAnnotation()) {
+            val lightMethods = function.toLightMethods()
+            if (!lightMethods.any { it.hasAnnotation(ArmeriaRouteSupport.SPRING_BEAN_ANNOTATION) }) {
                 continue
             }
-            if (!function.isArmeriaServerBeanReturnType(scope)) {
+            if (!lightMethods.any { ArmeriaRouteSupport.isArmeriaServerBeanReturnType(it, scope) }) {
                 continue
             }
             ArmeriaKotlinRouteCollector.collectServiceRegistrationsInScope(
@@ -66,10 +70,4 @@ internal object ArmeriaKotlinSpringBootRouteCollector {
             )
         }
     }
-
-    private fun KtNamedFunction.hasSpringBeanAnnotation(): Boolean =
-        toLightMethods().any { it.hasAnnotation(ArmeriaRouteSupport.SPRING_BEAN_ANNOTATION) }
-
-    private fun KtNamedFunction.isArmeriaServerBeanReturnType(scope: GlobalSearchScope): Boolean =
-        toLightMethods().any { ArmeriaRouteSupport.isArmeriaServerBeanReturnType(it, scope) }
 }

@@ -232,6 +232,49 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTes
         assertEquals("example.HelloService", directRoutes.single().target)
     }
 
+    fun testKotlinSpringBootCollectorCollectsRoutesWithServerImportOnly() {
+        myFixture.configureByText(
+            "ArmeriaConfig.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import org.springframework.context.annotation.Bean
+            import org.springframework.context.annotation.Configuration
+
+            @Configuration
+            class ArmeriaConfig {
+                @Bean
+                fun armeriaServer(): Server =
+                    Server.builder()
+                        .service("/server-import", HelloService())
+                        .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        ArmeriaKotlinSpringBootRouteCollector.collect(
+            project,
+            GlobalSearchScope.projectScope(project),
+            routes,
+            linkedSetOf(),
+            mutableSetOf(),
+        )
+
+        val serverImportRoutes = routes.filter { it.path == "/server-import" && it.routeMatch == RouteMatch.SERVICE }
+        assertEquals(1, serverImportRoutes.size)
+        assertEquals("example.HelloService", serverImportRoutes.single().target)
+    }
+
     fun testCollectServiceRegistrationFromBeanServerBuilder() {
         myFixture.configureByText(
             "ArmeriaConfig.kt",
