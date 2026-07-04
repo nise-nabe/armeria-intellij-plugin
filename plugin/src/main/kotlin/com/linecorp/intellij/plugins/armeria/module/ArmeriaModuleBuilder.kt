@@ -74,7 +74,8 @@ class ArmeriaModuleBuilder: StarterModuleBuilder() {
             SCALA_STARTER_LANGUAGE -> "scala"
             else -> "java"
         }
-        val packagePath = getPackagePath(starterContext.group, starterContext.artifact)
+        val packagePath = suggestPackageName(starterContext.group, starterContext.artifact)
+            .replace('.', '/')
         if (starterContext.language != SCALA_STARTER_LANGUAGE) {
             val mainFileName = when (starterContext.language) {
                 KOTLIN_STARTER_LANGUAGE -> "Main.kt"
