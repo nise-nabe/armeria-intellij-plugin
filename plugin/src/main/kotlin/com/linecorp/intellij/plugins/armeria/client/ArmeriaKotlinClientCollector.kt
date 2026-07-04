@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaKotlinRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
+import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
 
 internal object ArmeriaKotlinClientCollector {
     fun collect(
@@ -161,15 +162,4 @@ internal object ArmeriaKotlinClientCollector {
         }
     }
 
-    private inline fun PsiElement.forEachDescendant(action: (PsiElement) -> Unit) {
-        val queue = ArrayDeque<PsiElement>()
-        queue.add(this)
-        while (queue.isNotEmpty()) {
-            val element = queue.removeFirst()
-            action(element)
-            for (child in element.children) {
-                queue.add(child)
-            }
-        }
-    }
 }
