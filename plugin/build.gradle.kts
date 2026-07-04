@@ -36,6 +36,7 @@ changelog {
     header.set(provider { "[${version.get()}] - ${date()}" })
     unreleasedTerm.set("[Unreleased]")
     keepUnreleasedSection.set(true)
+    groups.set(listOf("Added", "Changed", "Deprecated", "Removed", "Fixed", "Security"))
 }
 
 intellijPlatform {
