@@ -294,6 +294,24 @@ object ArmeriaRouteSupport {
         return ARMERIA_REFERENCE_PATTERN.containsMatchIn(searchWindow)
     }
 
+    fun referencesArmeriaKotlinContentInText(contents: CharSequence): Boolean {
+        val header = contents.subSequence(0, minOf(contents.length, ARMERIA_HEADER_SCAN_LIMIT))
+        if (header.contains("import $ARMERIA_PACKAGE_PREFIX")) {
+            return true
+        }
+        return referencesArmeriaInText(contents)
+    }
+
+    fun mayReferenceSpringBootArmeriaInText(contents: CharSequence): Boolean {
+        if (referencesArmeriaKotlinContentInText(contents)) {
+            return true
+        }
+        val header = contents.subSequence(0, minOf(contents.length, ARMERIA_HEADER_SCAN_LIMIT))
+        return SPRING_BOOT_ARMERIA_FILE_INDICATORS.any { indicator ->
+            header.contains(indicator)
+        }
+    }
+
     fun looksLikeServerBuilderReceiverText(text: String): Boolean {
         return SERVER_BUILDER_CALL.containsMatchIn(text) || SERVER_BUILDER_IDENTIFIER.containsMatchIn(text)
     }

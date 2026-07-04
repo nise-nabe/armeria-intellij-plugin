@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
+import java.io.IOException
 
 internal object ArmeriaKotlinSpringBootRouteCollector {
     fun collect(
@@ -24,6 +25,10 @@ internal object ArmeriaKotlinSpringBootRouteCollector {
                 continue
             }
             ArmeriaRouteCollectionMetrics.current()?.filesScanned?.incrementAndGet()
+            val contents = loadVirtualFileText(virtualFile) ?: continue
+            if (!ArmeriaRouteSupport.mayReferenceSpringBootArmeriaInText(contents)) {
+                continue
+            }
             val file = PsiManager.getInstance(project).findFile(virtualFile) as? KtFile ?: continue
             if (!referencesSpringBootArmeria(file)) {
                 continue
@@ -38,12 +43,22 @@ internal object ArmeriaKotlinSpringBootRouteCollector {
         if (ArmeriaKotlinRouteCollector.referencesArmeriaKotlinContent(file)) {
             return true
         }
-        val contents = file.viewProvider.contents
-        val searchWindow = contents.subSequence(0, minOf(contents.length, ArmeriaRouteSupport.ARMERIA_HEADER_SCAN_LIMIT))
+        return hasSpringBootArmeriaFileIndicators(file.viewProvider.contents)
+    }
+
+    private fun hasSpringBootArmeriaFileIndicators(contents: CharSequence): Boolean {
+        val header = contents.subSequence(0, minOf(contents.length, ArmeriaRouteSupport.ARMERIA_HEADER_SCAN_LIMIT))
         return ArmeriaRouteSupport.SPRING_BOOT_ARMERIA_FILE_INDICATORS.any { indicator ->
-            searchWindow.contains(indicator)
+            header.contains(indicator)
         }
     }
+
+    private fun loadVirtualFileText(virtualFile: VirtualFile): CharSequence? =
+        try {
+            String(virtualFile.contentsToByteArray(), virtualFile.charset)
+        } catch (_: IOException) {
+            null
+        }
 
     private fun collectBeanServerRegistrations(
         file: KtFile,
