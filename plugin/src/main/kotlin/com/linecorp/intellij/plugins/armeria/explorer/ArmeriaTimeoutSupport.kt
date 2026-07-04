@@ -12,16 +12,16 @@ internal object ArmeriaTimeoutSupport {
 
     fun collectTimeoutHints(element: PsiElement): List<String> {
         val hints = mutableListOf<String>()
-        val method = PsiTreeUtil.getParentOfType(element, PsiMethod::class.java)
+        val method = PsiTreeUtil.getParentOfType(element, PsiMethod::class.java, false)
         if (method != null) {
             annotationHint(method, BLOCKING_ANNOTATION, "Blocking")?.let(hints::add)
             annotationHint(method, NON_BLOCKING_ANNOTATION, "Non-blocking")?.let(hints::add)
-        }
-        PsiTreeUtil.findChildrenOfType(element.containingFile, PsiMethodCallExpression::class.java).forEach { call ->
-            when (call.methodExpression.referenceName) {
-                "requestTimeout" -> hints += formatTimeoutCall("Request timeout", call)
-                "responseTimeout" -> hints += formatTimeoutCall("Response timeout", call)
-                "idleTimeout" -> hints += formatTimeoutCall("Idle timeout", call)
+            PsiTreeUtil.findChildrenOfType(method, PsiMethodCallExpression::class.java).forEach { call ->
+                when (call.methodExpression.referenceName) {
+                    "requestTimeout" -> hints += formatTimeoutCall("Request timeout", call)
+                    "responseTimeout" -> hints += formatTimeoutCall("Response timeout", call)
+                    "idleTimeout" -> hints += formatTimeoutCall("Idle timeout", call)
+                }
             }
         }
         return hints.distinct()
