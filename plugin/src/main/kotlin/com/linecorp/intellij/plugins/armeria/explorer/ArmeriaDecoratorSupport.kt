@@ -31,7 +31,7 @@ internal object ArmeriaDecoratorSupport {
 
     fun labelDecorator(raw: String): String {
         val normalized = raw.removeSuffix("::class.java").removeSuffix("::class").removeSuffix(".class")
-        val simpleName = normalized.substringAfterLast('.')
+        val simpleName = normalized.substringAfterLast('.').removeSuffix("()")
         val bundleKey = KNOWN_DECORATOR_BUNDLE_KEYS[simpleName]
         return if (bundleKey != null) message(bundleKey) else simpleName
     }
