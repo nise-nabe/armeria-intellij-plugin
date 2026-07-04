@@ -90,9 +90,11 @@ class ArmeriaWizardTemplateRenderingTest {
         val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-service-test.java.ft", context)
 
         assertTrue(rendered.contains("package ${context.rootPackage};"))
-        assertTrue(rendered.contains("org.junit.jupiter.api.Test"))
+        assertTrue(rendered.contains("com.linecorp.armeria.testing.junit5.server.ServerExtension"))
+        assertTrue(rendered.contains("org.junit.jupiter.api.extension.RegisterExtension"))
         assertTrue(rendered.contains("@Get(\"/ping\")"))
-        assertTrue(rendered.contains(".http(0)"))
+        assertTrue(rendered.contains("void pingReturnsPong()"))
+        assertTrue(rendered.contains("WebClient.of(server.httpUri())"))
     }
 
     @Test
@@ -101,10 +103,11 @@ class ArmeriaWizardTemplateRenderingTest {
         val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-service-test.kt.ft", context)
 
         assertTrue(rendered.contains("package ${context.rootPackage}"))
-        assertTrue(rendered.contains("org.junit.jupiter.api.Test"))
-        assertTrue(rendered.contains("org.junit.jupiter.api.Assertions.assertNotNull"))
+        assertTrue(rendered.contains("com.linecorp.armeria.testing.junit5.server.ServerExtension"))
+        assertTrue(rendered.contains("org.junit.jupiter.api.extension.RegisterExtension"))
         assertTrue(rendered.contains("@Get(\"/ping\")"))
-        assertTrue(rendered.contains(".http(0)"))
+        assertTrue(rendered.contains("fun pingReturnsPong()"))
+        assertTrue(rendered.contains("WebClient.of(server.httpUri())"))
     }
 
     @Test

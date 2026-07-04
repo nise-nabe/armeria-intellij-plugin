@@ -1,23 +1,33 @@
 package ${context.rootPackage};
 
-import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class MainTest {
-    @Test
-    void serverStarts() {
-        Server server = Server.builder()
-            .http(0)
-            .annotatedService(new Object() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.annotatedService(new Object() {
                 @Get("/ping")
                 public String ping() {
                     return "pong";
                 }
-            })
-            .build();
-        assertNotNull(server);
+            });
+        }
+    };
+
+    @Test
+    void pingReturnsPong() {
+        WebClient client = WebClient.of(server.httpUri());
+        AggregatedHttpResponse res = client.get("/ping").aggregate().join();
+        assertEquals("pong", res.contentUtf8());
     }
 }

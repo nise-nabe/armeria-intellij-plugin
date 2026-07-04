@@ -1,20 +1,31 @@
 package ${context.rootPackage}
 
-import com.linecorp.armeria.server.Server
+import com.linecorp.armeria.client.WebClient
+import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.annotation.Get
-import org.junit.jupiter.api.Assertions.assertNotNull
+import com.linecorp.armeria.testing.junit5.server.ServerExtension
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
 
 class MainTest {
+    companion object {
+        @JvmField
+        @RegisterExtension
+        val server: ServerExtension = object : ServerExtension() {
+            override fun configure(sb: ServerBuilder) {
+                sb.annotatedService(object {
+                    @Get("/ping")
+                    fun ping(): String = "pong"
+                })
+            }
+        }
+    }
+
     @Test
-    fun serverStarts() {
-        val server = Server.builder()
-            .http(0)
-            .annotatedService(object {
-                @Get("/ping")
-                fun ping(): String = "pong"
-            })
-            .build()
-        assertNotNull(server)
+    fun pingReturnsPong() {
+        val client = WebClient.of(server.httpUri())
+        val res = client.get("/ping").aggregate().join()
+        assertEquals("pong", res.contentUtf8())
     }
 }
