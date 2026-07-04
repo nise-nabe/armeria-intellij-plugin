@@ -37,7 +37,7 @@ class ArmeriaRouteDetailFormatterTest : LightJavaCodeInsightFixtureTestCase() {
         assertTrue(ArmeriaRouteDetailFormatter.registrationSummary(route).contains("/users/{id}"))
     }
 
-    fun testAttachmentsLine_includesTimeoutHints() {
+    fun testAttachmentsLine_includesExecutionHints() {
         val route = ArmeriaRoute(
             protocol = "HTTP",
             httpMethod = "GET",
@@ -50,13 +50,14 @@ class ArmeriaRouteDetailFormatterTest : LightJavaCodeInsightFixtureTestCase() {
             annotatedServiceHasPathPrefix = false,
             decorators = emptyList(),
             exceptionHandlers = emptyList(),
-            timeoutHints = listOf(message("route.explorer.timeout.blocking")),
+            executionHints = listOf(message("route.explorer.timeout.blocking")),
             pointer = TestPsiPointer,
         )
 
         val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
 
-        assertTrue(attachments.contains(message("route.explorer.detail.timeouts", message("route.explorer.timeout.blocking"))))
+        assertTrue(attachments.contains(message("route.explorer.detail.execution", message("route.explorer.timeout.blocking"))))
+        assertFalse(attachments.contains(message("route.explorer.detail.timeouts", message("route.explorer.timeout.blocking"))))
     }
 
     fun testAttachmentsLine_omitsSecondarySeparator() {

@@ -44,7 +44,7 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
         )
     }
 
-    fun testCollectTimeoutHints_includesBlockingAnnotation() {
+    fun testCollectExecutionHints_includesBlockingAnnotation() {
         myFixture.configureByText(
             "HelloService.java",
             """
@@ -64,7 +64,29 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
         )
 
         val method = findMethod("example.HelloService", "hello")
-        assertEquals(listOf(message("route.explorer.timeout.blocking")), ArmeriaTimeoutSupport.collectTimeoutHints(method))
+        assertEquals(listOf(message("route.explorer.timeout.blocking")), ArmeriaTimeoutSupport.collectExecutionHints(method))
+    }
+
+    fun testCollectTimeoutHints_skipsNoArgTimeoutCalls() {
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class HelloService {
+                @Get("/hello")
+                public String hello() {
+                    requestTimeout();
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val method = findMethod("example.HelloService", "hello")
+        assertEquals(emptyList<String>(), ArmeriaTimeoutSupport.collectTimeoutHints(method))
     }
 
     fun testCollectTimeoutHints_ignoresTimeoutCallsInOtherMethods() {
@@ -120,10 +142,12 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
 
         val routes = ArmeriaRouteCollector.collect(project).associateBy { it.path }
         assertEquals(emptyList<String>(), routes["/hello"]!!.timeoutHints)
+        assertEquals(emptyList<String>(), routes["/hello"]!!.executionHints)
         assertEquals(
             listOf(message("route.explorer.timeout.value", message("route.explorer.timeout.request"), "java.time.Duration.ofSeconds(5)")),
             routes["/other"]!!.timeoutHints,
         )
+        assertEquals(emptyList<String>(), routes["/other"]!!.executionHints)
     }
 
     private fun findMethod(className: String, methodName: String) =

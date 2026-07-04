@@ -10,29 +10,34 @@ internal object ArmeriaTimeoutSupport {
     const val BLOCKING_ANNOTATION = "com.linecorp.armeria.server.annotation.Blocking"
     const val NON_BLOCKING_ANNOTATION = "com.linecorp.armeria.server.annotation.NonBlocking"
 
+    fun collectExecutionHints(element: PsiElement): List<String> {
+        val method = PsiTreeUtil.getParentOfType(element, PsiMethod::class.java, false) ?: return emptyList()
+        return buildList {
+            annotationHint(method, BLOCKING_ANNOTATION, "route.explorer.timeout.blocking")?.let(::add)
+            annotationHint(method, NON_BLOCKING_ANNOTATION, "route.explorer.timeout.nonBlocking")?.let(::add)
+        }
+    }
+
     fun collectTimeoutHints(element: PsiElement): List<String> {
-        val hints = mutableListOf<String>()
-        val method = PsiTreeUtil.getParentOfType(element, PsiMethod::class.java, false)
-        if (method != null) {
-            annotationHint(method, BLOCKING_ANNOTATION, "route.explorer.timeout.blocking")?.let(hints::add)
-            annotationHint(method, NON_BLOCKING_ANNOTATION, "route.explorer.timeout.nonBlocking")?.let(hints::add)
-            PsiTreeUtil.findChildrenOfType(method, PsiMethodCallExpression::class.java).forEach { call ->
+        val method = PsiTreeUtil.getParentOfType(element, PsiMethod::class.java, false) ?: return emptyList()
+        return PsiTreeUtil.findChildrenOfType(method, PsiMethodCallExpression::class.java)
+            .mapNotNull { call ->
                 when (call.methodExpression.referenceName) {
-                    "requestTimeout" -> hints += formatTimeoutCall("route.explorer.timeout.request", call)
-                    "responseTimeout" -> hints += formatTimeoutCall("route.explorer.timeout.response", call)
-                    "idleTimeout" -> hints += formatTimeoutCall("route.explorer.timeout.idle", call)
+                    "requestTimeout" -> formatTimeoutCall("route.explorer.timeout.request", call)
+                    "responseTimeout" -> formatTimeoutCall("route.explorer.timeout.response", call)
+                    "idleTimeout" -> formatTimeoutCall("route.explorer.timeout.idle", call)
+                    else -> null
                 }
             }
-        }
-        return hints.distinct()
+            .distinct()
     }
 
     private fun annotationHint(method: PsiMethod, fqn: String, labelKey: String): String? {
         return if (method.hasAnnotation(fqn)) message(labelKey) else null
     }
 
-    private fun formatTimeoutCall(labelKey: String, call: PsiMethodCallExpression): String {
-        val value = call.argumentList.expressions.firstOrNull()?.text ?: "…"
+    private fun formatTimeoutCall(labelKey: String, call: PsiMethodCallExpression): String? {
+        val value = call.argumentList.expressions.firstOrNull()?.text ?: return null
         return message("route.explorer.timeout.value", message(labelKey), value)
     }
 }
