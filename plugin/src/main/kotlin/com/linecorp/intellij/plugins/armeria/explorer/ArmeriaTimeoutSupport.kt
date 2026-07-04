@@ -69,6 +69,6 @@ internal object ArmeriaTimeoutSupport {
         if (qualifierText != null) {
             return ArmeriaRouteSupport.looksLikeServerBuilderReceiverText(qualifierText)
         }
-        return true
+        return false
     }
 }

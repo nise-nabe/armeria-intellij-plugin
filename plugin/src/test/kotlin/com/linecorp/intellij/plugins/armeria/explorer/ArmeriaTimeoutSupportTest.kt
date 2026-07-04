@@ -17,6 +17,7 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
             """
             package example;
 
+            import com.linecorp.armeria.server.Server;
             import com.linecorp.armeria.server.annotation.Get;
 
             public class HelloService {
@@ -27,7 +28,7 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
 
                 @Get("/other")
                 public String other() {
-                    requestTimeout(java.time.Duration.ofSeconds(5));
+                    Server.builder().requestTimeout(java.time.Duration.ofSeconds(5));
                     return "other";
                 }
             }
@@ -147,12 +148,35 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
             """
             package example;
 
+            import com.linecorp.armeria.server.Server;
             import com.linecorp.armeria.server.annotation.Get;
 
             public class HelloService {
                 @Get("/hello")
                 public String hello() {
-                    requestTimeout();
+                    Server.builder().requestTimeout();
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val method = findMethod("example.HelloService", "hello")
+        assertEquals(emptyList<String>(), ArmeriaTimeoutSupport.collectTimeoutHints(method))
+    }
+
+    fun testCollectTimeoutHints_ignoresUnqualifiedUnresolvedTimeoutCalls() {
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class HelloService {
+                @Get("/hello")
+                public String hello() {
+                    requestTimeout(java.time.Duration.ofSeconds(5));
                     return "hello";
                 }
             }
@@ -197,6 +221,7 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
             """
             package example;
 
+            import com.linecorp.armeria.server.Server;
             import com.linecorp.armeria.server.annotation.Get;
 
             public class HelloService {
@@ -207,7 +232,7 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
 
                 @Get("/other")
                 public String other() {
-                    requestTimeout(java.time.Duration.ofSeconds(5));
+                    Server.builder().requestTimeout(java.time.Duration.ofSeconds(5));
                     return "other";
                 }
             }
