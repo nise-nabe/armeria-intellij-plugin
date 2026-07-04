@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
@@ -15,7 +16,7 @@ internal class ArmeriaRuntimeRoutePointer private constructor(
 ) : SmartPsiElementPointer<PsiElement> {
     constructor(project: Project) : this(
         projectProvider = { project },
-        virtualFileProvider = { project.baseDir ?: fallbackVirtualFile() },
+        virtualFileProvider = { virtualFileForProject(project) },
     )
 
     override fun getElement(): PsiElement? = null
@@ -32,11 +33,19 @@ internal class ArmeriaRuntimeRoutePointer private constructor(
 
     companion object {
         private val withoutProject = ArmeriaRuntimeRoutePointer(
-            projectProvider = { error("Runtime route has no associated project") },
-            virtualFileProvider = { fallbackVirtualFile() },
+            projectProvider = { ProjectManager.getInstance().defaultProject },
+            virtualFileProvider = { virtualFileForProject(ProjectManager.getInstance().defaultProject) },
         )
 
         fun withoutProject(): SmartPsiElementPointer<PsiElement> = withoutProject
+
+        private fun virtualFileForProject(project: Project): VirtualFile {
+            val basePath = project.basePath
+            if (basePath != null) {
+                LocalFileSystem.getInstance().findFileByPath(basePath)?.let { return it }
+            }
+            return fallbackVirtualFile()
+        }
 
         private fun fallbackVirtualFile(): VirtualFile {
             val workspaceRoot = File(".").absoluteFile

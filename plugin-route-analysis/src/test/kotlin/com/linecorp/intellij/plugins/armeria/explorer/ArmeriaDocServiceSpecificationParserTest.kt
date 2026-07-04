@@ -130,7 +130,7 @@ class ArmeriaDocServiceSpecificationParserTest {
                     {
                       "name": "escaped",
                       "httpMethod": "GET",
-                      "examplePaths": ["/line\nbreak", "/tab\there", "/quote\"path", "/unicode\u0041"]
+                      "examplePaths": ["/line\nbreak", "/tab\there", "/quote\"path"]
                     }
                   ]
                 }
@@ -141,7 +141,35 @@ class ArmeriaDocServiceSpecificationParserTest {
         val parsed = ArmeriaDocServiceSpecificationParser.parse(json)
 
         assertEquals(
-            setOf("GET /line\nbreak", "GET /tab\there", "GET /quote\"path", "GET /unicodeA"),
+            setOf("GET /line\nbreak", "GET /tab\there", "GET /quote\"path"),
+            parsed.routes.map { "${it.httpMethod} ${it.path}" }.toSet(),
+        )
+    }
+
+    @Test
+    fun parse_readsUnicodeEscapeSequenceInStrings() {
+        val jsonUnicodePath = "/unicode" + '\\' + "u0041"
+        val json = """
+            {
+              "services": [
+                {
+                  "name": "com.example.DemoService",
+                  "methods": [
+                    {
+                      "name": "escaped",
+                      "httpMethod": "GET",
+                      "examplePaths": ["$jsonUnicodePath"]
+                    }
+                  ]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val parsed = ArmeriaDocServiceSpecificationParser.parse(json)
+
+        assertEquals(
+            setOf("GET /unicodeA"),
             parsed.routes.map { "${it.httpMethod} ${it.path}" }.toSet(),
         )
     }
