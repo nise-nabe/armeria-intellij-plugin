@@ -16,6 +16,8 @@ data class ArmeriaRoute(
     val targetUnresolved: Boolean,
     val isDocService: Boolean,
     val annotatedServiceHasPathPrefix: Boolean = false,
+    val pathType: PathType = PathType.EXACT,
+    val virtualHostName: String = "",
     val decorators: List<String>,
     val exceptionHandlers: List<String>,
     val executionHints: List<String> = emptyList(),
@@ -40,6 +42,10 @@ data class ArmeriaRoute(
             RouteMatch.ANNOTATED_SERVICE -> message("route.explorer.method.annotatedService")
             RouteMatch.SERVICE -> message("route.explorer.method.allHttp")
             RouteMatch.SERVICE_UNDER -> message("route.explorer.method.prefix")
+            RouteMatch.FILE_SERVICE -> message("route.explorer.method.fileService")
+            RouteMatch.HEALTH_CHECK -> message("route.explorer.method.healthCheck")
+            RouteMatch.VIRTUAL_HOST -> message("route.explorer.method.virtualHost")
+            RouteMatch.ROUTE_DECORATOR -> message("route.explorer.method.routeDecorator")
             RouteMatch.NON_HTTP -> protocol
             RouteMatch.RUNTIME -> httpMethod
         }
@@ -78,6 +84,8 @@ data class ArmeriaRoute(
             targetUnresolved: Boolean = false,
             isDocService: Boolean = false,
             annotatedServiceHasPathPrefix: Boolean = false,
+            pathType: PathType = PathType.EXACT,
+            virtualHostName: String = "",
             decorators: List<String> = emptyList(),
             exceptionHandlers: List<String> = emptyList(),
             executionHints: List<String> = emptyList(),
@@ -93,6 +101,8 @@ data class ArmeriaRoute(
                 targetUnresolved = targetUnresolved,
                 isDocService = isDocService,
                 annotatedServiceHasPathPrefix = annotatedServiceHasPathPrefix,
+                pathType = pathType,
+                virtualHostName = virtualHostName,
                 decorators = decorators,
                 exceptionHandlers = exceptionHandlers,
                 executionHints = executionHints,

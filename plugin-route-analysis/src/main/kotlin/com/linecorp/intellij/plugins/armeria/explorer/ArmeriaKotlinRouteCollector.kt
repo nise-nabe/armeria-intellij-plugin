@@ -75,7 +75,7 @@ object ArmeriaKotlinRouteCollector {
             val call = element as? KtCallExpression ?: return@forEachDescendant
             ArmeriaRouteCollectionMetrics.current()?.methodCallsVisited?.incrementAndGet()
             val methodName = resolveCallName(call) ?: return@forEachDescendant
-            if (methodName !in ServiceRegistrationMethod.METHOD_NAMES) {
+            if (methodName !in ServiceRegistrationMethod.METHOD_NAMES - ServiceRegistrationMethod.EXTENDED_METHOD_NAMES) {
                 return@forEachDescendant
             }
             if (!looksLikeArmeriaBuilderCall(call)) {
@@ -282,7 +282,12 @@ object ArmeriaKotlinRouteCollector {
                     ?: findArgumentExpression(arguments, "service", 0)
             ServiceRegistrationMethod.SERVICE, ServiceRegistrationMethod.SERVICE_UNDER ->
                 findArgumentExpression(arguments, "service", 1)
-            null -> null
+            ServiceRegistrationMethod.FILE_SERVICE,
+            ServiceRegistrationMethod.HEALTH_CHECK_SERVICE,
+            ServiceRegistrationMethod.VIRTUAL_HOST,
+            ServiceRegistrationMethod.ROUTE_DECORATOR,
+            null,
+            -> null
         }
     }
 
@@ -315,7 +320,12 @@ object ArmeriaKotlinRouteCollector {
                     "/"
                 }
             }
-            null -> null
+            ServiceRegistrationMethod.FILE_SERVICE,
+            ServiceRegistrationMethod.HEALTH_CHECK_SERVICE,
+            ServiceRegistrationMethod.VIRTUAL_HOST,
+            ServiceRegistrationMethod.ROUTE_DECORATOR,
+            null,
+            -> null
         }
     }
 
