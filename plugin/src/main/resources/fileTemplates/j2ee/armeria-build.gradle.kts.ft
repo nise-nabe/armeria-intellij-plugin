@@ -163,7 +163,7 @@ tasks.withType<JavaCompile>().configureEach {
 }
 #if ($context.testRunnerId == "junit5")
 testing {
-    @Suppress("UnstableApiUsage", "unused")
+    @Suppress("UnstableApiUsage")
     suites {
         getByName<JvmTestSuite>("test") {
             useJUnitJupiter()
