@@ -35,18 +35,14 @@ internal object ArmeriaKotlinSpringBootRouteCollector {
     }
 
     private fun referencesSpringBootArmeria(file: KtFile): Boolean {
-        val hasArmeriaImports = file.importList?.imports?.any { import ->
-            import.importedFqName?.asString()?.startsWith(ArmeriaRouteSupport.ARMERIA_PACKAGE_PREFIX) == true
-        } ?: false
-        if (hasArmeriaImports) {
+        if (ArmeriaKotlinRouteCollector.referencesArmeriaKotlinContent(file)) {
             return true
         }
         val contents = file.viewProvider.contents
-        if (ArmeriaRouteSupport.referencesArmeriaInText(contents)) {
-            return true
-        }
         val searchWindow = contents.subSequence(0, minOf(contents.length, ArmeriaRouteSupport.ARMERIA_HEADER_SCAN_LIMIT))
-        return ArmeriaRouteSupport.SPRING_BOOT_ARMERIA_FILE_INDICATORS.any(searchWindow::contains)
+        return ArmeriaRouteSupport.SPRING_BOOT_ARMERIA_FILE_INDICATORS.any { indicator ->
+            searchWindow.contains(indicator)
+        }
     }
 
     private fun collectBeanServerRegistrations(
