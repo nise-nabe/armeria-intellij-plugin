@@ -41,7 +41,8 @@ internal object ArmeriaGrpcRouteCollector {
             for (rpc in RPC_PATTERN.findAll(body)) {
                 val methodName = rpc.groupValues[1]
                 val path = "/$fqService/$methodName"
-                if (!seenProtoRoutes.add(path)) {
+                val dedupeKey = "${ArmeriaRouteMetadata.moduleName(element)}:$path"
+                if (!seenProtoRoutes.add(dedupeKey)) {
                     continue
                 }
                 routes += ArmeriaRoute.create(

@@ -20,6 +20,24 @@ class ArmeriaProtoTextSupportTest {
     }
 
     @Test
+    fun stripCommentsDoesNotInsertSpaceBeforePunctuationAfterBlockComment() {
+        val proto = "package com/*c*/.example;"
+
+        val stripped = ArmeriaProtoTextSupport.stripComments(proto)
+
+        assertEquals("package com.example;", stripped)
+    }
+
+    @Test
+    fun stripCommentsInsertsSpaceBetweenIdentifiersSeparatedByBlockComment() {
+        val proto = "rpc/*inline*/SayHello"
+
+        val stripped = ArmeriaProtoTextSupport.stripComments(proto)
+
+        assertEquals("rpc SayHello", stripped)
+    }
+
+    @Test
     fun findMatchingCloseBraceIgnoresBracesInsideStringLiterals() {
         val text = """service Greeter { rpc SayHello() { option path = "/v1/{id"; } }"""
 

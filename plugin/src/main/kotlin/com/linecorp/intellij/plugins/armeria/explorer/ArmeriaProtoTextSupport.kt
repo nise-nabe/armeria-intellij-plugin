@@ -39,14 +39,16 @@ internal object ArmeriaProtoTextSupport {
                     index++
                 }
                 text.startsWith("//", index) -> {
-                    ensureTrailingWhitespace(result)
                     val lineEnd = text.indexOf('\n', index)
-                    index = if (lineEnd < 0) text.length else lineEnd
+                    val nextIndex = if (lineEnd < 0) text.length else lineEnd
+                    ensureWhitespaceBetweenIdentifiers(result, text.getOrNull(nextIndex))
+                    index = nextIndex
                 }
                 text.startsWith("/*", index) -> {
-                    ensureTrailingWhitespace(result)
                     val blockEnd = text.indexOf("*/", index + 2)
-                    index = if (blockEnd < 0) text.length else blockEnd + 2
+                    val nextIndex = if (blockEnd < 0) text.length else blockEnd + 2
+                    ensureWhitespaceBetweenIdentifiers(result, text.getOrNull(nextIndex))
+                    index = nextIndex
                 }
                 else -> {
                     result.append(text[index])
@@ -94,9 +96,15 @@ internal object ArmeriaProtoTextSupport {
         return null
     }
 
-    private fun ensureTrailingWhitespace(result: StringBuilder) {
-        if (result.isNotEmpty() && !result.last().isWhitespace()) {
+    private fun ensureWhitespaceBetweenIdentifiers(result: StringBuilder, nextChar: Char?) {
+        if (nextChar == null) {
+            return
+        }
+        val lastChar = result.lastOrNull() ?: return
+        if (isIdentifierChar(lastChar) && isIdentifierChar(nextChar)) {
             result.append(' ')
         }
     }
+
+    private fun isIdentifierChar(char: Char): Boolean = char.isLetterOrDigit() || char == '_'
 }

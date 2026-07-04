@@ -126,6 +126,24 @@ class ArmeriaGrpcRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         )
     }
 
+    fun testInlineBlockCommentInPackageDoesNotBreakPackageName() {
+        myFixture.configureByText(
+            "greeter.proto",
+            """
+            syntax = "proto3";
+            package com/*c*/.example;
+
+            service Greeter {
+              rpc SayHello(HelloRequest) returns (HelloResponse);
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project, includeProtoRoutes = true)
+
+        assertEquals(listOf("/com.example.Greeter/SayHello"), routes.map { it.path })
+    }
+
     fun testInlineBlockCommentBetweenTokensDoesNotMergeRpcName() {
         myFixture.configureByText(
             "greeter.proto",
