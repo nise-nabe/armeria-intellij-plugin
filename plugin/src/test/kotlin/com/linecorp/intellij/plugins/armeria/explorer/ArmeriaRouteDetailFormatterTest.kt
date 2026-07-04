@@ -50,14 +50,14 @@ class ArmeriaRouteDetailFormatterTest : LightJavaCodeInsightFixtureTestCase() {
             annotatedServiceHasPathPrefix = false,
             decorators = emptyList(),
             exceptionHandlers = emptyList(),
-            executionHints = listOf(message("route.explorer.timeout.blocking")),
+            executionHints = listOf(message("route.explorer.execution.blocking")),
             pointer = TestPsiPointer,
         )
 
         val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
 
-        assertTrue(attachments.contains(message("route.explorer.detail.execution", message("route.explorer.timeout.blocking"))))
-        assertFalse(attachments.contains(message("route.explorer.detail.timeouts", message("route.explorer.timeout.blocking"))))
+        assertTrue(attachments.contains(message("route.explorer.detail.execution", message("route.explorer.execution.blocking"))))
+        assertFalse(attachments.contains(message("route.explorer.detail.timeouts", message("route.explorer.execution.blocking"))))
     }
 
     fun testAttachmentsLine_omitsSecondarySeparator() {

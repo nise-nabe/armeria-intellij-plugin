@@ -159,6 +159,7 @@ object ArmeriaRouteCollector {
             method.getAnnotation(ArmeriaRouteSupport.EXCEPTION_HANDLER_ANNOTATION),
         )
         val target = buildMethodTarget(containingClass, method)
+        val executionHints = ArmeriaTimeoutSupport.collectExecutionHints(method)
         for (path in paths) {
             routes += ArmeriaRoute.create(
                 element = method,
@@ -169,8 +170,7 @@ object ArmeriaRouteCollector {
                 routeMatch = RouteMatch.ANNOTATED_HTTP,
                 decorators = methodDecorators.distinct(),
                 exceptionHandlers = methodExceptionHandlers.distinct(),
-                executionHints = ArmeriaTimeoutSupport.collectExecutionHints(method),
-                timeoutHints = ArmeriaTimeoutSupport.collectTimeoutHints(method),
+                executionHints = executionHints,
             )
         }
     }
@@ -312,6 +312,7 @@ object ArmeriaRouteCollector {
             registrationMethod == ServiceRegistrationMethod.ANNOTATED_SERVICE && argumentCount > 1
         val normalizedPath = ArmeriaRouteSupport.normalizePath(path)
         val programmaticDecorators = decorators ?: collectProgrammaticDecorators(element, normalizedPath)
+        val timeoutHints = collectBuilderTimeoutHints(element)
         routes += ArmeriaRoute.create(
             element = element,
             protocol = protocol.presentableName(),
@@ -323,6 +324,7 @@ object ArmeriaRouteCollector {
             isDocService = protocol == RouteProtocol.DOC_SERVICE,
             annotatedServiceHasPathPrefix = annotatedServiceHasPathPrefix,
             decorators = programmaticDecorators,
+            timeoutHints = timeoutHints,
         )
     }
 
@@ -393,6 +395,16 @@ object ArmeriaRouteCollector {
         }
         if (isKotlinPluginAvailable()) {
             return ArmeriaKotlinDecoratorSupport.collectProgrammaticDecorators(element, registrationPath)
+        }
+        return emptyList()
+    }
+
+    private fun collectBuilderTimeoutHints(element: PsiElement): List<String> {
+        if (element is PsiMethodCallExpression) {
+            return ArmeriaTimeoutSupport.collectBuilderTimeoutHints(element)
+        }
+        if (isKotlinPluginAvailable()) {
+            return ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(element)
         }
         return emptyList()
     }

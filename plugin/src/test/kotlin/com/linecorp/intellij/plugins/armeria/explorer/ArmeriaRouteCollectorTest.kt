@@ -504,6 +504,158 @@ class ArmeriaRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals("/v1/items", routes.single().path)
     }
 
+    fun testCollectAnnotatedRoute_blockingOnMethod() {
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation;
+
+            public @interface Blocking {
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class HelloService {
+                @Blocking
+                @Get("/hello")
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val route = ArmeriaRouteCollector.collect(project).single()
+
+        assertEquals(listOf("Blocking"), route.executionHints)
+        assertTrue(route.timeoutHints.isEmpty())
+    }
+
+    fun testCollectAnnotatedRoute_blockingOnClass() {
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation;
+
+            public @interface Blocking {
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            @Blocking
+            public class HelloService {
+                @Get("/hello")
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val route = ArmeriaRouteCollector.collect(project).single()
+
+        assertEquals(listOf("Blocking"), route.executionHints)
+    }
+
+    fun testCollectAnnotatedRoute_doesNotAttachUnrelatedFileTimeouts() {
+        myFixture.addClass(
+            """
+            package java.time;
+
+            public final class Duration {
+                public static Duration ofSeconds(long seconds) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Mixed.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.annotation.Get;
+            import java.time.Duration;
+
+            public class Mixed {
+                public static void configure() {
+                    Server.builder().requestTimeout(Duration.ofSeconds(30)).build();
+                }
+            }
+
+            class HelloService {
+                @Get("/hello")
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val route = ArmeriaRouteCollector.collect(project).single { it.path == "/hello" }
+
+        assertTrue(route.executionHints.isEmpty())
+        assertTrue(route.timeoutHints.isEmpty())
+    }
+
+    fun testCollectServiceRegistration_requestTimeoutOnBuilderChain() {
+        myFixture.addClass(
+            """
+            package java.time;
+
+            public final class Duration {
+                public static Duration ofSeconds(long seconds) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import java.time.Duration;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .requestTimeout(Duration.ofSeconds(30))
+                        .service("/api", new HelloService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val route = ArmeriaRouteCollector.collect(project).single { it.path == "/api" }
+
+        assertEquals(listOf("Request timeout: Duration.ofSeconds(30)"), route.timeoutHints)
+        assertTrue(route.executionHints.isEmpty())
+    }
+
     private fun registerArmeriaStubs() {
         myFixture.addClass(
             """
@@ -557,6 +709,18 @@ class ArmeriaRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
                 }
 
                 public ServerBuilder decorator(String pathPattern, Object decorator) {
+                    return this;
+                }
+
+                public ServerBuilder requestTimeout(Object duration) {
+                    return this;
+                }
+
+                public ServerBuilder responseTimeout(Object duration) {
+                    return this;
+                }
+
+                public ServerBuilder idleTimeout(Object duration) {
                     return this;
                 }
 

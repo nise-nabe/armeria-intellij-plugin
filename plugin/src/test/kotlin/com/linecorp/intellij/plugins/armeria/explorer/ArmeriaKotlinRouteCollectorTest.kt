@@ -103,6 +103,48 @@ class ArmeriaKotlinRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals("example.HelloService", serviceRoute.target)
     }
 
+    fun testCollectServiceRegistration_requestTimeoutOnBuilderChain() {
+        myFixture.addClass(
+            """
+            package java.time;
+
+            public final class Duration {
+                public static Duration ofSeconds(long seconds) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import java.time.Duration
+
+            fun main() {
+                Server.builder()
+                    .requestTimeout(Duration.ofSeconds(30))
+                    .service("/api", HelloService())
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val route = ArmeriaRouteCollector.collect(project).single { it.path == "/api" }
+
+        assertEquals(listOf("Request timeout: Duration.ofSeconds(30)"), route.timeoutHints)
+        assertTrue(route.executionHints.isEmpty())
+    }
+
     fun testCollectGrpcServiceRegistrationWithBuild() {
         myFixture.configureByText(
             "Main.kt",
@@ -1626,6 +1668,10 @@ class ArmeriaKotlinRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
                 }
 
                 public ServerBuilder decorator(String pathPattern, Object decorator) {
+                    return this;
+                }
+
+                public ServerBuilder requestTimeout(Object duration) {
                     return this;
                 }
 
