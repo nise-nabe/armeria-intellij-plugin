@@ -7,7 +7,7 @@ description: >-
 
 # Gradle Tooling API MCP
 
-This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.2.2 in `.cursor/mcp.json`. The JAR is installed by `.cursor/install.sh` to `~/.local/share/gradle-tapi-mcp-server/gradle-tapi-mcp-server.jar`. At MCP server launch, `.cursor/mcp.json` sets `GRADLE_PROJECT_DIR=${workspaceFolder}`.
+This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.2.3 in `.cursor/mcp.json`. The JAR is installed by `.cursor/install.sh` to `~/.local/share/gradle-tapi-mcp-server/gradle-tapi-mcp-server.jar`. At MCP server launch, `.cursor/mcp.json` sets `GRADLE_PROJECT_DIR=${workspaceFolder}`.
 
 ## Workflow (token-efficient)
 
@@ -22,5 +22,5 @@ Avoid `includeTasks=true` and heavy model queries unless necessary. `gradle_run_
 
 Full tool reference and advanced workflows live in the upstream repository:
 
-- [README (v0.2.2)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/v0.2.2/README.md)
-- [gradle-tapi-mcp skill](https://github.com/nise-nabe/gradle-tapi-mcp-server/tree/v0.2.2/skills/gradle-tapi-mcp)
+- [README (v0.2.3)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/v0.2.3/README.md)
+- [gradle-tapi-mcp skill](https://github.com/nise-nabe/gradle-tapi-mcp-server/tree/v0.2.3/skills/gradle-tapi-mcp)
