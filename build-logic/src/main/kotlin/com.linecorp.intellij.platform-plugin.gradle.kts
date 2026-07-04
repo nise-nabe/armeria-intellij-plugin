@@ -26,7 +26,7 @@ intellijPlatform {
 
 testing {
     suites {
-        val test by getting(JvmTestSuite::class) {
+        getByName<JvmTestSuite>("test") {
             targets.all {
                 testTask.configure {
                     failOnNoDiscoveredTests = false
