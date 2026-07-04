@@ -74,6 +74,53 @@ class ArmeriaWizardTemplateRenderingTest {
         assertTrue(rendered.contains("""implementation("com.linecorp.armeria:armeria")"""))
     }
 
+    @Test
+    fun kotlinMainTemplateRendersAnnotatedService() {
+        val context = ArmeriaWizardTemplateTestContext(language = "kotlin")
+        val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-main.kt.ft", context)
+
+        assertTrue(rendered.contains("package ${context.rootPackage}"))
+        assertTrue(rendered.contains("@Get(\"/hello\")"))
+        assertTrue(rendered.contains("fun main()"))
+    }
+
+    @Test
+    fun javaServiceTestTemplateRendersJUnit5Server() {
+        val context = ArmeriaWizardTemplateTestContext(language = "java")
+        val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-service-test.java.ft", context)
+
+        assertTrue(rendered.contains("package ${context.rootPackage};"))
+        assertTrue(rendered.contains("com.linecorp.armeria.testing.junit5.server.ServerExtension"))
+        assertTrue(rendered.contains("org.junit.jupiter.api.extension.RegisterExtension"))
+        assertTrue(rendered.contains("@Get(\"/ping\")"))
+        assertTrue(rendered.contains("void pingReturnsPong()"))
+        assertTrue(rendered.contains("WebClient.of(server.httpUri())"))
+    }
+
+    @Test
+    fun kotlinServiceTestTemplateRendersJUnit5Server() {
+        val context = ArmeriaWizardTemplateTestContext(language = "kotlin")
+        val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-service-test.kt.ft", context)
+
+        assertTrue(rendered.contains("package ${context.rootPackage}"))
+        assertTrue(rendered.contains("com.linecorp.armeria.testing.junit5.server.ServerExtension"))
+        assertTrue(rendered.contains("org.junit.jupiter.api.extension.RegisterExtension"))
+        assertTrue(rendered.contains("@Get(\"/ping\")"))
+        assertTrue(rendered.contains("fun pingReturnsPong()"))
+        assertTrue(rendered.contains("WebClient.of(server.httpUri())"))
+    }
+
+    @Test
+    fun logbackTemplateRendersConsoleAppender() {
+        val rendered = renderBuildTemplate(
+            "fileTemplates/j2ee/armeria-logback.xml.ft",
+            ArmeriaWizardTemplateTestContext(),
+        )
+
+        assertTrue(rendered.contains("ch.qos.logback.core.ConsoleAppender"))
+        assertTrue(rendered.contains("<root level=\"INFO\">"))
+    }
+
     private fun renderBuildTemplate(resourcePath: String, context: ArmeriaWizardTemplateTestContext): String =
         ArmeriaWizardTemplateRenderer.renderClasspathTemplate(resourcePath, context)
 }
