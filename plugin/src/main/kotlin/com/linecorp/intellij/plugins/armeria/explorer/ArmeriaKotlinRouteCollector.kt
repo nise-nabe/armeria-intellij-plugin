@@ -27,6 +27,7 @@ import org.jetbrains.kotlin.psi.KtTypeReference
 import org.jetbrains.kotlin.psi.KtUserType
 import org.jetbrains.kotlin.psi.KtValueArgument
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
+import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
 
 internal object ArmeriaKotlinRouteCollector {
     private val IMPLICIT_RECEIVER_SCOPE_METHODS = setOf("apply", "run")
@@ -90,18 +91,6 @@ internal object ArmeriaKotlinRouteCollector {
         seenServiceRegistrations: MutableSet<String>,
     ) {
         collectServiceRegistrationsInScope(file, routes, seenServiceRegistrations)
-    }
-
-    private inline fun PsiElement.forEachDescendant(action: (PsiElement) -> Unit) {
-        val queue = ArrayDeque<PsiElement>()
-        queue.add(this)
-        while (queue.isNotEmpty()) {
-            val element = queue.removeFirst()
-            action(element)
-            for (child in element.children) {
-                queue.add(child)
-            }
-        }
     }
 
     private fun resolveCallName(call: KtCallExpression): String? {

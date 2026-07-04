@@ -17,6 +17,8 @@ data class ArmeriaRoute(
     val annotatedServiceHasPathPrefix: Boolean = false,
     val decorators: List<String>,
     val exceptionHandlers: List<String>,
+    val executionHints: List<String> = emptyList(),
+    val timeoutHints: List<String> = emptyList(),
     val pointer: SmartPsiElementPointer<PsiElement>,
 ) {
     fun resolveSourceHint(): String {
@@ -76,6 +78,8 @@ data class ArmeriaRoute(
             annotatedServiceHasPathPrefix: Boolean = false,
             decorators: List<String> = emptyList(),
             exceptionHandlers: List<String> = emptyList(),
+            executionHints: List<String> = emptyList(),
+            timeoutHints: List<String> = emptyList(),
         ): ArmeriaRoute {
             return ArmeriaRoute(
                 protocol = protocol,
@@ -89,6 +93,8 @@ data class ArmeriaRoute(
                 annotatedServiceHasPathPrefix = annotatedServiceHasPathPrefix,
                 decorators = decorators,
                 exceptionHandlers = exceptionHandlers,
+                executionHints = executionHints,
+                timeoutHints = timeoutHints,
                 pointer = SmartPointerManager.createPointer(element),
             )
         }

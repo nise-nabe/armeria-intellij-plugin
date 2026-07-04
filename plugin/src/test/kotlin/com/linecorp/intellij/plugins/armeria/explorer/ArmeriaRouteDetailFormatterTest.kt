@@ -8,6 +8,8 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 
+import com.linecorp.intellij.plugins.armeria.message
+
 class ArmeriaRouteDetailFormatterTest : LightJavaCodeInsightFixtureTestCase() {
     override fun setUp() {
         super.setUp()
@@ -33,6 +35,29 @@ class ArmeriaRouteDetailFormatterTest : LightJavaCodeInsightFixtureTestCase() {
         val route = ArmeriaRouteCollector.collect(project).single()
         assertTrue(ArmeriaRouteDetailFormatter.registrationSummary(route).contains("@GET"))
         assertTrue(ArmeriaRouteDetailFormatter.registrationSummary(route).contains("/users/{id}"))
+    }
+
+    fun testAttachmentsLine_includesExecutionHints() {
+        val route = ArmeriaRoute(
+            protocol = "HTTP",
+            httpMethod = "GET",
+            path = "/hello",
+            target = "example.HelloService",
+            routeMatch = RouteMatch.ANNOTATED_HTTP,
+            moduleName = "app",
+            targetUnresolved = false,
+            isDocService = false,
+            annotatedServiceHasPathPrefix = false,
+            decorators = emptyList(),
+            exceptionHandlers = emptyList(),
+            executionHints = listOf(message("route.explorer.timeout.blocking")),
+            pointer = TestPsiPointer,
+        )
+
+        val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
+
+        assertTrue(attachments.contains(message("route.explorer.detail.execution", message("route.explorer.timeout.blocking"))))
+        assertFalse(attachments.contains(message("route.explorer.detail.timeouts", message("route.explorer.timeout.blocking"))))
     }
 
     fun testAttachmentsLine_omitsSecondarySeparator() {

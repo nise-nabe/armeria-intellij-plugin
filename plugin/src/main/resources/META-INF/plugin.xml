@@ -14,6 +14,10 @@
         <framework.type implementation="com.linecorp.intellij.plugins.armeria.framework.ArmeriaFrameworkEx" />
         <spellchecker.bundledDictionaryProvider implementation="com.linecorp.intellij.plugins.armeria.ArmeriaDictionaryProvider" />
         <deadCode implementation="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaMethodEntryPoint" />
+        <toolWindow id="Armeria Clients"
+                    factoryClass="com.linecorp.intellij.plugins.armeria.client.ArmeriaClientExplorerToolWindowFactory"
+                    anchor="right"
+                    icon="/icons/armeria.svg" />
         <toolWindow id="Armeria Services"
                     factoryClass="com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteExplorerToolWindowFactory"
                     anchor="right"

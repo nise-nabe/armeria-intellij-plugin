@@ -7,6 +7,8 @@
 - Added programmatic `ServerBuilder.decorator()` detection in Route Explorer.
 - Added HTTP Request file generation from Route Explorer routes, with method-aware filenames and toolbar enablement tied to the current tree selection.
 - Added Spring Boot `@Bean` Server registration discovery for Java and Kotlin sources.
+- Added timeout and blocking annotation hints in Route Explorer details.
+- Added Armeria Clients tool window for WebClient, GrpcClient, and ThriftClient discovery.
 - Added Kotlin source support to Route Explorer for annotated services and Server.builder registrations.
 - Added Velocity-based regression tests for New Project Wizard file templates.
 - Added `plugin/src/test/resources/wizard-verification-matrix.md` documenting representative wizard scenarios.
@@ -21,6 +23,8 @@
 ### Removed
 
 ### Fixed
+- Fixed Armeria Clients explorer listing no-arg `builder()` calls and non-Armeria `WebClient` false positives in Kotlin fallback resolution.
+- Fixed Kotlin client URI extraction, `GrpcClients`/`ThriftClients.newClient` discovery, and async PSI collection in Armeria Clients explorer.
 - Fixed duplicate Kotlin annotated routes and false-positive service registrations in Route Explorer.
 - Fixed false-positive route detection for unqualified `service` calls inside `also`/`let` blocks on `Server.builder()`.
 - Fixed FQCN `com.linecorp.armeria.server.Server.builder()` detection in Kotlin fallback scanning.
