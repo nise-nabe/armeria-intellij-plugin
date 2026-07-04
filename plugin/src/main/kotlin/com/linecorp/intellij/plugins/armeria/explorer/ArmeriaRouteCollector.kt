@@ -45,9 +45,10 @@ object ArmeriaRouteCollector {
         val metrics = ArmeriaRouteCollectionMetrics()
         val startedAt = System.nanoTime()
         val routes = ArmeriaRouteCollectionMetrics.runWith(metrics) {
-            CachedValuesManager.getManager(project).getCachedValue(project) {
+            val cachedRoutes = CachedValuesManager.getManager(project).getCachedValue(project) {
                 computeProjectRoutes(project)
             }
+            mergeProtoRoutesIfEnabled(project, cachedRoutes)
         }
         metrics.elapsedMs = (System.nanoTime() - startedAt) / 1_000_000
         ArmeriaRouteCollectionMetrics.logIfEnabled(metrics.snapshot())
@@ -86,13 +87,24 @@ object ArmeriaRouteCollector {
         }
         ArmeriaGraphqlRouteCollector.collect(project, scope, routes)
         ArmeriaThriftRouteCollector.collect(project, scope, routes)
-        ArmeriaGrpcRouteCollector.collect(project, scope, routes)
 
         return CachedValueProvider.Result.create(
             routes.sortedWith(
                 compareBy(ArmeriaRoute::moduleName, ArmeriaRoute::path, ArmeriaRoute::httpMethod, ArmeriaRoute::target),
             ),
             PsiModificationTracker.MODIFICATION_COUNT,
+        )
+    }
+
+    private fun mergeProtoRoutesIfEnabled(project: Project, baseRoutes: List<ArmeriaRoute>): List<ArmeriaRoute> {
+        if (!ArmeriaGrpcRouteCollector.isProtoRouteDiscoveryEnabled()) {
+            return baseRoutes
+        }
+        val scope = collectionScope(project)
+        val routes = baseRoutes.toMutableList()
+        ArmeriaGrpcRouteCollector.collect(project, scope, routes)
+        return routes.sortedWith(
+            compareBy(ArmeriaRoute::moduleName, ArmeriaRoute::path, ArmeriaRoute::httpMethod, ArmeriaRoute::target),
         )
     }
 

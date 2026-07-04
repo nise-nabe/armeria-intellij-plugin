@@ -8,6 +8,29 @@ class ArmeriaGrpcRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
     registerArmeriaStubs()
   }
 
+  fun testCollectGrpcRoutesFromProtoWithHttpsInHttpOption() {
+    myFixture.configureByText(
+      "greeter.proto",
+      """
+      syntax = "proto3";
+      package com.example;
+
+      service Greeter {
+        rpc SayHello(HelloRequest) returns (HelloResponse) {
+          option (google.api.http) = {
+            post: "https://api.example.com/v1/hello"
+            body: "*"
+          };
+        }
+      }
+      """.trimIndent(),
+    )
+
+    val routes = ArmeriaRouteCollector.collect(project)
+
+    assertEquals(listOf("/com.example.Greeter/SayHello"), routes.map { it.path })
+  }
+
   fun testCollectGrpcRoutesFromProto() {
     myFixture.configureByText(
       "greeter.proto",
