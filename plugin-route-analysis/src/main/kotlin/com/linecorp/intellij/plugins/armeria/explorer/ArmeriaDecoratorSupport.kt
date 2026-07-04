@@ -21,6 +21,10 @@ internal object ArmeriaDecoratorSupport {
         "DecodingService" to "route.explorer.decorator.decoding",
         "CacheControlDecorator" to "route.explorer.decorator.cacheControl",
         "WebSocketService" to "route.explorer.decorator.webSocket",
+        "BraveService" to "route.explorer.decorator.brave",
+        "ThrottlingService" to "route.explorer.decorator.throttling",
+        "PrometheusMetricCollectingService" to "route.explorer.decorator.prometheus",
+        "Bucket4jService" to "route.explorer.decorator.bucket4j",
     )
 
     fun collectProgrammaticDecorators(element: PsiMethodCallExpression, registrationPath: String): List<String> {

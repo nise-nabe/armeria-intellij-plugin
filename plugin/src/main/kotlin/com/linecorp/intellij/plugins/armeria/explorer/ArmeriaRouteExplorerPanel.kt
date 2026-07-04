@@ -299,6 +299,11 @@ class ArmeriaRouteExplorerPanel(
                 append(" · ")
                 append(message("route.explorer.summary.runtime", runtimeCount))
             }
+            val observability = ArmeriaObservabilitySummary.summarize(collectedRoutes)
+            if (observability.isNotEmpty()) {
+                append(" · ")
+                append(observability)
+            }
         }
     }
 
