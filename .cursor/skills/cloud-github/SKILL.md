@@ -23,7 +23,7 @@ unless ManagePullRequest fails and `gh auth status` succeeds.
 | Update PR title/body | `ManagePullRequest` with `action: update_pr` |
 | Edit labels | `EditPullRequestLabels` |
 
-Branch naming for agent work: `cursor/<descriptive-name>-c654`.
+Branch naming for agent work: `cursor/<descriptive-name>-<suffix>` (suffix is assigned per agent session).
 
 ## When `gh` is required
 
@@ -53,5 +53,5 @@ Use `gh pr checks` only when you need GitHub-attached check status and `gh auth 
 | Symptom | Fix |
 |---------|-----|
 | `gh: command not found` | Use `/exec-daemon/gh` or re-run `.cursor/install.sh` |
-| `Resource not accessible by integration` | Add `GH_TOKEN` in [Cursor Cloud Secrets](https://cursor.com/dashboard/cloud-agents); reinstall runs `gh auth login --with-token` |
+| `Resource not accessible by integration` | Add `GH_TOKEN` in [Cursor Cloud Secrets](https://cursor.com/dashboard/cloud-agents); reinstall runs `gh auth login --git-protocol https --with-token` |
 | ManagePullRequest fails | Push the branch first, then retry; do not fall back to `gh` unless auth works |

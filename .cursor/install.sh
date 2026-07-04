@@ -88,7 +88,7 @@ setup_gh_cli() {
   if ! "${gh_source}" auth status >/dev/null 2>&1; then
     local token="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
     if [[ -n "${token}" ]]; then
-      if ! "${gh_source}" auth login --hostname github.com --with-token <<<"${token}"; then
+      if ! "${gh_source}" auth login --hostname github.com --git-protocol https --with-token <<<"${token}"; then
         echo "Warning: gh auth login failed; gh CLI may be unavailable for API calls." >&2
         echo "Use ManagePullRequest for PRs, or set GH_TOKEN in Cursor Cloud Secrets." >&2
       fi
