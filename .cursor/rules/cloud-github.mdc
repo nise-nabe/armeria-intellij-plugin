@@ -12,6 +12,7 @@ In Cursor Cloud, do **not** assume `gh` is on PATH before `.cursor/install.sh` c
 - Use the built-in **ManagePullRequest** tool for `create_pr` and `update_pr`.
 - Use **EditPullRequestLabels** for label changes.
 - Do not run `gh pr create` / `gh pr edit` unless ManagePullRequest fails and `gh auth status` succeeds.
+- PR bodies must follow `.cursor/rules/pr-description-format.mdc` (feature PR format; no review-response sections).
 
 ## GitHub CLI fallback
 

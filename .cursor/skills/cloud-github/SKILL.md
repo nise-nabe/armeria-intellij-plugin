@@ -25,6 +25,15 @@ unless ManagePullRequest fails and `gh auth status` succeeds.
 
 Branch naming for agent work: `cursor/<descriptive-name>-<suffix>` (suffix is assigned per agent session).
 
+## PR description format
+
+PR bodies must read like **feature pull requests**, not review-response documents. See
+`.cursor/rules/pr-description-format.mdc`.
+
+- Use **Summary**, **Changes**, optional **Depends on**, and **Test plan** only
+- Never add sections such as "Thermos review fixes", "Fixes in this update", or "Review feedback addressed"
+- After addressing review comments, fold edits into **Changes**; reply in PR comments, not as new body sections
+
 ## When `gh` is required
 
 Some bundled skills (for example `loop-on-ci`, `fix-ci`) reference `gh pr checks`.
