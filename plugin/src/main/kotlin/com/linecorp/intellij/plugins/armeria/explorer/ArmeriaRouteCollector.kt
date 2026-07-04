@@ -41,12 +41,17 @@ object ArmeriaRouteCollector {
 
     private val KOTLIN_PLUGIN_ID = PluginId.getId("org.jetbrains.kotlin")
 
-    fun collect(project: Project): List<ArmeriaRoute> {
+    fun collect(project: Project, includeProtoRoutes: Boolean = false): List<ArmeriaRoute> {
         val metrics = ArmeriaRouteCollectionMetrics()
         val startedAt = System.nanoTime()
         val routes = ArmeriaRouteCollectionMetrics.runWith(metrics) {
-            CachedValuesManager.getManager(project).getCachedValue(project) {
+            val cachedRoutes = CachedValuesManager.getManager(project).getCachedValue(project) {
                 computeProjectRoutes(project)
+            }
+            if (includeProtoRoutes) {
+                mergeProtoRoutesIfEnabled(project, cachedRoutes)
+            } else {
+                cachedRoutes
             }
         }
         metrics.elapsedMs = (System.nanoTime() - startedAt) / 1_000_000
@@ -92,6 +97,18 @@ object ArmeriaRouteCollector {
                 compareBy(ArmeriaRoute::moduleName, ArmeriaRoute::path, ArmeriaRoute::httpMethod, ArmeriaRoute::target),
             ),
             PsiModificationTracker.MODIFICATION_COUNT,
+        )
+    }
+
+    private fun mergeProtoRoutesIfEnabled(project: Project, baseRoutes: List<ArmeriaRoute>): List<ArmeriaRoute> {
+        if (!ArmeriaGrpcRouteCollector.isProtoRouteDiscoveryEnabled()) {
+            return baseRoutes
+        }
+        val scope = collectionScope(project)
+        val routes = baseRoutes.toMutableList()
+        ArmeriaGrpcRouteCollector.collect(project, scope, routes)
+        return routes.sortedWith(
+            compareBy(ArmeriaRoute::moduleName, ArmeriaRoute::path, ArmeriaRoute::httpMethod, ArmeriaRoute::target),
         )
     }
 

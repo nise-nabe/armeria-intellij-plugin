@@ -44,6 +44,9 @@
         <registryKey key="armeria.route.explorer.metrics"
                      defaultValue="false"
                      description="Log Armeria Route Explorer collection metrics at INFO level"/>
+        <registryKey key="armeria.grpc.proto.routes.enabled"
+                     defaultValue="true"
+                     description="Include gRPC routes parsed from .proto files in Route Explorer"/>
 
         <!-- Run configuration -->
         <configurationType implementation="com.linecorp.intellij.plugins.armeria.run.ArmeriaRunConfigurationType" />

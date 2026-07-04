@@ -152,7 +152,7 @@ class ArmeriaRouteExplorerPanel(
     fun refresh() {
         statusLabel.text = message("route.explorer.summary.refreshing")
         ReadAction.nonBlocking<List<ArmeriaRoute>> {
-            ArmeriaRouteCollector.collect(project)
+            ArmeriaRouteCollector.collect(project, includeProtoRoutes = true)
         }
             .inSmartMode(project)
             .expireWith(this)
