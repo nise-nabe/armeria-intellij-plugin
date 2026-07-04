@@ -66,4 +66,35 @@ ensure_jar() {
 ensure_jar
 ln -sfn "${VERSIONED_JAR_NAME}" "${STABLE_JAR_PATH}"
 
+setup_gh_cli() {
+  local gh_source="/exec-daemon/gh"
+  if [[ ! -x "${gh_source}" ]]; then
+    echo "Warning: ${gh_source} not found; gh CLI will be unavailable in this session." >&2
+    return 0
+  fi
+
+  mkdir -p "${HOME}/.local/bin"
+  ln -sfn "${gh_source}" "${HOME}/.local/bin/gh"
+
+  if [[ -w /usr/local/bin ]]; then
+    ln -sfn "${gh_source}" /usr/local/bin/gh
+  fi
+
+  if ! "${gh_source}" auth status >/dev/null 2>&1; then
+    local token="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
+    if [[ -n "${token}" ]]; then
+      printf '%s\n' "${token}" | "${gh_source}" auth login --hostname github.com --with-token
+    else
+      echo "Warning: gh is not authenticated and GH_TOKEN/GITHUB_TOKEN is unset." >&2
+      echo "Set GH_TOKEN in Cursor Cloud Secrets, or use the ManagePullRequest tool for PRs." >&2
+    fi
+  fi
+
+  if ! command -v gh >/dev/null 2>&1; then
+    echo "Warning: gh is installed but not on PATH; use /exec-daemon/gh or ~/.local/bin/gh." >&2
+  fi
+}
+
+setup_gh_cli
+
 ./gradlew --no-daemon build
