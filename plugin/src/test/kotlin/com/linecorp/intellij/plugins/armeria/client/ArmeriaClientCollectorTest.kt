@@ -149,6 +149,28 @@ class ArmeriaClientCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         assertTrue(endpoints.isEmpty())
     }
 
+    fun testCollectWebClientOfViaStaticImport() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import static com.linecorp.armeria.client.WebClient.of;
+
+            public class Main {
+                public static void main(String[] args) {
+                    of("https://example.com");
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+
+        assertEquals(1, endpoints.size)
+        assertEquals("WebClient", endpoints.single().target)
+    }
+
     fun testDeduplicatesSameCallSite() {
         myFixture.configureByText(
             "Main.java",

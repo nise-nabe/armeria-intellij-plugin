@@ -3,6 +3,8 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 
+import com.linecorp.intellij.plugins.armeria.message
+
 class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
     override fun setUp() {
         super.setUp()
@@ -37,7 +39,7 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
 
         assertEquals(emptyList<String>(), ArmeriaTimeoutSupport.collectTimeoutHints(helloMethod))
         assertEquals(
-            listOf("Request timeout: java.time.Duration.ofSeconds(5)"),
+            listOf(message("route.explorer.timeout.value", message("route.explorer.timeout.request"), "java.time.Duration.ofSeconds(5)")),
             ArmeriaTimeoutSupport.collectTimeoutHints(otherMethod),
         )
     }
@@ -62,7 +64,7 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
         )
 
         val method = findMethod("example.HelloService", "hello")
-        assertEquals(listOf("Blocking"), ArmeriaTimeoutSupport.collectTimeoutHints(method))
+        assertEquals(listOf(message("route.explorer.timeout.blocking")), ArmeriaTimeoutSupport.collectTimeoutHints(method))
     }
 
     fun testCollectTimeoutHints_ignoresTimeoutCallsInOtherMethods() {
@@ -119,7 +121,7 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
         val routes = ArmeriaRouteCollector.collect(project).associateBy { it.path }
         assertEquals(emptyList<String>(), routes["/hello"]!!.timeoutHints)
         assertEquals(
-            listOf("Request timeout: java.time.Duration.ofSeconds(5)"),
+            listOf(message("route.explorer.timeout.value", message("route.explorer.timeout.request"), "java.time.Duration.ofSeconds(5)")),
             routes["/other"]!!.timeoutHints,
         )
     }

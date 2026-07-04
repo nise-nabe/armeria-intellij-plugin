@@ -50,7 +50,7 @@ internal object ArmeriaKotlinClientCollector {
         }
         val resolvedClass = resolveContainingClass(call) ?: return
         val protocol = ArmeriaClientSupport.protocolForClass(resolvedClass) ?: return
-        val target = resolveTargetName(call) ?: resolvedClass
+        val target = resolveTargetName(call) ?: resolvedClass.substringAfterLast('.')
         val uri = extractUri(call, methodName) ?: target
         ArmeriaClientCollector.addEndpoint(call, protocol, target, uri, endpoints, seenEndpoints)
     }
@@ -61,7 +61,7 @@ internal object ArmeriaKotlinClientCollector {
             is KtDotQualifiedExpression -> callee.receiverExpression
             else -> (call.parent as? KtDotQualifiedExpression)?.receiverExpression
         }
-        return receiver?.text ?: callee.text
+        return receiver?.text
     }
 
     private fun resolveCallName(call: KtCallExpression): String? {

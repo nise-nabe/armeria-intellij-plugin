@@ -58,6 +58,7 @@ class ArmeriaClientExplorerPanel(
             ): Component {
                 val label = if (value is ArmeriaClientEndpoint) "${value.clientType} ${value.uri}" else value?.toString()
                 val component = super.getListCellRendererComponent(list, label, index, isSelected, cellHasFocus)
+                toolTipText = null
                 if (value is ArmeriaClientEndpoint) {
                     toolTipText = buildString {
                         append(value.clientType)

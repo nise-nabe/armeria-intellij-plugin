@@ -81,6 +81,26 @@ class ArmeriaKotlinClientCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals("https://grpc.example.com", endpoint.uri)
     }
 
+    fun testCollectWebClientOfViaKotlinImportAlias() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient.of
+
+            fun main() {
+                of("https://example.com")
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+
+        assertEquals(1, endpoints.size)
+        assertEquals("WebClient", endpoints.single().target)
+    }
+
     private fun registerArmeriaClientStubs() {
         myFixture.addClass(
             """

@@ -12,8 +12,6 @@ internal enum class ClientProtocol(private val messageKey: String) {
 }
 
 internal object ArmeriaClientSupport {
-    const val ARMERIA_CLIENT_PACKAGE_PREFIX = "com.linecorp.armeria.client"
-
     private val CLIENT_CLASS_PROTOCOLS = mapOf(
         "com.linecorp.armeria.client.WebClient" to ClientProtocol.HTTP,
         "com.linecorp.armeria.client.grpc.GrpcClient" to ClientProtocol.GRPC,
