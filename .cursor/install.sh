@@ -104,5 +104,3 @@ setup_gh_cli() {
 }
 
 setup_gh_cli
-
-./gradlew --no-daemon build
