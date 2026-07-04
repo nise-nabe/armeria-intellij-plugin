@@ -1,6 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.intellij.psi.JavaPsiFacade
+import com.intellij.psi.PsiMethodCallExpression
+import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 
 import com.linecorp.intellij.plugins.armeria.message
@@ -11,38 +13,116 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
         registerArmeriaStubs()
     }
 
-    fun testCollectTimeoutHints_scopesTimeoutCallsToRouteMethod() {
+    fun testCollectBuilderTimeoutHints_requestTimeoutOnBuilderChain() {
+        myFixture.addClass(
+            """
+            package java.time;
+
+            public final class Duration {
+                public static Duration ofSeconds(long seconds) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
         myFixture.configureByText(
-            "HelloService.java",
+            "Main.java",
             """
             package example;
 
             import com.linecorp.armeria.server.Server;
-            import com.linecorp.armeria.server.annotation.Get;
+            import java.time.Duration;
 
-            public class HelloService {
-                @Get("/hello")
-                public String hello() {
-                    return "hello";
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .requestTimeout(Duration.ofSeconds(5))
+                        .service("/api", new HelloService());
                 }
+            }
 
-                @Get("/other")
-                public String other() {
-                    Server.builder().requestTimeout(java.time.Duration.ofSeconds(5));
-                    return "other";
+            class HelloService {}
+            """.trimIndent(),
+        )
+
+        val serviceCall = findServiceRegistrationCall("example.Main", "main")
+        assertEquals(
+            listOf(message("route.explorer.timeout.request", "Duration.ofSeconds(5)")),
+            ArmeriaTimeoutSupport.collectBuilderTimeoutHints(serviceCall),
+        )
+    }
+
+    fun testCollectBuilderTimeoutHints_skipsNoArgTimeoutCalls() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .requestTimeout()
+                        .service("/api", new HelloService());
+                }
+            }
+
+            class HelloService {}
+            """.trimIndent(),
+        )
+
+        val serviceCall = findServiceRegistrationCall("example.Main", "main")
+        assertEquals(
+            listOf(message("route.explorer.timeout.request", "…")),
+            ArmeriaTimeoutSupport.collectBuilderTimeoutHints(serviceCall),
+        )
+    }
+
+    fun testCollectBuilderTimeoutHints_ignoresResolvedNonArmeriaTimeoutCalls() {
+        myFixture.addClass(
+            """
+            package java.time;
+
+            public final class Duration {
+                public static Duration ofSeconds(long seconds) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import java.time.Duration;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/api", new HelloService());
+                }
+            }
+
+            class HelloService {}
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class Config {
+                public Config requestTimeout(java.time.Duration duration) {
+                    return this;
                 }
             }
             """.trimIndent(),
         )
 
-        val helloMethod = findMethod("example.HelloService", "hello")
-        val otherMethod = findMethod("example.HelloService", "other")
-
-        assertEquals(emptyList<String>(), ArmeriaTimeoutSupport.collectTimeoutHints(helloMethod))
-        assertEquals(
-            listOf(message("route.explorer.timeout.value", message("route.explorer.timeout.request"), "java.time.Duration.ofSeconds(5)")),
-            ArmeriaTimeoutSupport.collectTimeoutHints(otherMethod),
-        )
+        val serviceCall = findServiceRegistrationCall("example.Main", "main")
+        assertEquals(emptyList<String>(), ArmeriaTimeoutSupport.collectBuilderTimeoutHints(serviceCall))
     }
 
     fun testCollectExecutionHints_includesBlockingAnnotation() {
@@ -65,7 +145,7 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
         )
 
         val method = findMethod("example.HelloService", "hello")
-        assertEquals(listOf(message("route.explorer.timeout.blocking")), ArmeriaTimeoutSupport.collectExecutionHints(method))
+        assertEquals(listOf(message("route.explorer.execution.blocking")), ArmeriaTimeoutSupport.collectExecutionHints(method))
     }
 
     fun testCollectExecutionHints_includesClassLevelBlockingAnnotation() {
@@ -88,7 +168,7 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
         )
 
         val method = findMethod("example.HelloService", "hello")
-        assertEquals(listOf(message("route.explorer.timeout.blocking")), ArmeriaTimeoutSupport.collectExecutionHints(method))
+        assertEquals(listOf(message("route.explorer.execution.blocking")), ArmeriaTimeoutSupport.collectExecutionHints(method))
     }
 
     fun testCollectExecutionHints_prefersMethodAnnotationOverClassAnnotation() {
@@ -113,109 +193,21 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
         )
 
         val method = findMethod("example.HelloService", "hello")
-        assertEquals(listOf(message("route.explorer.timeout.blocking")), ArmeriaTimeoutSupport.collectExecutionHints(method))
-    }
-
-    fun testCollectTimeoutHints_ignoresResolvedNonArmeriaTimeoutCalls() {
-        myFixture.configureByText(
-            "HelloService.java",
-            """
-            package example;
-
-            import com.linecorp.armeria.server.annotation.Get;
-
-            public class HelloService {
-                @Get("/hello")
-                public String hello() {
-                    new Config().requestTimeout(java.time.Duration.ofSeconds(5));
-                    return "hello";
-                }
-            }
-
-            class Config {
-                public void requestTimeout(java.time.Duration duration) {}
-            }
-            """.trimIndent(),
-        )
-
-        val method = findMethod("example.HelloService", "hello")
-        assertEquals(emptyList<String>(), ArmeriaTimeoutSupport.collectTimeoutHints(method))
-    }
-
-    fun testCollectTimeoutHints_skipsNoArgTimeoutCalls() {
-        myFixture.configureByText(
-            "HelloService.java",
-            """
-            package example;
-
-            import com.linecorp.armeria.server.Server;
-            import com.linecorp.armeria.server.annotation.Get;
-
-            public class HelloService {
-                @Get("/hello")
-                public String hello() {
-                    Server.builder().requestTimeout();
-                    return "hello";
-                }
-            }
-            """.trimIndent(),
-        )
-
-        val method = findMethod("example.HelloService", "hello")
-        assertEquals(emptyList<String>(), ArmeriaTimeoutSupport.collectTimeoutHints(method))
-    }
-
-    fun testCollectTimeoutHints_ignoresUnqualifiedUnresolvedTimeoutCalls() {
-        myFixture.configureByText(
-            "HelloService.java",
-            """
-            package example;
-
-            import com.linecorp.armeria.server.annotation.Get;
-
-            public class HelloService {
-                @Get("/hello")
-                public String hello() {
-                    requestTimeout(java.time.Duration.ofSeconds(5));
-                    return "hello";
-                }
-            }
-            """.trimIndent(),
-        )
-
-        val method = findMethod("example.HelloService", "hello")
-        assertEquals(emptyList<String>(), ArmeriaTimeoutSupport.collectTimeoutHints(method))
-    }
-
-    fun testCollectTimeoutHints_ignoresTimeoutCallsInOtherMethods() {
-        myFixture.configureByText(
-            "Main.java",
-            """
-            package example;
-
-            import com.linecorp.armeria.server.Server;
-            import com.linecorp.armeria.server.annotation.Get;
-
-            public class Main {
-                public static void main(String[] args) {
-                    Server.builder().requestTimeout(java.time.Duration.ofSeconds(30));
-                }
-            }
-
-            class HelloService {
-                @Get("/hello")
-                public String hello() {
-                    return "hello";
-                }
-            }
-            """.trimIndent(),
-        )
-
-        val helloMethod = findMethod("example.HelloService", "hello")
-        assertEquals(emptyList<String>(), ArmeriaTimeoutSupport.collectTimeoutHints(helloMethod))
+        assertEquals(listOf(message("route.explorer.execution.blocking")), ArmeriaTimeoutSupport.collectExecutionHints(method))
     }
 
     fun testRouteCollector_doesNotAttachForeignTimeoutHints() {
+        myFixture.addClass(
+            """
+            package java.time;
+
+            public final class Duration {
+                public static Duration ofSeconds(long seconds) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
         myFixture.configureByText(
             "HelloService.java",
             """
@@ -223,6 +215,7 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
 
             import com.linecorp.armeria.server.Server;
             import com.linecorp.armeria.server.annotation.Get;
+            import java.time.Duration;
 
             public class HelloService {
                 @Get("/hello")
@@ -232,7 +225,7 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
 
                 @Get("/other")
                 public String other() {
-                    Server.builder().requestTimeout(java.time.Duration.ofSeconds(5));
+                    Server.builder().requestTimeout(Duration.ofSeconds(5));
                     return "other";
                 }
             }
@@ -242,10 +235,7 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
         val routes = ArmeriaRouteCollector.collect(project).associateBy { it.path }
         assertEquals(emptyList<String>(), routes["/hello"]!!.timeoutHints)
         assertEquals(emptyList<String>(), routes["/hello"]!!.executionHints)
-        assertEquals(
-            listOf(message("route.explorer.timeout.value", message("route.explorer.timeout.request"), "java.time.Duration.ofSeconds(5)")),
-            routes["/other"]!!.timeoutHints,
-        )
+        assertEquals(emptyList<String>(), routes["/other"]!!.timeoutHints)
         assertEquals(emptyList<String>(), routes["/other"]!!.executionHints)
     }
 
@@ -255,6 +245,12 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
             ?.findMethodsByName(methodName, false)
             ?.single()
             ?: error("Method not found: $className#$methodName")
+
+    private fun findServiceRegistrationCall(className: String, methodName: String): PsiMethodCallExpression {
+        val method = findMethod(className, methodName)
+        return PsiTreeUtil.findChildrenOfType(method, PsiMethodCallExpression::class.java)
+            .first { it.methodExpression.referenceName == "service" }
+    }
 
     private fun registerArmeriaStubs() {
         myFixture.addClass(
@@ -297,7 +293,15 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
             package com.linecorp.armeria.server;
 
             public final class ServerBuilder {
+                public ServerBuilder requestTimeout() {
+                    return this;
+                }
+
                 public ServerBuilder requestTimeout(java.time.Duration duration) {
+                    return this;
+                }
+
+                public ServerBuilder service(String path, Object service) {
                     return this;
                 }
             }

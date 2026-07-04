@@ -50,14 +50,14 @@ class ArmeriaRouteDetailFormatterTest : LightJavaCodeInsightFixtureTestCase() {
             annotatedServiceHasPathPrefix = false,
             decorators = emptyList(),
             exceptionHandlers = emptyList(),
-            executionHints = listOf(message("route.explorer.timeout.blocking")),
+            executionHints = listOf(message("route.explorer.execution.blocking")),
             pointer = TestPsiPointer,
         )
 
         val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
 
-        assertTrue(attachments.contains(message("route.explorer.detail.execution", message("route.explorer.timeout.blocking"))))
-        assertFalse(attachments.contains(message("route.explorer.detail.timeouts", message("route.explorer.timeout.blocking"))))
+        assertTrue(attachments.contains(message("route.explorer.detail.execution", message("route.explorer.execution.blocking"))))
+        assertFalse(attachments.contains(message("route.explorer.detail.timeouts", message("route.explorer.execution.blocking"))))
     }
 
     fun testAttachmentsLine_omitsSecondarySeparator() {
@@ -92,41 +92,6 @@ class ArmeriaRouteDetailFormatterTest : LightJavaCodeInsightFixtureTestCase() {
         assertTrue(attachments.contains("handlers:"))
         assertTrue(attachments.contains("MyDecorator"))
         assertTrue(attachments.contains("MyHandler"))
-    }
-
-    fun testAttachmentsLine_includesExecutionHints() {
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.annotation;
-
-            public @interface Blocking {
-            }
-            """.trimIndent(),
-        )
-        myFixture.configureByText(
-            "HelloService.java",
-            """
-            package example;
-
-            import com.linecorp.armeria.server.annotation.Blocking;
-            import com.linecorp.armeria.server.annotation.Get;
-
-            public class HelloService {
-                @Blocking
-                @Get("/hello")
-                public String hello() {
-                    return "hello";
-                }
-            }
-            """.trimIndent(),
-        )
-
-        val route = ArmeriaRouteCollector.collect(project).single()
-        val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
-
-        assertTrue(attachments.contains("execution:"))
-        assertTrue(attachments.contains("Blocking"))
-        assertFalse(attachments.contains("timeouts:"))
     }
 
     fun testRegistrationSummary_annotatedServiceWithoutPathPrefix() {
