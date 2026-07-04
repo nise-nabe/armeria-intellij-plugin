@@ -120,6 +120,33 @@ class ArmeriaDocServiceSpecificationParserTest {
     }
 
     @Test
+    fun parse_readsJsonEscapeSequencesInStrings() {
+        val json = """
+            {
+              "services": [
+                {
+                  "name": "com.example.DemoService",
+                  "methods": [
+                    {
+                      "name": "escaped",
+                      "httpMethod": "GET",
+                      "examplePaths": ["/line\nbreak", "/tab\there", "/quote\"path", "/unicode\u0041"]
+                    }
+                  ]
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val parsed = ArmeriaDocServiceSpecificationParser.parse(json)
+
+        assertEquals(
+            setOf("GET /line\nbreak", "GET /tab\there", "GET /quote\"path", "GET /unicodeA"),
+            parsed.routes.map { "${it.httpMethod} ${it.path}" }.toSet(),
+        )
+    }
+
+    @Test
     fun parse_ignoresOpenApiStylePathFields() {
         val json = """
             {

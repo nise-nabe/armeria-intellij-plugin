@@ -1,7 +1,9 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
@@ -44,8 +46,18 @@ class ArmeriaSyncRuntimeRoutesAction : DumbAwareAction(
             object : Task.Backgroundable(project, message("route.explorer.sync.progress"), true) {
                 override fun run(indicator: ProgressIndicator) {
                     indicator.isIndeterminate = true
-                    val result = ArmeriaRuntimeRouteFetcher.fetch(request)
-                    com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater({
+                    val result = try {
+                        ArmeriaRuntimeRouteFetcher.fetch(request)
+                    } catch (_: ProcessCanceledException) {
+                        return
+                    }
+                    if (indicator.isCanceled || project.isDisposed) {
+                        return
+                    }
+                    ApplicationManager.getApplication().invokeLater({
+                        if (project.isDisposed) {
+                            return@invokeLater
+                        }
                         when (result) {
                             is ArmeriaDocServiceFetchResult.Success -> {
                                 val explorerPanel = ArmeriaRouteExplorerAccess.findPanel(project)

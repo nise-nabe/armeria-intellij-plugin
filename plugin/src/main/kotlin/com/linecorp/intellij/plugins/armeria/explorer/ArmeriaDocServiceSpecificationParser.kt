@@ -183,7 +183,29 @@ internal object ArmeriaDocServiceSpecificationParser {
                     if (index + 1 >= json.length) {
                         return null
                     }
-                    builder.append(json[index + 1])
+                    when (val escaped = json[index + 1]) {
+                        '"' -> builder.append('"')
+                        '\\' -> builder.append('\\')
+                        '/' -> builder.append('/')
+                        'b' -> builder.append('\b')
+                        'f' -> builder.append('\u000C')
+                        'n' -> builder.append('\n')
+                        'r' -> builder.append('\r')
+                        't' -> builder.append('\t')
+                        'u' -> {
+                            if (index + 5 >= json.length) {
+                                return null
+                            }
+                            val hex = json.substring(index + 2, index + 6)
+                            if (!hex.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) {
+                                return null
+                            }
+                            builder.append(hex.toInt(16).toChar())
+                            index += 6
+                            continue
+                        }
+                        else -> builder.append(escaped)
+                    }
                     index += 2
                 }
                 else -> {

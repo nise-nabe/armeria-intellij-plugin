@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.openapi.progress.ProgressManager
 import com.linecorp.intellij.plugins.armeria.message
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -29,8 +30,10 @@ object ArmeriaRuntimeRouteFetcher {
     private const val MAX_RESPONSE_BYTES = 5 * 1024 * 1024
 
     fun fetch(request: ArmeriaDocServiceFetchRequest): ArmeriaDocServiceFetchResult {
+        ProgressManager.checkCanceled()
         val errors = mutableListOf<String>()
         for (mountPath in request.mountPaths.distinct()) {
+            ProgressManager.checkCanceled()
             val url = ArmeriaDocServiceEndpointValidator.buildSpecificationUrl(
                 request.host,
                 request.port,
@@ -131,7 +134,7 @@ object ArmeriaRuntimeRouteFetcher {
             }
             total += read
             if (total > MAX_RESPONSE_BYTES) {
-                throw IOException("Response exceeds ${MAX_RESPONSE_BYTES} bytes")
+                throw IOException(message("route.explorer.sync.error.responseTooLarge", MAX_RESPONSE_BYTES))
             }
             buffer.write(chunk, 0, read)
         }
