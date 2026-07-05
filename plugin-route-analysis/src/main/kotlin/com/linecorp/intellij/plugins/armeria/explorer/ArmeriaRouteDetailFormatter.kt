@@ -94,4 +94,20 @@ object ArmeriaRouteDetailFormatter {
             RouteMatch.CONFIG -> message("route.explorer.registration.config", route.httpMethod, route.path)
         }
     }
+
+
+    private fun delegatedRegistrationSummary(route: ArmeriaRoute): String {
+        val method = route.httpMethod.ifBlank { message("route.explorer.method.allHttp") }
+        return message(
+            "route.explorer.registration.delegated",
+            method,
+            route.path,
+            route.delegationMountPath,
+        )
+    }
+
+    private fun delegationBadge(kind: DelegationKind): String = when (kind) {
+        DelegationKind.SPRING_MVC -> message("route.explorer.badge.springMvc")
+        DelegationKind.SERVLET -> message("route.explorer.badge.servlet")
+    }
 }
