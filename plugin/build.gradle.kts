@@ -12,6 +12,8 @@ group = "com.linecorp.intellij"
 version = providers.gradleProperty("pluginVersion").get()
 
 dependencies {
+    implementation(project(":plugin-shared"))
+    implementation(project(":plugin-wizard"))
     intellijPlatform {
         intellijIdeaUltimate(libs.versions.idea.platform.get())
         bundledPlugin("com.intellij.java")
