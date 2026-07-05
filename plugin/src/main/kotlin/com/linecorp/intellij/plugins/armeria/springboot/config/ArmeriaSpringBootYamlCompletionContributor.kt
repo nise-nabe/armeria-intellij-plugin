@@ -9,7 +9,9 @@ import org.jetbrains.yaml.psi.YAMLScalar
 
 class ArmeriaSpringBootYamlCompletionContributor : CompletionContributor() {
     init {
-        extend(PlatformPatterns.psiElement(YAMLScalar::class.java).withParent(YAMLKeyValue::class.java),
+        extend(
+            CompletionType.BASIC,
+            PlatformPatterns.psiElement(YAMLScalar::class.java).withParent(YAMLKeyValue::class.java),
             object : CompletionProvider<CompletionParameters>() {
                 override fun addCompletions(p: CompletionParameters, ctx: ProcessingContext, result: CompletionResultSet) {
                     val keyValue = p.position.parent as? YAMLKeyValue ?: return
@@ -25,6 +27,7 @@ class ArmeriaSpringBootYamlCompletionContributor : CompletionContributor() {
                         }
                     }
                 }
-            })
+            },
+        )
     }
 }
