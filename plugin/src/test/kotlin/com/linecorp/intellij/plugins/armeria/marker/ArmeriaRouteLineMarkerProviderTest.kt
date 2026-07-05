@@ -87,6 +87,31 @@ class ArmeriaRouteLineMarkerProviderTest : LightJavaCodeInsightFixtureTestCase()
         assertEquals(ArmeriaIcons.Armeria, marker!!.icon)
     }
 
+    fun testKotlinServiceRegistrationMarker() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                Server.builder()
+                    .service("/api", Any())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val fileText = myFixture.file.text
+        val serviceIndex = fileText.indexOf("service")
+        val element = myFixture.file.findElementAt(serviceIndex)!!
+        val marker = provider.getLineMarkerInfo(element)
+
+        assertNotNull(marker)
+        assertEquals(ArmeriaIcons.Armeria, marker!!.icon)
+    }
+
     private fun registerArmeriaStubs() {
         myFixture.addClass(
             """
