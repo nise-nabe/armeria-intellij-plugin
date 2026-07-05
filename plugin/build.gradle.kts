@@ -50,25 +50,23 @@ testing {
                 testTask.configure {
                     description = "Runs unit tests without IntelliJ Platform PSI fixture"
                     dependsOn("prepareTest", "instrumentTestCode", "fastTestClasses")
-                    testClassesDirs = project.sourceSets.named("fastTest").get().output.classesDirs
+                    val fastTestClassesDirs = project.sourceSets.named("fastTest").get().output.classesDirs
+                    testClassesDirs = fastTestClassesDirs
+
+                    val standardTest = project.tasks.named<Test>("test")
+                    notCompatibleWithConfigurationCache(
+                        "Copies IntelliJ Platform test runtime from the standard test task",
+                    )
+                    classpath = fastTestClassesDirs + standardTest.get().classpath
+                    jvmArgumentProviders.addAll(standardTest.get().jvmArgumentProviders)
+                    javaLauncher.convention(standardTest.get().javaLauncher)
+                    systemProperties.putAll(standardTest.get().systemProperties)
+                    environment.putAll(standardTest.get().environment)
+                    jvmArgs = standardTest.get().jvmArgs
                 }
             }
         }
     }
-}
-
-val standardTest = tasks.named<Test>("test")
-tasks.named<Test>("fastTest").configure {
-    val fastTestClassesDirs = sourceSets.named("fastTest").get().output.classesDirs
-    notCompatibleWithConfigurationCache(
-        "Copies IntelliJ Platform test runtime from the standard test task",
-    )
-    classpath = fastTestClassesDirs + standardTest.get().classpath
-    jvmArgumentProviders.addAll(standardTest.get().jvmArgumentProviders)
-    javaLauncher.convention(standardTest.get().javaLauncher)
-    systemProperties.putAll(standardTest.get().systemProperties)
-    environment.putAll(standardTest.get().environment)
-    jvmArgs = standardTest.get().jvmArgs
 }
 
 dependencies {
