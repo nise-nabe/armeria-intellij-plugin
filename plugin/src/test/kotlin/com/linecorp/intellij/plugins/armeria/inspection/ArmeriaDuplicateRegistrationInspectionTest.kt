@@ -49,6 +49,52 @@ class ArmeriaDuplicateRegistrationInspectionTest : LightJavaCodeInsightFixtureTe
         assertEquals(1, duplicateHighlights.size)
     }
 
+    fun testHighlightingAttachesNavigateQuickFix() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/dup", new FirstService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Extra {
+                public static void register(com.linecorp.armeria.server.ServerBuilder sb) {
+                    sb.service("/dup", new SecondService());
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class FirstService {}")
+        myFixture.addClass("package example; public class SecondService {}")
+
+        myFixture.enableInspections(ArmeriaDuplicateRegistrationInspection())
+        val duplicateHighlights = myFixture.doHighlighting().filter {
+            it.description?.contains("conflicting registrations") == true
+        }
+
+        assertEquals(1, duplicateHighlights.size)
+        val quickFixes = myFixture.getAvailableQuickFixes().filter {
+            it.text.startsWith("Navigate to conflicting route:")
+        }
+        assertEquals(1, quickFixes.size)
+        assertEquals("Navigate to conflicting route: /dup", quickFixes.single().text)
+    }
+
     fun testQuickFixesOfferNavigationToConflictingRoutes() {
         myFixture.configureByText(
             "Main.java",
