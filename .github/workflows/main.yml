@@ -22,11 +22,9 @@ jobs:
           - name: Route fast tests
             task: :plugin-route-analysis:fastTest
           - name: Route platform tests
-            task: :plugin-route-analysis:platformTest
-          - name: Plugin client fast tests
-            task: :plugin:fastTest
-          - name: Plugin client platform tests
-            task: :plugin:platformTest
+            task: :plugin-route-analysis:test
+          - name: Plugin client tests
+            task: :plugin:test
 
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0

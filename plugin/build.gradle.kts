@@ -1,5 +1,3 @@
-import org.gradle.api.tasks.testing.Test
-import org.gradle.language.base.plugins.LifecycleBasePlugin
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.date
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
@@ -37,53 +35,6 @@ testing {
             }
         }
     }
-}
-
-private val fastTestPatterns = listOf(
-    "com.linecorp.intellij.plugins.armeria.client.*",
-)
-
-tasks.register<Test>("fastTest") {
-    notCompatibleWithConfigurationCache("Copies runtime settings from the standard test task")
-    description = "Runs unit tests without IntelliJ Platform PSI fixture"
-    group = LifecycleBasePlugin.VERIFICATION_GROUP
-    dependsOn("prepareTest", "instrumentTestCode", "testClasses")
-    filter {
-        isFailOnNoMatchingTests = false
-        fastTestPatterns.forEach { includeTestsMatching(it) }
-    }
-}
-
-tasks.register<Test>("platformTest") {
-    notCompatibleWithConfigurationCache("Copies runtime settings from the standard test task")
-    description = "Runs IntelliJ Platform PSI fixture tests"
-    group = LifecycleBasePlugin.VERIFICATION_GROUP
-    dependsOn("prepareTest", "instrumentTestCode", "testClasses")
-    filter {
-        isFailOnNoMatchingTests = false
-        fastTestPatterns.forEach { excludeTestsMatching(it) }
-    }
-}
-
-afterEvaluate {
-    val standardTest = tasks.named<Test>("test").get()
-    listOf("fastTest", "platformTest").forEach { suiteName ->
-        tasks.named<Test>(suiteName).configure {
-            testClassesDirs = standardTest.testClassesDirs
-            classpath = standardTest.classpath
-            jvmArgumentProviders.addAll(standardTest.jvmArgumentProviders)
-            javaLauncher.convention(standardTest.javaLauncher)
-            doFirst {
-                systemProperties.putAll(standardTest.systemProperties)
-                environment.putAll(standardTest.environment)
-                jvmArgs = standardTest.jvmArgs
-            }
-        }
-    }
-}
-
-tasks.named("check") {
-    dependsOn("fastTest", "platformTest")
 }
 
 changelog {
