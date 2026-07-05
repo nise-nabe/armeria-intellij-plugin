@@ -17,6 +17,11 @@ import com.intellij.psi.codeStyle.JavaCodeStyleManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.message
+import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.psi.KtPsiFactory
+import org.jetbrains.kotlin.resolve.ImportPath
 
 internal object ArmeriaTestMethodInserter {
     fun insertFromRouteExplorer(project: Project, route: ArmeriaRoute): Boolean {
@@ -76,10 +81,41 @@ internal object ArmeriaTestMethodInserter {
     }
 
     private fun insertKotlinMethod(project: Project, targetClass: PsiClass, methodText: String) {
-        val rBrace = targetClass.rBrace ?: return
-        val document = PsiDocumentManager.getInstance(project).getDocument(targetClass.containingFile) ?: return
-        document.insertString(rBrace.textRange.startOffset, "\n\n$methodText\n")
-        PsiDocumentManager.getInstance(project).commitDocument(document)
+        val ktClass = targetClass as? KtClass ?: return
+        val anchor = ktClass.body?.rBrace ?: return
+        val factory = KtPsiFactory(project)
+        val function = factory.createFunction(methodText)
+        val added = ktClass.addBefore(function, anchor)
+        val ktFile = ktClass.containingKtFile
+        insertKotlinImport(project, ktFile, "org.junit.jupiter.api.Test")
+        insertKotlinImport(project, ktFile, "org.junit.jupiter.api.Assertions.assertEquals")
+        if (methodText.contains("WebClient")) {
+            insertKotlinImport(project, ktFile, ArmeriaJUnitServerExtensionSupport.WEB_CLIENT_CLASS)
+        }
+        val editor = ktFile.virtualFile
+            ?.let { FileEditorManager.getInstance(project).openFile(it, true).firstOrNull() as? Editor }
+        editor?.caretModel?.moveToOffset(added.textRange.startOffset)
+        editor?.scrollingModel?.scrollToCaret(ScrollType.CENTER)
+    }
+
+    private fun insertKotlinImport(project: Project, ktFile: KtFile, fqName: String) {
+        val path = FqName(fqName)
+        if (ktFile.importDirectives.any { it.importedFqName == path }) {
+            return
+        }
+        val factory = KtPsiFactory(project)
+        val directive = factory.createImportDirective(ImportPath.fromString(fqName))
+        val importList = ktFile.importList
+        if (importList != null) {
+            importList.add(directive)
+            return
+        }
+        val packageDirective = ktFile.packageDirective
+        if (packageDirective != null) {
+            ktFile.addAfter(directive, packageDirective)
+        } else {
+            ktFile.add(directive)
+        }
     }
 
     private fun resolveTargetClass(project: Project, route: ArmeriaRoute): PsiClass? {

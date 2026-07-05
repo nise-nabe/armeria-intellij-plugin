@@ -30,5 +30,7 @@
                          implementationClass="com.linecorp.intellij.plugins.armeria.test.ArmeriaBlockingClientKotlinInspection" />
         <codeInsight.lineMarkerProvider language="kotlin"
                                         implementationClass="com.linecorp.intellij.plugins.armeria.marker.ArmeriaKotlinRouteLineMarkerProvider"/>
+        <codeInsight.lineMarkerProvider language="kotlin"
+                                        implementationClass="com.linecorp.intellij.plugins.armeria.test.ArmeriaKotlinJUnitServerExtensionLineMarkerProvider" />
     </extensions>
 </idea-plugin>

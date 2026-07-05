@@ -2,7 +2,6 @@ package com.linecorp.intellij.plugins.armeria.test
 
 import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.codeInspection.ProblemsHolder
-import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
@@ -10,6 +9,7 @@ import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
+import org.jetbrains.kotlin.psi.KtVisitorVoid
 
 class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
     override fun getDisplayName(): String = message("inspection.blocking.client.kotlin.display.name")
@@ -20,19 +20,19 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
         if (blockingPaths.isEmpty()) {
             return PsiElementVisitor.EMPTY_VISITOR
         }
-        return object : PsiElementVisitor() {
-            override fun visitElement(element: PsiElement) {
-                val call = element as? KtCallExpression ?: return
-                val extension = ArmeriaJUnitServerExtensionSupport.enclosingServerExtension(call, scope) ?: return
-                if (!usesAsyncWebClient(call, extension.variableName)) {
+        return object : KtVisitorVoid() {
+            override fun visitCallExpression(expression: KtCallExpression) {
+                super.visitCallExpression(expression)
+                val extension = ArmeriaJUnitServerExtensionSupport.enclosingServerExtension(expression, scope) ?: return
+                if (!usesAsyncWebClient(expression, extension.variableName)) {
                     return
                 }
-                val path = extractRequestPath(call) ?: return
+                val path = extractRequestPath(expression) ?: return
                 if (!blockingPaths.contains(ArmeriaRouteSupport.normalizePath(path))) {
                     return
                 }
                 holder.registerProblem(
-                    call.calleeExpression ?: call,
+                    expression.calleeExpression ?: expression,
                     message("inspection.blocking.client.problem", path),
                 )
             }
