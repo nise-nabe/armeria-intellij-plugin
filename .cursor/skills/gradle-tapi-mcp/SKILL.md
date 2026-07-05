@@ -7,7 +7,7 @@ description: >-
 
 # Gradle Tooling API MCP
 
-This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.3.2 in `.cursor/mcp.json`. The JAR is installed by `.cursor/install.sh` to `~/.local/share/gradle-tapi-mcp-server/gradle-tapi-mcp-server.jar`. At MCP server launch, `.cursor/mcp.json` sets `GRADLE_PROJECT_DIR=${workspaceFolder}`.
+This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.3.3 in `.cursor/mcp.json`. The JAR is installed by `.cursor/install.sh` to `~/.local/share/gradle-tapi-mcp-server/gradle-tapi-mcp-server.jar`. At MCP server launch, `.cursor/mcp.json` sets `GRADLE_PROJECT_DIR=${workspaceFolder}`.
 
 The MCP server may report `loading` for a few seconds on first use; call `gradle_connection_status` before other tools.
 
@@ -52,18 +52,16 @@ There is no `projectPath` filter on model tools — they return the project tree
 | Compile check, cold start (first MCP build in session) | MCP `gradle_run_tasks` with `background: true` + poll, or shell — foreground often hits MCP client timeout (~60s) while Gradle still runs |
 | Full `build` or `:plugin:test` in Cloud | **Shell** `./gradlew` — IntelliJ tests are long-running and MCP clients often time out (~60s) |
 | Single test class (daemon + sandbox warm) | MCP `gradle_run_tests` with **one** class, `background: true` + polling — often ~5s |
-| Single test class (cold sandbox / first run) | Expect several minutes; use MCP background + poll or shell — do not overlap with other test runs |
-| Single test method | MCP `testClasses` may accept `ClassName.methodName` (Gradle `--tests` form); prefer one method at a time — see [#103](https://github.com/nise-nabe/gradle-tapi-mcp-server/issues/103) for official selection docs |
+| Single test class (cold sandbox / first run) | Expect several minutes; use MCP background + poll or shell |
+| Single test method | MCP `gradle_run_tests` with `testMethods: { "ClassName": ["methodName"] }`, or `testClasses: ["ClassName.methodName"]` (auto-normalized) |
 | MCP server unresponsive / all tools timeout | **Shell** `./gradlew`; Gradle daemon may still be IDLE while MCP is stuck |
 | PR / CI parity check | `./gradlew build` or `./gradlew --no-daemon :plugin:compileKotlin :plugin:test` |
 
-Do **not** start a second MCP `gradle_run_tasks` or `gradle_run_tests` while one is still running. Overlapping runs cause `InterruptedException`, can leave the IntelliJ test sandbox corrupted, and may wedge the MCP server until it is restarted. Until [gradle-tapi-mcp-server#101](https://github.com/nise-nabe/gradle-tapi-mcp-server/issues/101) rejects concurrent builds per project, treat this as a manual guard.
-
-Do **not** run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` at the same time. Both spawn IntelliJ Platform test workers against the same sandbox and can appear hung for many minutes with no log output. Same workaround until [#101](https://github.com/nise-nabe/gradle-tapi-mcp-server/issues/101) ships.
+The server rejects a second MCP build on the same `projectDirectory` with `BUILD_ALREADY_RUNNING`. Do **not** run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` at the same time — both spawn IntelliJ Platform test workers against the same sandbox and can appear hung for many minutes with no log output.
 
 ## Recovering from hung or stuck tests
 
-If `:plugin:test` via MCP or shell shows no progress for several minutes (IDE sandbox cold start or overlapping runs — overlap should be prevented server-side by [#101](https://github.com/nise-nabe/gradle-tapi-mcp-server/issues/101)):
+If `:plugin:test` via MCP or shell shows no progress for several minutes (IDE sandbox cold start or overlapping MCP + shell runs):
 
 1. Stop test workers and Gradle test processes:
 
@@ -110,20 +108,24 @@ Or for a single test class:
 }
 ```
 
+Or for a single test method:
+
+```json
+{
+  "testMethods": {
+    "com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteTreeBuilderTest": ["buildRoot_groupsRoutesByModule"]
+  },
+  "background": true
+}
+```
+
 2. Poll `gradle_get_build_status` with the returned `buildId` until `status` is `succeeded`, `failed`, or `cancelled`.
 
 3. Read `outcome` and `buildSummary` from the poll response. Use `includeProgress: true` for task/test events; set `includeOutput: true` only if you need truncated logs.
 
 On failure, `stdout` often includes Kotlin/Java compiler diagnostics with file paths and line numbers — check there before enabling full logs.
 
-**Recorder noise in `stderr`:** Builds may still report `succeeded` or `failed` correctly while `stderr` contains secondary errors from the MCP init-script recorder. Treat `status` / `outcome` / `buildSummary` as authoritative until fixed upstream:
-
-- `No such property: failure for class: DefaultTaskFailureResult` — [#99](https://github.com/nise-nabe/gradle-tapi-mcp-server/issues/99)
-- Heartbeat `appendEvent()` `MissingMethodException` — [#100](https://github.com/nise-nabe/gradle-tapi-mcp-server/issues/100)
-
-Parent tracker: [#98](https://github.com/nise-nabe/gradle-tapi-mcp-server/issues/98).
-
-**If the start call times out:** run `gradle_list_builds` (if MCP responds) or `ls .gradle/mcp-builds/` and poll the most recent `buildId` with `gradle_get_build_status`. Manual disk fallback should become unnecessary when [#102](https://github.com/nise-nabe/gradle-tapi-mcp-server/issues/102) merges poll results from `.gradle/mcp-builds/<buildId>/`.
+**If the start call times out:** run `gradle_list_builds` (if MCP responds) or `ls .gradle/mcp-builds/` and poll the most recent `buildId` with `gradle_get_build_status`. Running polls merge task progress from `.gradle/mcp-builds/<buildId>/events.ndjson` automatically.
 
 **Foreground is fine when the daemon and outputs are warm** — e.g. repeated `:plugin:compileKotlin` after a recent build often completes in under 1s.
 
@@ -139,7 +141,7 @@ Parent tracker: [#98](https://github.com/nise-nabe/gradle-tapi-mcp-server/issues
 
 ### Disk recovery when MCP is stuck
 
-Build records persist under `.gradle/mcp-builds/<buildId>/` even when the MCP server stops responding. Today agents must read these files manually; [#102](https://github.com/nise-nabe/gradle-tapi-mcp-server/issues/102) should surface them during `running` polls automatically.
+Build records persist under `.gradle/mcp-builds/<buildId>/` even when the MCP server stops responding. `gradle_get_build_status` merges disk progress during `running` polls; use `gradle_list_builds` to find recent `buildId` values.
 
 | File | Use |
 |------|-----|
@@ -151,7 +153,7 @@ Build records persist under `.gradle/mcp-builds/<buildId>/` even when the MCP se
 If every MCP call times out but `./gradlew` still works:
 
 1. List recent builds: `gradle_list_builds` (if MCP responds) or `ls .gradle/mcp-builds/`
-2. Read `.gradle/mcp-builds/<buildId>/mcp-result.json` for `status`, `outcome`, and `buildSummary`
+2. Poll or read `.gradle/mcp-builds/<buildId>/mcp-result.json` for `status`, `outcome`, and `buildSummary`
 3. Avoid starting new MCP test runs until the environment recovers (restart the MCP server / agent session if needed)
 
 ## Repo-specific tips
@@ -163,18 +165,19 @@ If every MCP call times out but `./gradlew` still works:
 | Full verify | shell (preferred) | `./gradlew build` |
 | All plugin tests | shell (preferred) or MCP background | `./gradlew :plugin:test` |
 | Single test class | `gradle_run_tests` + background, or shell | See running builds section |
+| Single test method | `gradle_run_tests` with `testMethods`, or shell | See running builds section |
 | Fast compile gate | `gradle_run_tasks` | `{ "tasks": [":plugin:compileKotlin"] }` — use `background: true` on cold start |
 
-Prefer shell for full `:plugin:test` and `build` in Cursor Cloud. Use MCP for lightweight queries, compile checks, and **one test class at a time** after compile passes.
+Prefer shell for full `:plugin:test` and `build` in Cursor Cloud. Use MCP for lightweight queries, compile checks, and **one test class or method at a time** after compile passes.
 
 ### Recommended agent workflow (IntelliJ plugin changes)
 
 1. `gradle_connection_status` — confirm MCP is connected.
 2. `gradle_run_tasks` with `[":plugin:compileKotlin", ":plugin:compileTestKotlin"]` (foreground if warm, else `background: true` + poll).
 3. For each new or changed test class, **sequentially**:
-   - `gradle_run_tests` with one FQCN in `testClasses`, `background: true`
+   - `gradle_run_tests` with one FQCN in `testClasses` (or `testMethods` for a single method), `background: true`
    - Poll `gradle_get_build_status` with `includeOutput: true` on failure
-   - Do not start shell `./gradlew :plugin:test` until the MCP run finishes or is cancelled (manual guard until [#101](https://github.com/nise-nabe/gradle-tapi-mcp-server/issues/101))
+   - Wait for the MCP run to finish or cancel before starting shell `./gradlew :plugin:test`
 4. Before opening a PR, run `./gradlew build` in shell for CI parity (or at minimum `:plugin:test` if time allows).
 
 ### JDK / toolchain debugging
@@ -204,17 +207,5 @@ Then rerun `:plugin:test` or `build` via shell or MCP (background + polling).
 
 Full tool reference and advanced workflows live in the upstream repository:
 
-- [README (v0.3.2)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/v0.3.2/README.md)
-- [gradle-tapi-mcp skill](https://github.com/nise-nabe/gradle-tapi-mcp-server/tree/v0.3.2/skills/gradle-tapi-mcp)
-
-### Workarounds pending upstream fixes
-
-| Issue | Workaround in this skill | After fix |
-|-------|--------------------------|-----------|
-| [#99](https://github.com/nise-nabe/gradle-tapi-mcp-server/issues/99) | Ignore recorder `failure` / `failures` noise in `stderr` | Clean `stderr` on Gradle 9.6 |
-| [#100](https://github.com/nise-nabe/gradle-tapi-mcp-server/issues/100) | Same — ignore heartbeat `appendEvent()` errors | Stable recorder heartbeat |
-| [#101](https://github.com/nise-nabe/gradle-tapi-mcp-server/issues/101) | Never overlap MCP and shell test runs; one MCP build at a time | Server rejects concurrent builds |
-| [#102](https://github.com/nise-nabe/gradle-tapi-mcp-server/issues/102) | Manually read `.gradle/mcp-builds/<buildId>/` on timeout | Poll merges disk artifacts while `running` |
-| [#103](https://github.com/nise-nabe/gradle-tapi-mcp-server/issues/103) | Tentative `ClassName.method` in `testClasses` | Documented `testClasses` / `testMethods` schema |
-
-Parent: [#98](https://github.com/nise-nabe/gradle-tapi-mcp-server/issues/98).
+- [README (v0.3.3)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/v0.3.3/README.md)
+- [gradle-tapi-mcp skill](https://github.com/nise-nabe/gradle-tapi-mcp-server/tree/v0.3.3/skills/gradle-tapi-mcp)
