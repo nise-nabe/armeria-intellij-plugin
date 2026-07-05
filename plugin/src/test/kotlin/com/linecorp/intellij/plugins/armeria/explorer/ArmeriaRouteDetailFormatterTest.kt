@@ -6,15 +6,11 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.SmartPsiElementPointer
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 import com.linecorp.intellij.plugins.armeria.message
 
-class ArmeriaRouteDetailFormatterTest : LightJavaCodeInsightFixtureTestCase() {
-    override fun setUp() {
-        super.setUp()
-        registerArmeriaStubs()
-    }
+class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
 
     fun testRegistrationSummary_annotatedRoute() {
         myFixture.configureByText(
@@ -158,58 +154,6 @@ class ArmeriaRouteDetailFormatterTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals("Server.builder().service(\"/api\", …)", ArmeriaRouteDetailFormatter.registrationSummary(route))
     }
 
-    private fun registerArmeriaStubs() {
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.annotation;
-
-            public @interface Get {
-                String value() default "";
-                String path() default "";
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.annotation;
-
-            public @interface Decorator {
-                Class<?>[] value();
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.annotation;
-
-            public @interface ExceptionHandler {
-                Class<?>[] value();
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server;
-
-            public final class Server {
-                public static ServerBuilder builder() {
-                    return null;
-                }
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server;
-
-            public final class ServerBuilder {
-                public ServerBuilder service(String path, Object service) {
-                    return this;
-                }
-            }
-            """.trimIndent(),
-        )
-    }
 
     private object TestPsiPointer : SmartPsiElementPointer<PsiElement> {
         override fun getElement(): PsiElement? = null

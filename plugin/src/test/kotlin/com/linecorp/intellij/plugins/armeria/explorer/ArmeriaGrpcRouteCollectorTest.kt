@@ -1,11 +1,32 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
-class ArmeriaGrpcRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
-    override fun setUp() {
-        super.setUp()
-        registerArmeriaStubs()
+class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
+    override fun registerArmeriaStubs() {
+        registerResolvableArmeriaServerStubs()
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.grpc;
+
+            public final class GrpcService {
+                public static GrpcServiceBuilder builder(Object bindableService) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.grpc;
+
+            public final class GrpcServiceBuilder {
+                public com.linecorp.armeria.server.grpc.GrpcService build() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
     }
 
     fun testCollectGrpcRoutesFromProtoWithHttpsInHttpOption() {
@@ -267,56 +288,5 @@ class ArmeriaGrpcRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
 
         assertNotNull(routes.firstOrNull { it.path == "/grpc" })
         assertNotNull(routes.firstOrNull { it.path == "/com.example.Greeter/SayHello" })
-    }
-
-    private fun registerArmeriaStubs() {
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server;
-
-            public final class Server {
-                public static ServerBuilder builder() {
-                    return new ServerBuilder();
-                }
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server;
-
-            public final class ServerBuilder {
-                public ServerBuilder service(String path, Object service) {
-                    return this;
-                }
-
-                public com.linecorp.armeria.server.Server build() {
-                    return null;
-                }
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.grpc;
-
-            public final class GrpcService {
-                public static GrpcServiceBuilder builder(Object bindableService) {
-                    return null;
-                }
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.grpc;
-
-            public final class GrpcServiceBuilder {
-                public com.linecorp.armeria.server.grpc.GrpcService build() {
-                    return null;
-                }
-            }
-            """.trimIndent(),
-        )
     }
 }

@@ -1,11 +1,10 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
-class ArmeriaIdlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
-    override fun setUp() {
-        super.setUp()
-        registerArmeriaStubs()
+class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
+    override fun registerArmeriaStubs() {
+        registerMinimalArmeriaServerStubs()
     }
 
     fun testParseGraphqlQueryFields() {
@@ -130,7 +129,7 @@ class ArmeriaIdlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
     }
 
     fun testCollectGraphqlRoutesWhenGraphqlOnClasspath() {
-        registerIdlStubs()
+        registerArmeriaIdlStubs()
         myFixture.configureByText(
             "schema.graphql",
             """
@@ -156,7 +155,7 @@ class ArmeriaIdlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
     }
 
     fun testCollectGraphqlRoutesFromGraphqlsExtension() {
-        registerIdlStubs()
+        registerArmeriaIdlStubs()
         myFixture.configureByText(
             "schema.graphqls",
             """
@@ -174,7 +173,7 @@ class ArmeriaIdlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
     }
 
     fun testCollectThriftRoutesWhenThriftOnClasspath() {
-        registerIdlStubs()
+        registerArmeriaIdlStubs()
         myFixture.configureByText(
             "hello.thrift",
             """
@@ -217,53 +216,5 @@ class ArmeriaIdlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
             .filter { it.routeMatch == RouteMatch.NON_HTTP }
 
         assertTrue(routesWithoutIdlStubs.isEmpty())
-    }
-
-    private fun registerArmeriaStubs() {
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server;
-
-            public final class Server {
-                public static ServerBuilder builder() {
-                    return null;
-                }
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server;
-
-            public final class ServerBuilder {
-                public ServerBuilder service(String path, Object service) {
-                    return this;
-                }
-
-                public com.linecorp.armeria.server.Server build() {
-                    return null;
-                }
-            }
-            """.trimIndent(),
-        )
-    }
-
-    private fun registerIdlStubs() {
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.graphql;
-
-            public final class GraphqlService {
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.thrift;
-
-            public final class THttpService {
-            }
-            """.trimIndent(),
-        )
     }
 }
