@@ -155,7 +155,7 @@ object ArmeriaRouteDuplicateIndex {
         when (route.routeMatch) {
             RouteMatch.SERVICE_UNDER -> true
             RouteMatch.ANNOTATED_SERVICE -> route.annotatedServiceHasPathPrefix
-            RouteMatch.RUNTIME, RouteMatch.ANNOTATED_HTTP, RouteMatch.SERVICE, RouteMatch.NON_HTTP -> false
+            else -> route.pathType == PathType.PREFIX
         }
 
     private fun pathIsUnder(path: String, prefix: String): Boolean {

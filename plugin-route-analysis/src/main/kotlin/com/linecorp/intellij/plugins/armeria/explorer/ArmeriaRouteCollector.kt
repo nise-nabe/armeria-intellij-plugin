@@ -288,11 +288,11 @@ object ArmeriaRouteCollector {
         expression: PsiMethodCallExpression,
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
-    ) {
-        val registrationKey = serviceRegistrationKey(expression) ?: return
-        val methodName = expression.methodExpression.referenceName ?: return
+    ): Boolean {
+        val registrationKey = serviceRegistrationKey(expression) ?: return false
+        val methodName = expression.methodExpression.referenceName ?: return false
         val arguments = expression.argumentList.expressions
-        val path = extractRegistrationPath(methodName, arguments) ?: return
+        val path = extractRegistrationPath(methodName, arguments) ?: return false
         val implementationExpression = when (ServiceRegistrationMethod.fromMethodName(methodName)) {
             ServiceRegistrationMethod.ANNOTATED_SERVICE -> arguments.getOrNull(1) ?: arguments.getOrNull(0)
             ServiceRegistrationMethod.SERVICE, ServiceRegistrationMethod.SERVICE_UNDER -> arguments.getOrNull(1)
@@ -305,9 +305,9 @@ object ArmeriaRouteCollector {
             ServiceRegistrationMethod.DECORATOR_UNDER,
             null,
             -> null
-        } ?: return
+        } ?: return false
         val target = ArmeriaRouteTargetExtractor.extractTarget(implementationExpression)
-        addServiceRegistrationRoute(
+        return addServiceRegistrationRoute(
             element = expression,
             registrationKey = registrationKey,
             methodName = methodName,
@@ -333,11 +333,11 @@ object ArmeriaRouteCollector {
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
         decorators: List<String>? = null,
-    ) {
+    ): Boolean {
         if (!seenServiceRegistrations.add(registrationKey)) {
-            return
+            return false
         }
-        val registrationMethod = ServiceRegistrationMethod.fromMethodName(methodName) ?: return
+        val registrationMethod = ServiceRegistrationMethod.fromMethodName(methodName) ?: return false
         val protocol = ArmeriaRouteTargetExtractor.detectProtocol(implementationText)
         val routeMatch = resolveRouteMatch(registrationMethod, protocol)
         val annotatedServiceHasPathPrefix =
@@ -358,6 +358,7 @@ object ArmeriaRouteCollector {
             decorators = programmaticDecorators,
             timeoutHints = timeoutHints,
         )
+        return true
     }
 
     private fun resolveRouteMatch(registrationMethod: ServiceRegistrationMethod, protocol: RouteProtocol): RouteMatch {
