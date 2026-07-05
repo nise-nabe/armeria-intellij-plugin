@@ -1,9 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.test
 
-import com.intellij.psi.PsiMethod
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaTimeoutSupport
 import com.linecorp.intellij.plugins.armeria.explorer.RouteMatch
 import com.linecorp.intellij.plugins.armeria.message
 import java.util.Locale
@@ -23,12 +21,7 @@ internal object ArmeriaTestMethodGenerator {
     }
 
     fun requiresBlockingClient(route: ArmeriaRoute): Boolean {
-        if (route.executionHints.contains(message("route.explorer.execution.blocking"))) {
-            return true
-        }
-        val method = route.pointer.element as? PsiMethod ?: return false
-        return ArmeriaTimeoutSupport.collectExecutionHints(method)
-            .contains(message("route.explorer.execution.blocking"))
+        return route.executionHints.contains(message("route.explorer.execution.blocking"))
     }
 
     fun suggestMethodName(route: ArmeriaRoute): String {
