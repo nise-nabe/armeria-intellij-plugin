@@ -17,9 +17,17 @@ internal class ArmeriaOpenDocServiceAction(
         val project = e.project
         if (project == null) {
             e.presentation.isEnabled = false
+            e.presentation.description = null
             return
         }
-        e.presentation.isEnabled = ArmeriaDocServiceSupport.primaryUrl(routesProvider()) != null
+        val routes = routesProvider()
+        val url = ArmeriaDocServiceSupport.primaryUrl(routes)
+        e.presentation.isEnabled = url != null
+        e.presentation.description = if (url != null) {
+            message("route.explorer.action.openDocService.descriptionWithUrl", url)
+        } else {
+            message("route.explorer.action.openDocService.description")
+        }
     }
 
     override fun actionPerformed(e: AnActionEvent) {
