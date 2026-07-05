@@ -57,7 +57,28 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
         val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
 
         assertTrue(attachments.contains(message("route.explorer.detail.execution", message("route.explorer.execution.blocking"))))
-        assertFalse(attachments.contains(message("route.explorer.detail.timeouts", message("route.explorer.execution.blocking"))))
+    }
+
+    fun testAttachmentsLine_includesTimeoutHints() {
+        val route = ArmeriaRoute(
+            protocol = "HTTP",
+            httpMethod = "GET",
+            path = "/hello",
+            target = "example.HelloService",
+            routeMatch = RouteMatch.SERVICE,
+            moduleName = "app",
+            targetUnresolved = false,
+            isDocService = false,
+            annotatedServiceHasPathPrefix = false,
+            decorators = emptyList(),
+            exceptionHandlers = emptyList(),
+            timeoutHints = listOf("5s"),
+            pointer = TestPsiPointer,
+        )
+
+        val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
+
+        assertTrue(attachments.contains(message("route.explorer.detail.timeouts", "5s")))
     }
 
     fun testAttachmentsLine_omitsSecondarySeparator() {

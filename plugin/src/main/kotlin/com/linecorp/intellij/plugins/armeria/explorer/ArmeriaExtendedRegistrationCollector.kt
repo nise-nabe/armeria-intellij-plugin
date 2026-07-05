@@ -324,15 +324,18 @@ internal object ArmeriaExtendedRegistrationCollector {
         while (current != null) {
             if (current is PsiMethodCallExpression) {
                 val methodName = current.methodExpression.referenceName
-                if (methodName in ServiceRegistrationMethod.METHOD_NAMES - ServiceRegistrationMethod.EXTENDED_METHOD_NAMES) {
-                    ArmeriaRouteCollector.addServiceRegistrationFromCall(current, routes, seenRegistrations)
-                    annotateLastRouteWithVirtualHost(routes, hostname)
+                if (methodName in ServiceRegistrationMethod.METHOD_NAMES - ServiceRegistrationMethod.EXTENDED_METHOD_NAMES &&
+                    looksLikeArmeriaBuilderCall(current)
+                ) {
+                    val added = ArmeriaRouteCollector.addServiceRegistrationFromCall(current, routes, seenRegistrations)
+                    annotateRouteWithVirtualHost(routes, current, hostname, added)
                 }
                 if (methodName in ServiceRegistrationMethod.EXTENDED_METHOD_NAMES &&
                     methodName != ServiceRegistrationMethod.VIRTUAL_HOST.methodName
                 ) {
+                    val beforeSize = routes.size
                     collectFromMethodCall(current, routes, seenRegistrations)
-                    annotateLastRouteWithVirtualHost(routes, hostname)
+                    annotateRouteWithVirtualHost(routes, current, hostname, routes.size > beforeSize)
                 }
                 current = current.methodExpression.qualifierExpression
             } else {
@@ -344,10 +347,37 @@ internal object ArmeriaExtendedRegistrationCollector {
                 return@forEach
             }
             val methodName = nested.methodExpression.referenceName ?: return@forEach
-            if (methodName in ServiceRegistrationMethod.METHOD_NAMES - ServiceRegistrationMethod.EXTENDED_METHOD_NAMES) {
-                ArmeriaRouteCollector.addServiceRegistrationFromCall(nested, routes, seenRegistrations)
-                annotateLastRouteWithVirtualHost(routes, hostname)
+            if (methodName in ServiceRegistrationMethod.METHOD_NAMES - ServiceRegistrationMethod.EXTENDED_METHOD_NAMES &&
+                looksLikeArmeriaBuilderCall(nested)
+            ) {
+                val added = ArmeriaRouteCollector.addServiceRegistrationFromCall(nested, routes, seenRegistrations)
+                annotateRouteWithVirtualHost(routes, nested, hostname, added)
             }
+        }
+    }
+
+    private fun annotateRouteWithVirtualHost(
+        routes: MutableList<ArmeriaRoute>,
+        registrationCall: PsiMethodCallExpression,
+        hostname: String,
+        addedNewRoute: Boolean,
+    ) {
+        if (addedNewRoute) {
+            annotateLastRouteWithVirtualHost(routes, hostname)
+            return
+        }
+        val index = routes.indexOfLast { route ->
+            val element = route.pointer.element
+            element != null &&
+                element.containingFile == registrationCall.containingFile &&
+                element.textRange == registrationCall.textRange
+        }
+        if (index < 0) {
+            return
+        }
+        val route = routes[index]
+        if (route.virtualHostName.isEmpty() && route.routeMatch != RouteMatch.VIRTUAL_HOST) {
+            routes[index] = route.copy(virtualHostName = hostname)
         }
     }
 

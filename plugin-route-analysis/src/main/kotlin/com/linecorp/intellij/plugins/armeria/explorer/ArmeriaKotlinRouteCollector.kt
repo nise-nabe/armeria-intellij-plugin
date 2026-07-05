@@ -101,7 +101,7 @@ object ArmeriaKotlinRouteCollector {
         }
     }
 
-    private fun looksLikeArmeriaBuilderCall(call: KtCallExpression): Boolean {
+    internal fun looksLikeArmeriaBuilderCall(call: KtCallExpression): Boolean {
         if (resolvesToArmeriaServerBuilder(call)) {
             return true
         }

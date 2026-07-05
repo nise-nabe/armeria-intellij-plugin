@@ -31,6 +31,9 @@ object ArmeriaRouteDetailFormatter {
             if (route.executionHints.isNotEmpty()) {
                 add(message("route.explorer.detail.execution", route.executionHints.joinToString()))
             }
+            if (route.timeoutHints.isNotEmpty()) {
+                add(message("route.explorer.detail.timeouts", route.timeoutHints.joinToString()))
+            }
             if (route.pathType != PathType.EXACT) {
                 add(message("route.explorer.detail.pathType", pathTypeLabel(route.pathType)))
             }
