@@ -2,14 +2,10 @@ package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.intellij.openapi.project.Project
 import com.intellij.psi.search.GlobalSearchScope
+import com.linecorp.intellij.plugins.armeria.message
 
 internal object ArmeriaDelegatedRouteCollector {
     fun collect(project: Project, scope: GlobalSearchScope, routes: MutableList<ArmeriaRoute>) {
-        val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, scope)
-        if (springMvcRoutes.isEmpty()) {
-            return
-        }
-
         val mountRoutes = routes.mapNotNull { route ->
             val delegationKind = ArmeriaServletMountSupport.detectDelegation(route.target, route.routeMatch) ?: return@mapNotNull null
             route to delegationKind
@@ -18,13 +14,20 @@ internal object ArmeriaDelegatedRouteCollector {
             return
         }
 
+        val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, scope)
+        if (springMvcRoutes.isEmpty()) {
+            return
+        }
+
+        val unassignedModule = message("route.explorer.module.unassigned")
         val seenDelegatedKeys = mutableSetOf<String>()
         val delegatedRoutes = mutableListOf<ArmeriaRoute>()
         val mountPathsWithDelegation = mutableSetOf<String>()
 
         for ((mountRoute, delegationKind) in mountRoutes) {
             mountPathsWithDelegation += mountRoute.path
-            for (springMvcRoute in springMvcRoutes) {
+            val scopedSpringMvcRoutes = springMvcRoutesForMount(mountRoute, springMvcRoutes, unassignedModule)
+            for (springMvcRoute in scopedSpringMvcRoutes) {
                 val combinedPath = ArmeriaRouteSupport.combinePaths(mountRoute.path, springMvcRoute.path)
                 val dedupeKey = "${mountRoute.moduleName}:$combinedPath:${springMvcRoute.httpMethod}:${springMvcRoute.target}"
                 if (!seenDelegatedKeys.add(dedupeKey)) {
@@ -54,5 +57,19 @@ internal object ArmeriaDelegatedRouteCollector {
         routes.clear()
         routes += updatedRoutes
         routes += delegatedRoutes
+    }
+
+    internal fun springMvcRoutesForMount(
+        mountRoute: ArmeriaRoute,
+        springMvcRoutes: List<SpringMvcRoute>,
+        unassignedModule: String,
+    ): List<SpringMvcRoute> {
+        val mountModule = mountRoute.moduleName
+        if (mountModule == unassignedModule) {
+            return springMvcRoutes
+        }
+        return springMvcRoutes.filter { route ->
+            ArmeriaRouteMetadata.moduleName(route.element) == mountModule
+        }
     }
 }
