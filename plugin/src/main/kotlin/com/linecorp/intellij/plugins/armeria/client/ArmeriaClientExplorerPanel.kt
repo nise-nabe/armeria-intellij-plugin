@@ -66,6 +66,11 @@ class ArmeriaClientExplorerPanel(
                         append(value.uri)
                         append(" → ")
                         append(value.target)
+                        if (value.features.isNotEmpty()) {
+                            append(" [")
+                            append(value.features.joinToString())
+                            append(']')
+                        }
                         append(" (")
                         append(value.moduleName)
                         append(')')

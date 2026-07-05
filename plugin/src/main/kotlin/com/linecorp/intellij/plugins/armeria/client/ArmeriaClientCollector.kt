@@ -78,7 +78,8 @@ object ArmeriaClientCollector {
         val uri = extractUri(expression, methodName) ?: return
         val target = expression.methodExpression.qualifierExpression?.text
             ?: resolvedClass.substringAfterLast('.')
-        addEndpoint(expression, protocol, target, uri, endpoints, seenEndpoints)
+        val features = ArmeriaClientFeatureSupport.extractJavaFeatures(expression)
+        addEndpoint(expression, protocol, target, uri, endpoints, seenEndpoints, features)
     }
 
     internal fun addEndpoint(
@@ -88,13 +89,14 @@ object ArmeriaClientCollector {
         uri: String,
         endpoints: MutableList<ArmeriaClientEndpoint>,
         seenEndpoints: MutableSet<String>,
+        features: List<String> = emptyList(),
     ) {
         val virtualFile = element.containingFile?.virtualFile ?: return
         val dedupeKey = "${virtualFile.path}:${element.textRange.startOffset}"
         if (!seenEndpoints.add(dedupeKey)) {
             return
         }
-        endpoints += ArmeriaClientEndpoint.create(element, protocol.presentableName(), target, uri)
+        endpoints += ArmeriaClientEndpoint.create(element, protocol.presentableName(), target, uri, features)
     }
 
     private fun extractUri(expression: PsiMethodCallExpression, methodName: String): String? {

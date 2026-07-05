@@ -10,6 +10,7 @@ data class ArmeriaClientEndpoint(
     val target: String,
     val uri: String,
     val moduleName: String,
+    val features: List<String>,
     val pointer: SmartPsiElementPointer<PsiElement>,
 ) {
     companion object {
@@ -18,12 +19,14 @@ data class ArmeriaClientEndpoint(
             clientType: String,
             target: String,
             uri: String,
+            features: List<String> = emptyList(),
         ): ArmeriaClientEndpoint {
             return ArmeriaClientEndpoint(
                 clientType = clientType,
                 target = target,
                 uri = uri,
                 moduleName = ArmeriaRouteMetadata.moduleName(element),
+                features = features,
                 pointer = SmartPointerManager.createPointer(element),
             )
         }
