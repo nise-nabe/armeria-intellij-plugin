@@ -189,7 +189,7 @@ object ArmeriaKotlinRouteCollector {
     private fun extractKotlinString(expression: KtExpression?): String? =
         ArmeriaKotlinExpressionSupport.extractKotlinString(expression)
 
-    internal fun extractKotlinStrings(expression: KtExpression?): List<String> {
+    fun extractKotlinStrings(expression: KtExpression?): List<String> {
         val unwrapped = unwrapKotlinExpression(expression) ?: return emptyList()
         if (unwrapped is KtCollectionLiteralExpression) {
             return unwrapped.getInnerExpressions().mapNotNull(::extractKotlinString)
