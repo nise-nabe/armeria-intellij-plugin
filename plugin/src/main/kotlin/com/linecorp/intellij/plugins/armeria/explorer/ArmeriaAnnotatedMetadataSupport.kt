@@ -12,7 +12,6 @@ internal object ArmeriaAnnotatedMetadataSupport {
     private const val PRODUCES_ANNOTATION = "com.linecorp.armeria.server.annotation.Produces"
     private const val REDIRECT_ANNOTATION = "com.linecorp.armeria.server.annotation.Redirect"
     private const val DESCRIPTION_ANNOTATION = "com.linecorp.armeria.server.annotation.Description"
-    private const val PARAM_ANNOTATION = "com.linecorp.armeria.server.annotation.Param"
 
     fun collectContentHints(method: PsiMethod, path: String): List<String> {
         return buildList {
@@ -26,7 +25,6 @@ internal object ArmeriaAnnotatedMetadataSupport {
             collectPathVariables(path).takeIf { it.isNotEmpty() }?.let { vars ->
                 add(message("route.explorer.hint.pathVariables", vars.joinToString(", ")))
             }
-            collectClassBlockingHint(method.containingClass)?.let { add(it) }
         }
     }
 
@@ -82,30 +80,6 @@ internal object ArmeriaAnnotatedMetadataSupport {
         BRACE_PATH_VARIABLE_PATTERN.findAll(path).forEach { variables += it.groupValues[1] }
         COLON_PATH_VARIABLE_PATTERN.findAll(path).forEach { variables += it.groupValues[1] }
         return variables.toList()
-    }
-
-    private fun collectClassBlockingHint(containingClass: PsiClass?): String? {
-        if (containingClass == null) {
-            return null
-        }
-        val hasClassBlocking = containingClass.annotations.any { it.qualifiedName == ArmeriaRouteSupport.BLOCKING_ANNOTATION }
-        val hasClassNonBlocking = containingClass.annotations.any {
-            it.qualifiedName == ArmeriaRouteSupport.NON_BLOCKING_ANNOTATION
-        }
-        return when {
-            hasClassBlocking -> message("route.explorer.hint.classBlocking")
-            hasClassNonBlocking -> message("route.explorer.hint.classNonBlocking")
-            else -> null
-        }
-    }
-
-    fun collectParamNames(method: PsiMethod): List<String> {
-        return method.parameterList.parameters.mapNotNull { parameter ->
-            parameter.annotations
-                .firstOrNull { it.qualifiedName == PARAM_ANNOTATION }
-                ?.let { ArmeriaRouteSupport.extractStrings(it.findDeclaredAttributeValue("value")).firstOrNull() }
-                ?: parameter.name
-        }
     }
 
     private val BRACE_PATH_VARIABLE_PATTERN = Regex("""\{([^}]+)}""")
