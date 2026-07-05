@@ -11,6 +11,7 @@ internal object ArmeriaAnnotatedMetadataSupport {
     private const val CONSUMES_ANNOTATION = "com.linecorp.armeria.server.annotation.Consumes"
     private const val PRODUCES_ANNOTATION = "com.linecorp.armeria.server.annotation.Produces"
     private const val REDIRECT_ANNOTATION = "com.linecorp.armeria.server.annotation.Redirect"
+    private const val DESCRIPTION_ANNOTATION = "com.linecorp.armeria.server.annotation.Description"
     private const val PARAM_ANNOTATION = "com.linecorp.armeria.server.annotation.Param"
 
     fun collectContentHints(method: PsiMethod, path: String): List<String> {
@@ -20,6 +21,8 @@ internal object ArmeriaAnnotatedMetadataSupport {
             collectMediaTypes(method, CONSUMES_ANNOTATION, "route.explorer.hint.consumes")?.let { add(it) }
             collectMediaTypes(method, PRODUCES_ANNOTATION, "route.explorer.hint.produces")?.let { add(it) }
             collectRedirect(method)?.let { add(it) }
+            collectDescription(method)?.let { add(it) }
+            collectClassDescription(method.containingClass)?.let { add(it) }
             collectPathVariables(path).takeIf { it.isNotEmpty() }?.let { vars ->
                 add(message("route.explorer.hint.pathVariables", vars.joinToString(", ")))
             }
@@ -57,8 +60,28 @@ internal object ArmeriaAnnotatedMetadataSupport {
         return target?.let { message("route.explorer.hint.redirect", it) }
     }
 
+    private fun collectDescription(method: PsiMethod): String? {
+        return collectDescriptionText(method.getAnnotation(DESCRIPTION_ANNOTATION))
+    }
+
+    private fun collectClassDescription(containingClass: PsiClass?): String? {
+        return collectDescriptionText(containingClass?.getAnnotation(DESCRIPTION_ANNOTATION))
+    }
+
+    private fun collectDescriptionText(annotation: PsiAnnotation?): String? {
+        if (annotation == null) {
+            return null
+        }
+        val text = ArmeriaRouteSupport.extractStrings(annotation.findDeclaredAttributeValue("value")).firstOrNull()
+            ?: annotation.findDeclaredAttributeValue("value")?.text?.trim('"')
+        return text?.takeIf { it.isNotBlank() }?.let { message("route.explorer.hint.description", it) }
+    }
+
     private fun collectPathVariables(path: String): List<String> {
-        return PATH_VARIABLE_PATTERN.findAll(path).map { it.groupValues[1] }.toList()
+        val variables = linkedSetOf<String>()
+        BRACE_PATH_VARIABLE_PATTERN.findAll(path).forEach { variables += it.groupValues[1] }
+        COLON_PATH_VARIABLE_PATTERN.findAll(path).forEach { variables += it.groupValues[1] }
+        return variables.toList()
     }
 
     private fun collectClassBlockingHint(containingClass: PsiClass?): String? {
@@ -85,5 +108,6 @@ internal object ArmeriaAnnotatedMetadataSupport {
         }
     }
 
-    private val PATH_VARIABLE_PATTERN = Regex("""\{([^}]+)}""")
+    private val BRACE_PATH_VARIABLE_PATTERN = Regex("""\{([^}]+)}""")
+    private val COLON_PATH_VARIABLE_PATTERN = Regex(""":([A-Za-z_][A-Za-z0-9_]*)""")
 }

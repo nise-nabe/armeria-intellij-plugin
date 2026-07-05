@@ -39,6 +39,32 @@ class ArmeriaAnnotatedMetadataSupportTest : LightJavaCodeInsightFixtureTestCase(
         assertTrue(route.contentHints.any { it.contains("Blocking") })
     }
 
+    fun testCollectColonStylePathVariablesAndDescription() {
+        myFixture.configureByText(
+            "GreetService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.*;
+
+            @Description("Greets users by name.")
+            public class GreetService {
+                @Get("/hello/:name")
+                @Description("Returns a greeting.")
+                public String greet(@Param("name") String name) {
+                    return name;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val route = routes.single()
+        assertTrue(route.contentHints.any { it.contains("name") })
+        assertTrue(route.contentHints.any { it.contains("Returns a greeting") })
+        assertTrue(route.contentHints.any { it.contains("Greets users by name") })
+    }
+
     private fun registerStubs() {
         myFixture.addClass(
             """
@@ -86,6 +112,12 @@ class ArmeriaAnnotatedMetadataSupportTest : LightJavaCodeInsightFixtureTestCase(
             """
             package com.linecorp.armeria.server.annotation;
             public @interface Blocking {}
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation;
+            public @interface Description { String value() default ""; }
             """.trimIndent(),
         )
     }
