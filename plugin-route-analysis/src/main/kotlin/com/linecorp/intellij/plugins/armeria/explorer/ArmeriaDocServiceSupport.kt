@@ -1,6 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
-internal object ArmeriaDocServiceSupport {
+object ArmeriaDocServiceSupport {
     fun docServiceRoutes(routes: List<ArmeriaRoute>): List<ArmeriaRoute> = routes.filter { it.isDocService }
 
     fun hasDocService(routes: List<ArmeriaRoute>): Boolean = routes.any { it.isDocService }
