@@ -18,6 +18,9 @@ class ArmeriaGenerateRouteMethodIntention : PsiElementBaseIntentionAction() {
 
     override fun isAvailable(project: Project, editor: Editor, element: PsiElement): Boolean {
         val serviceClass = ArmeriaIntentionSupport.annotatedServiceClass(element) ?: return false
+        if (serviceClass.containingFile !is com.intellij.psi.PsiJavaFile) {
+            return false
+        }
         return ArmeriaIntentionSupport.isInsideClassBody(element, serviceClass)
     }
 
