@@ -300,6 +300,9 @@ object ArmeriaRouteCollector {
             ServiceRegistrationMethod.HEALTH_CHECK_SERVICE,
             ServiceRegistrationMethod.VIRTUAL_HOST,
             ServiceRegistrationMethod.ROUTE_DECORATOR,
+            ServiceRegistrationMethod.ROUTE,
+            ServiceRegistrationMethod.WITH_ROUTE,
+            ServiceRegistrationMethod.DECORATOR_UNDER,
             null,
             -> null
         } ?: return
@@ -369,6 +372,9 @@ object ArmeriaRouteCollector {
             ServiceRegistrationMethod.HEALTH_CHECK_SERVICE,
             ServiceRegistrationMethod.VIRTUAL_HOST,
             ServiceRegistrationMethod.ROUTE_DECORATOR,
+            ServiceRegistrationMethod.ROUTE,
+            ServiceRegistrationMethod.WITH_ROUTE,
+            ServiceRegistrationMethod.DECORATOR_UNDER,
             -> error("Extended registration handled separately: $registrationMethod")
         }
     }
@@ -407,6 +413,9 @@ object ArmeriaRouteCollector {
             ServiceRegistrationMethod.HEALTH_CHECK_SERVICE,
             ServiceRegistrationMethod.VIRTUAL_HOST,
             ServiceRegistrationMethod.ROUTE_DECORATOR,
+            ServiceRegistrationMethod.ROUTE,
+            ServiceRegistrationMethod.WITH_ROUTE,
+            ServiceRegistrationMethod.DECORATOR_UNDER,
             null,
             -> null
         }

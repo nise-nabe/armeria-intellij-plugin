@@ -46,6 +46,8 @@ data class ArmeriaRoute(
             RouteMatch.HEALTH_CHECK -> message("route.explorer.method.healthCheck")
             RouteMatch.VIRTUAL_HOST -> message("route.explorer.method.virtualHost")
             RouteMatch.ROUTE_DECORATOR -> message("route.explorer.method.routeDecorator")
+            RouteMatch.ROUTE_FLUENT -> httpMethod.ifBlank { message("route.explorer.method.allHttp") }
+            RouteMatch.DECORATOR_UNDER -> message("route.explorer.method.decoratorUnder")
             RouteMatch.NON_HTTP -> protocol
             RouteMatch.RUNTIME -> httpMethod
         }

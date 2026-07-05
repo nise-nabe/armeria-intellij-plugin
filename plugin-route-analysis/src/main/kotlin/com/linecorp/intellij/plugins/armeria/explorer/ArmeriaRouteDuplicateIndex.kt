@@ -28,6 +28,7 @@ object ArmeriaRouteDuplicateIndex {
         RouteMatch.ANNOTATED_SERVICE,
         RouteMatch.SERVICE,
         RouteMatch.SERVICE_UNDER,
+        RouteMatch.ROUTE_FLUENT,
     )
 
     fun duplicateHitsInFile(project: Project, file: PsiFile): List<DuplicateRegistrationHit> {
@@ -184,9 +185,10 @@ object ArmeriaRouteDuplicateIndex {
     private fun matchesAllHttpMethods(route: ArmeriaRoute): Boolean =
         when (route.routeMatch) {
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.ANNOTATED_SERVICE -> true
+            RouteMatch.ROUTE_FLUENT -> route.httpMethod.isBlank()
             RouteMatch.ANNOTATED_HTTP, RouteMatch.NON_HTTP, RouteMatch.RUNTIME,
             RouteMatch.FILE_SERVICE, RouteMatch.HEALTH_CHECK,
-            RouteMatch.VIRTUAL_HOST, RouteMatch.ROUTE_DECORATOR,
+            RouteMatch.VIRTUAL_HOST, RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
             -> false
         }
 

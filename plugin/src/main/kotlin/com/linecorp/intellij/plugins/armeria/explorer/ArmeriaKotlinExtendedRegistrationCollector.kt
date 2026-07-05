@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
+import com.linecorp.intellij.plugins.armeria.message
 
 internal object ArmeriaKotlinExtendedRegistrationCollector {
 
@@ -99,8 +100,22 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
                     protocol = RouteProtocol.HTTP.presentableName(),
                     httpMethod = "",
                     path = "/**",
-                    target = "routeDecorator",
+                    target = message("route.explorer.target.routeDecorator"),
                     routeMatch = RouteMatch.ROUTE_DECORATOR,
+                )
+            }
+            ServiceRegistrationMethod.WITH_ROUTE -> Unit
+            ServiceRegistrationMethod.DECORATOR_UNDER -> {
+                val rawPath = extractKotlinString(pathArg) ?: return
+                val (pathType, normalizedPath) = ArmeriaRouteSupport.parsePathType(rawPath)
+                routes += ArmeriaRoute.create(
+                    element = call,
+                    protocol = RouteProtocol.HTTP.presentableName(),
+                    httpMethod = "",
+                    path = normalizedPath,
+                    target = message("route.explorer.target.decoratorUnder"),
+                    routeMatch = RouteMatch.DECORATOR_UNDER,
+                    pathType = pathType,
                 )
             }
             else -> Unit
