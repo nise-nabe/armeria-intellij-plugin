@@ -59,6 +59,42 @@ class ArmeriaScalaTextSupportTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals("/", match.path)
     }
 
+    fun testFindServiceUnderWithPositionalArguments() {
+        val matches = ArmeriaScalaTextSupport.findServiceRegistrations(
+            """
+            import com.linecorp.armeria.server.Server
+
+            Server.builder()
+              .serviceUnder("/api", new ApiService())
+              .build()
+            """.trimIndent(),
+        )
+
+        assertEquals(1, matches.size)
+        val match = matches.single()
+        assertEquals("serviceUnder", match.methodName)
+        assertEquals("/api", match.path)
+        assertEquals("ApiService", ArmeriaScalaTextSupport.renderScalaTarget(match.targetText))
+    }
+
+    fun testFindServiceUnderWithNamedArguments() {
+        val matches = ArmeriaScalaTextSupport.findServiceRegistrations(
+            """
+            import com.linecorp.armeria.server.Server
+
+            Server.builder()
+              .serviceUnder(pathPrefix = "/v1", service = new HelloService())
+              .build()
+            """.trimIndent(),
+        )
+
+        assertEquals(1, matches.size)
+        val match = matches.single()
+        assertEquals("serviceUnder", match.methodName)
+        assertEquals("/v1", match.path)
+        assertEquals("HelloService", ArmeriaScalaTextSupport.renderScalaTarget(match.targetText))
+    }
+
     fun testFindWebClientEndpoint() {
         val endpoints = ArmeriaScalaTextSupport.findClientEndpoints(
             """
