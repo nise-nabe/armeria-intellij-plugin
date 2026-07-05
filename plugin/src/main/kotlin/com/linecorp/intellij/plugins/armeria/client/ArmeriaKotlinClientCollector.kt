@@ -135,7 +135,6 @@ internal object ArmeriaKotlinClientCollector {
                 uri = ArmeriaClientEndpointGroupSupport.extractKotlinEndpointGroupUri(arguments[1]) ?: endpointGroup,
                 decorators = decorators,
                 endpointGroup = endpointGroup,
-                transport = message("client.explorer.transport.webClient"),
             )
         }
         val uri = extractKotlinString(firstArg) ?: return null

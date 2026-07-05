@@ -162,7 +162,6 @@ object ArmeriaClientCollector {
                 uri = ArmeriaClientEndpointGroupSupport.extractJavaEndpointGroupUri(arguments[1]) ?: endpointGroup,
                 decorators = decorators,
                 endpointGroup = endpointGroup,
-                transport = message("client.explorer.transport.webClient"),
             )
         }
         val uri = extractString(firstArg) ?: return null
