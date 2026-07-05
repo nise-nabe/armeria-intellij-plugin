@@ -137,6 +137,12 @@ class ArmeriaKotlinClientCollectorTest : ArmeriaClientFixtureTestBase() {
                 public static WebClientBuilder builder(String uri) {
                     return null;
                 }
+
+                public static WebClientBuilder builder(
+                        com.linecorp.armeria.common.SessionProtocol protocol,
+                        com.linecorp.armeria.client.endpoint.EndpointGroup endpointGroup) {
+                    return null;
+                }
             }
             """.trimIndent(),
         )
@@ -145,6 +151,13 @@ class ArmeriaKotlinClientCollectorTest : ArmeriaClientFixtureTestBase() {
             package com.example;
 
             public final class WebClientBuilder {
+                public WebClientBuilder decorator(Object decorator) {
+                    return this;
+                }
+
+                public WebClient build() {
+                    return null;
+                }
             }
             """.trimIndent(),
         )
@@ -154,4 +167,324 @@ class ArmeriaKotlinClientCollectorTest : ArmeriaClientFixtureTestBase() {
         assertTrue(endpoints.isEmpty())
     }
 
+    fun testCollectWebClientWithDecoratorsFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+            import com.linecorp.armeria.client.logging.LoggingClient
+            import com.linecorp.armeria.client.retrying.RetryingClient
+
+            fun main() {
+                WebClient.builder("https://example.com")
+                    .decorator(LoggingClient.newDecorator())
+                    .decorator(RetryingClient.newDecorator())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals(listOf("Logging", "Retrying"), endpoint.decorators)
+    }
+
+    fun testCollectWebClientWithEndpointGroupFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+            import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup
+            import com.linecorp.armeria.common.SessionProtocol
+
+            fun main() {
+                WebClient.builder(SessionProtocol.HTTP, DnsAddressEndpointGroup.of("example.com", 8080))
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("example.com", endpoint.uri)
+        assertTrue(endpoint.endpointGroup!!.startsWith("DnsAddressEndpointGroup"))
+    }
+
+    fun testCollectRetrofitBuilderWithWebClientTransportFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+            import com.linecorp.armeria.client.retrofit2.ArmeriaRetrofit
+
+            fun main() {
+                ArmeriaRetrofit.builder(WebClient.of("https://api.example.com")).build()
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("Retrofit", endpoint.clientType)
+        assertEquals("https://api.example.com", endpoint.uri)
+        assertEquals("WebClient transport", endpoint.transport)
+    }
+
+    private fun registerArmeriaClientStubs() {
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client;
+
+            public final class WebClient {
+                public static WebClient of(String uri) {
+                    return null;
+                }
+
+                public static WebClientBuilder builder() {
+                    return null;
+                }
+
+                public static WebClientBuilder builder(String uri) {
+                    return null;
+                }
+
+                public static WebClientBuilder builder(
+                        com.linecorp.armeria.common.SessionProtocol protocol,
+                        com.linecorp.armeria.client.endpoint.EndpointGroup endpointGroup) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client;
+
+            public final class WebClientBuilder {
+                public WebClientBuilder decorator(Object decorator) {
+                    return this;
+                }
+
+                public WebClient build() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.common;
+
+            public final class SessionProtocol {
+                public static final SessionProtocol HTTP = new SessionProtocol();
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.endpoint;
+
+            public interface EndpointGroup {
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.endpoint.dns;
+
+            public final class DnsAddressEndpointGroup {
+                public static com.linecorp.armeria.client.endpoint.EndpointGroup of(String host, int port) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.logging;
+
+            public final class LoggingClient {
+                public static Object newDecorator() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.retrying;
+
+            public final class RetryingClient {
+                public static Object newDecorator() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.retrofit2;
+
+            public final class ArmeriaRetrofit {
+                public static ArmeriaRetrofitBuilder builder(com.linecorp.armeria.client.WebClient webClient) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.retrofit2;
+
+            public final class ArmeriaRetrofitBuilder {
+                public retrofit2.Retrofit build() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package retrofit2;
+
+            public final class Retrofit {
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.grpc;
+
+            public final class GrpcClients {
+                public static GrpcClientBuilder builder(String uri) {
+                    return null;
+                }
+
+                public static Object newClient(String uri, Class<?> stubClass) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.common;
+
+            public final class SessionProtocol {
+                public static final SessionProtocol HTTP = new SessionProtocol();
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.endpoint;
+
+            public interface EndpointGroup {
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.endpoint.dns;
+
+            public final class DnsAddressEndpointGroup {
+                public static com.linecorp.armeria.client.endpoint.EndpointGroup of(String host, int port) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.logging;
+
+            public final class LoggingClient {
+                public static Object newDecorator() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.retrying;
+
+            public final class RetryingClient {
+                public static Object newDecorator() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.retrofit2;
+
+            public final class ArmeriaRetrofit {
+                public static ArmeriaRetrofitBuilder builder(com.linecorp.armeria.client.WebClient webClient) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.retrofit2;
+
+            public final class ArmeriaRetrofitBuilder {
+                public retrofit2.Retrofit build() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package retrofit2;
+
+            public final class Retrofit {
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.grpc;
+
+            public final class GrpcClientBuilder {
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.thrift;
+
+            public final class ThriftClients {
+                public static ThriftClientBuilder builder(String uri) {
+                    return null;
+                }
+
+                public static Object newClient(String uri, Class<?> ifaceClass) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.thrift;
+
+            public final class ThriftClientBuilder {
+            }
+            """.trimIndent(),
+        )
+    }
 }

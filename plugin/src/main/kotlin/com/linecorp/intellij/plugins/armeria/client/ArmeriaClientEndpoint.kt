@@ -11,6 +11,9 @@ data class ArmeriaClientEndpoint(
     val uri: String,
     val moduleName: String,
     val pointer: SmartPsiElementPointer<PsiElement>,
+    val decorators: List<String> = emptyList(),
+    val endpointGroup: String? = null,
+    val transport: String? = null,
 ) {
     companion object {
         fun create(
@@ -18,6 +21,9 @@ data class ArmeriaClientEndpoint(
             clientType: String,
             target: String,
             uri: String,
+            decorators: List<String> = emptyList(),
+            endpointGroup: String? = null,
+            transport: String? = null,
         ): ArmeriaClientEndpoint {
             return ArmeriaClientEndpoint(
                 clientType = clientType,
@@ -25,6 +31,9 @@ data class ArmeriaClientEndpoint(
                 uri = uri,
                 moduleName = ArmeriaRouteMetadata.moduleName(element),
                 pointer = SmartPointerManager.createPointer(element),
+                decorators = decorators,
+                endpointGroup = endpointGroup,
+                transport = transport,
             )
         }
     }

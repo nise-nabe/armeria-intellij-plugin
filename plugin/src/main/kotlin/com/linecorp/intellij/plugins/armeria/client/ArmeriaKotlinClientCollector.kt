@@ -8,7 +8,6 @@ import com.intellij.psi.PsiVariable
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.PsiManager
-import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
@@ -17,8 +16,10 @@ import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
+import org.jetbrains.kotlin.idea.KotlinFileType
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaKotlinRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
+import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
 
 internal object ArmeriaKotlinClientCollector {
@@ -51,9 +52,125 @@ internal object ArmeriaKotlinClientCollector {
         }
         val resolvedClass = resolveContainingClass(call) ?: return
         val protocol = ArmeriaClientSupport.protocolForClass(resolvedClass) ?: return
-        val uri = extractUri(call, methodName) ?: return
+        val metadata = extractClientMetadata(call, methodName, protocol) ?: return
         val target = resolveTargetName(call) ?: resolvedClass.substringAfterLast('.')
-        ArmeriaClientCollector.addEndpoint(call, protocol, target, uri, endpoints, seenEndpoints)
+        ArmeriaClientCollector.addEndpoint(
+            element = call,
+            protocol = protocol,
+            target = target,
+            uri = metadata.uri,
+            endpoints = endpoints,
+            seenEndpoints = seenEndpoints,
+            decorators = metadata.decorators,
+            endpointGroup = metadata.endpointGroup,
+            transport = metadata.transport,
+        )
+    }
+
+    private data class ClientMetadata(
+        val uri: String,
+        val decorators: List<String> = emptyList(),
+        val endpointGroup: String? = null,
+        val transport: String? = null,
+    )
+
+    private fun extractClientMetadata(
+        call: KtCallExpression,
+        methodName: String,
+        protocol: ClientProtocol,
+    ): ClientMetadata? {
+        val arguments = call.valueArguments.mapNotNull { it.getArgumentExpression() }
+        val decorators = ArmeriaKotlinClientDecoratorSupport.collectKotlinClientDecorators(call)
+        return when (methodName) {
+            "newClient", "of" -> {
+                when (protocol) {
+                    ClientProtocol.RETROFIT -> extractRetrofitMetadata(arguments, decorators)
+                    else -> {
+                        val uri = extractKotlinString(arguments.firstOrNull()) ?: return null
+                        ClientMetadata(uri = uri, decorators = decorators)
+                    }
+                }
+            }
+            "builder" -> {
+                when {
+                    arguments.isEmpty() -> null
+                    arguments.size >= 2 && isEndpointGroupArgument(arguments[1]) -> {
+                        val endpointGroup = ArmeriaClientEndpointGroupSupport.labelKotlinEndpointGroup(arguments[1])
+                            ?: return null
+                        ClientMetadata(
+                            uri = ArmeriaClientEndpointGroupSupport.extractKotlinEndpointGroupUri(arguments[1])
+                                ?: endpointGroup,
+                            decorators = decorators,
+                            endpointGroup = endpointGroup,
+                        )
+                    }
+                    protocol == ClientProtocol.RETROFIT -> extractRetrofitMetadata(arguments, decorators)
+                    else -> {
+                        val uri = extractKotlinString(arguments.firstOrNull()) ?: return null
+                        ClientMetadata(uri = uri, decorators = decorators)
+                    }
+                }
+            }
+            else -> null
+        }
+    }
+
+    private fun extractRetrofitMetadata(
+        arguments: List<KtExpression>,
+        decorators: List<String>,
+    ): ClientMetadata? {
+        val firstArg = arguments.firstOrNull() ?: return null
+        val webClientInfo = extractWebClientTransport(firstArg)
+        if (webClientInfo != null) {
+            val (uri, innerDecorators) = webClientInfo
+            return ClientMetadata(
+                uri = uri,
+                decorators = (decorators + innerDecorators).distinct(),
+                transport = message("client.explorer.transport.webClient"),
+            )
+        }
+        if (arguments.size >= 2 && isEndpointGroupArgument(arguments[1])) {
+            val endpointGroup = ArmeriaClientEndpointGroupSupport.labelKotlinEndpointGroup(arguments[1]) ?: return null
+            return ClientMetadata(
+                uri = ArmeriaClientEndpointGroupSupport.extractKotlinEndpointGroupUri(arguments[1]) ?: endpointGroup,
+                decorators = decorators,
+                endpointGroup = endpointGroup,
+                transport = message("client.explorer.transport.webClient"),
+            )
+        }
+        val uri = extractKotlinString(firstArg) ?: return null
+        return ClientMetadata(uri = uri, decorators = decorators)
+    }
+
+    private fun extractWebClientTransport(expression: KtExpression): Pair<String, List<String>>? {
+        val call = expression as? KtCallExpression
+        if (call != null) {
+            val methodName = resolveCallName(call)
+            val resolvedClass = resolveContainingClass(call)
+            if (ArmeriaClientSupport.isWebClientClass(resolvedClass) && methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES) {
+                val arguments = call.valueArguments.mapNotNull { it.getArgumentExpression() }
+                if (arguments.size >= 2 && isEndpointGroupArgument(arguments[1])) {
+                    val uri = ArmeriaClientEndpointGroupSupport.extractKotlinEndpointGroupUri(arguments[1]) ?: return null
+                    return uri to ArmeriaKotlinClientDecoratorSupport.collectKotlinClientDecorators(call)
+                }
+                val uri = extractKotlinString(arguments.firstOrNull()) ?: return null
+                return uri to ArmeriaKotlinClientDecoratorSupport.collectKotlinClientDecorators(call)
+            }
+        }
+        if (expression is KtNameReferenceExpression) {
+            val resolved = expression.references.firstOrNull()?.resolve()
+            if (resolved is KtProperty) {
+                return extractWebClientTransport(resolved.initializer ?: return null)
+            }
+            if (resolved is PsiVariable) {
+                return extractWebClientTransport(resolved.initializer as? KtExpression ?: return null)
+            }
+        }
+        return null
+    }
+
+    private fun isEndpointGroupArgument(expression: KtExpression): Boolean {
+        return ArmeriaClientEndpointGroupSupport.labelKotlinEndpointGroup(expression) != null
     }
 
     private fun resolveTargetName(call: KtCallExpression): String? {
@@ -112,15 +229,6 @@ internal object ArmeriaKotlinClientCollector {
         return importFqcn?.takeIf { ArmeriaClientSupport.protocolForClass(it) != null }
     }
 
-    private fun extractUri(call: KtCallExpression, methodName: String): String? {
-        val arguments = call.valueArguments
-        return when (methodName) {
-            "newClient", "of" -> extractKotlinString(arguments.firstOrNull()?.getArgumentExpression())
-            "builder" -> extractKotlinString(arguments.firstOrNull()?.getArgumentExpression())
-            else -> null
-        }
-    }
-
     private fun extractKotlinString(expression: KtExpression?): String? {
         val unwrapped = unwrapKotlinExpression(expression) ?: return null
         return when (unwrapped) {
@@ -164,5 +272,4 @@ internal object ArmeriaKotlinClientCollector {
             }
         }
     }
-
 }
