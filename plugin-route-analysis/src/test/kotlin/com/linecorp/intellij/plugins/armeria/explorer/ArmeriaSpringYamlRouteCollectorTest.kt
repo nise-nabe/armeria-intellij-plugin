@@ -44,4 +44,67 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
         assertTrue(routes.any { it.isDocService })
         assertTrue(routes.any { it.path == "/actuator" })
     }
+
+    fun testCollectFromProfileYaml() {
+        val psiFile = myFixture.configureByText(
+            "application-dev.yml",
+            """
+            armeria:
+              ports:
+                - port: 7070
+                  protocols:
+                    - http
+              internal-services:
+                include: docs
+            """.trimIndent(),
+        )
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        ArmeriaSpringYamlRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+
+        assertTrue(routes.any { it.target.contains("7070") })
+        assertTrue(routes.any { it.isDocService })
+    }
+
+    fun testIgnoresServerPortFalsePositive() {
+        val psiFile = myFixture.configureByText(
+            "application.yml",
+            """
+            server:
+              port: 9999
+            armeria:
+              ports:
+                - port: 8080
+                  protocols:
+                    - http
+            """.trimIndent(),
+        )
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        ArmeriaSpringYamlRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+
+        assertTrue(routes.any { it.target.contains("8080") })
+        assertFalse(routes.any { it.target.contains("9999") })
+    }
+
+    fun testIgnoresUnrelatedIncludeKey() {
+        val psiFile = myFixture.configureByText(
+            "application.yml",
+            """
+            spring:
+              profiles:
+                include: dev,local
+            armeria:
+              internal-services:
+                include: docs
+            """.trimIndent(),
+        )
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        ArmeriaSpringYamlRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+
+        assertTrue(routes.any { it.isDocService })
+        assertFalse(routes.any { it.path == "/actuator" })
+        assertFalse(routes.any { it.path == "/internal/healthcheck" })
+    }
 }
