@@ -19,5 +19,7 @@
                          enabledByDefault="true"
                          level="WARNING"
                          implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaDuplicateRegistrationKotlinInspection" />
+        <codeInsight.lineMarkerProvider language="kotlin"
+                                        implementationClass="com.linecorp.intellij.plugins.armeria.marker.ArmeriaRouteLineMarkerProvider"/>
     </extensions>
 </idea-plugin>
