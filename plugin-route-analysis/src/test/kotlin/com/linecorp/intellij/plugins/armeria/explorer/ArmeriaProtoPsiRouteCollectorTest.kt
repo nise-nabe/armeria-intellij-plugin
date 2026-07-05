@@ -1,5 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.extensions.ExtensionPoint
 import com.intellij.protobuf.lang.psi.PbFile
 import com.intellij.protobuf.lang.psi.PbServiceMethod
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
@@ -8,6 +10,7 @@ class ArmeriaProtoPsiRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() 
     override fun setUp() {
         super.setUp()
         registerArmeriaStubs()
+        registerProtoRouteCollectorExtensionPoint()
     }
 
     fun testCollectGrpcRoutesFromProtoPsi() {
@@ -98,6 +101,21 @@ class ArmeriaProtoPsiRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() 
         assertEquals(listOf("/com.example.Greeter/SayHello"), routes.map { it.path })
     }
 
+    fun testProtoPsiReturnsFalseWhenNoServicesToAllowTextFallback() {
+        val file = myFixture.configureByText(
+            "empty.proto",
+            """
+            syntax = "proto3";
+            package com.example;
+            """.trimIndent(),
+        )
+        assertTrue(file is PbFile)
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        assertFalse(ArmeriaProtoPsiRouteCollector().collectFromFile(file, routes, mutableSetOf()))
+        assertTrue(routes.isEmpty())
+    }
+
     fun testCollectFromProtoFilePrefersPsiCollectorOverTextParsing() {
         myFixture.configureByText(
             "greeter.proto",
@@ -116,6 +134,22 @@ class ArmeriaProtoPsiRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() 
         val routes = ArmeriaRouteCollector.collect(project, includeProtoRoutes = true)
 
         assertEquals(listOf("/com.example.Greeter/SayHello"), routes.map { it.path })
+    }
+
+    private fun registerProtoRouteCollectorExtensionPoint() {
+        try {
+            ArmeriaProtoRouteCollector.EP.extensionList
+            return
+        } catch (_: IllegalArgumentException) {
+            // Extension point is not registered in this test container yet.
+        }
+        val extensionArea = ApplicationManager.getApplication().extensionArea
+        extensionArea.registerExtensionPoint(
+            "com.linecorp.intellij.armeria.protoRouteCollector",
+            ArmeriaProtoRouteCollector::class.java.name,
+            ExtensionPoint.Kind.INTERFACE,
+            true,
+        )
     }
 
     private fun registerProtoRouteCollectorExtension() {

@@ -34,12 +34,20 @@ internal object ArmeriaGrpcRouteCollector {
         routes: MutableList<ArmeriaRoute>,
         seenProtoRoutes: MutableSet<String>,
     ) {
-        for (collector in ArmeriaProtoRouteCollector.EP.extensionList) {
+        for (collector in protoRouteCollectors()) {
             if (collector.collectFromFile(psiFile, routes, seenProtoRoutes)) {
                 return
             }
         }
         collectFromProtoText(psiFile.text, psiFile, routes, seenProtoRoutes)
+    }
+
+    private fun protoRouteCollectors(): List<ArmeriaProtoRouteCollector> {
+        return try {
+            ArmeriaProtoRouteCollector.EP.extensionList
+        } catch (_: IllegalArgumentException) {
+            emptyList()
+        }
     }
 
     internal fun collectFromProtoText(

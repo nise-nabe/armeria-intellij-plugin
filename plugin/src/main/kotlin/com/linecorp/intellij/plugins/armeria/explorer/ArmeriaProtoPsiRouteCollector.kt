@@ -12,17 +12,23 @@ internal class ArmeriaProtoPsiRouteCollector : ArmeriaProtoRouteCollector {
     seenProtoRoutes: MutableSet<String>,
   ): Boolean {
     val pbFile = file as? PbFile ?: return false
-    for (service in PsiTreeUtil.findChildrenOfType(pbFile, PbServiceDefinition::class.java)) {
+    val services = PsiTreeUtil.findChildrenOfType(pbFile, PbServiceDefinition::class.java)
+    if (services.isEmpty()) {
+      return false
+    }
+    var collected = false
+    for (service in services) {
       val fqService = service.qualifiedName?.toString().orEmpty()
       if (fqService.isBlank()) {
-        continue
+        return false
       }
       val methods = service.body?.serviceMethodList.orEmpty()
       for (method in methods) {
         val methodName = method.name ?: continue
         ArmeriaGrpcRouteCollector.addProtoRoute(method, fqService, methodName, routes, seenProtoRoutes)
+        collected = true
       }
     }
-    return true
+    return collected
   }
 }
