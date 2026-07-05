@@ -94,6 +94,7 @@ object ArmeriaRouteCollector {
         ArmeriaGraphqlRouteCollector.collect(project, scope, routes)
         ArmeriaThriftRouteCollector.collect(project, scope, routes)
         collectExtendedRegistrations(project, scope, routes, seenServiceRegistrations, fallbackScannedFiles)
+        ArmeriaDelegatedRouteCollector.collect(project, scope, routes)
 
         return CachedValueProvider.Result.create(
             routes.sortedWith(
