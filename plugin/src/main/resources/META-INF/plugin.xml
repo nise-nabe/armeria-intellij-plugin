@@ -54,6 +54,18 @@
         <!-- Run configuration -->
         <configurationType implementation="com.linecorp.intellij.plugins.armeria.run.ArmeriaRunConfigurationType" />
         <runConfigurationProducer implementation="com.linecorp.intellij.plugins.armeria.run.ArmeriaRunConfigurationProducer" />
+
+        <localInspection language="JAVA"
+                         bundle="messages.ArmeriaBundle"
+                         key="inspection.blocking.client.display.name"
+                         groupBundle="messages.ArmeriaBundle"
+                         groupKey="inspection.group.armeria"
+                         shortName="ArmeriaBlockingClient"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         implementationClass="com.linecorp.intellij.plugins.armeria.test.ArmeriaBlockingClientInspection" />
+        <codeInsight.lineMarkerProvider language="JAVA"
+                                        implementationClass="com.linecorp.intellij.plugins.armeria.test.ArmeriaJUnitServerExtensionLineMarkerProvider" />
     </extensions>
 
     <actions>

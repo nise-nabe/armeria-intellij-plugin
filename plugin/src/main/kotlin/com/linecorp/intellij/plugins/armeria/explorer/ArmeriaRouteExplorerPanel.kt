@@ -75,6 +75,7 @@ class ArmeriaRouteExplorerPanel(
             add(ArmeriaGenerateHttpRequestAction { selectedRouteFromTree() })
             add(ArmeriaSyncRuntimeRoutesAction())
             add(ArmeriaOpenDocServiceAction { filterRoutes(allRoutes()) })
+            add(ArmeriaGenerateTestMethodAction { selectedRouteFromTree() })
         }
         toolbar = ActionManager.getInstance().createActionToolbar("ArmeriaRouteExplorer", actionGroup, true).also {
             it.targetComponent = this
