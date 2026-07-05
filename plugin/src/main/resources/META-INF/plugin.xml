@@ -3,6 +3,12 @@
     <name>Armeria</name>
     <vendor email="nise.nabe@gmail.com" url="https://github.com/nise-nabe/armeria-intellij-plugin">nise_nabe</vendor>
 
+    <extensionPoints>
+        <extensionPoint qualifiedName="com.linecorp.intellij.armeria.protoRouteCollector"
+                        interface="com.linecorp.intellij.plugins.armeria.explorer.ArmeriaProtoRouteCollector"
+                        dynamic="true"/>
+    </extensionPoints>
+
     <depends>com.intellij.java</depends>
     <depends>org.jetbrains.plugins.gradle</depends>
     <depends optional="true" config-file="kotlin-integration.xml">org.jetbrains.kotlin</depends>

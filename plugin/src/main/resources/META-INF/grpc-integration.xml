@@ -1,2 +1,3 @@
 <idea-plugin>
+    <!-- Reserved for gRPC-plugin-specific Route Explorer integrations when com.intellij.grpc APIs are used. -->
 </idea-plugin>

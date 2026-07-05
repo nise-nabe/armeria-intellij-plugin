@@ -18,6 +18,7 @@ dependencies {
         bundledPlugin("com.intellij.java")
         bundledPlugin("org.jetbrains.plugins.gradle")
         bundledPlugin("org.jetbrains.kotlin")
+        bundledPlugin("idea.plugin.protoeditor")
         testFramework(TestFrameworkType.Plugin.Java)
         testFramework(TestFrameworkType.Plugin.Java, configurationName = "testFixturesImplementation")
     }
