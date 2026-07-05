@@ -1,4 +1,5 @@
 import org.gradle.api.tasks.testing.Test
+import org.gradle.api.tasks.testing.junit.JUnitOptions
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.date
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
@@ -24,7 +25,7 @@ dependencies {
 
 private fun JvmTestSuite.configureFilteredSuite(
     description: String,
-    configureJUnit: org.gradle.api.tasks.testing.junit.JUnitOptions.() -> Unit,
+    configureJUnit: JUnitOptions.() -> Unit,
 ) {
     useJUnit(libs.versions.junit4.get())
     sources {
@@ -37,7 +38,9 @@ private fun JvmTestSuite.configureFilteredSuite(
                 this.description = description
                 dependsOn("prepareTest", "instrumentTestCode", "testClasses")
                 testClassesDirs = sourceSets.named("test").get().output.classesDirs
-                useJUnit(configureJUnit)
+                options {
+                    configureJUnit(this as JUnitOptions)
+                }
                 filter {
                     isFailOnNoMatchingTests = false
                 }
