@@ -1,12 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.client
 
-import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 
-class ArmeriaKotlinClientCollectorFallbackTest : ArmeriaFixtureTestBase() {
-    override fun registerArmeriaStubs() {
-        // Fallback test registers its own minimal WebClient stub.
-    }
-
+class ArmeriaKotlinClientCollectorFallbackTest : LightJavaCodeInsightFixtureTestCase() {
     fun testCollectWebClientOfViaImportWhenMethodResolutionFails() {
         myFixture.addClass(
             """
