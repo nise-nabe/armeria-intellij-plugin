@@ -44,6 +44,8 @@ class ArmeriaRouteExplorerPanel(
 ) : SimpleToolWindowPanel(true, true), Disposable, UiDataProvider {
     private var staticRoutes: List<ArmeriaRoute> = emptyList()
     private var runtimeRoutes: List<ArmeriaRoute> = emptyList()
+    private var refreshGeneration = 0
+    private var runtimeApplyGeneration = 0
     private var selectedRoute: ArmeriaRoute? = null
     private var currentModuleOnly = false
     private var initialRefreshScheduled = false
@@ -156,6 +158,7 @@ class ArmeriaRouteExplorerPanel(
     }
 
     fun refresh() {
+        val generation = ++refreshGeneration
         statusLabel.text = message("route.explorer.summary.refreshing")
         ReadAction.nonBlocking<List<ArmeriaRoute>> {
             ArmeriaRouteCollector.collect(project, includeProtoRoutes = true)
@@ -164,8 +167,13 @@ class ArmeriaRouteExplorerPanel(
             .expireWith(this)
             .coalesceBy(this)
             .finishOnUiThread(ModalityState.any()) { collectedRoutes ->
+                if (generation != refreshGeneration) {
+                    return@finishOnUiThread
+                }
                 staticRoutes = collectedRoutes
-                runtimeRoutes = emptyList()
+                if (runtimeApplyGeneration < generation) {
+                    runtimeRoutes = emptyList()
+                }
                 rebuildTree()
                 updateStatusLabel()
                 updateDetailFootnote()
@@ -175,6 +183,7 @@ class ArmeriaRouteExplorerPanel(
     fun staticRoutes(): List<ArmeriaRoute> = staticRoutes
 
     fun applyRuntimeRoutes(routes: List<ArmeriaRoute>) {
+        runtimeApplyGeneration = refreshGeneration
         runtimeRoutes = routes
         rebuildTree()
         updateStatusLabel()
