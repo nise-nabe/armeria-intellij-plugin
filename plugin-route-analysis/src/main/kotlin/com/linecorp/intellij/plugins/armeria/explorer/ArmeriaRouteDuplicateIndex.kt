@@ -218,6 +218,7 @@ object ArmeriaRouteDuplicateIndex {
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.ANNOTATED_SERVICE -> true
             RouteMatch.ROUTE_FLUENT -> route.httpMethod.isBlank()
             RouteMatch.ANNOTATED_HTTP, RouteMatch.NON_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG,
+            RouteMatch.DELEGATED_SPRING_MVC, RouteMatch.DELEGATED_SERVLET,
             RouteMatch.FILE_SERVICE, RouteMatch.HEALTH_CHECK,
             RouteMatch.VIRTUAL_HOST, RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
             -> false
@@ -249,8 +250,9 @@ object ArmeriaRouteDuplicateIndex {
 
     internal fun registrationLabel(route: ArmeriaRoute): String =
         when (route.routeMatch) {
-            RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG, RouteMatch.HEALTH_CHECK ->
-                "${route.httpMethod} ${route.path}"
+            RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG, RouteMatch.HEALTH_CHECK,
+            RouteMatch.DELEGATED_SPRING_MVC, RouteMatch.DELEGATED_SERVLET,
+            -> "${route.httpMethod} ${route.path}"
             else -> route.path
         }
 

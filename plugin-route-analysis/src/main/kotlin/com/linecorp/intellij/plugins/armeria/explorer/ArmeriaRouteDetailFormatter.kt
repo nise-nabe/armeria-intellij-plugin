@@ -13,7 +13,11 @@ object ArmeriaRouteDetailFormatter {
             }
             if (route.routeMatch == RouteMatch.RUNTIME) {
                 add(message("route.explorer.badge.runtime"))
-            } else {
+            }
+            route.delegationKind?.let { kind ->
+                add(delegationBadge(kind))
+            }
+            if (route.routeMatch != RouteMatch.RUNTIME) {
                 add(message("route.explorer.badge.staticAnalysis"))
             }
         }
@@ -42,6 +46,9 @@ object ArmeriaRouteDetailFormatter {
             }
             if (route.contentHints.isNotEmpty()) {
                 add(message("route.explorer.detail.content", route.contentHints.joinToString(" · ")))
+            }
+            if (route.delegationMountPath.isNotEmpty()) {
+                add(message("route.explorer.detail.delegationMount", route.delegationMountPath))
             }
         }
         return parts.joinToString("\n")
@@ -81,6 +88,7 @@ object ArmeriaRouteDetailFormatter {
                 route.path,
             )
             RouteMatch.DECORATOR_UNDER -> message("route.explorer.registration.decoratorUnder", route.path)
+            RouteMatch.DELEGATED_SPRING_MVC, RouteMatch.DELEGATED_SERVLET -> delegatedRegistrationSummary(route)
             RouteMatch.NON_HTTP -> message("route.explorer.registration.nonHttp", route.protocol, route.path)
             RouteMatch.RUNTIME -> message("route.explorer.registration.runtime", route.httpMethod, route.path)
             RouteMatch.CONFIG -> message("route.explorer.registration.config", route.httpMethod, route.path)
