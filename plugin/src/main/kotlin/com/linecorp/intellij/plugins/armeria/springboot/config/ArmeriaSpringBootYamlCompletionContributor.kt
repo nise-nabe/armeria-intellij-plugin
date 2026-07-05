@@ -12,7 +12,8 @@ class ArmeriaSpringBootYamlCompletionContributor : CompletionContributor() {
         extend(PlatformPatterns.psiElement(YAMLScalar::class.java).withParent(YAMLKeyValue::class.java),
             object : CompletionProvider<CompletionParameters>() {
                 override fun addCompletions(p: CompletionParameters, ctx: ProcessingContext, result: CompletionResultSet) {
-                    val keyText = (p.position.parent as? YAMLKeyValue)?.keyText?.text ?: return
+                    val keyValue = p.position.parent as? YAMLKeyValue ?: return
+                    val keyText = keyValue.name ?: return
                     if (keyText != "armeria" && !keyText.startsWith("armeria.") && keyText !in ArmeriaSpringBootConfigKeys.RELATED_ROOT_KEYS &&
                         !keyText.startsWith("server") && !keyText.startsWith("management") && !keyText.startsWith("spring.main")) return
                     for (s in ArmeriaSpringBootConfigKeys.COMPLETION_SUGGESTIONS) {

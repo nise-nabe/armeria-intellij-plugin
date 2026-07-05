@@ -48,12 +48,17 @@ class ArmeriaSpringBootConfigPanel(private val project: Project) : SimpleToolWin
     fun scheduleInitialRefreshIfNeeded() { if (!initialRefreshScheduled) { initialRefreshScheduled = true; refresh() } }
     fun refresh() {
         statusLabel.text = message("springboot.config.summary.refreshing")
-        ReadAction.nonBlocking { ArmeriaSpringBootConfigCollector.collect(project) }
+        ReadAction.nonBlocking<List<ArmeriaSpringBootConfigFile>> {
+            ArmeriaSpringBootConfigCollector.collect(project)
+        }
             .inSmartMode(project).expireWith(this).coalesceBy(this)
             .finishOnUiThread(ModalityState.any()) { files ->
-                tableModel.setRows(files.flatMap { f -> f.entries.map { ConfigRow(f.fileName, f.filePath, it) } })
+                val rows = files.flatMap { file ->
+                    file.entries.map { entry -> ConfigRow(file.fileName, file.filePath, entry) }
+                }
+                tableModel.setRows(rows)
                 statusLabel.text = if (files.isEmpty()) message("springboot.config.summary.empty")
-                else message("springboot.config.summary.entries", files.size, files.sumOf { it.entries.size })
+                else message("springboot.config.summary.entries", files.size, files.sumOf { configFile -> configFile.entries.size })
             }.submit(AppExecutorUtil.getAppExecutorService())
     }
     override fun dispose() = Unit
