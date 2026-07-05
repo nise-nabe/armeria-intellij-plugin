@@ -38,6 +38,18 @@ object ArmeriaRouteDuplicateIndex {
         return getIndex(project).hitsByVirtualFile[virtualFile].orEmpty()
     }
 
+    fun conflictingRoutes(project: Project, element: PsiElement): List<ArmeriaRoute> {
+        for (group in duplicateGroups(project)) {
+            val current = group.routes.find { routeMatchesElement(it.pointer.element, element) } ?: continue
+            return group.routes.filter { route ->
+                route !== current && routesOverlap(current, route) && httpMethodsOverlap(current, route)
+            }
+        }
+        return emptyList()
+    }
+
+    internal fun duplicateRegistrationLabel(route: ArmeriaRoute): String = registrationLabel(route)
+
     internal fun duplicateGroups(project: Project): List<DuplicateRegistrationGroup> {
         return getIndex(project).groups
     }
@@ -252,6 +264,16 @@ object ArmeriaRouteDuplicateIndex {
                 "${route.httpMethod} ${route.path}"
             else -> route.path
         }
+
+    private fun routeMatchesElement(routeElement: PsiElement?, element: PsiElement): Boolean {
+        if (routeElement == null) {
+            return false
+        }
+        if (routeElement == element) {
+            return true
+        }
+        return routeElement.navigationElement == element.navigationElement
+    }
 }
 
 data class DuplicateRegistrationGroup(
