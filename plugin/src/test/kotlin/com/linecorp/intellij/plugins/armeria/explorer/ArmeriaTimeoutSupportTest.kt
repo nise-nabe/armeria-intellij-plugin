@@ -3,14 +3,14 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.util.PsiTreeUtil
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
-
 import com.linecorp.intellij.plugins.armeria.message
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
-class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
-    override fun setUp() {
-        super.setUp()
-        registerArmeriaStubs()
+class ArmeriaTimeoutSupportTest : ArmeriaFixtureTestBase() {
+    override fun registerArmeriaStubs() {
+        registerArmeriaAnnotationStubs()
+        registerArmeriaBlockingAnnotationStubs()
+        registerArmeriaServerStubs()
     }
 
     fun testCollectBuilderTimeoutHints_requestTimeoutOnBuilderChain() {
@@ -265,62 +265,5 @@ class ArmeriaTimeoutSupportTest : LightJavaCodeInsightFixtureTestCase() {
         val method = findMethod(className, methodName)
         return PsiTreeUtil.findChildrenOfType(method, PsiMethodCallExpression::class.java)
             .first { it.methodExpression.referenceName == "service" }
-    }
-
-    private fun registerArmeriaStubs() {
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.annotation;
-
-            public @interface Get {
-                String value() default "";
-                String path() default "";
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.annotation;
-
-            public @interface Blocking {}
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.annotation;
-
-            public @interface NonBlocking {}
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server;
-
-            public final class Server {
-                public static ServerBuilder builder() {
-                    return null;
-                }
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server;
-
-            public final class ServerBuilder {
-                public ServerBuilder requestTimeout() {
-                    return this;
-                }
-
-                public ServerBuilder requestTimeout(java.time.Duration duration) {
-                    return this;
-                }
-
-                public ServerBuilder service(String path, Object service) {
-                    return this;
-                }
-            }
-            """.trimIndent(),
-        )
     }
 }

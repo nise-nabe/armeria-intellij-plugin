@@ -2,6 +2,7 @@ import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 
 plugins {
     kotlin("jvm")
+    `java-test-fixtures`
     id("org.jetbrains.intellij.platform")
     id("org.jetbrains.changelog")
 }

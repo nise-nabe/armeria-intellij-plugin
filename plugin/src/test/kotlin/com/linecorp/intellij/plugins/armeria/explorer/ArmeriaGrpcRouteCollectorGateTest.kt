@@ -1,9 +1,13 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
-class ArmeriaGrpcRouteCollectorGateTest : LightJavaCodeInsightFixtureTestCase() {
+class ArmeriaGrpcRouteCollectorGateTest : ArmeriaFixtureTestBase() {
+    override fun registerArmeriaStubs() {
+        // Classpath gate test does not need Armeria stubs.
+    }
+
     fun testProtoRoutesSkippedWithoutGrpcOnClasspath() {
         myFixture.configureByText(
             "greeter.proto",

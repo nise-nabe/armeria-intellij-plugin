@@ -1,12 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.client
 
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaClientFixtureTestBase
 
-class ArmeriaClientCollectorTest : LightJavaCodeInsightFixtureTestCase() {
-    override fun setUp() {
-        super.setUp()
-        registerArmeriaClientStubs()
-    }
+class ArmeriaClientCollectorTest : ArmeriaClientFixtureTestBase() {
 
     fun testCollectWebClientOf() {
         myFixture.configureByText(
@@ -215,101 +211,4 @@ class ArmeriaClientCollectorTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals(first, second)
     }
 
-    private fun registerArmeriaClientStubs() {
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.client;
-
-            public final class WebClient {
-                public static WebClient of(String uri) {
-                    return null;
-                }
-
-                public static WebClientBuilder builder() {
-                    return null;
-                }
-
-                public static WebClientBuilder builder(String uri) {
-                    return null;
-                }
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.client;
-
-            public final class WebClientBuilder {
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.client.grpc;
-
-            public final class GrpcClient {
-                public static GrpcClientBuilder builder() {
-                    return null;
-                }
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.client.grpc;
-
-            public final class GrpcClientBuilder {
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.client.grpc;
-
-            public final class GrpcClients {
-                public static GrpcClientBuilder builder(String uri) {
-                    return null;
-                }
-
-                public static Object newClient(String uri, Class<?> stubClass) {
-                    return null;
-                }
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.client.thrift;
-
-            public final class ThriftClient {
-                public static ThriftClientBuilder builder() {
-                    return null;
-                }
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.client.thrift;
-
-            public final class ThriftClientBuilder {
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.client.thrift;
-
-            public final class ThriftClients {
-                public static ThriftClientBuilder builder(String uri) {
-                    return null;
-                }
-
-                public static Object newClient(String uri, Class<?> ifaceClass) {
-                    return null;
-                }
-            }
-            """.trimIndent(),
-        )
-    }
 }

@@ -52,10 +52,14 @@ release workflow — tag and `gh release create` after merging a version-bump PR
 |------|---------|
 | Full verify | `./gradlew build` |
 | Compile plugin | `./gradlew :plugin:compileKotlin` |
-| Unit tests | `./gradlew :plugin:test` |
+| Platform PSI fixture tests | `./gradlew :plugin:test` |
+| Pure unit tests (`src/fastTest`) | `./gradlew :plugin:fastTest` |
+| All plugin tests | `./gradlew :plugin:check` (or `build`) |
 | Run IDE sandbox | `./gradlew :plugin:runIde` |
-| Fast CI-style check | `./gradlew --no-daemon :plugin:compileKotlin :plugin:test` |
+| Fast compile + platform tests | `./gradlew --no-daemon :plugin:compileKotlin :plugin:test` |
 | Fix stale test sandbox | `.cursor/clean-test-sandbox.sh` |
+
+`:plugin:test` runs only platform fixture tests under `src/test`. `:plugin:fastTest` runs pure unit tests under `src/fastTest` (still on the IntelliJ Platform test runtime, but without PSI fixtures). Use `check` or `build` to run both suites.
 
 There is no separate lint task; `./gradlew build` is the compile/test gate.
 

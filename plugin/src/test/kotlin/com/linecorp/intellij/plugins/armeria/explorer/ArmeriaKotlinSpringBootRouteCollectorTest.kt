@@ -1,16 +1,25 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
-class ArmeriaKotlinSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
+class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
+    override fun registerArmeriaStubs() {
+        // Registered per test alongside Spring stubs.
+    }
+
     override fun setUp() {
         super.setUp()
-        registerArmeriaStubs()
-        registerSpringBootStubs()
+        registerSpringAnnotationStubs()
+    }
+
+    private fun registerSpringBootRouteStubs() {
+        registerMinimalArmeriaServerStubs()
+        registerArmeriaSpringStubs()
     }
 
     fun testCollectServiceRegistrationFromBeanConfigurator() {
+        registerSpringBootRouteStubs()
         myFixture.configureByText(
             "ArmeriaConfig.kt",
             """
@@ -48,6 +57,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTes
     }
 
     fun testDoesNotDuplicateIndexedServiceRegistration() {
+        registerSpringBootRouteStubs()
         myFixture.configureByText(
             "ArmeriaConfig.kt",
             """
@@ -84,6 +94,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTes
     }
 
     fun testCollectServiceRegistrationFromBeanServer() {
+        registerSpringBootRouteStubs()
         myFixture.configureByText(
             "ArmeriaConfig.kt",
             """
@@ -120,6 +131,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTes
     }
 
     fun testIgnoresUnrelatedServiceCallInBeanMethod() {
+        registerSpringBootRouteStubs()
         myFixture.configureByText(
             "ArmeriaConfig.kt",
             """
@@ -167,6 +179,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTes
     }
 
     fun testIgnoresBeanFunctionWithoutArmeriaReturnType() {
+        registerSpringBootRouteStubs()
         myFixture.configureByText(
             "OtherConfig.kt",
             """
@@ -190,6 +203,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTes
     }
 
     fun testKotlinSpringBootCollectorCollectsRoutesDirectly() {
+        registerSpringBootRouteStubs()
         myFixture.configureByText(
             "ArmeriaConfig.kt",
             """
@@ -233,6 +247,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTes
     }
 
     fun testKotlinSpringBootCollectorCollectsRoutesWithServerImportOnly() {
+        registerSpringBootRouteStubs()
         myFixture.configureByText(
             "ArmeriaConfig.kt",
             """
@@ -276,6 +291,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTes
     }
 
     fun testCollectServiceRegistrationFromBeanServerBuilder() {
+        registerSpringBootRouteStubs()
         myFixture.configureByText(
             "ArmeriaConfig.kt",
             """
@@ -312,6 +328,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTes
     }
 
     fun testCollectInferredReturnTypeFromBeanFunction() {
+        registerSpringBootRouteStubs()
         myFixture.configureByText(
             "ArmeriaConfig.kt",
             """
@@ -348,6 +365,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTes
     }
 
     fun testCollectServiceUnderAndAnnotatedServiceFromBeanConfigurator() {
+        registerSpringBootRouteStubs()
         myFixture.configureByText(
             "ArmeriaConfig.kt",
             """
@@ -394,6 +412,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTes
     }
 
     fun testCollectServiceRegistrationFromConfiguratorSubtype() {
+        registerSpringBootRouteStubs()
         myFixture.addClass(
             """
             package example;
@@ -439,69 +458,5 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : LightJavaCodeInsightFixtureTes
         assertEquals(1, subtypeRoutes.size)
     }
 
-    private fun registerArmeriaStubs() {
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server;
 
-            public final class Server {
-                public static ServerBuilder builder() {
-                    return null;
-                }
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server;
-
-            public final class ServerBuilder {
-                public ServerBuilder service(String path, Object service) {
-                    return this;
-                }
-
-                public ServerBuilder serviceUnder(String prefix, Object service) {
-                    return this;
-                }
-
-                public ServerBuilder annotatedService(Object service) {
-                    return this;
-                }
-
-                public Server build() {
-                    return null;
-                }
-            }
-            """.trimIndent(),
-        )
-    }
-
-    private fun registerSpringBootStubs() {
-        myFixture.addClass(
-            """
-            package org.springframework.context.annotation;
-
-            public @interface Bean {
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package org.springframework.context.annotation;
-
-            public @interface Configuration {
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.spring;
-
-            @FunctionalInterface
-            public interface ArmeriaServerConfigurator {
-                void configure(com.linecorp.armeria.server.ServerBuilder serverBuilder);
-            }
-            """.trimIndent(),
-        )
-    }
 }
