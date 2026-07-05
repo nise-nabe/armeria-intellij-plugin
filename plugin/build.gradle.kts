@@ -36,6 +36,7 @@ private fun JvmTestSuite.configureFilteredSuite(
             testTask.configure {
                 this.description = description
                 dependsOn("prepareTest", "instrumentTestCode", "testClasses")
+                testClassesDirs = sourceSets.named("test").get().output.classesDirs
                 useJUnit(configureJUnit)
                 filter {
                     isFailOnNoMatchingTests = false
@@ -52,16 +53,12 @@ private fun Project.wireFilteredTestSuitesToStandardTest() {
             notCompatibleWithConfigurationCache(
                 "Copies IntelliJ Platform test runtime from the standard test task",
             )
-            testClassesDirs = standardTest.get().testClassesDirs
             classpath = standardTest.get().classpath
             jvmArgumentProviders.addAll(standardTest.get().jvmArgumentProviders)
             javaLauncher.convention(standardTest.get().javaLauncher)
-            doFirst {
-                val source = standardTest.get()
-                systemProperties.putAll(source.systemProperties)
-                environment.putAll(source.environment)
-                jvmArgs = source.jvmArgs
-            }
+            systemProperties.putAll(standardTest.get().systemProperties)
+            environment.putAll(standardTest.get().environment)
+            jvmArgs = standardTest.get().jvmArgs
         }
     }
 }
@@ -88,10 +85,6 @@ testing {
             }
         }
     }
-}
-
-afterEvaluate {
-    wireFilteredTestSuitesToStandardTest()
 }
 
 changelog {
@@ -126,3 +119,5 @@ intellijPlatform {
         }
     }
 }
+
+wireFilteredTestSuitesToStandardTest()
