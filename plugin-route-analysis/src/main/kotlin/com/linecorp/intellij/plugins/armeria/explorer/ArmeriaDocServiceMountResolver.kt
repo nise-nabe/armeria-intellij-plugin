@@ -1,6 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
-internal object ArmeriaDocServiceMountResolver {
+object ArmeriaDocServiceMountResolver {
     private val DEFAULT_MOUNT_PATHS = listOf("/docs", "/internal/docs")
 
     fun candidateMountPaths(staticRoutes: List<ArmeriaRoute>, userMountPath: String?): List<String> {

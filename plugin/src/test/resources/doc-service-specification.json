@@ -1,0 +1,49 @@
+{
+  "services": [
+    {
+      "name": "com.example.FooService",
+      "methods": [
+        {
+          "name": "getUser",
+          "httpMethod": "GET",
+          "endpoints": [
+            {
+              "hostnamePattern": "*",
+              "pathMapping": "/api/users/{id}"
+            }
+          ],
+          "examplePaths": ["/api/users/1"]
+        },
+        {
+          "name": "createUser",
+          "httpMethod": "POST",
+          "endpoints": [
+            {
+              "hostnamePattern": "*",
+              "pathMapping": "/api/users"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "armeria.grpc.testing.TestService",
+      "methods": [
+        {
+          "name": "UnaryCall",
+          "httpMethod": "POST",
+          "endpoints": [
+            {
+              "hostnamePattern": "*",
+              "pathMapping": "/armeria.grpc.testing.TestService/UnaryCall"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "docServiceRoute": {
+    "patternString": "/docs/*",
+    "pathType": "PREFIX"
+  }
+}

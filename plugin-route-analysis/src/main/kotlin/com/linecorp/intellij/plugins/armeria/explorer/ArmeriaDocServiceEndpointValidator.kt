@@ -1,6 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
-internal object ArmeriaDocServiceEndpointValidator {
+object ArmeriaDocServiceEndpointValidator {
     private val HOST_PATTERN = Regex("""^(?:localhost|[a-zA-Z0-9.\-]+|\[[0-9a-fA-F:.]+\])$""")
 
     fun validateHost(host: String): String? {

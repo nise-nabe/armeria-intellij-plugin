@@ -3,7 +3,7 @@ package com.linecorp.intellij.plugins.armeria.explorer
 /**
  * Parses Armeria DocService [specification.json](https://armeria.dev) payloads.
  */
-internal object ArmeriaDocServiceSpecificationParser {
+object ArmeriaDocServiceSpecificationParser {
     data class ParsedSpecification(
         val routes: List<ParsedRoute>,
         val docServiceMountPath: String?,
