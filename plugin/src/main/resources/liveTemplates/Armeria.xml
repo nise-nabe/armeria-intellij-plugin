@@ -1,0 +1,34 @@
+<templateSet group="Armeria">
+  <template name="armroute" key="live.template.annotated.route.method.description" resource-bundle="messages.ArmeriaBundle" value="@Get(&quot;$PATH$&quot;)&#10;public $RETURN_TYPE$ $NAME$($PARAMS$) {&#10;    $END$&#10;    return null;&#10;}" description="Annotated Armeria route method" toReformat="true" toShortenFQNames="true">
+    <variable name="PATH" expression="" defaultValue="&quot;/&quot;" alwaysStopAt="true"/>
+    <variable name="RETURN_TYPE" expression="completeSmart()" defaultValue="String" alwaysStopAt="true"/>
+    <variable name="NAME" expression="" defaultValue="handler" alwaysStopAt="true"/>
+    <variable name="PARAMS" expression="" defaultValue="" alwaysStopAt="true"/>
+    <context><option name="JAVA_DECLARATION" value="true"/></context>
+  </template>
+  <template name="armroute" key="live.template.annotated.route.method.kotlin.description" resource-bundle="messages.ArmeriaBundle" value="@Get(&quot;$PATH$&quot;)&#10;fun $NAME$($PARAMS$): $RETURN_TYPE$ {&#10;    $END$&#10;    return &quot;&quot;&#10;}" description="Annotated Armeria route method (Kotlin)" toReformat="true" toShortenFQNames="true">
+    <variable name="PATH" expression="" defaultValue="&quot;/&quot;" alwaysStopAt="true"/>
+    <variable name="NAME" expression="" defaultValue="handler" alwaysStopAt="true"/>
+    <variable name="PARAMS" expression="" defaultValue="" alwaysStopAt="true"/>
+    <variable name="RETURN_TYPE" expression="completeSmart()" defaultValue="String" alwaysStopAt="true"/>
+    <context><option name="KOTLIN" value="true"/></context>
+  </template>
+  <template name="armsrv" key="live.template.server.builder.description" resource-bundle="messages.ArmeriaBundle" value="Server.builder()&#10;      .http($PORT$)&#10;      .annotatedService(new $SERVICE$())&#10;      .build()&#10;      .start()&#10;      .join();" description="Armeria Server.builder skeleton" toReformat="true" toShortenFQNames="true">
+    <variable name="PORT" expression="" defaultValue="8080" alwaysStopAt="true"/>
+    <variable name="SERVICE" expression="completeSmart()" defaultValue="MyService" alwaysStopAt="true"/>
+    <context><option name="JAVA_STATEMENT" value="true"/></context>
+  </template>
+  <template name="armsrv" key="live.template.server.builder.kotlin.description" resource-bundle="messages.ArmeriaBundle" value="Server.builder()&#10;    .http($PORT$)&#10;    .annotatedService($SERVICE$())&#10;    .build()&#10;    .start()&#10;    .join()" description="Armeria Server.builder skeleton (Kotlin)" toReformat="true" toShortenFQNames="true">
+    <variable name="PORT" expression="" defaultValue="8080" alwaysStopAt="true"/>
+    <variable name="SERVICE" expression="completeSmart()" defaultValue="MyService" alwaysStopAt="true"/>
+    <context><option name="KOTLIN_STATEMENT" value="true"/></context>
+  </template>
+  <template name="armwc" key="live.template.webclient.decorator.description" resource-bundle="messages.ArmeriaBundle" value="WebClient.builder(&quot;$URI$&quot;)&#10;         .decorator(LoggingClient.newDecorator())&#10;         .build();" description="Armeria WebClient with LoggingClient decorator" toReformat="true" toShortenFQNames="true">
+    <variable name="URI" expression="" defaultValue="&quot;http://localhost:8080&quot;" alwaysStopAt="true"/>
+    <context><option name="JAVA_DECLARATION" value="true"/><option name="JAVA_STATEMENT" value="true"/></context>
+  </template>
+  <template name="armwc" key="live.template.webclient.decorator.kotlin.description" resource-bundle="messages.ArmeriaBundle" value="WebClient.builder(&quot;$URI$&quot;)&#10;    .decorator(LoggingClient.newDecorator())&#10;    .build()" description="Armeria WebClient with LoggingClient decorator (Kotlin)" toReformat="true" toShortenFQNames="true">
+    <variable name="URI" expression="" defaultValue="&quot;http://localhost:8080&quot;" alwaysStopAt="true"/>
+    <context><option name="KOTLIN" value="true"/><option name="KOTLIN_STATEMENT" value="true"/></context>
+  </template>
+</templateSet>
