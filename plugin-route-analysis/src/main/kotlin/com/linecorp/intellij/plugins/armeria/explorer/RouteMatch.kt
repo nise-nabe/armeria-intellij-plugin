@@ -9,6 +9,8 @@ enum class RouteMatch {
     HEALTH_CHECK,
     VIRTUAL_HOST,
     ROUTE_DECORATOR,
+    ROUTE_FLUENT,
+    DECORATOR_UNDER,
     NON_HTTP,
     RUNTIME,
 }

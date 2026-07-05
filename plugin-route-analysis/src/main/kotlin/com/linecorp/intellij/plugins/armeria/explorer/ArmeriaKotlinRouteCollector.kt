@@ -286,6 +286,9 @@ object ArmeriaKotlinRouteCollector {
             ServiceRegistrationMethod.HEALTH_CHECK_SERVICE,
             ServiceRegistrationMethod.VIRTUAL_HOST,
             ServiceRegistrationMethod.ROUTE_DECORATOR,
+            ServiceRegistrationMethod.ROUTE,
+            ServiceRegistrationMethod.WITH_ROUTE,
+            ServiceRegistrationMethod.DECORATOR_UNDER,
             null,
             -> null
         }
@@ -324,6 +327,9 @@ object ArmeriaKotlinRouteCollector {
             ServiceRegistrationMethod.HEALTH_CHECK_SERVICE,
             ServiceRegistrationMethod.VIRTUAL_HOST,
             ServiceRegistrationMethod.ROUTE_DECORATOR,
+            ServiceRegistrationMethod.ROUTE,
+            ServiceRegistrationMethod.WITH_ROUTE,
+            ServiceRegistrationMethod.DECORATOR_UNDER,
             null,
             -> null
         }

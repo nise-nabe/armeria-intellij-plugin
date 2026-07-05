@@ -69,6 +69,12 @@ object ArmeriaRouteDetailFormatter {
                 route.virtualHostName.ifBlank { route.target },
             )
             RouteMatch.ROUTE_DECORATOR -> message("route.explorer.registration.routeDecorator", route.path)
+            RouteMatch.ROUTE_FLUENT -> message(
+                "route.explorer.registration.fluentRoute",
+                route.httpMethod.ifBlank { message("route.explorer.method.allHttp") },
+                route.path,
+            )
+            RouteMatch.DECORATOR_UNDER -> message("route.explorer.registration.decoratorUnder", route.path)
             RouteMatch.NON_HTTP -> message("route.explorer.registration.nonHttp", route.protocol, route.path)
             RouteMatch.RUNTIME -> message("route.explorer.registration.runtime", route.httpMethod, route.path)
         }

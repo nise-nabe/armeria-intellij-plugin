@@ -57,6 +57,58 @@ class ArmeriaExtendedRegistrationCollectorTest : LightJavaCodeInsightFixtureTest
         assertEquals("/internal/healthcheck", healthRoute!!.path)
     }
 
+    fun testCollectFluentRouteRegistration() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .route()
+                        .post("/api/items")
+                        .build((ctx, req) -> null)
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val fluentRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_FLUENT }
+        assertNotNull(fluentRoute)
+        assertEquals("POST", fluentRoute!!.httpMethod)
+        assertEquals("/api/items", fluentRoute.path)
+    }
+
+    fun testCollectDecoratorUnderRegistration() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.logging.LoggingService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .decoratorUnder("/public", LoggingService.newDecorator())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val decoratorRoute = routes.firstOrNull { it.routeMatch == RouteMatch.DECORATOR_UNDER }
+        assertNotNull(decoratorRoute)
+        assertEquals("/public", decoratorRoute!!.path)
+    }
+
     fun testCollectPathAnnotationAndPathType() {
         myFixture.configureByText(
             "HelloService.java",
@@ -131,6 +183,22 @@ class ArmeriaExtendedRegistrationCollectorTest : LightJavaCodeInsightFixtureTest
                 }
 
                 public ServerBuilder virtualHost(String hostname) {
+                    return this;
+                }
+
+                public ServerBuilder route() {
+                    return this;
+                }
+
+                public ServerBuilder post(String path) {
+                    return this;
+                }
+
+                public ServerBuilder build(Object handler) {
+                    return this;
+                }
+
+                public ServerBuilder decoratorUnder(String path, Object decorator) {
                     return this;
                 }
 

@@ -20,6 +20,9 @@ internal enum class ServiceRegistrationMethod(val methodName: String) {
     HEALTH_CHECK_SERVICE("healthCheckService"),
     VIRTUAL_HOST("virtualHost"),
     ROUTE_DECORATOR("routeDecorator"),
+    ROUTE("route"),
+    WITH_ROUTE("withRoute"),
+    DECORATOR_UNDER("decoratorUnder"),
     ;
 
     companion object {
@@ -29,6 +32,11 @@ internal enum class ServiceRegistrationMethod(val methodName: String) {
             HEALTH_CHECK_SERVICE.methodName,
             VIRTUAL_HOST.methodName,
             ROUTE_DECORATOR.methodName,
+            WITH_ROUTE.methodName,
+            DECORATOR_UNDER.methodName,
+        )
+        val FLUENT_ROUTE_HTTP_METHODS: Set<String> = setOf(
+            "get", "head", "post", "put", "delete", "options", "patch", "trace",
         )
 
         fun fromMethodName(name: String): ServiceRegistrationMethod? =
