@@ -3,6 +3,10 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaKotlinServiceRegistrationCollectorTest : ArmeriaFixtureTestBase() {
+
+    override fun registerArmeriaStubs() {
+        registerKotlinRouteCollectorStubs()
+    }
     fun testCollectServiceRegistrationFromBuilderVariable() {
         myFixture.configureByText(
             "Main.kt",

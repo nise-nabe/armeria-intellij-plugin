@@ -12,6 +12,10 @@ import com.linecorp.intellij.plugins.armeria.message
 
 class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
 
+    override fun registerArmeriaStubs() {
+        registerRouteDetailFormatterStubs()
+    }
+
     fun testRegistrationSummary_annotatedRoute() {
         myFixture.configureByText(
             "HelloService.java",

@@ -4,6 +4,10 @@ import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaRouteDuplicateIndexTest : ArmeriaFixtureTestBase() {
 
+    override fun registerArmeriaStubs() {
+        registerRouteDuplicateIndexStubs()
+    }
+
     fun testDuplicateServiceRegistrationsInDifferentFilesAreReported() {
         myFixture.configureByText(
             "Main.java",

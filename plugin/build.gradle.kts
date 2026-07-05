@@ -48,21 +48,15 @@ testing {
             }
             targets.all {
                 testTask.configure {
-                    description = "Runs unit tests without IntelliJ Platform PSI fixture"
+                    description =
+                        "Runs pure unit tests from src/fastTest (IntelliJ Platform test runtime; no PSI fixtures)"
                     dependsOn("prepareTest", "instrumentTestCode", "fastTestClasses")
-                    val fastTestClassesDirs = project.sourceSets.named("fastTest").get().output.classesDirs
-                    testClassesDirs = fastTestClassesDirs
-
-                    val standardTest = project.tasks.named<Test>("test")
-                    notCompatibleWithConfigurationCache(
-                        "Copies IntelliJ Platform test runtime from the standard test task",
-                    )
-                    classpath = fastTestClassesDirs + standardTest.get().classpath
-                    jvmArgumentProviders.addAll(standardTest.get().jvmArgumentProviders)
-                    javaLauncher.convention(standardTest.get().javaLauncher)
-                    systemProperties.putAll(standardTest.get().systemProperties)
-                    environment.putAll(standardTest.get().environment)
-                    jvmArgs = standardTest.get().jvmArgs
+                    val fastTestClassesDirs =
+                        project.sourceSets.named("fastTest").map { it.output.classesDirs }
+                    testClassesDirs = project.sourceSets.named("fastTest").get().output.classesDirs
+                    val platformTestClasspath = project.tasks.named<Test>("test").map { it.classpath }
+                    classpath = project.files(fastTestClassesDirs, platformTestClasspath)
+                    javaLauncher.set(project.tasks.named<Test>("test").flatMap { it.javaLauncher })
                 }
             }
         }

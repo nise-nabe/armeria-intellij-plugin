@@ -4,13 +4,22 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
+    override fun registerArmeriaStubs() {
+        // Registered per test alongside Spring stubs.
+    }
+
     override fun setUp() {
         super.setUp()
         registerSpringAnnotationStubs()
+    }
+
+    private fun registerSpringBootRouteStubs() {
+        registerMinimalArmeriaServerStubs()
         registerArmeriaSpringStubs()
     }
 
     fun testCollectServiceRegistrationFromBeanConfigurator() {
+        registerSpringBootRouteStubs()
         myFixture.configureByText(
             "ArmeriaConfig.kt",
             """
@@ -48,6 +57,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
     }
 
     fun testDoesNotDuplicateIndexedServiceRegistration() {
+        registerSpringBootRouteStubs()
         myFixture.configureByText(
             "ArmeriaConfig.kt",
             """
@@ -84,6 +94,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
     }
 
     fun testCollectServiceRegistrationFromBeanServer() {
+        registerSpringBootRouteStubs()
         myFixture.configureByText(
             "ArmeriaConfig.kt",
             """
@@ -120,6 +131,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
     }
 
     fun testIgnoresUnrelatedServiceCallInBeanMethod() {
+        registerSpringBootRouteStubs()
         myFixture.configureByText(
             "ArmeriaConfig.kt",
             """
@@ -167,6 +179,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
     }
 
     fun testIgnoresBeanFunctionWithoutArmeriaReturnType() {
+        registerSpringBootRouteStubs()
         myFixture.configureByText(
             "OtherConfig.kt",
             """
@@ -190,6 +203,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
     }
 
     fun testKotlinSpringBootCollectorCollectsRoutesDirectly() {
+        registerSpringBootRouteStubs()
         myFixture.configureByText(
             "ArmeriaConfig.kt",
             """
@@ -233,6 +247,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
     }
 
     fun testKotlinSpringBootCollectorCollectsRoutesWithServerImportOnly() {
+        registerSpringBootRouteStubs()
         myFixture.configureByText(
             "ArmeriaConfig.kt",
             """
@@ -276,6 +291,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
     }
 
     fun testCollectServiceRegistrationFromBeanServerBuilder() {
+        registerSpringBootRouteStubs()
         myFixture.configureByText(
             "ArmeriaConfig.kt",
             """
@@ -312,6 +328,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
     }
 
     fun testCollectInferredReturnTypeFromBeanFunction() {
+        registerSpringBootRouteStubs()
         myFixture.configureByText(
             "ArmeriaConfig.kt",
             """
@@ -348,6 +365,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
     }
 
     fun testCollectServiceUnderAndAnnotatedServiceFromBeanConfigurator() {
+        registerSpringBootRouteStubs()
         myFixture.configureByText(
             "ArmeriaConfig.kt",
             """
@@ -394,6 +412,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
     }
 
     fun testCollectServiceRegistrationFromConfiguratorSubtype() {
+        registerSpringBootRouteStubs()
         myFixture.addClass(
             """
             package example;

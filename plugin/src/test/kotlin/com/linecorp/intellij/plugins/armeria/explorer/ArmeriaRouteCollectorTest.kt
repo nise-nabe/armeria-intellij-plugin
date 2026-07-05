@@ -4,6 +4,10 @@ import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaRouteCollectorTest : ArmeriaFixtureTestBase() {
 
+    override fun registerArmeriaStubs() {
+        registerRouteCollectorStubs()
+    }
+
     fun testCollectAnnotatedRoute() {
         myFixture.configureByText(
             "HelloService.java",
