@@ -1,16 +1,24 @@
 package com.linecorp.intellij.plugins.armeria.client
 
+import com.intellij.psi.PsiClassObjectAccessExpression
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiExpression
+import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethodCallExpression
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaDecoratorSupport
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteTargetExtractor
+import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 
 internal object ArmeriaClientFeatureSupport {
     private val CLIENT_FEATURE_METHODS = setOf("decorator", "endpointGroup")
+
+    private val KNOWN_CLIENT_DECORATOR_BUNDLE_KEYS = mapOf(
+        "LoggingClient" to "client.explorer.decorator.logging",
+        "BraveClient" to "client.explorer.decorator.brave",
+        "RetryingClient" to "client.explorer.decorator.retrying",
+        "CircuitBreakerClient" to "client.explorer.decorator.circuitBreaker",
+    )
 
     fun extractJavaFeatures(expression: PsiMethodCallExpression): List<String> {
         val features = linkedSetOf<String>()
@@ -40,14 +48,13 @@ internal object ArmeriaClientFeatureSupport {
         when (call.methodExpression.referenceName) {
             "decorator" -> {
                 val argument = call.argumentList.expressions.firstOrNull()
-                val label = argument?.let(ArmeriaRouteTargetExtractor::extractTarget).orEmpty()
-                ArmeriaDecoratorSupport.labelDecorator(label)
+                labelClientDecorator(extractJavaTarget(argument))
                     .takeIf { it.isNotBlank() }
                     ?.let(features::add)
             }
             "endpointGroup" -> {
                 val argument = call.argumentList.expressions.firstOrNull()
-                val label = argument?.let(ArmeriaRouteTargetExtractor::extractTarget).orEmpty().ifBlank { "EndpointGroup" }
+                val label = extractJavaTarget(argument).ifBlank { "EndpointGroup" }
                 features += "EndpointGroup: $label"
             }
         }
@@ -57,7 +64,7 @@ internal object ArmeriaClientFeatureSupport {
         when (call.calleeExpression?.text) {
             "decorator" -> {
                 val argument = call.valueArguments.firstOrNull()?.getArgumentExpression()
-                ArmeriaDecoratorSupport.labelDecorator(argument?.text.orEmpty())
+                labelClientDecorator(argument?.text.orEmpty())
                     .takeIf { it.isNotBlank() }
                     ?.let(features::add)
             }
@@ -66,6 +73,28 @@ internal object ArmeriaClientFeatureSupport {
                 val label = argument?.text?.takeIf { it.isNotBlank() } ?: "EndpointGroup"
                 features += "EndpointGroup: $label"
             }
+        }
+    }
+
+    private fun labelClientDecorator(raw: String): String {
+        val normalized = raw.removeSuffix("::class.java").removeSuffix("::class").removeSuffix(".class")
+        val simpleName = normalized.substringAfterLast('.').removeSuffix("()")
+        val bundleKey = KNOWN_CLIENT_DECORATOR_BUNDLE_KEYS[simpleName]
+        return if (bundleKey != null) message(bundleKey) else simpleName
+    }
+
+    private fun extractJavaTarget(expression: PsiExpression?): String {
+        if (expression == null) {
+            return ""
+        }
+        return when (expression) {
+            is PsiClassObjectAccessExpression -> expression.text
+            is PsiLiteralExpression -> expression.value?.toString().orEmpty()
+            is PsiMethodCallExpression -> {
+                expression.methodExpression.qualifierExpression?.text
+                    ?: expression.methodExpression.referenceName.orEmpty()
+            }
+            else -> expression.text.trim()
         }
     }
 
