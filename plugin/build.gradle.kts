@@ -1,8 +1,7 @@
+import org.gradle.api.tasks.testing.Test
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.date
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
-import org.gradle.api.tasks.testing.Test
-import org.gradle.language.base.plugins.LifecycleBasePlugin
 
 plugins {
     id("com.linecorp.intellij.platform-plugin")
@@ -18,18 +17,9 @@ dependencies {
         bundledPlugin("org.jetbrains.plugins.gradle")
         bundledPlugin("org.jetbrains.kotlin")
         testFramework(TestFrameworkType.Plugin.Java)
+        testFramework(TestFrameworkType.Plugin.Java, configurationName = "testFixturesImplementation")
     }
-}
-
-testing {
-    suites {
-        getByName<JvmTestSuite>("test") {
-            dependencies {
-                implementation(libs.velocity.engine.core)
-                implementation(libs.junit4)
-            }
-        }
-    }
+    testFixturesImplementation(libs.junit4)
 }
 
 private val fastTestPatterns = listOf(
@@ -43,42 +33,76 @@ private val fastTestPatterns = listOf(
     "com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteExplorerTest",
 )
 
-
-tasks.register<Test>("fastTest") {
-    description = "Runs unit tests without IntelliJ Platform PSI fixture"
-    group = LifecycleBasePlugin.VERIFICATION_GROUP
-    dependsOn("prepareTest", "instrumentTestCode", "testClasses")
-    filter {
-        isFailOnNoMatchingTests = false
-        fastTestPatterns.forEach { includeTestsMatching(it) }
+private fun JvmTestSuite.configureFilteredSuite(
+    description: String,
+    configureFilter: org.gradle.api.tasks.testing.TestFilter.() -> Unit,
+) {
+    useJUnit(libs.versions.junit4.get())
+    sources {
+        kotlin.setSrcDirs(emptyList<String>())
+        resources.setSrcDirs(emptyList<String>())
+    }
+    targets {
+        all {
+            testTask.configure {
+                this.description = description
+                dependsOn("prepareTest", "instrumentTestCode", "testClasses")
+                filter {
+                    isFailOnNoMatchingTests = false
+                    configureFilter()
+                }
+            }
+        }
     }
 }
 
-tasks.register<Test>("platformTest") {
-    description = "Runs IntelliJ Platform PSI fixture tests"
-    group = LifecycleBasePlugin.VERIFICATION_GROUP
-    dependsOn("prepareTest", "instrumentTestCode", "testClasses")
-    filter {
-        isFailOnNoMatchingTests = false
-        fastTestPatterns.forEach { excludeTestsMatching(it) }
+private fun Project.wireFilteredTestSuitesToStandardTest() {
+    val standardTest = tasks.named<Test>("test")
+    listOf("fastTest", "platformTest").forEach { suiteName ->
+        tasks.named<Test>(suiteName).configure {
+            notCompatibleWithConfigurationCache(
+                "Copies IntelliJ Platform test runtime from the standard test task",
+            )
+            testClassesDirs = standardTest.get().testClassesDirs
+            classpath = standardTest.get().classpath
+            jvmArgumentProviders.addAll(standardTest.get().jvmArgumentProviders)
+            javaLauncher.convention(standardTest.get().javaLauncher)
+            doFirst {
+                val source = standardTest.get()
+                systemProperties.putAll(source.systemProperties)
+                environment.putAll(source.environment)
+                jvmArgs = source.jvmArgs
+            }
+        }
+    }
+}
+
+testing {
+    suites {
+        getByName<JvmTestSuite>("test") {
+            dependencies {
+                implementation(testFixtures(project()))
+                implementation(libs.velocity.engine.core)
+                implementation(libs.junit4)
+            }
+        }
+
+        register("fastTest", JvmTestSuite::class) {
+            configureFilteredSuite("Runs unit tests without IntelliJ Platform PSI fixture") {
+                fastTestPatterns.forEach { includeTestsMatching(it) }
+            }
+        }
+
+        register("platformTest", JvmTestSuite::class) {
+            configureFilteredSuite("Runs IntelliJ Platform PSI fixture tests") {
+                fastTestPatterns.forEach { excludeTestsMatching(it) }
+            }
+        }
     }
 }
 
 afterEvaluate {
-    val standardTest = tasks.named<Test>("test").get()
-    listOf("fastTest", "platformTest").forEach { suiteName ->
-        tasks.named<Test>(suiteName).configure {
-            testClassesDirs = standardTest.testClassesDirs
-            classpath = standardTest.classpath
-            jvmArgumentProviders.addAll(standardTest.jvmArgumentProviders)
-            javaLauncher.convention(standardTest.javaLauncher)
-            doFirst {
-                systemProperties.putAll(standardTest.systemProperties)
-                environment.putAll(standardTest.environment)
-                jvmArgs = standardTest.jvmArgs
-            }
-        }
-    }
+    wireFilteredTestSuitesToStandardTest()
 }
 
 changelog {
