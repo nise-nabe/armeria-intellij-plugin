@@ -24,4 +24,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "armeria-intellij-plugin"
 includeBuild("build-logic")
-include("plugin-shared", "plugin-wizard", "plugin")
+include("plugin-shared")
+include("plugin-wizard")
+include("plugin")
