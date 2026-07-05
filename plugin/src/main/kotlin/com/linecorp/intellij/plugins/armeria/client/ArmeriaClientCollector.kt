@@ -9,6 +9,7 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.JavaRecursiveElementWalkingVisitor
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiExpression
+import com.intellij.psi.PsiExpressionList
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiManager
@@ -72,6 +73,9 @@ object ArmeriaClientCollector {
         endpoints: MutableList<ArmeriaClientEndpoint>,
         seenEndpoints: MutableSet<String>,
     ) {
+        if (isNestedInsideClientFactoryArgument(expression)) {
+            return
+        }
         val methodName = expression.methodExpression.referenceName ?: return
         if (methodName !in ArmeriaClientSupport.FACTORY_METHOD_NAMES) {
             return
@@ -173,6 +177,12 @@ object ArmeriaClientCollector {
         if (call != null) {
             val methodName = call.methodExpression.referenceName
             val resolvedClass = call.resolveMethod()?.containingClass?.qualifiedName
+            if (methodName == "build" &&
+                resolvedClass?.startsWith(ArmeriaClientSupport.ARMERIA_CLIENT_PACKAGE_PREFIX) == true
+            ) {
+                val factoryCall = findWebClientFactoryInQualifierChain(call) ?: return null
+                return extractWebClientTransport(factoryCall)
+            }
             if (ArmeriaClientSupport.isWebClientClass(resolvedClass) && methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES) {
                 val arguments = call.argumentList.expressions
                 if (arguments.size >= 2 && isEndpointGroupArgument(arguments[1])) {
@@ -189,6 +199,20 @@ object ArmeriaClientCollector {
             if (resolved is PsiVariable) {
                 return extractWebClientTransport(resolved.initializer ?: return null)
             }
+        }
+        return null
+    }
+
+    private fun findWebClientFactoryInQualifierChain(expression: PsiMethodCallExpression): PsiMethodCallExpression? {
+        var current: PsiExpression? = expression.methodExpression.qualifierExpression
+        while (current != null) {
+            val call = current as? PsiMethodCallExpression ?: break
+            val methodName = call.methodExpression.referenceName
+            val resolvedClass = call.resolveMethod()?.containingClass?.qualifiedName
+            if (ArmeriaClientSupport.isWebClientClass(resolvedClass) && methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES) {
+                return call
+            }
+            current = call.methodExpression.qualifierExpression
         }
         return null
     }
@@ -238,4 +262,34 @@ object ArmeriaClientCollector {
     }
 
     private fun isKotlinPluginAvailable(): Boolean = PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
+
+    private fun isNestedInsideClientFactoryArgument(expression: PsiMethodCallExpression): Boolean {
+        var element: PsiElement? = expression.parent
+        while (element != null) {
+            val outerCall = element as? PsiMethodCallExpression ?: run {
+                element = element.parent
+                continue
+            }
+            val methodName = outerCall.methodExpression.referenceName
+            if (methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES &&
+                ArmeriaClientSupport.protocolForClass(outerCall.resolveMethod()?.containingClass?.qualifiedName) != null &&
+                isDescendantOfArgumentList(expression, outerCall.argumentList)
+            ) {
+                return true
+            }
+            element = element.parent
+        }
+        return false
+    }
+
+    private fun isDescendantOfArgumentList(expression: PsiElement, argumentList: PsiExpressionList): Boolean {
+        var current: PsiElement? = expression
+        while (current != null) {
+            if (current.parent == argumentList) {
+                return true
+            }
+            current = current.parent
+        }
+        return false
+    }
 }

@@ -1,11 +1,12 @@
 package com.linecorp.intellij.plugins.armeria.client
 
 import com.intellij.psi.PsiClassObjectAccessExpression
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiExpression
+import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiVariable
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteTargetExtractor
 import com.linecorp.intellij.plugins.armeria.message
 
 internal object ArmeriaClientDecoratorSupport {
@@ -36,15 +37,25 @@ internal object ArmeriaClientDecoratorSupport {
     ) {
         var current: PsiExpression = factoryCall
         while (true) {
-            val parent = current.parent as? PsiMethodCallExpression ?: break
-            if (parent.methodExpression.qualifierExpression != current) {
-                break
-            }
+            val parent = findEnclosingQualifierCall(current) ?: break
             if (isJavaClientDecoratorCall(parent)) {
                 extractJavaDecoratorLabel(parent)?.let { decorators += it }
             }
             current = parent
         }
+    }
+
+    private fun findEnclosingQualifierCall(expression: PsiExpression): PsiMethodCallExpression? {
+        var element: PsiElement? = expression.parent
+        while (element != null) {
+            if (element is PsiMethodCallExpression &&
+                element.methodExpression.qualifierExpression == expression
+            ) {
+                return element
+            }
+            element = element.parent
+        }
+        return null
     }
 
     private fun collectJavaDecoratorsFromQualifier(
@@ -77,9 +88,9 @@ internal object ArmeriaClientDecoratorSupport {
         if (expression.methodExpression.referenceName != "decorator") {
             return false
         }
-        val resolvedClass = expression.resolveMethod()?.containingClass?.qualifiedName ?: return false
-        if (resolvedClass.startsWith(ArmeriaClientSupport.ARMERIA_CLIENT_PACKAGE_PREFIX)) {
-            return true
+        val resolvedClass = expression.resolveMethod()?.containingClass?.qualifiedName
+        if (resolvedClass != null) {
+            return resolvedClass.startsWith(ArmeriaClientSupport.ARMERIA_CLIENT_PACKAGE_PREFIX)
         }
         val qualifierText = expression.methodExpression.qualifierExpression?.text ?: return false
         return ArmeriaClientSupport.looksLikeClientBuilderReceiverText(qualifierText)
@@ -89,7 +100,12 @@ internal object ArmeriaClientDecoratorSupport {
         val decoratorArgument = expression.argumentList.expressions.firstOrNull() ?: return null
         val target = when (decoratorArgument) {
             is PsiClassObjectAccessExpression -> decoratorArgument.text
-            else -> ArmeriaRouteTargetExtractor.extractTarget(decoratorArgument)
+            is PsiLiteralExpression -> decoratorArgument.value?.toString().orEmpty()
+            is PsiMethodCallExpression -> {
+                decoratorArgument.methodExpression.qualifierExpression?.text
+                    ?: decoratorArgument.methodExpression.referenceName.orEmpty()
+            }
+            else -> decoratorArgument.text.trim()
         }
         return labelClientDecorator(target)
     }
