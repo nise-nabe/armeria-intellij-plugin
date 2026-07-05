@@ -396,6 +396,9 @@ object ArmeriaRouteCollector {
         )
     }
 
+    internal fun looksLikeArmeriaBuilderCall(expression: PsiMethodCallExpression): Boolean =
+        ArmeriaBuilderCallHeuristics.looksLikeJavaBuilderCall(expression)
+
     private fun buildMethodTarget(psiClass: PsiClass, method: PsiMethod): String {
         val className = psiClass.qualifiedName ?: psiClass.name ?: "<anonymous>"
         return "$className#${method.name}()"
