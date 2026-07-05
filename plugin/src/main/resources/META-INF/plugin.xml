@@ -8,6 +8,7 @@
     <depends optional="true" config-file="kotlin-integration.xml">org.jetbrains.kotlin</depends>
     <depends optional="true" config-file="grpc-integration.xml">com.intellij.grpc</depends>
     <depends optional="true" config-file="proto-integration.xml">idea.plugin.protoeditor</depends>
+    <depends optional="true" config-file="spring-boot-integration.xml">org.jetbrains.plugins.yaml</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <moduleBuilder builderClass="com.linecorp.intellij.plugins.armeria.module.ArmeriaModuleBuilder" />

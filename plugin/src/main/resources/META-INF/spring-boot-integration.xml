@@ -1,0 +1,10 @@
+<idea-plugin>
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="Armeria Spring Boot Config"
+                    factoryClass="com.linecorp.intellij.plugins.armeria.springboot.config.ArmeriaSpringBootConfigToolWindowFactory"
+                    anchor="right"
+                    icon="/icons/armeria.svg" />
+        <completion.contributor language="yaml"
+                                implementationClass="com.linecorp.intellij.plugins.armeria.springboot.config.ArmeriaSpringBootYamlCompletionContributor" />
+    </extensions>
+</idea-plugin>

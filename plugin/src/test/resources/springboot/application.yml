@@ -1,0 +1,17 @@
+spring.main.web-application-type: none
+server:
+  port: -1
+armeria:
+  ports:
+    - port: 8080
+      protocols:
+        - http
+  internal-services:
+    port: 8090
+    include: docs, health, metrics
+management:
+  server:
+    port: 8081
+logging:
+  level:
+    com.linecorp.armeria: debug
