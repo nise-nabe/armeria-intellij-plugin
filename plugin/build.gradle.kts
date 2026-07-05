@@ -23,21 +23,31 @@ dependencies {
     testFixturesImplementation(libs.junit4)
 }
 
-private fun JvmTestSuite.configureFilteredSuite(
+private val pluginTestSuiteNames = setOf("test", "fastTest", "platformTest")
+private val filteredTestSuiteNames = setOf("fastTest", "platformTest")
+
+private val configurePluginTestSuite = { suite: JvmTestSuite ->
+    suite.useJUnit(libs.versions.junit4.get())
+    suite.dependencies {
+        if (suite.name != "test") {
+            implementation(project())
+        }
+        implementation(testFixtures(project()))
+        implementation(libs.velocity.engine.core)
+        implementation(libs.junit4)
+    }
+}
+
+private fun JvmTestSuite.configureFilteredTestTarget(
     description: String,
     configureJUnit: JUnitOptions.() -> Unit,
 ) {
-    useJUnit(libs.versions.junit4.get())
-    sources {
-        kotlin.setSrcDirs(emptyList<String>())
-        resources.setSrcDirs(emptyList<String>())
-    }
     targets {
         all {
             testTask.configure {
                 this.description = description
                 dependsOn("prepareTest", "instrumentTestCode", "testClasses")
-                testClassesDirs = sourceSets.named("test").get().output.classesDirs
+                testClassesDirs = project.sourceSets.named("test").get().output.classesDirs
                 options {
                     configureJUnit(this as JUnitOptions)
                 }
@@ -51,7 +61,7 @@ private fun JvmTestSuite.configureFilteredSuite(
 
 private fun Project.wireFilteredTestSuitesToStandardTest() {
     val standardTest = tasks.named<Test>("test")
-    listOf("fastTest", "platformTest").forEach { suiteName ->
+    filteredTestSuiteNames.forEach { suiteName ->
         tasks.named<Test>(suiteName).configure {
             notCompatibleWithConfigurationCache(
                 "Copies IntelliJ Platform test runtime from the standard test task",
@@ -68,27 +78,30 @@ private fun Project.wireFilteredTestSuitesToStandardTest() {
 
 testing {
     suites {
-        getByName<JvmTestSuite>("test") {
-            dependencies {
-                implementation(testFixtures(project()))
-                implementation(libs.velocity.engine.core)
-                implementation(libs.junit4)
-            }
-        }
+        withType<JvmTestSuite>().matching { it.name in pluginTestSuiteNames }.configureEach(configurePluginTestSuite)
 
         register("fastTest", JvmTestSuite::class) {
-            configureFilteredSuite("Runs unit tests without IntelliJ Platform PSI fixture") {
+            configureFilteredTestTarget("Runs unit tests without IntelliJ Platform PSI fixture") {
                 includeCategories("com.linecorp.intellij.plugins.armeria.test.FastTest")
             }
         }
 
         register("platformTest", JvmTestSuite::class) {
-            configureFilteredSuite("Runs IntelliJ Platform PSI fixture tests") {
+            configureFilteredTestTarget("Runs IntelliJ Platform PSI fixture tests") {
                 excludeCategories("com.linecorp.intellij.plugins.armeria.test.FastTest")
             }
         }
     }
 }
+
+dependencies {
+    intellijPlatform {
+        testFramework(TestFrameworkType.Plugin.Java, configurationName = "fastTestImplementation")
+        testFramework(TestFrameworkType.Plugin.Java, configurationName = "platformTestImplementation")
+    }
+}
+
+wireFilteredTestSuitesToStandardTest()
 
 changelog {
     version.set(providers.gradleProperty("pluginVersion"))
@@ -122,5 +135,3 @@ intellijPlatform {
         }
     }
 }
-
-wireFilteredTestSuitesToStandardTest()
