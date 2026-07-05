@@ -18,17 +18,14 @@ object ArmeriaObservabilitySummary {
         val matched = OBSERVABILITY_DECORATORS.filterKeys { key ->
             decorators.any { decorator -> decorator.contains(key, ignoreCase = true) }
         }
-        if (matched.isEmpty() && !routes.any { it.isDocService }) {
-            return ""
-        }
         val parts = buildList {
             matched.values.forEach { key -> add(message(key)) }
-            if (routes.any { it.isDocService }) {
-                add(message("route.explorer.observability.docService"))
-            }
             if (routes.any { it.routeMatch == RouteMatch.HEALTH_CHECK }) {
                 add(message("route.explorer.observability.healthCheck"))
             }
+        }
+        if (parts.isEmpty()) {
+            return ""
         }
         return message("route.explorer.observability.summary", parts.joinToString(", "))
     }

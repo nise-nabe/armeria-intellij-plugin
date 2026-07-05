@@ -13,10 +13,9 @@ import org.junit.Test
 
 class ArmeriaObservabilitySummaryTest {
     @Test
-    fun summarize_listsMatchedDecoratorsAndDocService() {
+    fun summarize_listsMatchedDecoratorsAndHealthCheck() {
         val routes = listOf(
             route(decorators = listOf("Logging", "Brave")),
-            route(isDocService = true, routeMatch = RouteMatch.NON_HTTP, protocol = "gRPC"),
             route(routeMatch = RouteMatch.HEALTH_CHECK, path = "/internal/healthcheck"),
         )
 
@@ -24,13 +23,28 @@ class ArmeriaObservabilitySummaryTest {
 
         assertTrue(summary.contains(message("route.explorer.observability.logging")))
         assertTrue(summary.contains(message("route.explorer.observability.tracing")))
-        assertTrue(summary.contains(message("route.explorer.observability.docService")))
+        assertTrue(summary.contains(message("route.explorer.observability.healthCheck")))
+    }
+
+    @Test
+    fun summarize_includesHealthCheckWhenOnlySignal() {
+        val routes = listOf(route(routeMatch = RouteMatch.HEALTH_CHECK, path = "/internal/healthcheck"))
+
+        val summary = ArmeriaObservabilitySummary.summarize(routes)
+
         assertTrue(summary.contains(message("route.explorer.observability.healthCheck")))
     }
 
     @Test
     fun summarize_returnsEmptyWhenNoSignals() {
         val routes = listOf(route(decorators = listOf("Cors")))
+
+        assertEquals("", ArmeriaObservabilitySummary.summarize(routes))
+    }
+
+    @Test
+    fun summarize_omitsDocService() {
+        val routes = listOf(route(isDocService = true, routeMatch = RouteMatch.NON_HTTP, protocol = "gRPC"))
 
         assertEquals("", ArmeriaObservabilitySummary.summarize(routes))
     }
