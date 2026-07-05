@@ -1,9 +1,12 @@
 package com.linecorp.intellij.plugins.armeria.module
 
+import com.linecorp.intellij.plugins.armeria.test.FastTest
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.experimental.categories.Category
 import java.nio.charset.StandardCharsets
 
+@Category(FastTest::class)
 class ArmeriaWizardTemplateCoverageTest {
     @Test
     fun gradleKtsOptionalLibraryHasConditionalBlock() {

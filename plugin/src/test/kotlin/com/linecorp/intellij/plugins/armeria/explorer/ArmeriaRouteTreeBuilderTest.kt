@@ -6,11 +6,14 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.SmartPsiElementPointer
+import com.linecorp.intellij.plugins.armeria.test.FastTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import org.junit.experimental.categories.Category
 import javax.swing.tree.DefaultMutableTreeNode
 
+@Category(FastTest::class)
 class ArmeriaRouteTreeBuilderTest {
     @Test
     fun buildRoot_groupsRoutesByModule() {

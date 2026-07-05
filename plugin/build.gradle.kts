@@ -22,20 +22,9 @@ dependencies {
     testFixturesImplementation(libs.junit4)
 }
 
-private val fastTestPatterns = listOf(
-    "com.linecorp.intellij.plugins.armeria.module.*",
-    "com.linecorp.intellij.plugins.armeria.explorer.ArmeriaDecoratorSupportTest",
-    "com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteTreeBuilderTest",
-    "com.linecorp.intellij.plugins.armeria.explorer.ArmeriaHttpRequestGeneratorTest",
-    "com.linecorp.intellij.plugins.armeria.explorer.ArmeriaHttpMethodPillTest",
-    "com.linecorp.intellij.plugins.armeria.explorer.ArmeriaProtoTextSupportTest",
-    "com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupportApplicationDetectionTest",
-    "com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteExplorerTest",
-)
-
 private fun JvmTestSuite.configureFilteredSuite(
     description: String,
-    configureFilter: org.gradle.api.tasks.testing.TestFilter.() -> Unit,
+    configureJUnit: org.gradle.api.tasks.testing.junit.JUnitOptions.() -> Unit,
 ) {
     useJUnit(libs.versions.junit4.get())
     sources {
@@ -47,9 +36,9 @@ private fun JvmTestSuite.configureFilteredSuite(
             testTask.configure {
                 this.description = description
                 dependsOn("prepareTest", "instrumentTestCode", "testClasses")
+                useJUnit(configureJUnit)
                 filter {
                     isFailOnNoMatchingTests = false
-                    configureFilter()
                 }
             }
         }
@@ -89,13 +78,13 @@ testing {
 
         register("fastTest", JvmTestSuite::class) {
             configureFilteredSuite("Runs unit tests without IntelliJ Platform PSI fixture") {
-                fastTestPatterns.forEach { includeTestsMatching(it) }
+                includeCategories("com.linecorp.intellij.plugins.armeria.test.FastTest")
             }
         }
 
         register("platformTest", JvmTestSuite::class) {
             configureFilteredSuite("Runs IntelliJ Platform PSI fixture tests") {
-                fastTestPatterns.forEach { excludeTestsMatching(it) }
+                excludeCategories("com.linecorp.intellij.plugins.armeria.test.FastTest")
             }
         }
     }

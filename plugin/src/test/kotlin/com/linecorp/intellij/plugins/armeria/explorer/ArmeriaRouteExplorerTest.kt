@@ -1,8 +1,11 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.linecorp.intellij.plugins.armeria.test.FastTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import org.junit.experimental.categories.Category
 
+@Category(FastTest::class)
 class ArmeriaRouteExplorerTest {
     @Test
     fun truncateTarget_shortensLongValues() {
