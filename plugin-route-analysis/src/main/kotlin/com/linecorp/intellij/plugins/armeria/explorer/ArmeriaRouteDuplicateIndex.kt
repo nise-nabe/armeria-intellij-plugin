@@ -1,6 +1,5 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
-import com.intellij.lang.java.JavaLanguage
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiClass
@@ -21,8 +20,9 @@ import com.intellij.psi.util.PsiModificationTracker
  * Excludes non-HTTP protocols such as gRPC and mount-only registrations such as file services.
  *
  * Cross-registration conflicts are detected, for example `@Get("/foo")` versus
- * `.service("/foo", …)`. Java in-class annotated duplicate HTTP routes are excluded because
- * [com.linecorp.intellij.plugins.armeria.inspection.ArmeriaDuplicateRouteInspection] covers them.
+ * `.service("/foo", …)`. In-class annotated duplicate HTTP routes are excluded because
+ * [com.linecorp.intellij.plugins.armeria.inspection.ArmeriaDuplicateRouteInspection] and
+ * [com.linecorp.intellij.plugins.armeria.inspection.ArmeriaDuplicateRouteKotlinInspection] cover them.
  */
 object ArmeriaRouteDuplicateIndex {
     private val CHECKED_MATCHES = setOf(
@@ -54,7 +54,7 @@ object ArmeriaRouteDuplicateIndex {
                 continue
             }
             for (component in findConnectedComponents(moduleRoutes)) {
-                if (component.size < 2 || isJavaInClassAnnotatedHttpOnly(component)) {
+                if (component.size < 2 || isInClassAnnotatedHttpOnly(component)) {
                     continue
                 }
                 groups += DuplicateRegistrationGroup(component)
@@ -123,16 +123,13 @@ object ArmeriaRouteDuplicateIndex {
             .map { indices -> indices.map { routes[it] } }
     }
 
-    private fun isJavaInClassAnnotatedHttpOnly(routes: List<ArmeriaRoute>): Boolean {
+    private fun isInClassAnnotatedHttpOnly(routes: List<ArmeriaRoute>): Boolean {
         if (routes.any { it.routeMatch != RouteMatch.ANNOTATED_HTTP }) {
             return false
         }
         var containingClass: PsiClass? = null
         for (route in routes) {
             val method = route.pointer.element as? PsiMethod ?: return false
-            if (!method.language.isKindOf(JavaLanguage.INSTANCE)) {
-                return false
-            }
             val routeClass = method.containingClass ?: return false
             if (containingClass == null) {
                 containingClass = routeClass

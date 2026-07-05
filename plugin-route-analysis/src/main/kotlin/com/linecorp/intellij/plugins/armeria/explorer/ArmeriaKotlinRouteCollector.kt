@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtConstructor
 import org.jetbrains.kotlin.psi.KtCallExpression
+import org.jetbrains.kotlin.psi.KtCollectionLiteralExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
@@ -187,6 +188,14 @@ object ArmeriaKotlinRouteCollector {
 
     private fun extractKotlinString(expression: KtExpression?): String? =
         ArmeriaKotlinExpressionSupport.extractKotlinString(expression)
+
+    internal fun extractKotlinStrings(expression: KtExpression?): List<String> {
+        val unwrapped = unwrapKotlinExpression(expression) ?: return emptyList()
+        if (unwrapped is KtCollectionLiteralExpression) {
+            return unwrapped.getInnerExpressions().mapNotNull(::extractKotlinString)
+        }
+        return extractKotlinString(unwrapped)?.let { listOf(it) }.orEmpty()
+    }
 
     private fun unwrapKotlinExpression(expression: KtExpression?): KtExpression? {
         var current = expression ?: return null

@@ -1,11 +1,11 @@
 package com.linecorp.intellij.plugins.armeria.inspection
 
+import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaKotlinRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
 import com.intellij.psi.util.PsiTreeUtil
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtNamedFunction
-import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 
 internal data class ArmeriaKotlinMethodRoute(
     val httpMethod: String,
@@ -53,20 +53,7 @@ internal data class ArmeriaKotlinMethodRoute(
                 return emptyList()
             }
             return valueArguments.flatMap { argument ->
-                argument.getArgumentExpression()?.let(::extractStringValues).orEmpty()
-            }
-        }
-
-        private fun extractStringValues(expression: org.jetbrains.kotlin.psi.KtExpression): List<String> {
-            return when (expression) {
-                is KtStringTemplateExpression -> {
-                    if (expression.entries.size == 1 && expression.entries[0].text.startsWith('"')) {
-                        listOf(expression.entries[0].text.trim('"'))
-                    } else {
-                        listOf(expression.text.trim('"'))
-                    }
-                }
-                else -> listOf(expression.text.trim('"')).filter { it.isNotEmpty() }
+                ArmeriaKotlinRouteCollector.extractKotlinStrings(argument.getArgumentExpression())
             }
         }
     }
