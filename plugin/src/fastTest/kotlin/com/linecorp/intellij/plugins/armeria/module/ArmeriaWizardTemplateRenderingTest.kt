@@ -1,15 +1,12 @@
 package com.linecorp.intellij.plugins.armeria.module
 
-import com.linecorp.intellij.plugins.armeria.test.FastTest
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.junit.experimental.categories.Category
 
 /**
  * Regression tests for the representative wizard matrix from the New Project Wizard review.
  */
-@Category(FastTest::class)
 class ArmeriaWizardTemplateRenderingTest {
     @Test
     fun gradleKtsKotlinServerGrpcJunit5() {

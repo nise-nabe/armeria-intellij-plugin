@@ -1,10 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
-import com.linecorp.intellij.plugins.armeria.test.FastTest
 import junit.framework.TestCase
-import org.junit.experimental.categories.Category
 
-@Category(FastTest::class)
 class ArmeriaDecoratorSupportTest : TestCase() {
     fun testLabelDecoratorKnownService() {
         assertEquals("Logging", ArmeriaDecoratorSupport.labelDecorator("LoggingService.class"))

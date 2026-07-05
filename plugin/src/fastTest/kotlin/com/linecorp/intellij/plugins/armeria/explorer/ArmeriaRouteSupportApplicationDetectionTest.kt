@@ -1,12 +1,9 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
-import com.linecorp.intellij.plugins.armeria.test.FastTest
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.junit.experimental.categories.Category
 
-@Category(FastTest::class)
 class ArmeriaRouteSupportApplicationDetectionTest {
     @Test
     fun referencesArmeriaApplicationInSource_matchesFqcnServerBuilderCallWithoutImports() {
