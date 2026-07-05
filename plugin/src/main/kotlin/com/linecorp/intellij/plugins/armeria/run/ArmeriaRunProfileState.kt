@@ -1,11 +1,23 @@
 package com.linecorp.intellij.plugins.armeria.run
 
 import com.intellij.execution.ExecutionException
+import com.intellij.execution.ExecutionResult
+import com.intellij.execution.Executor
 import com.intellij.execution.configurations.JavaCommandLineState
 import com.intellij.execution.configurations.JavaParameters
+import com.intellij.execution.process.ProcessEvent
+import com.intellij.execution.process.ProcessListener
 import com.intellij.execution.runners.ExecutionEnvironment
+import com.intellij.execution.runners.ProgramRunner
+import com.intellij.execution.ui.ConsoleView
+import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.execution.util.JavaParametersUtil
+import com.intellij.ide.browsers.OpenUrlHyperlinkInfo
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.roots.ModuleRootManager
+import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaDocServiceSupport
+import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.message
 
 class ArmeriaRunProfileState(
@@ -25,5 +37,36 @@ class ArmeriaRunProfileState(
             ?: ModuleRootManager.getInstance(module).contentRoots.firstOrNull()?.path
             ?: configuration.project.basePath
         return params
+    }
+
+    override fun execute(executor: Executor, runner: ProgramRunner<*>): ExecutionResult {
+        val result = super.execute(executor, runner)
+        val docServiceUrl = resolveDocServiceUrl()
+        if (docServiceUrl != null) {
+            result.processHandler.addProcessListener(
+                object : ProcessListener {
+                    override fun startNotified(event: ProcessEvent) {
+                        printDocServiceHint(result, docServiceUrl)
+                    }
+                },
+            )
+        }
+        return result
+    }
+
+    private fun resolveDocServiceUrl(): String? {
+        val module = configuration.getConfigurationModule().module ?: return null
+        val routes = ReadAction.compute<List<ArmeriaRoute>, RuntimeException> {
+            ArmeriaRouteCollector.collect(configuration.project)
+        }
+        return ArmeriaDocServiceSupport.primaryUrl(routes.filter { it.moduleName == module.name })
+    }
+
+    private fun printDocServiceHint(result: ExecutionResult, url: String) {
+        val console = result.executionConsole as? ConsoleView ?: return
+        console.print(message("armeria.run.docService.console.prefix"), ConsoleViewContentType.SYSTEM_OUTPUT)
+        console.print(" ", ConsoleViewContentType.SYSTEM_OUTPUT)
+        console.printHyperlink(url, OpenUrlHyperlinkInfo(url))
+        console.print("\n", ConsoleViewContentType.SYSTEM_OUTPUT)
     }
 }
