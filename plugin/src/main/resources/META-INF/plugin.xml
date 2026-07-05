@@ -47,6 +47,8 @@
         <registryKey key="armeria.grpc.proto.routes.enabled"
                      defaultValue="true"
                      description="Include gRPC routes parsed from .proto files in Route Explorer"/>
+        <codeInsight.lineMarkerProvider language="JAVA"
+                                        implementationClass="com.linecorp.intellij.plugins.armeria.marker.ArmeriaRouteLineMarkerProvider"/>
 
         <!-- Run configuration -->
         <configurationType implementation="com.linecorp.intellij.plugins.armeria.run.ArmeriaRunConfigurationType" />
