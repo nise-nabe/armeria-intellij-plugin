@@ -144,7 +144,7 @@ class ArmeriaHttpRequestGeneratorTest {
         val route = route(protocol = "gRPC", path = "/example.EchoService/Echo", routeMatch = RouteMatch.NON_HTTP)
 
         assertTrue(ArmeriaHttpRequestGenerator.supports(route))
-        assertEquals("armeria-grpc-example.EchoService-Echo.grpc", ArmeriaHttpRequestGenerator.fileName(route))
+        assertEquals("armeria-grpc-example.EchoService-Echo.http", ArmeriaHttpRequestGenerator.fileName(route))
     }
 
     private fun route(

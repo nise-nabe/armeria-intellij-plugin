@@ -36,7 +36,7 @@ object ArmeriaHttpRequestGenerator {
     fun fileName(route: ArmeriaRoute): String {
         if (route.routeMatch == RouteMatch.NON_HTTP) {
             val slug = pathSlug(route.path)
-            return "armeria-grpc-$slug.grpc"
+            return "armeria-grpc-$slug.http"
         }
         val method = httpMethod(route).lowercase(Locale.ROOT)
         return "armeria-$method-${pathSlug(route.path)}.http"
