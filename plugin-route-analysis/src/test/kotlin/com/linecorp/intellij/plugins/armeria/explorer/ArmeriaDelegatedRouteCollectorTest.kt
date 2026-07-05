@@ -106,7 +106,6 @@ class ArmeriaDelegatedRouteCollectorTest : LightJavaCodeInsightFixtureTestCase()
     }
 
     fun testSpringBootServiceBeanMountIsDetected() {
-        registerArmeriaSpringStubs()
         myFixture.configureByText(
             "ArmeriaConfig.java",
             """
