@@ -1,6 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import com.linecorp.intellij.plugins.armeria.message
 
 class ArmeriaDelegatedRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
     override fun setUp() {
@@ -196,6 +198,54 @@ class ArmeriaDelegatedRouteCollectorTest : LightJavaCodeInsightFixtureTestCase()
 
         assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
         assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SERVLET })
+    }
+
+    fun testSpringMvcRoutesForMountFiltersControllersByModule() {
+        myFixture.configureByText(
+            "AppController.java",
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.GetMapping;
+            import org.springframework.web.bind.annotation.RestController;
+
+            @RestController
+            public class AppController {
+                @GetMapping("/hello")
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.allScope(project))
+        val helloRoute = springMvcRoutes.single()
+        val controllerModule = ArmeriaRouteMetadata.moduleName(helloRoute.element)
+        val matchingMount = ArmeriaRoute.create(
+            element = helloRoute.element,
+            protocol = RouteProtocol.HTTP.presentableName(),
+            httpMethod = "",
+            path = "/spring/",
+            target = "TomcatService",
+            routeMatch = RouteMatch.SERVICE_UNDER,
+        )
+        val unassignedModule = message("route.explorer.module.unassigned")
+
+        val scopedRoutes = ArmeriaDelegatedRouteCollector.springMvcRoutesForMount(
+            mountRoute = matchingMount,
+            springMvcRoutes = springMvcRoutes,
+            unassignedModule = unassignedModule,
+        )
+        assertEquals(springMvcRoutes, scopedRoutes)
+
+        val otherModuleMount = matchingMount.copy(moduleName = "$controllerModule-other")
+        val filteredRoutes = ArmeriaDelegatedRouteCollector.springMvcRoutesForMount(
+            mountRoute = otherModuleMount,
+            springMvcRoutes = springMvcRoutes,
+            unassignedModule = unassignedModule,
+        )
+        assertTrue(filteredRoutes.isEmpty())
     }
 
     fun testServletMountSupportDetectsKnownServices() {
