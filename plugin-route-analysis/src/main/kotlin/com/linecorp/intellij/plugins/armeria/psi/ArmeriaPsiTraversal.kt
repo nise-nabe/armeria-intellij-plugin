@@ -2,7 +2,7 @@ package com.linecorp.intellij.plugins.armeria.psi
 
 import com.intellij.psi.PsiElement
 
-internal inline fun PsiElement.forEachDescendant(action: (PsiElement) -> Unit) {
+inline fun PsiElement.forEachDescendant(action: (PsiElement) -> Unit) {
     val queue = ArrayDeque<PsiElement>()
     queue.add(this)
     while (queue.isNotEmpty()) {

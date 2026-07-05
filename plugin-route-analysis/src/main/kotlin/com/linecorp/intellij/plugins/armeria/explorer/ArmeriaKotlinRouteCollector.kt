@@ -29,12 +29,12 @@ import org.jetbrains.kotlin.psi.KtValueArgument
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
 
-internal object ArmeriaKotlinRouteCollector {
+object ArmeriaKotlinRouteCollector {
     private val IMPLICIT_RECEIVER_SCOPE_METHODS = setOf("apply", "run")
     private val EXPLICIT_PARAMETER_SCOPE_METHODS = setOf("also", "let")
     private val BUILDER_SCOPE_METHOD_NAMES = IMPLICIT_RECEIVER_SCOPE_METHODS + EXPLICIT_PARAMETER_SCOPE_METHODS
 
-    internal fun referencesArmeriaKotlinContent(file: KtFile): Boolean {
+    fun referencesArmeriaKotlinContent(file: KtFile): Boolean {
         val hasArmeriaImports = file.importList?.imports?.any { import ->
             import.importedFqName?.asString()?.startsWith(ArmeriaRouteSupport.ARMERIA_PACKAGE_PREFIX) == true
         } ?: false

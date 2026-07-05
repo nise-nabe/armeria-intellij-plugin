@@ -2,7 +2,7 @@ package com.linecorp.intellij.plugins.armeria.explorer
 
 import java.util.Locale
 
-internal object ArmeriaHttpRequestGenerator {
+object ArmeriaHttpRequestGenerator {
     const val DEFAULT_BASE_URL = "http://localhost:8080"
 
     private val NON_SLUG_CHARACTERS = Regex("[^a-zA-Z0-9._-]")

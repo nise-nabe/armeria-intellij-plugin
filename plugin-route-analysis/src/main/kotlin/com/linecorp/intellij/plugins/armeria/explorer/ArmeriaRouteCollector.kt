@@ -219,7 +219,7 @@ object ArmeriaRouteCollector {
         }
     }
 
-    internal fun referencesArmeriaJavaContent(file: PsiJavaFile): Boolean {
+    fun referencesArmeriaJavaContent(file: PsiJavaFile): Boolean {
         val hasArmeriaImports = file.importList
             ?.allImportStatements
             ?.any { statement ->

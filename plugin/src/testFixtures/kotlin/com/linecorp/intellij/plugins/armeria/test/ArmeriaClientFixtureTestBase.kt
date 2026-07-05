@@ -1,10 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.test
 
-abstract class ArmeriaClientFixtureTestBase : ArmeriaFixtureTestBase() {
+import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 
-    override fun registerArmeriaStubs() {
-        // Client tests do not need route collector stubs.
-    }
+abstract class ArmeriaClientFixtureTestBase : LightJavaCodeInsightFixtureTestCase() {
 
     override fun setUp() {
         super.setUp()

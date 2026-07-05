@@ -22,7 +22,7 @@ import com.intellij.psi.util.PsiModificationTracker
  * `.service("/foo", …)`. Java in-class annotated duplicate HTTP routes are excluded because
  * [com.linecorp.intellij.plugins.armeria.inspection.ArmeriaDuplicateRouteInspection] covers them.
  */
-internal object ArmeriaRouteDuplicateIndex {
+object ArmeriaRouteDuplicateIndex {
     private val CHECKED_MATCHES = setOf(
         RouteMatch.ANNOTATED_HTTP,
         RouteMatch.ANNOTATED_SERVICE,
@@ -219,11 +219,11 @@ internal object ArmeriaRouteDuplicateIndex {
         }
 }
 
-internal data class DuplicateRegistrationGroup(
+data class DuplicateRegistrationGroup(
     val routes: List<ArmeriaRoute>,
 )
 
-internal data class DuplicateRegistrationHit(
+data class DuplicateRegistrationHit(
     val pointer: SmartPsiElementPointer<PsiElement>,
     val registrationLabel: String,
     val registrationCount: Int,

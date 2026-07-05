@@ -1,8 +1,8 @@
 import org.gradle.api.tasks.testing.Test
+import org.gradle.language.base.plugins.LifecycleBasePlugin
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.date
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
-import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 plugins {
     id("com.linecorp.intellij.platform-plugin")
@@ -13,6 +13,7 @@ version = providers.gradleProperty("pluginVersion").get()
 
 dependencies {
     implementation(project(":plugin-shared"))
+    implementation(project(":plugin-route-analysis"))
     implementation(project(":plugin-wizard"))
     intellijPlatform {
         intellijIdeaUltimate(libs.versions.idea.platform.get())
@@ -35,51 +36,54 @@ testing {
                 implementation(libs.junit4)
             }
         }
+    }
+}
 
-        register("fastTest", JvmTestSuite::class) {
-            useJUnit(libs.versions.junit4.get())
-            dependencies {
-                implementation(project())
-                implementation(testFixtures(project()))
-                implementation(libs.velocity.engine.core)
-                implementation(libs.junit4)
-            }
-            sources {
-                compileClasspath += configurations.named("testCompileClasspath").get()
-                runtimeClasspath += configurations.named("testRuntimeClasspath").get()
-            }
-            targets.all {
-                testTask.configure {
-                    description =
-                        "Runs pure unit tests from src/fastTest (IntelliJ Platform test runtime; no PSI fixtures)"
-                    dependsOn("prepareTest", "instrumentTestCode", "fastTestClasses")
-                    val fastTestClassesDirs =
-                        project.sourceSets.named("fastTest").map { it.output.classesDirs }
-                    testClassesDirs = project.sourceSets.named("fastTest").get().output.classesDirs
-                    val platformTestClasspath = project.tasks.named<Test>("test").map { it.classpath }
-                    classpath = project.files(fastTestClassesDirs, platformTestClasspath)
-                    javaLauncher.set(project.tasks.named<Test>("test").flatMap { it.javaLauncher })
-                }
+private val fastTestPatterns = listOf(
+    "com.linecorp.intellij.plugins.armeria.client.*",
+)
+
+tasks.register<Test>("fastTest") {
+    notCompatibleWithConfigurationCache("Copies runtime settings from the standard test task")
+    description = "Runs unit tests without IntelliJ Platform PSI fixture"
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    dependsOn("prepareTest", "instrumentTestCode", "testClasses")
+    filter {
+        isFailOnNoMatchingTests = false
+        fastTestPatterns.forEach { includeTestsMatching(it) }
+    }
+}
+
+tasks.register<Test>("platformTest") {
+    notCompatibleWithConfigurationCache("Copies runtime settings from the standard test task")
+    description = "Runs IntelliJ Platform PSI fixture tests"
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    dependsOn("prepareTest", "instrumentTestCode", "testClasses")
+    filter {
+        isFailOnNoMatchingTests = false
+        fastTestPatterns.forEach { excludeTestsMatching(it) }
+    }
+}
+
+afterEvaluate {
+    val standardTest = tasks.named<Test>("test").get()
+    listOf("fastTest", "platformTest").forEach { suiteName ->
+        tasks.named<Test>(suiteName).configure {
+            testClassesDirs = standardTest.testClassesDirs
+            classpath = standardTest.classpath
+            jvmArgumentProviders.addAll(standardTest.jvmArgumentProviders)
+            javaLauncher.convention(standardTest.javaLauncher)
+            doFirst {
+                systemProperties.putAll(standardTest.systemProperties)
+                environment.putAll(standardTest.environment)
+                jvmArgs = standardTest.jvmArgs
             }
         }
     }
 }
 
-dependencies {
-    intellijPlatform {
-        testFramework(TestFrameworkType.Plugin.Java, configurationName = "fastTestImplementation")
-        testFramework(TestFrameworkType.Platform, configurationName = "fastTestImplementation")
-    }
-}
-
-extensions.configure<KotlinJvmProjectExtension>("kotlin") {
-    target.compilations.named("fastTest") {
-        associateWith(target.compilations.getByName("main"))
-    }
-}
-
 tasks.named("check") {
-    dependsOn(testing.suites.named("fastTest"))
+    dependsOn("fastTest", "platformTest")
 }
 
 changelog {
