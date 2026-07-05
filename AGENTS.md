@@ -12,7 +12,7 @@ IntelliJ Platform plugin for Armeria. Gradle multi-project build (`build-logic` 
 
 ### MCP: Gradle Tooling API
 
-The `gradle` MCP server (`nise-nabe/gradle-tapi-mcp-server` v0.3.2) is configured in `.cursor/mcp.json`. The install script downloads the release JAR to `~/.local/share/gradle-tapi-mcp-server/`, verifies its SHA-256, and exposes it via a stable `gradle-tapi-mcp-server.jar` symlink. `GRADLE_PROJECT_DIR` is set to the workspace root.
+The `gradle` MCP server (`nise-nabe/gradle-tapi-mcp-server` v0.3.3) is configured in `.cursor/mcp.json`. The install script downloads the release JAR to `~/.local/share/gradle-tapi-mcp-server/`, verifies its SHA-256, and exposes it via a stable `gradle-tapi-mcp-server.jar` symlink. `GRADLE_PROJECT_DIR` is set to the workspace root.
 
 Prefer token-efficient MCP workflows documented in `.cursor/skills/gradle-tapi-mcp/SKILL.md`:
 
@@ -20,7 +20,7 @@ Prefer token-efficient MCP workflows documented in `.cursor/skills/gradle-tapi-m
 2. `gradle_get_project_overview` for module hierarchy
 3. `gradle_run_tasks` with `[":plugin:compileKotlin"]` for fast compile checks
 
-For **`:plugin:test` and `build`**, prefer `./gradlew` in Cursor Cloud — IntelliJ tests are long-running and MCP clients often time out (~60s). Use `background: true` and poll `gradle_get_build_status` for MCP builds; never overlap concurrent MCP test runs. Cold-start compile may also timeout in foreground while Gradle still succeeds — use background + poll or `gradle_list_builds`. If MCP stops responding, read `.gradle/mcp-builds/<buildId>/mcp-result.json` and fall back to shell. Task discovery: see `gradle-tapi-mcp` skill (`gradle_get_build_invocations` / `gradle_get_project_model`).
+For **`:plugin:test` and `build`**, prefer `./gradlew` in Cursor Cloud — IntelliJ tests are long-running and MCP clients often time out (~60s). Use `background: true` and poll `gradle_get_build_status` for MCP builds; the server rejects a second MCP build on the same project with `BUILD_ALREADY_RUNNING`. Do not run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` at the same time (sandbox contention). Cold-start compile may also timeout in foreground while Gradle still succeeds — use background + poll or `gradle_list_builds`. If MCP stops responding, poll with `gradle_get_build_status` (merges disk progress from `.gradle/mcp-builds/<buildId>/`) or read `mcp-result.json` and fall back to shell. Task discovery: see `gradle-tapi-mcp` skill (`gradle_get_build_invocations` / `gradle_get_project_model`).
 
 ### GitHub and pull requests (Cursor Cloud)
 
