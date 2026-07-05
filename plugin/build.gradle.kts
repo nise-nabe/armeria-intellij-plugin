@@ -23,72 +23,59 @@ dependencies {
     testFixturesImplementation(libs.junit4)
 }
 
-private val pluginTestSuiteNames = setOf("test", "fastTest", "platformTest")
-private val filteredTestSuiteNames = setOf("fastTest", "platformTest")
-
-private val configurePluginTestSuite = { suite: JvmTestSuite ->
-    suite.useJUnit(libs.versions.junit4.get())
-    suite.dependencies {
-        if (suite.name != "test") {
-            implementation(project())
-        }
-        implementation(testFixtures(project()))
-        implementation(libs.velocity.engine.core)
-        implementation(libs.junit4)
-    }
-}
-
-private fun JvmTestSuite.configureFilteredTestTarget(
-    description: String,
-    configureJUnit: JUnitOptions.() -> Unit,
-) {
-    targets {
-        all {
-            testTask.configure {
-                this.description = description
-                dependsOn("prepareTest", "instrumentTestCode", "testClasses")
-                testClassesDirs = project.sourceSets.named("test").get().output.classesDirs
-                options {
-                    configureJUnit(this as JUnitOptions)
-                }
-                filter {
-                    isFailOnNoMatchingTests = false
-                }
-            }
-        }
-    }
-}
-
-private fun Project.wireFilteredTestSuitesToStandardTest() {
-    val standardTest = tasks.named<Test>("test")
-    filteredTestSuiteNames.forEach { suiteName ->
-        tasks.named<Test>(suiteName).configure {
-            notCompatibleWithConfigurationCache(
-                "Copies IntelliJ Platform test runtime from the standard test task",
-            )
-            classpath = standardTest.get().classpath
-            jvmArgumentProviders.addAll(standardTest.get().jvmArgumentProviders)
-            javaLauncher.convention(standardTest.get().javaLauncher)
-            systemProperties.putAll(standardTest.get().systemProperties)
-            environment.putAll(standardTest.get().environment)
-            jvmArgs = standardTest.get().jvmArgs
-        }
-    }
-}
-
 testing {
     suites {
-        withType<JvmTestSuite>().matching { it.name in pluginTestSuiteNames }.configureEach(configurePluginTestSuite)
+        withType<JvmTestSuite>().matching {
+            it.name in setOf("test", "fastTest", "platformTest")
+        }.configureEach {
+            useJUnit(libs.versions.junit4.get())
+            dependencies {
+                if (name != "test") {
+                    implementation(project())
+                }
+                implementation(testFixtures(project()))
+                implementation(libs.velocity.engine.core)
+                implementation(libs.junit4)
+            }
+        }
 
         register("fastTest", JvmTestSuite::class) {
-            configureFilteredTestTarget("Runs unit tests without IntelliJ Platform PSI fixture") {
-                includeCategories("com.linecorp.intellij.plugins.armeria.test.FastTest")
+            targets {
+                all {
+                    testTask.configure {
+                        description = "Runs unit tests without IntelliJ Platform PSI fixture"
+                        dependsOn("prepareTest", "instrumentTestCode", "testClasses")
+                        testClassesDirs = project.sourceSets.named("test").get().output.classesDirs
+                        options {
+                            (this as JUnitOptions).includeCategories(
+                                "com.linecorp.intellij.plugins.armeria.test.FastTest",
+                            )
+                        }
+                        filter {
+                            isFailOnNoMatchingTests = false
+                        }
+                    }
+                }
             }
         }
 
         register("platformTest", JvmTestSuite::class) {
-            configureFilteredTestTarget("Runs IntelliJ Platform PSI fixture tests") {
-                excludeCategories("com.linecorp.intellij.plugins.armeria.test.FastTest")
+            targets {
+                all {
+                    testTask.configure {
+                        description = "Runs IntelliJ Platform PSI fixture tests"
+                        dependsOn("prepareTest", "instrumentTestCode", "testClasses")
+                        testClassesDirs = project.sourceSets.named("test").get().output.classesDirs
+                        options {
+                            (this as JUnitOptions).excludeCategories(
+                                "com.linecorp.intellij.plugins.armeria.test.FastTest",
+                            )
+                        }
+                        filter {
+                            isFailOnNoMatchingTests = false
+                        }
+                    }
+                }
             }
         }
     }
@@ -101,7 +88,20 @@ dependencies {
     }
 }
 
-wireFilteredTestSuitesToStandardTest()
+val standardTest = tasks.named<Test>("test")
+listOf("fastTest", "platformTest").forEach { suiteName ->
+    tasks.named<Test>(suiteName).configure {
+        notCompatibleWithConfigurationCache(
+            "Copies IntelliJ Platform test runtime from the standard test task",
+        )
+        classpath = standardTest.get().classpath
+        jvmArgumentProviders.addAll(standardTest.get().jvmArgumentProviders)
+        javaLauncher.convention(standardTest.get().javaLauncher)
+        systemProperties.putAll(standardTest.get().systemProperties)
+        environment.putAll(standardTest.get().environment)
+        jvmArgs = standardTest.get().jvmArgs
+    }
+}
 
 changelog {
     version.set(providers.gradleProperty("pluginVersion"))
