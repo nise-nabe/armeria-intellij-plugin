@@ -504,6 +504,156 @@ class ArmeriaRouteDuplicateIndexTest : ArmeriaFixtureTestBase() {
         assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
     }
 
+    fun testDuplicateFluentRoutesOnSamePathAreReported() {
+        myFixture.configureByText(
+            "FirstMain.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class FirstMain {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .route()
+                        .post("/dup")
+                        .build(new FirstHandler())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class SecondMain {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .route()
+                        .post("/dup")
+                        .build(new SecondHandler())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class FirstHandler {}")
+        myFixture.addClass("package example; public class SecondHandler {}")
+
+        val groups = ArmeriaRouteDuplicateIndex.duplicateGroups(project)
+
+        assertEquals(1, groups.size)
+        assertEquals(2, groups.single().routes.size)
+        assertTrue(groups.single().routes.all { it.routeMatch == RouteMatch.ROUTE_FLUENT })
+    }
+
+    fun testFluentRouteWithPathPrefixConflictsWithAnnotatedRoute() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .route()
+                        .pathPrefix("/api")
+                        .get("/items")
+                        .build(new Handler())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class AnnotatedHandler {
+                @Get("/api/items")
+                public String handle() {
+                    return "items";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class Handler {}")
+
+        val groups = ArmeriaRouteDuplicateIndex.duplicateGroups(project)
+
+        assertEquals(1, groups.size)
+        assertEquals(2, groups.single().routes.size)
+        assertEquals(
+            setOf(RouteMatch.ROUTE_FLUENT, RouteMatch.ANNOTATED_HTTP),
+            groups.single().routes.map { it.routeMatch }.toSet(),
+        )
+    }
+
+    fun testDuplicateFluentRoutesWithDifferentMethodsOnSamePathAreNotDuplicates() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .route()
+                        .get("/resource")
+                        .build(new ReadHandler())
+                        .route()
+                        .post("/resource")
+                        .build(new WriteHandler())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class ReadHandler {}")
+        myFixture.addClass("package example; public class WriteHandler {}")
+
+        assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
+    }
+
+    fun testHealthCheckServiceConflictsWithServiceRegistration() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/internal/healthcheck", new HealthHandler())
+                        .healthCheckService()
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class HealthHandler {}")
+
+        val groups = ArmeriaRouteDuplicateIndex.duplicateGroups(project)
+
+        assertEquals(1, groups.size)
+        assertEquals(2, groups.single().routes.size)
+        assertEquals(
+            setOf(RouteMatch.SERVICE, RouteMatch.HEALTH_CHECK),
+            groups.single().routes.map { it.routeMatch }.toSet(),
+        )
+    }
+
     fun testDuplicateHitsAreIndexedByFile() {
         myFixture.configureByText(
             "First.java",

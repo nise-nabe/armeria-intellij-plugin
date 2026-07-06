@@ -200,6 +200,89 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
         assertEquals("Server.builder().service(\"/api\", …)", ArmeriaRouteDetailFormatter.registrationSummary(route))
     }
 
+    fun testAttachmentsLine_includesVirtualHostName() {
+        val route = ArmeriaRoute(
+            protocol = "HTTP",
+            httpMethod = "GET",
+            path = "/api",
+            target = "example.ApiService",
+            routeMatch = RouteMatch.SERVICE,
+            moduleName = "app",
+            targetUnresolved = false,
+            isDocService = false,
+            annotatedServiceHasPathPrefix = false,
+            decorators = emptyList(),
+            exceptionHandlers = emptyList(),
+            virtualHostName = "api.example.com",
+            pointer = TestPsiPointer,
+        )
+
+        val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
+
+        assertTrue(attachments.contains(message("route.explorer.detail.virtualHost", "api.example.com")))
+    }
+
+    fun testRegistrationSummary_extendedRouteMatches() {
+        assertEquals(
+            "Server.builder().fileService(\"/files/\", …)",
+            ArmeriaRouteDetailFormatter.registrationSummary(
+                ArmeriaRoute(
+                    protocol = "HTTP",
+                    httpMethod = "",
+                    path = "/files/",
+                    target = "/tmp",
+                    routeMatch = RouteMatch.FILE_SERVICE,
+                    moduleName = "app",
+                    targetUnresolved = false,
+                    isDocService = false,
+                    annotatedServiceHasPathPrefix = false,
+                    decorators = emptyList(),
+                    exceptionHandlers = emptyList(),
+                    pointer = TestPsiPointer,
+                ),
+            ),
+        )
+        assertEquals(
+            "Server.builder().healthCheckService() at /internal/healthcheck",
+            ArmeriaRouteDetailFormatter.registrationSummary(
+                ArmeriaRoute(
+                    protocol = "HTTP",
+                    httpMethod = "GET",
+                    path = "/internal/healthcheck",
+                    target = message("route.explorer.target.healthCheck"),
+                    routeMatch = RouteMatch.HEALTH_CHECK,
+                    moduleName = "app",
+                    targetUnresolved = false,
+                    isDocService = false,
+                    annotatedServiceHasPathPrefix = false,
+                    decorators = emptyList(),
+                    exceptionHandlers = emptyList(),
+                    pointer = TestPsiPointer,
+                ),
+            ),
+        )
+        assertEquals(
+            "Server.builder().virtualHost(\"api.example.com\")",
+            ArmeriaRouteDetailFormatter.registrationSummary(
+                ArmeriaRoute(
+                    protocol = "HTTP",
+                    httpMethod = "",
+                    path = "/",
+                    target = "api.example.com",
+                    routeMatch = RouteMatch.VIRTUAL_HOST,
+                    moduleName = "app",
+                    targetUnresolved = false,
+                    isDocService = false,
+                    annotatedServiceHasPathPrefix = false,
+                    decorators = emptyList(),
+                    exceptionHandlers = emptyList(),
+                    virtualHostName = "api.example.com",
+                    pointer = TestPsiPointer,
+                ),
+            ),
+        )
+    }
+
 
     private object TestPsiPointer : SmartPsiElementPointer<PsiElement> {
         override fun getElement(): PsiElement? = null

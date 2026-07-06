@@ -156,6 +156,146 @@ class ArmeriaKotlinExtendedRegistrationCollectorTest : ArmeriaFixtureTestBase() 
         assertEquals("/wrapped", fluentRoutes.single().path)
     }
 
+    fun testCollectKotlinHealthCheckRegistration() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                Server.builder()
+                    .healthCheckService()
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val healthRoute = routes.firstOrNull { it.routeMatch == RouteMatch.HEALTH_CHECK }
+        assertNotNull(healthRoute)
+        assertEquals("/internal/healthcheck", healthRoute!!.path)
+    }
+
+    fun testCollectKotlinVirtualHostRegistration() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                Server.builder()
+                    .virtualHost("api.example.com")
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val virtualHostRoute = routes.firstOrNull { it.routeMatch == RouteMatch.VIRTUAL_HOST }
+        assertNotNull(virtualHostRoute)
+        assertEquals("api.example.com", virtualHostRoute!!.virtualHostName)
+    }
+
+    fun testCollectKotlinRouteDecoratorRegistration() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.logging.LoggingService
+
+            fun main() {
+                Server.builder()
+                    .routeDecorator()
+                    .path("/decorated/**")
+                    .build(LoggingService.newDecorator())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        assertNotNull(routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_DECORATOR })
+    }
+
+    fun testIgnoreNonArmeriaKotlinFluentBuildCalls() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            fun main() {
+                OtherBuilder.builder()
+                    .route()
+                    .post("/nope")
+                    .build(Any())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
+    }
+
+    fun testCollectKotlinVirtualHostLambdaAnnotatesFileService() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import java.io.File
+
+            fun main() {
+                Server.builder()
+                    .virtualHost("api.example.com") { sb ->
+                        sb.fileService("/files/", File("/tmp"))
+                    }
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val fileRoute = routes.firstOrNull { it.routeMatch == RouteMatch.FILE_SERVICE }
+        assertNotNull(fileRoute)
+        assertEquals("/files/", fileRoute!!.path)
+        assertEquals("api.example.com", fileRoute.virtualHostName)
+    }
+
+    fun testCollectKotlinFluentRoutePathPrefix() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                Server.builder()
+                    .route()
+                    .pathPrefix("/api")
+                    .get("/items")
+                    .build(Any())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val fluentRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_FLUENT }
+        assertNotNull(fluentRoute)
+        assertEquals(PathType.PREFIX, fluentRoute!!.pathType)
+        assertEquals("/api", fluentRoute.path)
+        assertEquals("GET", fluentRoute.httpMethod)
+    }
+
     private fun registerKotlinExtendedRegistrationStubs() {
         myFixture.addClass(
             """
@@ -189,6 +329,10 @@ class ArmeriaKotlinExtendedRegistrationCollectorTest : ArmeriaFixtureTestBase() 
                     return this;
                 }
 
+                public ServerBuilder virtualHost(String hostname, java.util.function.Consumer<ServerBuilder> customizer) {
+                    return this;
+                }
+
                 public ServerBuilder routeDecorator() {
                     return this;
                 }
@@ -206,6 +350,14 @@ class ArmeriaKotlinExtendedRegistrationCollectorTest : ArmeriaFixtureTestBase() 
                 }
 
                 public ServerBuilder post(String path) {
+                    return this;
+                }
+
+                public ServerBuilder get(String path) {
+                    return this;
+                }
+
+                public ServerBuilder pathPrefix(String pathPrefix) {
                     return this;
                 }
 
@@ -244,6 +396,33 @@ class ArmeriaKotlinExtendedRegistrationCollectorTest : ArmeriaFixtureTestBase() 
 
             public final class LoggingService {
                 public static Object newDecorator() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public final class OtherBuilder {
+                public static OtherBuilder builder() {
+                    return null;
+                }
+
+                public OtherBuilder route() {
+                    return this;
+                }
+
+                public OtherBuilder post(String path) {
+                    return this;
+                }
+
+                public OtherBuilder build(Object handler) {
+                    return this;
+                }
+
+                public Object build() {
                     return null;
                 }
             }

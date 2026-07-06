@@ -367,6 +367,81 @@ class ArmeriaExtendedRegistrationCollectorTest : LightJavaCodeInsightFixtureTest
         assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
     }
 
+    fun testCollectVirtualHostLambdaAnnotatesFileService() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import java.io.File;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .virtualHost("api.example.com", sb -> sb.fileService("/files/", new File("/tmp")))
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val fileRoute = routes.firstOrNull { it.routeMatch == RouteMatch.FILE_SERVICE }
+        assertNotNull(fileRoute)
+        assertEquals("/files/", fileRoute!!.path)
+        assertEquals("api.example.com", fileRoute.virtualHostName)
+    }
+
+    fun testCollectFluentRoutePathPrefix() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .route()
+                        .pathPrefix("/api")
+                        .get("/items")
+                        .build((ctx, req) -> null)
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val fluentRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_FLUENT }
+        assertNotNull(fluentRoute)
+        assertEquals(PathType.PREFIX, fluentRoute!!.pathType)
+        assertEquals("/api", fluentRoute.path)
+        assertEquals("GET", fluentRoute.httpMethod)
+    }
+
+    fun testIgnoreNonArmeriaVirtualHostCalls() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            public class Main {
+                public static void main(String[] args) {
+                    OtherBuilder.builder()
+                        .virtualHost("nope.example.com")
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        assertTrue(routes.none { it.routeMatch == RouteMatch.VIRTUAL_HOST })
+    }
+
     private fun registerArmeriaStubs() {
         myFixture.addClass(
             """
@@ -419,6 +494,10 @@ class ArmeriaExtendedRegistrationCollectorTest : LightJavaCodeInsightFixtureTest
                     return this;
                 }
 
+                public ServerBuilder virtualHost(String hostname, java.util.function.Consumer<ServerBuilder> customizer) {
+                    return this;
+                }
+
                 public ServerBuilder routeDecorator() {
                     return this;
                 }
@@ -436,6 +515,14 @@ class ArmeriaExtendedRegistrationCollectorTest : LightJavaCodeInsightFixtureTest
                 }
 
                 public ServerBuilder post(String path) {
+                    return this;
+                }
+
+                public ServerBuilder get(String path) {
+                    return this;
+                }
+
+                public ServerBuilder pathPrefix(String pathPrefix) {
                     return this;
                 }
 
@@ -515,6 +602,10 @@ class ArmeriaExtendedRegistrationCollectorTest : LightJavaCodeInsightFixtureTest
                 }
 
                 public OtherBuilder build(Object handler) {
+                    return this;
+                }
+
+                public OtherBuilder virtualHost(String hostname) {
                     return this;
                 }
 

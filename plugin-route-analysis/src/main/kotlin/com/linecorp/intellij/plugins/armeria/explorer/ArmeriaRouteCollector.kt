@@ -207,7 +207,7 @@ object ArmeriaRouteCollector {
     ) {
         val psiFacade = JavaPsiFacade.getInstance(project)
         val builderClass = psiFacade.findClass(ArmeriaRouteSupport.SERVER_BUILDER_CLASS, scope) ?: return
-        for (methodName in ServiceRegistrationMethod.METHOD_NAMES) {
+        for (methodName in ServiceRegistrationMethod.CORE_METHOD_NAMES) {
             for (method in builderClass.findMethodsByName(methodName, false)) {
                 ReferencesSearch.search(method, scope).forEach { reference ->
                     val call = PsiTreeUtil.getParentOfType(reference.element, PsiMethodCallExpression::class.java)
