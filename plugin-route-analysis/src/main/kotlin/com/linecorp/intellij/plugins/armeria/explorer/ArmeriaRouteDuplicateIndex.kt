@@ -15,8 +15,9 @@ import com.intellij.psi.util.PsiModificationTracker
 /**
  * Detects duplicate HTTP route registrations within the same module.
  *
- * Includes annotated HTTP methods and ServerBuilder `.service`, `.serviceUnder`, and
- * `.annotatedService` registrations. Excludes non-HTTP protocols such as gRPC.
+ * Includes annotated HTTP methods, ServerBuilder `.service`, `.serviceUnder`, and
+ * `.annotatedService` registrations, fluent `.route()` chains, and `.healthCheckService()`.
+ * Excludes non-HTTP protocols such as gRPC and mount-only registrations such as file services.
  *
  * Cross-registration conflicts are detected, for example `@Get("/foo")` versus
  * `.service("/foo", …)`. Java in-class annotated duplicate HTTP routes are excluded because
@@ -29,6 +30,7 @@ object ArmeriaRouteDuplicateIndex {
         RouteMatch.SERVICE,
         RouteMatch.SERVICE_UNDER,
         RouteMatch.ROUTE_FLUENT,
+        RouteMatch.HEALTH_CHECK,
     )
 
     fun duplicateHitsInFile(project: Project, file: PsiFile): List<DuplicateRegistrationHit> {

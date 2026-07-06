@@ -32,12 +32,13 @@ internal object ArmeriaExtendedRegistrationCollector {
         expression: PsiMethodCallExpression,
         routes: MutableList<ArmeriaRoute>,
         seenRegistrations: MutableSet<String>,
+        requireBuilderCall: Boolean = true,
     ) {
         val methodName = expression.methodExpression.referenceName ?: return
         if (methodName !in ServiceRegistrationMethod.EXTENDED_METHOD_NAMES) {
             return
         }
-        if (!looksLikeArmeriaBuilderCall(expression)) {
+        if (requireBuilderCall && !looksLikeArmeriaBuilderCall(expression)) {
             return
         }
         when (ServiceRegistrationMethod.fromMethodName(methodName)) {
@@ -177,11 +178,15 @@ internal object ArmeriaExtendedRegistrationCollector {
         buildCall: PsiMethodCallExpression,
         routes: MutableList<ArmeriaRoute>,
         seenRegistrations: MutableSet<String>,
+        requireBuilderCall: Boolean = true,
     ) {
         if (buildCall.methodExpression.referenceName != "build") {
             return
         }
-        if (!looksLikeArmeriaBuilderCall(buildCall)) {
+        if (buildCall.argumentList.expressionCount == 0) {
+            return
+        }
+        if (requireBuilderCall && !looksLikeArmeriaBuilderCall(buildCall)) {
             return
         }
         val chainInfo = extractFluentRouteChain(buildCall, requireRouteAnchor = true) ?: return
@@ -349,12 +354,33 @@ internal object ArmeriaExtendedRegistrationCollector {
             if (nested == virtualHostCall) {
                 return@forEach
             }
-            val methodName = nested.methodExpression.referenceName ?: return@forEach
-            if (methodName in ServiceRegistrationMethod.METHOD_NAMES - ServiceRegistrationMethod.EXTENDED_METHOD_NAMES &&
-                looksLikeArmeriaBuilderCall(nested)
-            ) {
+            annotateNestedVirtualHostRegistration(nested, routes, seenRegistrations, hostname)
+        }
+    }
+
+    private fun annotateNestedVirtualHostRegistration(
+        nested: PsiMethodCallExpression,
+        routes: MutableList<ArmeriaRoute>,
+        seenRegistrations: MutableSet<String>,
+        hostname: String,
+    ) {
+        when (nested.methodExpression.referenceName) {
+            "build" -> {
+                val beforeSize = routes.size
+                tryCollectFluentRoute(nested, routes, seenRegistrations, requireBuilderCall = false)
+                annotateRouteWithVirtualHost(routes, nested, hostname, routes.size > beforeSize)
+            }
+            in ServiceRegistrationMethod.CORE_METHOD_NAMES -> {
                 val added = ArmeriaRouteCollector.addServiceRegistrationFromCall(nested, routes, seenRegistrations)
                 annotateRouteWithVirtualHost(routes, nested, hostname, added)
+            }
+            in ServiceRegistrationMethod.EXTENDED_METHOD_NAMES -> {
+                if (nested.methodExpression.referenceName == ServiceRegistrationMethod.VIRTUAL_HOST.methodName) {
+                    return
+                }
+                val beforeSize = routes.size
+                collectFromMethodCall(nested, routes, seenRegistrations, requireBuilderCall = false)
+                annotateRouteWithVirtualHost(routes, nested, hostname, routes.size > beforeSize)
             }
         }
     }
@@ -371,7 +397,7 @@ internal object ArmeriaExtendedRegistrationCollector {
         val statement = PsiTreeUtil.getParentOfType(anchorCall, PsiStatement::class.java) ?: return
         for (index in routes.indices) {
             val route = routes[index]
-            if (route.routeMatch != RouteMatch.SERVICE || route.virtualHostName.isNotEmpty()) {
+            if (route.virtualHostName.isNotEmpty() || route.routeMatch == RouteMatch.VIRTUAL_HOST) {
                 continue
             }
             val element = route.pointer.element ?: continue
@@ -540,20 +566,13 @@ internal object ArmeriaExtendedRegistrationCollector {
     }
 
     private fun looksLikeArmeriaBuilderCall(expression: PsiMethodCallExpression): Boolean {
-        val methodName = expression.methodExpression.referenceName
-        if (methodName == ServiceRegistrationMethod.VIRTUAL_HOST.methodName ||
-            methodName == ServiceRegistrationMethod.ROUTE_DECORATOR.methodName
-        ) {
-            return true
-        }
         val resolvedClass = expression.resolveMethod()?.containingClass?.qualifiedName
         if (resolvedClass?.startsWith(ArmeriaRouteSupport.ARMERIA_SERVER_PACKAGE_PREFIX) == true) {
             return true
         }
         val qualifierText = expression.methodExpression.qualifierExpression?.text ?: return false
         return ArmeriaRouteSupport.looksLikeServerBuilderReceiverText(qualifierText) ||
-            qualifierText.contains("routeDecorator") ||
-            qualifierText.contains("virtualHost")
+            qualifierText.contains("routeDecorator")
     }
 
     private fun extractString(expression: PsiExpression?): String? {

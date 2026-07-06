@@ -109,9 +109,6 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
                     timeoutHints = ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(call),
                 )
             }
-            ServiceRegistrationMethod.VIRTUAL_HOST -> {
-                addVirtualHost(call, routes, seenRegistrations)
-            }
             ServiceRegistrationMethod.ROUTE_DECORATOR -> {
                 val chainInfo = extractRouteDecoratorChain(call)
                 routes += ArmeriaRoute.create(
@@ -199,9 +196,16 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
         buildCall: KtCallExpression,
         routes: MutableList<ArmeriaRoute>,
         seenRegistrations: MutableSet<String>,
+        requireBuilderCall: Boolean = true,
     ) {
+        if (resolveCallName(buildCall) != "build") {
+            return
+        }
+        if (buildCall.valueArguments.isEmpty()) {
+            return
+        }
         val chainInfo = extractFluentRouteChain(buildCall, requireRouteAnchor = true) ?: return
-        if (!ArmeriaKotlinRouteCollector.referencesArmeriaKotlinContent(buildCall.containingKtFile)) {
+        if (requireBuilderCall && !ArmeriaKotlinRouteCollector.looksLikeArmeriaBuilderCall(buildCall)) {
             return
         }
         val key = registrationKey(buildCall) ?: return
@@ -412,12 +416,34 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
             if (nested == virtualHostCall) {
                 return@forEachDescendant
             }
-            val methodName = resolveCallName(nested) ?: return@forEachDescendant
-            if (methodName in ServiceRegistrationMethod.METHOD_NAMES - ServiceRegistrationMethod.EXTENDED_METHOD_NAMES &&
-                ArmeriaKotlinRouteCollector.looksLikeArmeriaBuilderCall(nested)
-            ) {
+            annotateNestedVirtualHostRegistration(nested, routes, seenRegistrations, hostname)
+        }
+    }
+
+    private fun annotateNestedVirtualHostRegistration(
+        nested: KtCallExpression,
+        routes: MutableList<ArmeriaRoute>,
+        seenRegistrations: MutableSet<String>,
+        hostname: String,
+    ) {
+        when (resolveCallName(nested)) {
+            "build" -> {
+                val beforeSize = routes.size
+                tryCollectFluentRoute(nested, routes, seenRegistrations, requireBuilderCall = false)
+                annotateRouteWithVirtualHost(routes, nested, hostname, routes.size > beforeSize)
+            }
+            in ServiceRegistrationMethod.CORE_METHOD_NAMES -> {
                 val beforeSize = routes.size
                 ArmeriaKotlinRouteCollector.collectServiceRegistrationsInScope(nested, routes, seenRegistrations)
+                annotateRouteWithVirtualHost(routes, nested, hostname, routes.size > beforeSize)
+            }
+            in ServiceRegistrationMethod.EXTENDED_METHOD_NAMES -> {
+                if (resolveCallName(nested) == ServiceRegistrationMethod.VIRTUAL_HOST.methodName) {
+                    return
+                }
+                val methodName = resolveCallName(nested) ?: return
+                val beforeSize = routes.size
+                collectFromKotlinCall(nested, methodName, routes, seenRegistrations)
                 annotateRouteWithVirtualHost(routes, nested, hostname, routes.size > beforeSize)
             }
         }
@@ -435,7 +461,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
         val statement = anchorCall.getParentOfType<PsiStatement>(strict = false) ?: return
         for (index in routes.indices) {
             val route = routes[index]
-            if (route.routeMatch != RouteMatch.SERVICE || route.virtualHostName.isNotEmpty()) {
+            if (route.virtualHostName.isNotEmpty() || route.routeMatch == RouteMatch.VIRTUAL_HOST) {
                 continue
             }
             val element = route.pointer.element ?: continue

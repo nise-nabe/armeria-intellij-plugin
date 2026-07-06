@@ -102,12 +102,6 @@ object ArmeriaKotlinRouteCollector {
     }
 
     internal fun looksLikeArmeriaBuilderCall(call: KtCallExpression): Boolean {
-        val methodName = resolveCallName(call)
-        if (methodName == ServiceRegistrationMethod.VIRTUAL_HOST.methodName ||
-            methodName == ServiceRegistrationMethod.ROUTE_DECORATOR.methodName
-        ) {
-            return true
-        }
         if (resolvesToArmeriaServerBuilder(call)) {
             return true
         }
@@ -119,7 +113,7 @@ object ArmeriaKotlinRouteCollector {
             return true
         }
         val receiverText = dotQualified?.receiverExpression?.text.orEmpty()
-        if (receiverText.contains("virtualHost") || receiverText.contains("routeDecorator")) {
+        if (receiverText.contains("routeDecorator")) {
             return true
         }
         return hasServerBuilderImplicitReceiver(call)
