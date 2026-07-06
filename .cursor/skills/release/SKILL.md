@@ -69,9 +69,15 @@ pluginVersion=0.2.0
 
 Then patch the changelog (moves `[Unreleased]` content into a new version section and recreates the template):
 
-```bash
-./gradlew :plugin:patchChangelog -Prelease.version=0.2.0
+Prefer Gradle MCP:
+
+```json
+{ "tasks": [":plugin:patchChangelog"], "arguments": ["-Prelease.version=0.2.0"] }
 ```
+
+→ `gradle_run_tasks` (use `background: true` + poll if cold start)
+
+Shell fallback: `./gradlew :plugin:patchChangelog -Prelease.version=0.2.0`
 
 Review `plugin/CHANGELOG.md`:
 
@@ -80,9 +86,13 @@ Review `plugin/CHANGELOG.md`:
 
 ### 4. Verify
 
-```bash
-./gradlew build :plugin:buildPlugin
+Prefer Gradle MCP (`gradle_run_tasks` with `background: true` + poll):
+
+```json
+{ "tasks": ["build", ":plugin:buildPlugin"], "background": true }
 ```
+
+Shell fallback: `./gradlew build :plugin:buildPlugin`
 
 Confirm the artifact exists:
 
@@ -90,11 +100,13 @@ Confirm the artifact exists:
 ls plugin/build/distributions/plugin-<version>.zip
 ```
 
-Optional sanity check:
+Optional sanity check — MCP:
 
-```bash
-./gradlew :plugin:getChangelog --unreleased
+```json
+{ "tasks": [":plugin:getChangelog"], "arguments": ["--unreleased"] }
 ```
+
+→ `gradle_run_tasks`
 
 ### 5. Merge to `main`
 
@@ -123,7 +135,7 @@ Tag the merge commit on `main`, not the feature-branch tip.
 
 ### 7. Publish GitHub Release
 
-Rebuild on `main` so the ZIP matches the tagged commit:
+Rebuild on `main` so the ZIP matches the tagged commit (prefer MCP `gradle_run_tasks` `{ "tasks": [":plugin:buildPlugin"], "background": true }`; shell fallback below):
 
 ```bash
 ./gradlew :plugin:buildPlugin

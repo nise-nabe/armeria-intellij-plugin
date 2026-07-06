@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "gradle": {
+      "type": "stdio",
+      "command": "bash",
+      "args": [".github/scripts/gradle-mcp-server.sh"],
+      "tools": ["*"]
+    }
+  }
+}

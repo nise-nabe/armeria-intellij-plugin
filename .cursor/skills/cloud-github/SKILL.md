@@ -43,7 +43,7 @@ Before calling `gh`:
 2. Resolve the binary: `command -v gh` → prefer that path; fall back to `/exec-daemon/gh`.
 3. Confirm auth: `gh auth status` (or the resolved path above).
 4. If auth fails, stop retrying `gh` and either use ManagePullRequest for PR work or
-   verify locally with `./gradlew build`.
+   verify locally with Gradle MCP (`gradle_run_tasks` `["build"]` + background/poll).
 
 Do not install `gh` via apt, brew, or curl in agent sessions.
 
@@ -52,9 +52,8 @@ Do not install `gh` via apt, brew, or curl in agent sessions.
 GitHub Actions runs `./gradlew build` (see `.github/workflows/main.yml`).
 For agent-side verification, prefer:
 
-1. `./gradlew build` or `./gradlew --no-daemon :plugin:compileKotlin :plugin:test` — matches CI; reliable for long IntelliJ tests
-2. MCP `gradle_run_tasks` with `[":plugin:compileKotlin"]` for fast compile checks (see `gradle-tapi-mcp` skill)
-3. MCP `gradle_run_tasks` / `gradle_run_tests` with `background: true` only when the MCP client stays responsive; fall back to shell on timeout or unresponsive MCP server
+1. **Gradle MCP** — `gradle_connection_status`, then `gradle_run_tasks` / `gradle_run_tests` with `background: true` + poll (see `gradle-tapi-mcp` skill)
+2. Shell `./gradlew build` only when MCP is unresponsive, returns `BUILD_ALREADY_RUNNING` that cannot be cancelled, or for final CI parity after MCP passes
 
 Use `gh pr checks` only when you need GitHub-attached check status and `gh auth status` succeeds.
 
