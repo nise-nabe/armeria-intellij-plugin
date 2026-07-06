@@ -15,7 +15,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaKotlinRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteTargetExtractor
+import com.linecorp.intellij.plugins.armeria.explorer.extractArmeriaRouteTarget
 import com.linecorp.intellij.plugins.armeria.explorer.ServiceRegistrationMethod
 import com.linecorp.intellij.plugins.armeria.inspection.ArmeriaKotlinMethodRoute
 import com.linecorp.intellij.plugins.armeria.message
@@ -209,7 +209,7 @@ internal object ArmeriaRouteNavigationSupport {
 
     private fun resolveServiceClassFromImplementation(expression: PsiElement, project: Project): PsiClass? {
         if (expression is PsiExpression) {
-            val target = ArmeriaRouteTargetExtractor.extractTarget(expression)
+            val target = extractArmeriaRouteTarget(expression)
             return findClassByTarget(project, target)
         }
         if (expression is KtExpression) {
@@ -233,7 +233,7 @@ internal object ArmeriaRouteNavigationSupport {
             }
         }
         return (expression as? PsiExpression)?.let {
-            findClassByTarget(project, ArmeriaRouteTargetExtractor.extractTarget(it))
+            findClassByTarget(project, extractArmeriaRouteTarget(it))
         }
     }
 
