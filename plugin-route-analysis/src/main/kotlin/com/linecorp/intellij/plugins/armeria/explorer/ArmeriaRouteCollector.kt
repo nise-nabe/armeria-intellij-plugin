@@ -211,7 +211,7 @@ object ArmeriaRouteCollector {
                 decorators = methodDecorators.distinct(),
                 exceptionHandlers = methodExceptionHandlers.distinct(),
                 executionHints = executionHints,
-                contentHints = ArmeriaAnnotatedMetadataSupport.collectContentHints(method, combinedPath),
+                contentHints = ArmeriaAnnotatedMetadataSupport.collectContentHints(method, combinedPath, pathType),
             )
         }
     }

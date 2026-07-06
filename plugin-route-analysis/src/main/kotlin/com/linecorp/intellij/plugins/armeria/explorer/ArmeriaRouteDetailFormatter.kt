@@ -41,7 +41,7 @@ object ArmeriaRouteDetailFormatter {
                 add(message("route.explorer.detail.virtualHost", route.virtualHostName))
             }
             if (route.contentHints.isNotEmpty()) {
-                add(message("route.explorer.detail.content", route.contentHints.joinToString()))
+                add(message("route.explorer.detail.content", route.contentHints.joinToString(" · ")))
             }
         }
         return parts.joinToString("\n")

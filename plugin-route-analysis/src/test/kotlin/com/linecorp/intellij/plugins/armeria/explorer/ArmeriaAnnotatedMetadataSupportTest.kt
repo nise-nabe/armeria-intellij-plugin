@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import com.linecorp.intellij.plugins.armeria.message
 
 class ArmeriaAnnotatedMetadataSupportTest : LightJavaCodeInsightFixtureTestCase() {
     override fun setUp() {
@@ -32,17 +33,32 @@ class ArmeriaAnnotatedMetadataSupportTest : LightJavaCodeInsightFixtureTestCase(
 
         val routes = ArmeriaRouteCollector.collect(project)
         val route = routes.single()
-        assertTrue(route.contentHints.any { it.contains("201") })
-        assertTrue(route.contentHints.any { it.contains("application/json") })
-        assertTrue(route.contentHints.any { it.contains("client-type=android") })
-        assertTrue(route.contentHints.any { it.contains("id") })
-        assertTrue(route.executionHints.any { it.contains("Blocking") })
+        assertEquals(
+            listOf(
+                message("route.explorer.hint.matchesHeader", "client-type=android"),
+                message("route.explorer.hint.statusCode", "201"),
+                message("route.explorer.hint.consumes", "application/json"),
+                message("route.explorer.hint.produces", "application/json"),
+                message("route.explorer.hint.pathVariables", "id"),
+            ),
+            route.contentHints,
+        )
+        assertEquals(
+            listOf(message("route.explorer.execution.blocking")),
+            route.executionHints,
+        )
 
         val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
-        assertTrue(attachments.contains("Content: "))
-        assertTrue(attachments.contains("201"))
-        assertTrue(attachments.contains("application/json"))
-        assertTrue(attachments.contains("client-type=android"))
+        assertEquals(
+            listOf(
+                message("route.explorer.detail.execution", route.executionHints.joinToString()),
+                message(
+                    "route.explorer.detail.content",
+                    route.contentHints.joinToString(" · "),
+                ),
+            ).joinToString("\n"),
+            attachments,
+        )
     }
 
     fun testCollectColonStylePathVariablesAndDescription() {
@@ -66,9 +82,91 @@ class ArmeriaAnnotatedMetadataSupportTest : LightJavaCodeInsightFixtureTestCase(
 
         val routes = ArmeriaRouteCollector.collect(project)
         val route = routes.single()
-        assertTrue(route.contentHints.any { it.contains("name") })
-        assertTrue(route.contentHints.any { it.contains("Returns a greeting") })
-        assertTrue(route.contentHints.any { it.contains("Greets users by name") })
+        assertEquals(
+            listOf(
+                message("route.explorer.hint.description", "Returns a greeting."),
+                message("route.explorer.hint.description", "Greets users by name."),
+                message("route.explorer.hint.pathVariables", "name"),
+            ),
+            route.contentHints,
+        )
+    }
+
+    fun testCollectRepeatableConsumesAnnotations() {
+        myFixture.configureByText(
+            "ItemService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.*;
+
+            public class ItemService {
+                @Post("/items")
+                @Consumes("application/json")
+                @Consumes("application/xml")
+                public String create() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val route = routes.single()
+        assertEquals(
+            listOf(message("route.explorer.hint.consumes", "application/json, application/xml")),
+            route.contentHints,
+        )
+    }
+
+    fun testRegexPathSkipsPathVariables() {
+        myFixture.configureByText(
+            "RegexService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.*;
+
+            public class RegexService {
+                @Get("regex:\\d{2,3}")
+                public String match() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val route = routes.single()
+        assertEquals(PathType.REGEX, route.pathType)
+        assertTrue(route.contentHints.none { it.contains("Path variables") })
+    }
+
+    fun testDuplicateDescriptionIsNotRepeated() {
+        myFixture.configureByText(
+            "DupService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.*;
+
+            @Description("Shared summary.")
+            public class DupService {
+                @Get("/")
+                @Description("Shared summary.")
+                public String handle() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val route = routes.single()
+        assertEquals(
+            listOf(message("route.explorer.hint.description", "Shared summary.")),
+            route.contentHints,
+        )
     }
 
     private fun registerStubs() {

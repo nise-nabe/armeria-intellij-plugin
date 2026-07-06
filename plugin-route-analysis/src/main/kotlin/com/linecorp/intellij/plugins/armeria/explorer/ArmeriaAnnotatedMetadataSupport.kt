@@ -7,23 +7,25 @@ import com.intellij.psi.PsiMethod
 import com.linecorp.intellij.plugins.armeria.message
 
 internal object ArmeriaAnnotatedMetadataSupport {
+    private val BRACE_PATH_VARIABLE_PATTERN = Regex("""\{([^}]+)}""")
+    private val COLON_PATH_VARIABLE_PATTERN = Regex(""":([A-Za-z_][A-Za-z0-9_]*)""")
+
     private const val MATCHES_HEADER_ANNOTATION = "com.linecorp.armeria.server.annotation.MatchesHeader"
     private const val STATUS_CODE_ANNOTATION = "com.linecorp.armeria.server.annotation.StatusCode"
     private const val CONSUMES_ANNOTATION = "com.linecorp.armeria.server.annotation.Consumes"
     private const val PRODUCES_ANNOTATION = "com.linecorp.armeria.server.annotation.Produces"
-    private const val REDIRECT_ANNOTATION = "com.linecorp.armeria.server.annotation.Redirect"
     private const val DESCRIPTION_ANNOTATION = "com.linecorp.armeria.server.annotation.Description"
 
-    fun collectContentHints(method: PsiMethod, path: String): List<String> {
+    fun collectContentHints(method: PsiMethod, path: String, pathType: PathType): List<String> {
+        val methodDescription = method.getAnnotation(DESCRIPTION_ANNOTATION)
         return buildList {
             addAll(collectHeaderMatches(method))
             collectStatusCode(method)?.let { add(it) }
             collectMediaTypes(method, CONSUMES_ANNOTATION, "route.explorer.hint.consumes")?.let { add(it) }
             collectMediaTypes(method, PRODUCES_ANNOTATION, "route.explorer.hint.produces")?.let { add(it) }
-            collectRedirect(method)?.let { add(it) }
-            collectDescription(method)?.let { add(it) }
-            collectClassDescription(method.containingClass)?.let { add(it) }
-            collectPathVariables(path).takeIf { it.isNotEmpty() }?.let { vars ->
+            collectDescription(methodDescription)?.let { add(it) }
+            collectClassDescription(method.containingClass, methodDescription)?.let { add(it) }
+            collectPathVariables(path, pathType).takeIf { it.isNotEmpty() }?.let { vars ->
                 add(message("route.explorer.hint.pathVariables", vars.joinToString(", ")))
             }
         }
@@ -48,46 +50,51 @@ internal object ArmeriaAnnotatedMetadataSupport {
     }
 
     private fun collectMediaTypes(method: PsiMethod, annotationFqn: String, messageKey: String): String? {
-        val annotation = method.annotations.firstOrNull { it.qualifiedName == annotationFqn } ?: return null
-        val types = ArmeriaRouteSupport.extractStrings(annotation.findDeclaredAttributeValue("value"))
-            .ifEmpty { ArmeriaRouteSupport.extractStrings(annotation.findDeclaredAttributeValue("types")) }
+        val types = method.annotations
+            .filter { it.qualifiedName == annotationFqn }
+            .flatMap { annotation ->
+                ArmeriaRouteSupport.extractStrings(annotation.findDeclaredAttributeValue("value"))
+                    .ifEmpty { ArmeriaRouteSupport.extractStrings(annotation.findDeclaredAttributeValue("types")) }
+            }
+            .distinct()
         if (types.isEmpty()) {
             return null
         }
         return message(messageKey, types.joinToString(", "))
     }
 
-    private fun collectRedirect(method: PsiMethod): String? {
-        val annotation = method.annotations.firstOrNull { it.qualifiedName == REDIRECT_ANNOTATION } ?: return null
-        val target = ArmeriaRouteSupport.extractStrings(annotation.findDeclaredAttributeValue("value")).firstOrNull()
-            ?: annotation.findDeclaredAttributeValue("value")?.text?.trim('"')
-        return target?.let { message("route.explorer.hint.redirect", it) }
+    private fun collectDescription(annotation: PsiAnnotation?): String? {
+        return descriptionText(annotation)?.let { message("route.explorer.hint.description", it) }
     }
 
-    private fun collectDescription(method: PsiMethod): String? {
-        return collectDescriptionText(method.getAnnotation(DESCRIPTION_ANNOTATION))
+    private fun collectClassDescription(containingClass: PsiClass?, methodDescription: PsiAnnotation?): String? {
+        val classAnnotation = containingClass?.getAnnotation(DESCRIPTION_ANNOTATION) ?: return null
+        val classText = descriptionText(classAnnotation) ?: return null
+        if (classText == descriptionText(methodDescription)) {
+            return null
+        }
+        return message("route.explorer.hint.description", classText)
     }
 
-    private fun collectClassDescription(containingClass: PsiClass?): String? {
-        return collectDescriptionText(containingClass?.getAnnotation(DESCRIPTION_ANNOTATION))
-    }
-
-    private fun collectDescriptionText(annotation: PsiAnnotation?): String? {
+    private fun descriptionText(annotation: PsiAnnotation?): String? {
         if (annotation == null) {
             return null
         }
-        val text = ArmeriaRouteSupport.extractStrings(annotation.findDeclaredAttributeValue("value")).firstOrNull()
-            ?: annotation.findDeclaredAttributeValue("value")?.text?.trim('"')
-        return text?.takeIf { it.isNotBlank() }?.let { message("route.explorer.hint.description", it) }
+        return firstStringOrRawText(annotation)?.takeIf { it.isNotBlank() }
     }
 
-    private fun collectPathVariables(path: String): List<String> {
+    private fun firstStringOrRawText(annotation: PsiAnnotation, attribute: String = "value"): String? {
+        val value = annotation.findDeclaredAttributeValue(attribute) ?: return null
+        return ArmeriaRouteSupport.extractStrings(value).firstOrNull() ?: value.text.trim('"')
+    }
+
+    private fun collectPathVariables(path: String, pathType: PathType): List<String> {
+        if (pathType == PathType.REGEX || pathType == PathType.GLOB) {
+            return emptyList()
+        }
         val variables = linkedSetOf<String>()
         BRACE_PATH_VARIABLE_PATTERN.findAll(path).forEach { variables += it.groupValues[1] }
         COLON_PATH_VARIABLE_PATTERN.findAll(path).forEach { variables += it.groupValues[1] }
         return variables.toList()
     }
-
-    private val BRACE_PATH_VARIABLE_PATTERN = Regex("""\{([^}]+)}""")
-    private val COLON_PATH_VARIABLE_PATTERN = Regex(""":([A-Za-z_][A-Za-z0-9_]*)""")
 }

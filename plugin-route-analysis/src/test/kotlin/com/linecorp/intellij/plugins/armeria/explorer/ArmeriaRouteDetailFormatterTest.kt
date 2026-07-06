@@ -266,7 +266,7 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
 
         val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
 
-        assertEquals("Content: Status: 201, Consumes: application/json", attachments)
+        assertEquals("Content: Status: 201 · Consumes: application/json", attachments)
     }
 
     fun testRegistrationSummary_extendedRouteMatches() {
