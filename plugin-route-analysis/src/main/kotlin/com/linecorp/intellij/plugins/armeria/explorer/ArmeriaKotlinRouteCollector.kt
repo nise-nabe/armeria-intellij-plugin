@@ -92,7 +92,7 @@ object ArmeriaKotlinRouteCollector {
         }
     }
 
-    internal fun looksLikeArmeriaBuilderCall(call: KtCallExpression): Boolean =
+    fun looksLikeArmeriaBuilderCall(call: KtCallExpression): Boolean =
         ArmeriaBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)
 
     internal fun addServiceRegistrationFromCall(

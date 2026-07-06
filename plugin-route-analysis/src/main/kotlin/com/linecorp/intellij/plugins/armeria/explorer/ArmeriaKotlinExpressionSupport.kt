@@ -12,7 +12,7 @@ import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 
-internal object ArmeriaKotlinExpressionSupport {
+object ArmeriaKotlinExpressionSupport {
 
     fun containingKotlinExpressionScope(call: KtCallExpression): PsiElement {
         var current: PsiElement = call

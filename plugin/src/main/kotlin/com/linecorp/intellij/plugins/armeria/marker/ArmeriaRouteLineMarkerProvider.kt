@@ -8,6 +8,7 @@ import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.ArmeriaIcons
+import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaKotlinExpressionSupport
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaKotlinRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
@@ -120,16 +121,16 @@ internal class ArmeriaRouteLineMarkerProvider : LineMarkerProvider {
     private fun kotlinRegistrationPath(methodName: String, arguments: List<KtValueArgument>): String? {
         return when (ServiceRegistrationMethod.fromMethodName(methodName)) {
             ServiceRegistrationMethod.SERVICE ->
-                ArmeriaKotlinRouteCollector.extractKotlinString(arguments.firstOrNull()?.getArgumentExpression())
+                ArmeriaKotlinExpressionSupport.extractKotlinString(arguments.firstOrNull()?.getArgumentExpression())
             ServiceRegistrationMethod.SERVICE_UNDER ->
-                ArmeriaKotlinRouteCollector.extractKotlinString(
+                ArmeriaKotlinExpressionSupport.extractKotlinString(
                     arguments.firstOrNull { it.getArgumentName()?.asName?.identifier == "pathPrefix" }
                         ?.getArgumentExpression()
                         ?: arguments.firstOrNull()?.getArgumentExpression(),
                 )
             ServiceRegistrationMethod.ANNOTATED_SERVICE ->
                 if (arguments.size > 1) {
-                    ArmeriaKotlinRouteCollector.extractKotlinString(
+                    ArmeriaKotlinExpressionSupport.extractKotlinString(
                         arguments.firstOrNull { it.getArgumentName()?.asName?.identifier == "pathPrefix" }
                             ?.getArgumentExpression()
                             ?: arguments.firstOrNull()?.getArgumentExpression(),
@@ -137,7 +138,7 @@ internal class ArmeriaRouteLineMarkerProvider : LineMarkerProvider {
                 } else {
                     "/"
                 }
-            null -> null
+            else -> null
         }
     }
 
