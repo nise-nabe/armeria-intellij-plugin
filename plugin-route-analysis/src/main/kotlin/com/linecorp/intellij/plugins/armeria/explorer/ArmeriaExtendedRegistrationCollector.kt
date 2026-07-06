@@ -398,9 +398,7 @@ internal object ArmeriaExtendedRegistrationCollector {
             }
             methodName in ServiceRegistrationMethod.EXTENDED_METHOD_NAMES -> {
                 val sizeBefore = routes.size
-                if (ArmeriaBuilderCallHeuristics.looksLikeJavaBuilderCall(call)) {
-                    collectFromMethodCall(call, routes, seenRegistrations, requireBuilderCall = true)
-                }
+                collectFromMethodCall(call, routes, seenRegistrations, requireBuilderCall = false)
                 registrationKey(call)?.let(scopedKeys::add)
                 annotateVirtualHostForCall(call, routes, sizeBefore, hostname)
             }
