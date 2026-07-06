@@ -275,7 +275,34 @@ class ArmeriaKotlinExtendedRegistrationCollectorTest : ArmeriaFixtureTestBase() 
         val routes = ArmeriaRouteCollector.collect(project)
         val decoratorRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_DECORATOR }
         assertNotNull(decoratorRoute)
-        assertEquals("/decorated/**", decoratorRoute!!.path)
+        assertEquals(PathType.EXACT, decoratorRoute!!.pathType)
+        assertEquals("/decorated/**", decoratorRoute.path)
+    }
+
+    fun testCollectKotlinRouteDecoratorMethodsStripHttpMethodPrefix() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.common.HttpMethod
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.logging.LoggingService
+
+            fun main() {
+                Server.builder()
+                    .routeDecorator()
+                    .methods(HttpMethod.POST, HttpMethod.PUT)
+                    .build(LoggingService.newDecorator())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val decoratorRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_DECORATOR }
+        assertNotNull(decoratorRoute)
+        assertEquals("POST, PUT", decoratorRoute!!.httpMethod)
     }
 
     fun testCollectKotlinRouteDecoratorIgnoresPathCallsInsideDecoratorLambda() {
@@ -501,6 +528,10 @@ class ArmeriaKotlinExtendedRegistrationCollectorTest : ArmeriaFixtureTestBase() 
                     return this;
                 }
 
+                public ServerBuilder methods(Object... methods) {
+                    return this;
+                }
+
                 public ServerBuilder withRoute(java.util.function.Function<RouteBuilder, RouteBuilder> fn) {
                     return this;
                 }
@@ -577,6 +608,16 @@ class ArmeriaKotlinExtendedRegistrationCollectorTest : ArmeriaFixtureTestBase() 
                 public Object build() {
                     return null;
                 }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.common;
+
+            public final class HttpMethod {
+                public static final HttpMethod POST = null;
+                public static final HttpMethod PUT = null;
             }
             """.trimIndent(),
         )
