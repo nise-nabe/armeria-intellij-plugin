@@ -10,17 +10,23 @@ object ArmeriaHttpRequestGenerator {
     fun supports(route: ArmeriaRoute): Boolean {
         return when (route.routeMatch) {
             RouteMatch.ANNOTATED_HTTP -> route.httpMethod.isNotBlank()
-            RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER -> true
+            RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.HEALTH_CHECK, RouteMatch.ROUTE_FLUENT -> true
             RouteMatch.RUNTIME -> route.httpMethod.isNotBlank()
-            RouteMatch.ANNOTATED_SERVICE, RouteMatch.NON_HTTP -> false
+            RouteMatch.ANNOTATED_SERVICE, RouteMatch.NON_HTTP,
+            RouteMatch.FILE_SERVICE, RouteMatch.VIRTUAL_HOST, RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
+            -> false
         }
     }
 
     fun httpMethod(route: ArmeriaRoute): String {
         return when (route.routeMatch) {
             RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME -> route.httpMethod
-            RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER -> "GET"
-            RouteMatch.ANNOTATED_SERVICE, RouteMatch.NON_HTTP ->
+            RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.HEALTH_CHECK, RouteMatch.ROUTE_FLUENT -> {
+                route.httpMethod.ifBlank { "GET" }
+            }
+            RouteMatch.ANNOTATED_SERVICE, RouteMatch.NON_HTTP,
+            RouteMatch.FILE_SERVICE, RouteMatch.VIRTUAL_HOST, RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
+            ->
                 error("Unsupported route match: ${route.routeMatch}")
         }
     }

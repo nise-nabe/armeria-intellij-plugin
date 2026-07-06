@@ -20,6 +20,21 @@ class ArmeriaHttpMethodPillTest {
     }
 
     @Test
+    fun pillLabel_abbreviatesExtendedRegistrationRoutes() {
+        assertEquals("FIL", ArmeriaHttpMethodPill.pillLabel(route(routeMatch = RouteMatch.FILE_SERVICE)))
+        assertEquals("HLT", ArmeriaHttpMethodPill.pillLabel(route(routeMatch = RouteMatch.HEALTH_CHECK)))
+        assertEquals("VHS", ArmeriaHttpMethodPill.pillLabel(route(routeMatch = RouteMatch.VIRTUAL_HOST)))
+        assertEquals("DEC", ArmeriaHttpMethodPill.pillLabel(route(routeMatch = RouteMatch.ROUTE_DECORATOR)))
+        assertEquals("UND", ArmeriaHttpMethodPill.pillLabel(route(routeMatch = RouteMatch.DECORATOR_UNDER)))
+    }
+
+    @Test
+    fun pillLabel_usesHttpMethodForFluentRoutes() {
+        assertEquals("POST", ArmeriaHttpMethodPill.pillLabel(route(httpMethod = "POST", routeMatch = RouteMatch.ROUTE_FLUENT)))
+        assertEquals("ALL", ArmeriaHttpMethodPill.pillLabel(route(httpMethod = "", routeMatch = RouteMatch.ROUTE_FLUENT)))
+    }
+
+    @Test
     fun pillLabel_abbreviatesNonAnnotatedRoutes() {
         assertEquals("ANN", ArmeriaHttpMethodPill.pillLabel(route(routeMatch = RouteMatch.ANNOTATED_SERVICE)))
         assertEquals("ALL", ArmeriaHttpMethodPill.pillLabel(route(routeMatch = RouteMatch.SERVICE)))

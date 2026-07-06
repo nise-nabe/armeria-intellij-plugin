@@ -15,6 +15,12 @@ object ArmeriaHttpMethodPill {
         RouteMatch.ANNOTATED_SERVICE -> "ANN"
         RouteMatch.SERVICE -> "ALL"
         RouteMatch.SERVICE_UNDER -> "PRE"
+        RouteMatch.FILE_SERVICE -> "FIL"
+        RouteMatch.HEALTH_CHECK -> "HLT"
+        RouteMatch.VIRTUAL_HOST -> "VHS"
+        RouteMatch.ROUTE_DECORATOR -> "DEC"
+        RouteMatch.ROUTE_FLUENT -> route.httpMethod.ifBlank { "ALL" }
+        RouteMatch.DECORATOR_UNDER -> "UND"
         RouteMatch.NON_HTTP -> route.protocol.uppercase()
         RouteMatch.RUNTIME -> route.httpMethod
     }

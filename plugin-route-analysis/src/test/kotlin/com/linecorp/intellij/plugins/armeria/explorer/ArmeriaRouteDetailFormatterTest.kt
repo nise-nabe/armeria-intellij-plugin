@@ -57,7 +57,28 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
         val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
 
         assertTrue(attachments.contains(message("route.explorer.detail.execution", message("route.explorer.execution.blocking"))))
-        assertFalse(attachments.contains(message("route.explorer.detail.timeouts", message("route.explorer.execution.blocking"))))
+    }
+
+    fun testAttachmentsLine_includesTimeoutHints() {
+        val route = ArmeriaRoute(
+            protocol = "HTTP",
+            httpMethod = "GET",
+            path = "/hello",
+            target = "example.HelloService",
+            routeMatch = RouteMatch.SERVICE,
+            moduleName = "app",
+            targetUnresolved = false,
+            isDocService = false,
+            annotatedServiceHasPathPrefix = false,
+            decorators = emptyList(),
+            exceptionHandlers = emptyList(),
+            timeoutHints = listOf("5s"),
+            pointer = TestPsiPointer,
+        )
+
+        val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
+
+        assertTrue(attachments.contains(message("route.explorer.detail.timeouts", "5s")))
     }
 
     fun testAttachmentsLine_omitsSecondarySeparator() {
@@ -177,6 +198,117 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
         val route = ArmeriaRouteCollector.collect(project).single()
         assertEquals("example.Main#configure()", route.resolveRegisteredInHint())
         assertEquals("Server.builder().service(\"/api\", …)", ArmeriaRouteDetailFormatter.registrationSummary(route))
+    }
+
+    fun testAttachmentsLine_includesVirtualHostName() {
+        val route = ArmeriaRoute(
+            protocol = "HTTP",
+            httpMethod = "GET",
+            path = "/api",
+            target = "example.ApiService",
+            routeMatch = RouteMatch.SERVICE,
+            moduleName = "app",
+            targetUnresolved = false,
+            isDocService = false,
+            annotatedServiceHasPathPrefix = false,
+            decorators = emptyList(),
+            exceptionHandlers = emptyList(),
+            virtualHostName = "api.example.com",
+            pointer = TestPsiPointer,
+        )
+
+        val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
+
+        assertEquals(
+            message("route.explorer.detail.virtualHost", "api.example.com"),
+            attachments,
+        )
+    }
+
+    fun testAttachmentsLine_includesPathType() {
+        val route = ArmeriaRoute(
+            protocol = "HTTP",
+            httpMethod = "GET",
+            path = "/api/**",
+            target = "example.ApiService",
+            routeMatch = RouteMatch.SERVICE_UNDER,
+            pathType = PathType.GLOB,
+            moduleName = "app",
+            targetUnresolved = false,
+            isDocService = false,
+            annotatedServiceHasPathPrefix = false,
+            decorators = emptyList(),
+            exceptionHandlers = emptyList(),
+            pointer = TestPsiPointer,
+        )
+
+        val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
+
+        assertEquals(
+            message("route.explorer.detail.pathType", message("route.explorer.pathType.glob")),
+            attachments,
+        )
+    }
+
+    fun testRegistrationSummary_extendedRouteMatches() {
+        assertEquals(
+            "Server.builder().fileService(\"/files/\", …)",
+            ArmeriaRouteDetailFormatter.registrationSummary(
+                ArmeriaRoute(
+                    protocol = "HTTP",
+                    httpMethod = "",
+                    path = "/files/",
+                    target = "/tmp",
+                    routeMatch = RouteMatch.FILE_SERVICE,
+                    moduleName = "app",
+                    targetUnresolved = false,
+                    isDocService = false,
+                    annotatedServiceHasPathPrefix = false,
+                    decorators = emptyList(),
+                    exceptionHandlers = emptyList(),
+                    pointer = TestPsiPointer,
+                ),
+            ),
+        )
+        assertEquals(
+            "Server.builder().healthCheckService() at /internal/healthcheck",
+            ArmeriaRouteDetailFormatter.registrationSummary(
+                ArmeriaRoute(
+                    protocol = "HTTP",
+                    httpMethod = "GET",
+                    path = "/internal/healthcheck",
+                    target = message("route.explorer.target.healthCheck"),
+                    routeMatch = RouteMatch.HEALTH_CHECK,
+                    moduleName = "app",
+                    targetUnresolved = false,
+                    isDocService = false,
+                    annotatedServiceHasPathPrefix = false,
+                    decorators = emptyList(),
+                    exceptionHandlers = emptyList(),
+                    pointer = TestPsiPointer,
+                ),
+            ),
+        )
+        assertEquals(
+            "Server.builder().virtualHost(\"api.example.com\")",
+            ArmeriaRouteDetailFormatter.registrationSummary(
+                ArmeriaRoute(
+                    protocol = "HTTP",
+                    httpMethod = "",
+                    path = "/",
+                    target = "api.example.com",
+                    routeMatch = RouteMatch.VIRTUAL_HOST,
+                    moduleName = "app",
+                    targetUnresolved = false,
+                    isDocService = false,
+                    annotatedServiceHasPathPrefix = false,
+                    decorators = emptyList(),
+                    exceptionHandlers = emptyList(),
+                    virtualHostName = "api.example.com",
+                    pointer = TestPsiPointer,
+                ),
+            ),
+        )
     }
 
 

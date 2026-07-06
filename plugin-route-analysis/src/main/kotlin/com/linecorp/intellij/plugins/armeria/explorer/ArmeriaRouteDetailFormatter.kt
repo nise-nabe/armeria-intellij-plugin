@@ -34,8 +34,21 @@ object ArmeriaRouteDetailFormatter {
             if (route.timeoutHints.isNotEmpty()) {
                 add(message("route.explorer.detail.timeouts", route.timeoutHints.joinToString()))
             }
+            if (route.pathType != PathType.EXACT) {
+                add(message("route.explorer.detail.pathType", pathTypeLabel(route.pathType)))
+            }
+            if (route.virtualHostName.isNotEmpty()) {
+                add(message("route.explorer.detail.virtualHost", route.virtualHostName))
+            }
         }
         return parts.joinToString("\n")
+    }
+
+    private fun pathTypeLabel(pathType: PathType): String = when (pathType) {
+        PathType.EXACT -> message("route.explorer.pathType.exact")
+        PathType.PREFIX -> message("route.explorer.pathType.prefix")
+        PathType.REGEX -> message("route.explorer.pathType.regex")
+        PathType.GLOB -> message("route.explorer.pathType.glob")
     }
 
     fun registrationSummary(route: ArmeriaRoute): String {
@@ -52,6 +65,19 @@ object ArmeriaRouteDetailFormatter {
             }
             RouteMatch.SERVICE -> message("route.explorer.registration.service", route.path)
             RouteMatch.SERVICE_UNDER -> message("route.explorer.registration.serviceUnder", route.path)
+            RouteMatch.FILE_SERVICE -> message("route.explorer.registration.fileService", route.path)
+            RouteMatch.HEALTH_CHECK -> message("route.explorer.registration.healthCheck", route.path)
+            RouteMatch.VIRTUAL_HOST -> message(
+                "route.explorer.registration.virtualHost",
+                route.virtualHostName.ifBlank { route.target },
+            )
+            RouteMatch.ROUTE_DECORATOR -> message("route.explorer.registration.routeDecorator", route.path)
+            RouteMatch.ROUTE_FLUENT -> message(
+                "route.explorer.registration.fluentRoute",
+                route.httpMethod.ifBlank { message("route.explorer.method.allHttp") },
+                route.path,
+            )
+            RouteMatch.DECORATOR_UNDER -> message("route.explorer.registration.decoratorUnder", route.path)
             RouteMatch.NON_HTTP -> message("route.explorer.registration.nonHttp", route.protocol, route.path)
             RouteMatch.RUNTIME -> message("route.explorer.registration.runtime", route.httpMethod, route.path)
         }

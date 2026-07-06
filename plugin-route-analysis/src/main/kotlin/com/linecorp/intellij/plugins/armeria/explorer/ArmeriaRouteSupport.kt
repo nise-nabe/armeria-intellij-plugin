@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.openapi.util.TextRange
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
@@ -8,18 +9,40 @@ import com.intellij.psi.PsiMethod
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.PsiAnnotationMemberValue
 import com.intellij.psi.PsiArrayInitializerMemberValue
+import com.intellij.openapi.util.text.StringUtil
+import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiLiteralExpression
+import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiVariable
 
 internal enum class ServiceRegistrationMethod(val methodName: String) {
     SERVICE("service"),
     SERVICE_UNDER("serviceUnder"),
     ANNOTATED_SERVICE("annotatedService"),
+    FILE_SERVICE("fileService"),
+    HEALTH_CHECK_SERVICE("healthCheckService"),
+    VIRTUAL_HOST("virtualHost"),
+    ROUTE_DECORATOR("routeDecorator"),
+    ROUTE("route"),
+    WITH_ROUTE("withRoute"),
+    DECORATOR_UNDER("decoratorUnder"),
     ;
 
     companion object {
         val METHOD_NAMES: Set<String> = entries.mapTo(linkedSetOf()) { it.methodName }
+        val EXTENDED_METHOD_NAMES: Set<String> = setOf(
+            FILE_SERVICE.methodName,
+            HEALTH_CHECK_SERVICE.methodName,
+            VIRTUAL_HOST.methodName,
+            ROUTE_DECORATOR.methodName,
+            WITH_ROUTE.methodName,
+            DECORATOR_UNDER.methodName,
+        )
+        val CORE_METHOD_NAMES: Set<String> = CoreServiceRegistrationMethod.METHOD_NAMES
+        val FLUENT_ROUTE_HTTP_METHODS: Set<String> = setOf(
+            "get", "head", "post", "put", "delete", "options", "patch", "trace",
+        )
 
         fun fromMethodName(name: String): ServiceRegistrationMethod? =
             entries.firstOrNull { it.methodName == name }
@@ -56,7 +79,9 @@ object ArmeriaRouteSupport {
     private val UNQUALIFIED_SERVER_BUILDER_CALL = Regex(UNQUALIFIED_SERVER_BUILDER_CALL_PATTERN)
     private val SERVER_BUILDER_CALL =
         Regex("""(?:$FQCN_SERVER_BUILDER_CALL_PATTERN|$UNQUALIFIED_SERVER_BUILDER_CALL_PATTERN)""")
+    private val ROUTE_DECORATOR_CALL = Regex("""(?<![\w"])routeDecorator\s*\(""")
 
+    const val PATH_ANNOTATION = "com.linecorp.armeria.server.annotation.Path"
     const val PATH_PREFIX_ANNOTATION = "com.linecorp.armeria.server.annotation.PathPrefix"
     const val DECORATOR_ANNOTATION = "com.linecorp.armeria.server.annotation.Decorator"
     const val EXCEPTION_HANDLER_ANNOTATION = "com.linecorp.armeria.server.annotation.ExceptionHandler"
@@ -93,14 +118,25 @@ object ArmeriaRouteSupport {
     fun extractPaths(annotation: PsiAnnotation): List<String> {
         val values = extractStrings(annotation.findDeclaredAttributeValue("value"))
         if (values.isNotEmpty()) {
-            return values.map(::normalizePath)
+            return values.map(::preserveOrNormalizePath)
         }
         val pathValues = extractStrings(annotation.findDeclaredAttributeValue("path"))
         if (pathValues.isNotEmpty()) {
-            return pathValues.map(::normalizePath)
+            return pathValues.map(::preserveOrNormalizePath)
         }
         return emptyList()
     }
+
+    private fun preserveOrNormalizePath(path: String): String {
+        val trimmed = path.trim()
+        return if (hasPathTypePrefix(trimmed)) trimmed else normalizePath(trimmed)
+    }
+
+    private fun hasPathTypePrefix(path: String): Boolean =
+        path.startsWith("prefix:") ||
+            path.startsWith("regex:") ||
+            path.startsWith("glob:") ||
+            path.startsWith("exact:")
 
     fun extractPrimaryPath(annotation: PsiAnnotation?): String {
         if (annotation == null) {
@@ -164,6 +200,23 @@ object ArmeriaRouteSupport {
         }
         val candidate = path.trim()
         return if (candidate.startsWith("/")) candidate else "/$candidate"
+    }
+
+    internal fun parsePathType(rawPath: String): Pair<PathType, String> {
+        val trimmed = rawPath.trim()
+        return when {
+            trimmed.startsWith("prefix:") -> PathType.PREFIX to normalizePath(trimmed.removePrefix("prefix:"))
+            trimmed.startsWith("regex:") -> PathType.REGEX to trimmed.removePrefix("regex:").trim()
+            trimmed.startsWith("glob:") -> PathType.GLOB to normalizePath(trimmed.removePrefix("glob:"))
+            trimmed.startsWith("exact:") -> PathType.EXACT to normalizePath(trimmed.removePrefix("exact:"))
+            else -> PathType.EXACT to normalizePath(trimmed)
+        }
+    }
+
+    fun extractPathAnnotations(method: PsiMethod): List<String> {
+        return method.annotations
+            .filter { it.qualifiedName == PATH_ANNOTATION }
+            .flatMap(::extractPaths)
     }
 
     fun decoratorPathPatternAppliesToRoute(pattern: String, routePath: String): Boolean {
@@ -252,6 +305,22 @@ object ArmeriaRouteSupport {
         return variable.computeConstantValue() as? String
     }
 
+    fun extractJavaStringConstant(expression: PsiExpression?): String? {
+        return when (expression) {
+            null -> null
+            is PsiLiteralExpression -> expression.value as? String
+            is PsiReferenceExpression -> {
+                (expression.resolve() as? PsiVariable)?.let(::evaluateJavaStringConstant)
+            }
+            else -> {
+                val constantValue = JavaPsiFacade.getInstance(expression.project)
+                    .constantEvaluationHelper
+                    .computeConstantExpression(expression) as? String
+                constantValue ?: expression.text.takeIf { StringUtil.isNotEmpty(it) }?.trim('"')
+            }
+        }
+    }
+
     private fun normalizeServerBuilderTypeText(typeText: String): String {
         var normalized = typeText.trim().replace(Regex("""/\*.*?\*/"""), "").trim()
         normalized = stripLeadingKotlinTypeAnnotations(normalized)
@@ -317,6 +386,13 @@ object ArmeriaRouteSupport {
     fun looksLikeServerBuilderReceiverText(text: String): Boolean {
         return SERVER_BUILDER_CALL.containsMatchIn(text) || SERVER_BUILDER_IDENTIFIER.containsMatchIn(text)
     }
+
+    fun looksLikeRouteDecoratorReceiverText(text: String): Boolean {
+        return ROUTE_DECORATOR_CALL.containsMatchIn(text)
+    }
+
+    fun registrationKey(virtualFilePath: String, textRange: TextRange, methodName: String): String =
+        "$virtualFilePath:${textRange.startOffset}:${textRange.endOffset}:$methodName"
 
     fun referencesArmeriaApplicationInSource(contents: CharSequence): Boolean {
         if (FQCN_SERVER_BUILDER_CALL.containsMatchIn(contents)) {

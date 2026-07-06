@@ -15,8 +15,9 @@ import com.intellij.psi.util.PsiModificationTracker
 /**
  * Detects duplicate HTTP route registrations within the same module.
  *
- * Includes annotated HTTP methods and ServerBuilder `.service`, `.serviceUnder`, and
- * `.annotatedService` registrations. Excludes non-HTTP protocols such as gRPC.
+ * Includes annotated HTTP methods, ServerBuilder `.service`, `.serviceUnder`, and
+ * `.annotatedService` registrations, fluent `.route()` chains, and `.healthCheckService()`.
+ * Excludes non-HTTP protocols such as gRPC and mount-only registrations such as file services.
  *
  * Cross-registration conflicts are detected, for example `@Get("/foo")` versus
  * `.service("/foo", …)`. Java in-class annotated duplicate HTTP routes are excluded because
@@ -28,6 +29,8 @@ object ArmeriaRouteDuplicateIndex {
         RouteMatch.ANNOTATED_SERVICE,
         RouteMatch.SERVICE,
         RouteMatch.SERVICE_UNDER,
+        RouteMatch.ROUTE_FLUENT,
+        RouteMatch.HEALTH_CHECK,
     )
 
     fun duplicateHitsInFile(project: Project, file: PsiFile): List<DuplicateRegistrationHit> {
@@ -136,25 +139,39 @@ object ArmeriaRouteDuplicateIndex {
     }
 
     private fun routesOverlap(first: ArmeriaRoute, second: ArmeriaRoute): Boolean =
-        pathsOverlap(first, second)
+        virtualHostsOverlap(first, second) && pathsOverlap(first, second)
+
+    private fun virtualHostsOverlap(first: ArmeriaRoute, second: ArmeriaRoute): Boolean =
+        first.virtualHostName == second.virtualHostName
 
     private fun pathsOverlap(first: ArmeriaRoute, second: ArmeriaRoute): Boolean {
         val firstIsPrefixMount = isPrefixMount(first)
         val secondIsPrefixMount = isPrefixMount(second)
         return when {
             firstIsPrefixMount && secondIsPrefixMount ->
-                pathIsUnder(first.path, second.path) || pathIsUnder(second.path, first.path)
-            firstIsPrefixMount -> pathIsUnder(second.path, first.path)
-            secondIsPrefixMount -> pathIsUnder(first.path, second.path)
+                pathIsUnder(first.path, prefixForMount(second)) ||
+                    pathIsUnder(second.path, prefixForMount(first)) ||
+                    prefixForMount(first) == prefixForMount(second)
+            firstIsPrefixMount -> pathIsUnder(second.path, prefixForMount(first))
+            secondIsPrefixMount -> pathIsUnder(first.path, prefixForMount(second))
+            first.pathType == PathType.REGEX || second.pathType == PathType.REGEX ->
+                first.path == second.path && first.pathType == second.pathType
             else -> first.path == second.path
         }
     }
+
+    private fun prefixForMount(route: ArmeriaRoute): String =
+        when {
+            route.pathType == PathType.GLOB && route.path.endsWith("/**") -> route.path.removeSuffix("/**")
+            else -> route.path
+        }
 
     private fun isPrefixMount(route: ArmeriaRoute): Boolean =
         when (route.routeMatch) {
             RouteMatch.SERVICE_UNDER -> true
             RouteMatch.ANNOTATED_SERVICE -> route.annotatedServiceHasPathPrefix
-            RouteMatch.RUNTIME, RouteMatch.ANNOTATED_HTTP, RouteMatch.SERVICE, RouteMatch.NON_HTTP -> false
+            else -> route.pathType == PathType.PREFIX ||
+                (route.pathType == PathType.GLOB && route.path.endsWith("/**"))
         }
 
     private fun pathIsUnder(path: String, prefix: String): Boolean {
@@ -178,13 +195,30 @@ object ArmeriaRouteDuplicateIndex {
         if (matchesAllHttpMethods(first) || matchesAllHttpMethods(second)) {
             return true
         }
-        return first.httpMethod.equals(second.httpMethod, ignoreCase = true)
+        val firstMethods = parseHttpMethods(first.httpMethod)
+        val secondMethods = parseHttpMethods(second.httpMethod)
+        if (firstMethods.isEmpty() || secondMethods.isEmpty()) {
+            return first.httpMethod.equals(second.httpMethod, ignoreCase = true)
+        }
+        return firstMethods.any { firstMethod ->
+            secondMethods.any { secondMethod -> firstMethod.equals(secondMethod, ignoreCase = true) }
+        }
     }
+
+    private fun parseHttpMethods(httpMethod: String): Set<String> =
+        httpMethod.split(',')
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .toSet()
 
     private fun matchesAllHttpMethods(route: ArmeriaRoute): Boolean =
         when (route.routeMatch) {
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.ANNOTATED_SERVICE -> true
-            RouteMatch.ANNOTATED_HTTP, RouteMatch.NON_HTTP, RouteMatch.RUNTIME -> false
+            RouteMatch.ROUTE_FLUENT -> route.httpMethod.isBlank()
+            RouteMatch.ANNOTATED_HTTP, RouteMatch.NON_HTTP, RouteMatch.RUNTIME,
+            RouteMatch.FILE_SERVICE, RouteMatch.HEALTH_CHECK,
+            RouteMatch.VIRTUAL_HOST, RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
+            -> false
         }
 
     private fun buildHitsByVirtualFile(groups: List<DuplicateRegistrationGroup>): Map<VirtualFile, List<DuplicateRegistrationHit>> {
@@ -214,7 +248,8 @@ object ArmeriaRouteDuplicateIndex {
 
     private fun registrationLabel(route: ArmeriaRoute): String =
         when (route.routeMatch) {
-            RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME -> "${route.httpMethod} ${route.path}"
+            RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME, RouteMatch.HEALTH_CHECK ->
+                "${route.httpMethod} ${route.path}"
             else -> route.path
         }
 }
