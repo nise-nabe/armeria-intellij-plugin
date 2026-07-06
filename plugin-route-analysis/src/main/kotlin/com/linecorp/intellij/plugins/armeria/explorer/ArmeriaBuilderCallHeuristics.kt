@@ -83,6 +83,51 @@ internal object ArmeriaBuilderCallHeuristics {
         return false
     }
 
+    fun isClearlyNonArmeriaJavaRegistrationCall(expression: PsiMethodCallExpression): Boolean {
+        val methodName = expression.methodExpression.referenceName ?: return false
+        if (methodName !in ServiceRegistrationMethod.METHOD_NAMES && methodName != "build") {
+            return false
+        }
+        if (looksLikeJavaBuilderCall(expression)) {
+            return false
+        }
+        val resolvedClass = expression.resolveMethod()?.containingClass?.qualifiedName ?: return false
+        return !resolvedClass.startsWith(ArmeriaRouteSupport.ARMERIA_SERVER_PACKAGE_PREFIX)
+    }
+
+    fun isClearlyNonArmeriaKotlinRegistrationCall(call: KtCallExpression): Boolean {
+        val methodName = resolveKotlinCallName(call) ?: return false
+        if (methodName !in ServiceRegistrationMethod.METHOD_NAMES && methodName != "build") {
+            return false
+        }
+        if (looksLikeKotlinBuilderCall(call)) {
+            return false
+        }
+        val resolvedClass = resolveKotlinRegistrationMethodClass(call) ?: return false
+        return !resolvedClass.startsWith(ArmeriaRouteSupport.ARMERIA_SERVER_PACKAGE_PREFIX)
+    }
+
+    private fun resolveKotlinRegistrationMethodClass(call: KtCallExpression): String? {
+        val dotQualified = call.parent as? KtDotQualifiedExpression
+        if (dotQualified != null) {
+            for (reference in dotQualified.references) {
+                val resolved = reference.resolve()
+                if (resolved is PsiMethod) {
+                    return resolved.containingClass?.qualifiedName
+                }
+            }
+        }
+        val callee = call.calleeExpression ?: return null
+        val references = when (callee) {
+            is KtNameReferenceExpression -> callee.references.toList()
+            is KtDotQualifiedExpression -> callee.references.toList()
+            else -> emptyList()
+        }
+        return references.firstNotNullOfOrNull { reference ->
+            (reference.resolve() as? PsiMethod)?.containingClass?.qualifiedName
+        }
+    }
+
     private fun resolvesToArmeriaServerBuilder(expression: PsiMethodCallExpression): Boolean {
         ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
         val resolvedClass = expression.resolveMethod()?.containingClass?.qualifiedName

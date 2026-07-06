@@ -149,8 +149,8 @@ object ArmeriaRouteDuplicateIndex {
         val secondIsPrefixMount = isPrefixMount(second)
         return when {
             firstIsPrefixMount && secondIsPrefixMount ->
-                pathIsUnder(first.path, prefixForMount(first)) ||
-                    pathIsUnder(second.path, prefixForMount(second)) ||
+                pathIsUnder(first.path, prefixForMount(second)) ||
+                    pathIsUnder(second.path, prefixForMount(first)) ||
                     prefixForMount(first) == prefixForMount(second)
             firstIsPrefixMount -> pathIsUnder(second.path, prefixForMount(first))
             secondIsPrefixMount -> pathIsUnder(first.path, prefixForMount(second))

@@ -1,8 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiStatement
-import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -364,6 +362,9 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
         val methodName = resolveCallName(call) ?: return
         when {
             methodName == ServiceRegistrationMethod.VIRTUAL_HOST.methodName -> {
+                if (ArmeriaBuilderCallHeuristics.isClearlyNonArmeriaKotlinRegistrationCall(call)) {
+                    return
+                }
                 addVirtualHost(call, routes, seenRegistrations)
             }
             methodName == "build" -> {
@@ -375,12 +376,18 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
                 annotateVirtualHostForCall(call, routes, sizeBefore, hostname)
             }
             methodName in CoreServiceRegistrationMethod.METHOD_NAMES -> {
+                if (ArmeriaBuilderCallHeuristics.isClearlyNonArmeriaKotlinRegistrationCall(call)) {
+                    return
+                }
                 val sizeBefore = routes.size
                 ArmeriaKotlinRouteCollector.addServiceRegistrationFromCall(call, routes, seenRegistrations)
                 registrationKey(call)?.let(scopedKeys::add)
                 annotateVirtualHostForCall(call, routes, sizeBefore, hostname)
             }
             methodName in ServiceRegistrationMethod.EXTENDED_METHOD_NAMES -> {
+                if (ArmeriaBuilderCallHeuristics.isClearlyNonArmeriaKotlinRegistrationCall(call)) {
+                    return
+                }
                 val sizeBefore = routes.size
                 collectFromKotlinCall(call, methodName, routes, seenRegistrations)
                 registrationKey(call)?.let(scopedKeys::add)
@@ -418,11 +425,11 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
         start: KtCallExpression,
         stopExclusive: KtCallExpression?,
     ): List<KtCallExpression> {
-        val statement = start.getParentOfType<PsiStatement>(strict = false) ?: return listOf(start)
+        val scope = ArmeriaKotlinExpressionSupport.containingKotlinExpressionScope(start)
         val startOffset = start.textRange.startOffset
         val stopOffset = stopExclusive?.textRange?.startOffset ?: Int.MAX_VALUE
         val calls = mutableListOf<KtCallExpression>()
-        statement.forEachDescendant { element ->
+        scope.forEachDescendant { element ->
             val call = element as? KtCallExpression ?: return@forEachDescendant
             if (call.textRange.startOffset in startOffset until stopOffset) {
                 calls += call
@@ -474,9 +481,12 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
     }
 
     private fun findFluentRouteBuildAfterCall(withRouteCall: KtCallExpression): KtCallExpression? {
-        val statement = withRouteCall.getParentOfType<PsiStatement>(strict = false) ?: return null
+        val scope = ArmeriaKotlinExpressionSupport.containingKotlinExpressionScope(withRouteCall)
         var found: KtCallExpression? = null
-        statement.forEachDescendant { element ->
+        scope.forEachDescendant { element ->
+            if (found != null) {
+                return@forEachDescendant
+            }
             val call = element as? KtCallExpression ?: return@forEachDescendant
             if (call.textRange.startOffset <= withRouteCall.textRange.startOffset) {
                 return@forEachDescendant

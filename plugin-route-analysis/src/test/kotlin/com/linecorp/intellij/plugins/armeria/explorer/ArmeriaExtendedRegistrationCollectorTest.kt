@@ -159,6 +159,31 @@ class ArmeriaExtendedRegistrationCollectorTest : LightJavaCodeInsightFixtureTest
         assertEquals("/foo", route.path)
     }
 
+    fun testCollectGlobPathAnnotationNormalizesLeadingSlash() {
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.Path;
+
+            public class HelloService {
+                @Get
+                @Path("glob:foo/**")
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val route = routes.single()
+        assertEquals(PathType.GLOB, route.pathType)
+        assertEquals("/foo/**", route.path)
+    }
+
     fun testCollectVirtualHostRegistration() {
         myFixture.configureByText(
             "Main.java",
@@ -555,6 +580,32 @@ class ArmeriaExtendedRegistrationCollectorTest : LightJavaCodeInsightFixtureTest
         assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
     }
 
+    fun testIgnoreNonArmeriaServiceInVirtualHostLambda() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .virtualHost("api.example.com", vh -> {
+                            OtherBuilder.builder()
+                                .service("/nope", new Object())
+                                .build();
+                        })
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        assertTrue(routes.none { it.routeMatch == RouteMatch.SERVICE })
+    }
+
     private fun registerArmeriaStubs() {
         myFixture.addClass(
             """
@@ -719,6 +770,10 @@ class ArmeriaExtendedRegistrationCollectorTest : LightJavaCodeInsightFixtureTest
                 }
 
                 public OtherBuilder virtualHost(String hostname) {
+                    return this;
+                }
+
+                public OtherBuilder service(String path, Object handler) {
                     return this;
                 }
 

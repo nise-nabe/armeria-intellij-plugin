@@ -203,7 +203,7 @@ object ArmeriaRouteSupport {
         return when {
             trimmed.startsWith("prefix:") -> PathType.PREFIX to normalizePath(trimmed.removePrefix("prefix:"))
             trimmed.startsWith("regex:") -> PathType.REGEX to trimmed.removePrefix("regex:").trim()
-            trimmed.startsWith("glob:") -> PathType.GLOB to trimmed.removePrefix("glob:").trim()
+            trimmed.startsWith("glob:") -> PathType.GLOB to normalizePath(trimmed.removePrefix("glob:"))
             trimmed.startsWith("exact:") -> PathType.EXACT to normalizePath(trimmed.removePrefix("exact:"))
             else -> PathType.EXACT to normalizePath(trimmed)
         }

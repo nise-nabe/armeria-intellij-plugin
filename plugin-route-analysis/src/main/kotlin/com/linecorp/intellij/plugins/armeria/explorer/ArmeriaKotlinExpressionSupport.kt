@@ -1,14 +1,30 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiVariable
+import org.jetbrains.kotlin.psi.KtBlockExpression
+import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
+import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 
 internal object ArmeriaKotlinExpressionSupport {
+
+    fun containingKotlinExpressionScope(call: KtCallExpression): PsiElement {
+        var current: PsiElement = call
+        while (true) {
+            val parent = current.parent ?: break
+            if (parent is KtBlockExpression || parent is KtLambdaExpression) {
+                return current
+            }
+            current = parent
+        }
+        return call
+    }
 
     fun extractKotlinString(expression: KtExpression?): String? {
         val unwrapped = unwrapKotlinExpression(expression) ?: return null

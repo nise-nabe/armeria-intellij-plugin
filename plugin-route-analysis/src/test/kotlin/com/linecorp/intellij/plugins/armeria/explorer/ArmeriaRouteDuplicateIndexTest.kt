@@ -511,6 +511,30 @@ class ArmeriaRouteDuplicateIndexTest : ArmeriaFixtureTestBase() {
         assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
     }
 
+    fun testUnrelatedServiceUnderPrefixesAreNotDuplicates() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .serviceUnder("/api", new ApiService())
+                        .serviceUnder("/foo", new FooService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class ApiService {}")
+        myFixture.addClass("package example; public class FooService {}")
+
+        assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
+    }
+
     fun testDuplicateFluentRoutesOnSamePathAreReported() {
         myFixture.configureByText(
             "FirstMain.java",

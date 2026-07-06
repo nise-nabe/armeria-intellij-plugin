@@ -273,7 +273,9 @@ class ArmeriaKotlinExtendedRegistrationCollectorTest : ArmeriaFixtureTestBase() 
         )
 
         val routes = ArmeriaRouteCollector.collect(project)
-        assertNotNull(routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_DECORATOR })
+        val decoratorRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_DECORATOR }
+        assertNotNull(decoratorRoute)
+        assertEquals("/decorated/**", decoratorRoute!!.path)
     }
 
     fun testIgnoreNonArmeriaKotlinFluentBuildCalls() {
@@ -294,6 +296,30 @@ class ArmeriaKotlinExtendedRegistrationCollectorTest : ArmeriaFixtureTestBase() 
 
         val routes = ArmeriaRouteCollector.collect(project)
         assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
+    }
+
+    fun testIgnoreNonArmeriaServiceInVirtualHostLambda() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                Server.builder()
+                    .virtualHost("api.example.com") { vh ->
+                        OtherBuilder.builder()
+                            .service("/nope", Any())
+                            .build()
+                    }
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        assertTrue(routes.none { it.routeMatch == RouteMatch.SERVICE })
     }
 
     fun testCollectKotlinVirtualHostLambdaAnnotatesFileService() {
@@ -523,6 +549,10 @@ class ArmeriaKotlinExtendedRegistrationCollectorTest : ArmeriaFixtureTestBase() 
                 }
 
                 public OtherBuilder build(Object handler) {
+                    return this;
+                }
+
+                public OtherBuilder service(String path, Object handler) {
                     return this;
                 }
 
