@@ -6,12 +6,12 @@ on:
   push:
     paths:
       - .github/workflows/copilot-setup-steps.yml
-      - .github/scripts/install-kotlin-language-server.sh
+      - .github/scripts/install-kotlin-lsp.sh
       - .github/lsp.json
   pull_request:
     paths:
       - .github/workflows/copilot-setup-steps.yml
-      - .github/scripts/install-kotlin-language-server.sh
+      - .github/scripts/install-kotlin-lsp.sh
       - .github/lsp.json
 
 
@@ -35,7 +35,7 @@ jobs:
       - name: Install Gradle Tooling API MCP server
         run: bash .github/scripts/install-gradle-tapi-mcp.sh
 
-      - name: Install Kotlin language server
-        run: bash .github/scripts/install-kotlin-language-server.sh
+      - name: Install JetBrains Kotlin language server
+        run: bash .github/scripts/install-kotlin-lsp.sh
 
       - run: ./gradlew assemble

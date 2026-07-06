@@ -1,7 +1,7 @@
 {
   "lspServers": {
     "kotlin": {
-      "command": "kotlin-language-server",
+      "command": "kotlin-lsp",
       "args": [],
       "fileExtensions": {
         ".kt": "kotlin",
