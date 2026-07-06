@@ -55,6 +55,34 @@ internal object ArmeriaBuilderCallHeuristics {
         return hasKotlinServerBuilderImplicitReceiver(call)
     }
 
+    fun looksLikeArmeriaFluentRouteBuild(expression: PsiMethodCallExpression): Boolean {
+        if (looksLikeJavaBuilderCall(expression)) {
+            return true
+        }
+        var current = javaPreviousMethodCallInChain(expression)
+        while (current != null) {
+            if (current.methodExpression.referenceName == "route") {
+                return looksLikeJavaBuilderCall(current)
+            }
+            current = javaPreviousMethodCallInChain(current)
+        }
+        return false
+    }
+
+    fun looksLikeArmeriaFluentRouteBuild(call: KtCallExpression): Boolean {
+        if (looksLikeKotlinBuilderCall(call)) {
+            return true
+        }
+        var current = kotlinParentCallExpression(call)
+        while (current != null) {
+            if (resolveKotlinCallName(current) == "route") {
+                return looksLikeKotlinBuilderCall(current)
+            }
+            current = kotlinParentCallExpression(current)
+        }
+        return false
+    }
+
     private fun resolvesToArmeriaServerBuilder(expression: PsiMethodCallExpression): Boolean {
         ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
         val resolvedClass = expression.resolveMethod()?.containingClass?.qualifiedName
@@ -197,6 +225,32 @@ internal object ArmeriaBuilderCallHeuristics {
         return when (callee) {
             is KtDotQualifiedExpression -> callee.selectorExpression?.text
             else -> callee.text
+        }
+    }
+
+    private fun javaPreviousMethodCallInChain(call: PsiMethodCallExpression): PsiMethodCallExpression? {
+        var expression: PsiElement? = call.methodExpression.qualifierExpression
+        while (expression != null) {
+            when (expression) {
+                is PsiMethodCallExpression -> return expression
+                is PsiReferenceExpression -> expression = expression.qualifier
+                else -> return null
+            }
+        }
+        return null
+    }
+
+    private fun kotlinParentCallExpression(call: KtCallExpression): KtCallExpression? {
+        val parent = call.parent
+        return when (parent) {
+            is KtDotQualifiedExpression -> {
+                when (val receiver = parent.receiverExpression) {
+                    is KtCallExpression -> receiver
+                    is KtDotQualifiedExpression -> receiver.selectorExpression as? KtCallExpression
+                    else -> null
+                }
+            }
+            else -> null
         }
     }
 }

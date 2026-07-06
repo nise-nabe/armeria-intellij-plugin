@@ -31,6 +31,8 @@ internal object ArmeriaRegistrationChainReducer {
         var httpMethod = ""
         var path = "/"
         var pathType = PathType.EXACT
+        var mountPrefix: String? = null
+        var methodPath: String? = null
         var foundRoute = false
         var foundPath = false
         for (step in stepsFromBuildUpward) {
@@ -42,12 +44,14 @@ internal object ArmeriaRegistrationChainReducer {
                 in ServiceRegistrationMethod.FLUENT_ROUTE_HTTP_METHODS -> {
                     httpMethod = step.methodName.uppercase()
                     parsePathFromStep(step)?.let { parsed ->
+                        methodPath = parsed.second
                         path = parsed.second
                         pathType = parsed.first
                         foundPath = true
                     }
                 }
                 "path" -> parsePathFromStep(step)?.let { parsed ->
+                    methodPath = parsed.second
                     path = parsed.second
                     pathType = parsed.first
                     foundPath = true
@@ -55,6 +59,7 @@ internal object ArmeriaRegistrationChainReducer {
                 "pathPrefix" -> {
                     val raw = step.firstStringArg ?: path
                     val parsed = ArmeriaRouteSupport.parsePathType("prefix:$raw")
+                    mountPrefix = parsed.second
                     pathType = parsed.first
                     path = parsed.second
                     foundPath = true
@@ -86,10 +91,20 @@ internal object ArmeriaRegistrationChainReducer {
         if (!requireRouteAnchor && !foundPath) {
             return null
         }
+        val resolvedPath = if (mountPrefix != null && methodPath != null) {
+            ArmeriaRouteSupport.combinePaths(mountPrefix!!, methodPath!!)
+        } else {
+            path
+        }
+        val resolvedPathType = if (mountPrefix != null && methodPath != null) {
+            PathType.EXACT
+        } else {
+            pathType
+        }
         return FluentRouteChainInfo(
             httpMethod = httpMethod,
-            path = path,
-            pathType = pathType,
+            path = resolvedPath,
+            pathType = resolvedPathType,
             target = handlerTarget ?: defaultTarget,
         )
     }

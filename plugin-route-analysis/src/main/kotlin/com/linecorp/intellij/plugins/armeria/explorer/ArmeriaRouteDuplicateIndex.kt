@@ -235,7 +235,8 @@ object ArmeriaRouteDuplicateIndex {
 
     private fun registrationLabel(route: ArmeriaRoute): String =
         when (route.routeMatch) {
-            RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME -> "${route.httpMethod} ${route.path}"
+            RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME, RouteMatch.HEALTH_CHECK ->
+                "${route.httpMethod} ${route.path}"
             else -> route.path
         }
 }
