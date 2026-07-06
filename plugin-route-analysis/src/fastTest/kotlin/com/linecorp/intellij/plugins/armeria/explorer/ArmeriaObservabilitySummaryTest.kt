@@ -15,7 +15,12 @@ class ArmeriaObservabilitySummaryTest {
     @Test
     fun summarize_listsMatchedDecoratorsAndHealthCheck() {
         val routes = listOf(
-            route(decorators = listOf("Logging", "Brave")),
+            route(
+                decorators = listOf(
+                    message("route.explorer.decorator.logging"),
+                    message("route.explorer.decorator.brave"),
+                ),
+            ),
             route(routeMatch = RouteMatch.HEALTH_CHECK, path = "/internal/healthcheck"),
         )
 
@@ -24,6 +29,16 @@ class ArmeriaObservabilitySummaryTest {
         assertTrue(summary.contains(message("route.explorer.observability.logging")))
         assertTrue(summary.contains(message("route.explorer.observability.tracing")))
         assertTrue(summary.contains(message("route.explorer.observability.healthCheck")))
+    }
+
+    @Test
+    fun summarize_matchesDecoratorClassSimpleNames() {
+        val routes = listOf(route(decorators = listOf("LoggingService", "BraveService")))
+
+        val summary = ArmeriaObservabilitySummary.summarize(routes)
+
+        assertTrue(summary.contains(message("route.explorer.observability.logging")))
+        assertTrue(summary.contains(message("route.explorer.observability.tracing")))
     }
 
     @Test
@@ -43,8 +58,22 @@ class ArmeriaObservabilitySummaryTest {
     }
 
     @Test
-    fun summarize_omitsDocService() {
-        val routes = listOf(route(isDocService = true, routeMatch = RouteMatch.NON_HTTP, protocol = "gRPC"))
+    fun summarize_omitsDocServiceEvenWhenDecorated() {
+        val routes = listOf(
+            route(
+                isDocService = true,
+                routeMatch = RouteMatch.NON_HTTP,
+                protocol = "gRPC",
+                decorators = listOf(message("route.explorer.decorator.logging")),
+            ),
+        )
+
+        assertEquals("", ArmeriaObservabilitySummary.summarize(routes))
+    }
+
+    @Test
+    fun summarize_doesNotTreatOAuthAsAuth() {
+        val routes = listOf(route(decorators = listOf("OAuthService")))
 
         assertEquals("", ArmeriaObservabilitySummary.summarize(routes))
     }
