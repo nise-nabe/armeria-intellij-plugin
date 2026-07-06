@@ -16,7 +16,7 @@ import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiVariable
 
-internal enum class ServiceRegistrationMethod(val methodName: String) {
+enum class ServiceRegistrationMethod(val methodName: String) {
     SERVICE("service"),
     SERVICE_UNDER("serviceUnder"),
     ANNOTATED_SERVICE("annotatedService"),

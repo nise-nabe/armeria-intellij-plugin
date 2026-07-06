@@ -396,7 +396,7 @@ object ArmeriaRouteCollector {
         )
     }
 
-    internal fun looksLikeArmeriaBuilderCall(expression: PsiMethodCallExpression): Boolean =
+    fun looksLikeArmeriaBuilderCall(expression: PsiMethodCallExpression): Boolean =
         ArmeriaBuilderCallHeuristics.looksLikeJavaBuilderCall(expression)
 
     private fun buildMethodTarget(psiClass: PsiClass, method: PsiMethod): String {
