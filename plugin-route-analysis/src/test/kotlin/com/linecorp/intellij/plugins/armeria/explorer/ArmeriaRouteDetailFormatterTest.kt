@@ -94,6 +94,27 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
         assertTrue(attachments.contains("MyHandler"))
     }
 
+    fun testRegistrationSummary_runtimeRoute() {
+        val route = ArmeriaRoute(
+            protocol = "DocService (runtime)",
+            httpMethod = "GET",
+            path = "/api/users/{id}",
+            target = "com.example.FooService/getUser",
+            routeMatch = RouteMatch.RUNTIME,
+            moduleName = "Runtime (DocService)",
+            targetUnresolved = false,
+            isDocService = false,
+            decorators = emptyList(),
+            exceptionHandlers = emptyList(),
+            pointer = TestPsiPointer,
+        )
+        assertEquals(
+            "GET /api/users/{id} (runtime)",
+            ArmeriaRouteDetailFormatter.registrationSummary(route),
+        )
+        assertTrue(ArmeriaRouteDetailFormatter.statusLine(route).contains("Runtime"))
+    }
+
     fun testRegistrationSummary_annotatedServiceWithoutPathPrefix() {
         val route = ArmeriaRoute(
             protocol = "HTTP",

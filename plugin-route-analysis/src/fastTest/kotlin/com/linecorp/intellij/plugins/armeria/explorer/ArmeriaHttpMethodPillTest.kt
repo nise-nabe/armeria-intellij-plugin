@@ -25,6 +25,7 @@ class ArmeriaHttpMethodPillTest {
         assertEquals("ALL", ArmeriaHttpMethodPill.pillLabel(route(routeMatch = RouteMatch.SERVICE)))
         assertEquals("PRE", ArmeriaHttpMethodPill.pillLabel(route(routeMatch = RouteMatch.SERVICE_UNDER)))
         assertEquals("GRPC", ArmeriaHttpMethodPill.pillLabel(route(protocol = "gRPC", routeMatch = RouteMatch.NON_HTTP)))
+        assertEquals("DELETE", ArmeriaHttpMethodPill.pillLabel(route(httpMethod = "DELETE", routeMatch = RouteMatch.RUNTIME)))
     }
 
     @Test

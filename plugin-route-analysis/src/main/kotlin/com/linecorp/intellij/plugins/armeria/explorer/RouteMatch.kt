@@ -6,4 +6,5 @@ enum class RouteMatch {
     SERVICE,
     SERVICE_UNDER,
     NON_HTTP,
+    RUNTIME,
 }

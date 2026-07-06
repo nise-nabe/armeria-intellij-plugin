@@ -4,8 +4,10 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.ToggleAction
+import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -39,8 +41,12 @@ import javax.swing.tree.TreePath
 
 class ArmeriaRouteExplorerPanel(
     private val project: Project,
-) : SimpleToolWindowPanel(true, true), Disposable {
-    private var currentRoutes: List<ArmeriaRoute> = emptyList()
+) : SimpleToolWindowPanel(true, true), Disposable, UiDataProvider {
+    private var staticRoutes: List<ArmeriaRoute> = emptyList()
+    private var runtimeRoutes: List<ArmeriaRoute> = emptyList()
+    private var refreshGeneration = 0
+    private var runtimeApplyGeneration = 0
+    private var selectedRoute: ArmeriaRoute? = null
     private var currentModuleOnly = false
     private var initialRefreshScheduled = false
 
@@ -74,6 +80,7 @@ class ArmeriaRouteExplorerPanel(
                 }
             })
             add(ArmeriaGenerateHttpRequestAction { selectedRouteFromTree() })
+            add(ArmeriaSyncRuntimeRoutesAction())
         }
         toolbar = ActionManager.getInstance().createActionToolbar("ArmeriaRouteExplorer", actionGroup, true).also {
             it.targetComponent = this
@@ -93,7 +100,8 @@ class ArmeriaRouteExplorerPanel(
             true,
         )
         routeTree.addTreeSelectionListener { _: TreeSelectionEvent ->
-            routeDetailPanel.setRoute(selectedRouteFromTree())
+            selectedRoute = ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent)
+            routeDetailPanel.setRoute(selectedRoute)
         }
         routeTree.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(event: MouseEvent) {
@@ -150,6 +158,7 @@ class ArmeriaRouteExplorerPanel(
     }
 
     fun refresh() {
+        val generation = ++refreshGeneration
         statusLabel.text = message("route.explorer.summary.refreshing")
         ReadAction.nonBlocking<List<ArmeriaRoute>> {
             ArmeriaRouteCollector.collect(project, includeProtoRoutes = true)
@@ -158,28 +167,55 @@ class ArmeriaRouteExplorerPanel(
             .expireWith(this)
             .coalesceBy(this)
             .finishOnUiThread(ModalityState.any()) { collectedRoutes ->
-                currentRoutes = collectedRoutes
+                if (generation != refreshGeneration) {
+                    return@finishOnUiThread
+                }
+                staticRoutes = collectedRoutes
+                if (runtimeApplyGeneration < generation) {
+                    runtimeRoutes = emptyList()
+                }
                 rebuildTree()
-                updateStatusLabel(collectedRoutes)
+                updateStatusLabel()
+                updateDetailFootnote()
             }.submit(AppExecutorUtil.getAppExecutorService())
     }
 
+    fun staticRoutes(): List<ArmeriaRoute> = staticRoutes
+
+    fun applyRuntimeRoutes(routes: List<ArmeriaRoute>) {
+        runtimeApplyGeneration = refreshGeneration
+        runtimeRoutes = routes
+        rebuildTree()
+        updateStatusLabel()
+        updateDetailFootnote()
+    }
+
+    private fun allRoutes(): List<ArmeriaRoute> = staticRoutes + runtimeRoutes
+
     private fun rebuildTree() {
         val previousSelection = ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent)
-        val visibleRoutes = filterRoutes(currentRoutes)
+        val visibleRoutes = filterRoutes(allRoutes())
         val root = ArmeriaRouteTreeBuilder.buildRoot(visibleRoutes)
         routeTree.model = DefaultTreeModel(root)
         val selectionRestored = previousSelection != null && restoreTreeSelection(root, previousSelection)
         when {
-            visibleRoutes.isEmpty() -> routeDetailPanel.clear()
-            selectionRestored -> {
-                routeDetailPanel.setRoute(ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent))
+            visibleRoutes.isEmpty() -> {
+                selectedRoute = null
+                routeDetailPanel.clear()
             }
-            else -> routeDetailPanel.setRoute(null)
+            selectionRestored -> {
+                selectedRoute = ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent)
+                routeDetailPanel.setRoute(selectedRoute)
+            }
+            else -> {
+                selectedRoute = null
+                routeDetailPanel.setRoute(null)
+            }
         }
     }
 
-    private fun updateStatusLabel(collectedRoutes: List<ArmeriaRoute> = currentRoutes) {
+    private fun updateStatusLabel() {
+        val collectedRoutes = allRoutes()
         statusLabel.text = if (
             currentModuleOnly &&
             selectedEditorModule() == null &&
@@ -188,6 +224,14 @@ class ArmeriaRouteExplorerPanel(
             message("route.explorer.summary.moduleFilterNoEditor")
         } else {
             summary(filterRoutes(collectedRoutes))
+        }
+    }
+
+    private fun updateDetailFootnote() {
+        detailFootnote.text = if (runtimeRoutes.isEmpty()) {
+            message("route.explorer.footnote.static")
+        } else {
+            message("route.explorer.footnote.runtime", runtimeRoutes.size)
         }
     }
 
@@ -219,11 +263,13 @@ class ArmeriaRouteExplorerPanel(
     }
 
     private fun filterRoutes(routes: List<ArmeriaRoute>): List<ArmeriaRoute> {
+        val withoutRuntime = routes.filter { it.routeMatch != RouteMatch.RUNTIME }
+        val runtimeOnly = routes.filter { it.routeMatch == RouteMatch.RUNTIME }
         if (!currentModuleOnly) {
-            return routes
+            return withoutRuntime + runtimeOnly
         }
-        val selectedModule = selectedEditorModule() ?: return emptyList()
-        return routes.filter { it.moduleName == selectedModule.name }
+        val selectedModule = selectedEditorModule() ?: return runtimeOnly
+        return withoutRuntime.filter { it.moduleName == selectedModule.name } + runtimeOnly
     }
 
     private fun selectedEditorModule(): com.intellij.openapi.module.Module? {
@@ -236,6 +282,7 @@ class ArmeriaRouteExplorerPanel(
             return message("route.explorer.summary.empty")
         }
         val docServiceDetected = collectedRoutes.any { it.isDocService }
+        val runtimeCount = collectedRoutes.count { it.routeMatch == RouteMatch.RUNTIME }
         return buildString {
             append(message("route.explorer.summary.routes", collectedRoutes.size))
             append(" · ")
@@ -247,6 +294,10 @@ class ArmeriaRouteExplorerPanel(
             if (docServiceDetected) {
                 append(" · ")
                 append(message("route.explorer.summary.docService"))
+            }
+            if (runtimeCount > 0) {
+                append(" · ")
+                append(message("route.explorer.summary.runtime", runtimeCount))
             }
         }
     }
@@ -267,6 +318,10 @@ class ArmeriaRouteExplorerPanel(
 
     private fun selectedRouteFromTree(): ArmeriaRoute? {
         return ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent)
+    }
+
+    override fun uiDataSnapshot(sink: DataSink) {
+        selectedRoute?.let { sink[ArmeriaRouteDataKeys.SELECTED_ROUTE] = it }
     }
 
     override fun dispose() = Unit
