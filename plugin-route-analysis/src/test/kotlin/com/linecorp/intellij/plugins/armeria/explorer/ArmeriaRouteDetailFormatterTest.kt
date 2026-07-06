@@ -219,10 +219,7 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
 
         val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
 
-        assertEquals(
-            message("route.explorer.detail.virtualHost", "api.example.com"),
-            attachments,
-        )
+        assertEquals("Virtual host: api.example.com", attachments)
     }
 
     fun testAttachmentsLine_includesPathType() {
@@ -244,10 +241,32 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
 
         val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
 
-        assertEquals(
-            message("route.explorer.detail.pathType", message("route.explorer.pathType.glob")),
-            attachments,
+        assertEquals("Path type: Glob", attachments)
+    }
+
+    fun testAttachmentsLine_includesContentHints() {
+        val route = ArmeriaRoute(
+            protocol = "HTTP",
+            httpMethod = "POST",
+            path = "/users/{id}",
+            target = "example.UserService",
+            routeMatch = RouteMatch.ANNOTATED_HTTP,
+            moduleName = "app",
+            targetUnresolved = false,
+            isDocService = false,
+            annotatedServiceHasPathPrefix = false,
+            decorators = emptyList(),
+            exceptionHandlers = emptyList(),
+            contentHints = listOf(
+                message("route.explorer.hint.statusCode", "201"),
+                message("route.explorer.hint.consumes", "application/json"),
+            ),
+            pointer = TestPsiPointer,
         )
+
+        val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
+
+        assertEquals("Content: Status: 201, Consumes: application/json", attachments)
     }
 
     fun testRegistrationSummary_extendedRouteMatches() {

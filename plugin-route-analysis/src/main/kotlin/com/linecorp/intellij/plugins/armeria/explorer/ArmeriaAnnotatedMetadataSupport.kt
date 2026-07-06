@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiMethod
@@ -36,9 +37,14 @@ internal object ArmeriaAnnotatedMetadataSupport {
     }
 
     private fun collectStatusCode(method: PsiMethod): String? {
-        val annotation = method.annotations.firstOrNull { it.qualifiedName == STATUS_CODE_ANNOTATION } ?: return null
-        val value = annotation.findDeclaredAttributeValue("value")?.text?.trim()?.removeSuffix("}")?.substringAfter("(")
-        return value?.let { message("route.explorer.hint.statusCode", it) }
+        val annotation = method.getAnnotation(STATUS_CODE_ANNOTATION) ?: return null
+        val valueAttribute = annotation.findDeclaredAttributeValue("value") ?: return null
+        val value = JavaPsiFacade.getInstance(method.project)
+            .constantEvaluationHelper
+            .computeConstantExpression(valueAttribute)
+            ?.toString()
+            ?: valueAttribute.text.trim()
+        return message("route.explorer.hint.statusCode", value)
     }
 
     private fun collectMediaTypes(method: PsiMethod, annotationFqn: String, messageKey: String): String? {

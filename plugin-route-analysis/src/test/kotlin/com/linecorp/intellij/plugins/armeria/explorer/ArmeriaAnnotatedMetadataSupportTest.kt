@@ -37,6 +37,12 @@ class ArmeriaAnnotatedMetadataSupportTest : LightJavaCodeInsightFixtureTestCase(
         assertTrue(route.contentHints.any { it.contains("client-type=android") })
         assertTrue(route.contentHints.any { it.contains("id") })
         assertTrue(route.executionHints.any { it.contains("Blocking") })
+
+        val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
+        assertTrue(attachments.contains("Content: "))
+        assertTrue(attachments.contains("201"))
+        assertTrue(attachments.contains("application/json"))
+        assertTrue(attachments.contains("client-type=android"))
     }
 
     fun testCollectColonStylePathVariablesAndDescription() {
