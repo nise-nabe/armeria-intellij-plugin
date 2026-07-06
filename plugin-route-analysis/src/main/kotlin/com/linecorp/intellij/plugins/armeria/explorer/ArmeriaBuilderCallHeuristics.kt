@@ -34,7 +34,7 @@ internal object ArmeriaBuilderCallHeuristics {
         }
         val qualifierText = expression.methodExpression.qualifierExpression?.text ?: return false
         return ArmeriaRouteSupport.looksLikeServerBuilderReceiverText(qualifierText) ||
-            qualifierText.contains("routeDecorator")
+            ArmeriaRouteSupport.looksLikeRouteDecoratorReceiverText(qualifierText)
     }
 
     fun looksLikeKotlinBuilderCall(call: KtCallExpression): Boolean {
@@ -49,7 +49,7 @@ internal object ArmeriaBuilderCallHeuristics {
             return true
         }
         val receiverText = dotQualified?.receiverExpression?.text.orEmpty()
-        if (receiverText.contains("routeDecorator")) {
+        if (ArmeriaRouteSupport.looksLikeRouteDecoratorReceiverText(receiverText)) {
             return true
         }
         return hasKotlinServerBuilderImplicitReceiver(call)

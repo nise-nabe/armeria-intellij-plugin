@@ -132,4 +132,14 @@ class ArmeriaRouteSupportApplicationDetectionTest {
 
         assertFalse(ArmeriaRouteSupport.referencesArmeriaApplicationInSource(source))
     }
+
+    @Test
+    fun looksLikeRouteDecoratorReceiverText_matchesChainedCall() {
+        assertTrue(ArmeriaRouteSupport.looksLikeRouteDecoratorReceiverText("Server.builder().routeDecorator()"))
+    }
+
+    @Test
+    fun looksLikeRouteDecoratorReceiverText_doesNotMatchUnrelatedIdentifier() {
+        assertFalse(ArmeriaRouteSupport.looksLikeRouteDecoratorReceiverText("routeDecoratorFactory"))
+    }
 }

@@ -76,6 +76,7 @@ object ArmeriaRouteSupport {
     private val UNQUALIFIED_SERVER_BUILDER_CALL = Regex(UNQUALIFIED_SERVER_BUILDER_CALL_PATTERN)
     private val SERVER_BUILDER_CALL =
         Regex("""(?:$FQCN_SERVER_BUILDER_CALL_PATTERN|$UNQUALIFIED_SERVER_BUILDER_CALL_PATTERN)""")
+    private val ROUTE_DECORATOR_CALL = Regex("""(?<![\w"])routeDecorator\s*\(""")
 
     const val PATH_ANNOTATION = "com.linecorp.armeria.server.annotation.Path"
     const val PATH_PREFIX_ANNOTATION = "com.linecorp.armeria.server.annotation.PathPrefix"
@@ -365,6 +366,10 @@ object ArmeriaRouteSupport {
 
     fun looksLikeServerBuilderReceiverText(text: String): Boolean {
         return SERVER_BUILDER_CALL.containsMatchIn(text) || SERVER_BUILDER_IDENTIFIER.containsMatchIn(text)
+    }
+
+    fun looksLikeRouteDecoratorReceiverText(text: String): Boolean {
+        return ROUTE_DECORATOR_CALL.containsMatchIn(text)
     }
 
     fun registrationKey(virtualFilePath: String, textRange: TextRange, methodName: String): String =

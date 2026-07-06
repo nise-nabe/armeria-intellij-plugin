@@ -80,7 +80,7 @@ internal object ArmeriaRegistrationChainReducer {
                 }
                 "methods", "method" -> {
                     httpMethod = step.rawMethodArgs.joinToString(", ") { argument ->
-                        argument.removePrefix("HttpMethod.").uppercase()
+                        formatHttpMethodArgument(argument)
                     }
                 }
             }
@@ -134,7 +134,7 @@ internal object ArmeriaRegistrationChainReducer {
                 }
                 "methods", "method" -> {
                     methods = step.rawMethodArgs.joinToString(", ") { argument ->
-                        argument.removePrefix("HttpMethod.").uppercase()
+                        formatHttpMethodArgument(argument)
                     }
                 }
                 "build" -> {
@@ -152,4 +152,7 @@ internal object ArmeriaRegistrationChainReducer {
         val raw = step.firstStringArg ?: return null
         return ArmeriaRouteSupport.parsePathType(raw)
     }
+
+    private fun formatHttpMethodArgument(argument: String): String =
+        argument.trim().substringAfterLast('.').uppercase()
 }

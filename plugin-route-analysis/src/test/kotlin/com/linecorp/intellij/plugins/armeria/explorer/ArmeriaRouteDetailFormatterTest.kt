@@ -219,7 +219,35 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
 
         val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
 
-        assertTrue(attachments.contains(message("route.explorer.detail.virtualHost", "api.example.com")))
+        assertEquals(
+            message("route.explorer.detail.virtualHost", "api.example.com"),
+            attachments,
+        )
+    }
+
+    fun testAttachmentsLine_includesPathType() {
+        val route = ArmeriaRoute(
+            protocol = "HTTP",
+            httpMethod = "GET",
+            path = "/api/**",
+            target = "example.ApiService",
+            routeMatch = RouteMatch.SERVICE_UNDER,
+            pathType = PathType.GLOB,
+            moduleName = "app",
+            targetUnresolved = false,
+            isDocService = false,
+            annotatedServiceHasPathPrefix = false,
+            decorators = emptyList(),
+            exceptionHandlers = emptyList(),
+            pointer = TestPsiPointer,
+        )
+
+        val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
+
+        assertEquals(
+            message("route.explorer.detail.pathType", message("route.explorer.pathType.glob")),
+            attachments,
+        )
     }
 
     fun testRegistrationSummary_extendedRouteMatches() {
