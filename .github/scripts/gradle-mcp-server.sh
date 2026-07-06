@@ -6,7 +6,7 @@ readonly STABLE_JAR_PATH="${INSTALL_DIR}/gradle-tapi-mcp-server.jar"
 
 if [[ ! -f "${STABLE_JAR_PATH}" ]]; then
   repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-  "${repo_root}/.github/scripts/install-gradle-tapi-mcp.sh"
+  bash "${repo_root}/.github/scripts/install-gradle-tapi-mcp.sh"
 fi
 
 if [[ -z "${GRADLE_PROJECT_DIR:-}" ]]; then

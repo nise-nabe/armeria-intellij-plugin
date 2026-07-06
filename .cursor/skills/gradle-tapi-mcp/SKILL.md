@@ -163,10 +163,10 @@ If every MCP call times out but `./gradlew` still works:
 
 | Goal | MCP tool (preferred) | Shell fallback |
 |------|---------------------|----------------|
-| Full verify | `gradle_run_tasks` `["build"]` + background/poll | `./gradlew build` |
-| All plugin tests | `gradle_run_tasks` `[":plugin:test"]` + background/poll | `./gradlew :plugin:test` |
-| Single test class | `gradle_run_tests` + background/poll | `./gradlew :plugin:test --tests 'FQCN'` |
-| Single test method | `gradle_run_tests` with `testMethods` + background/poll | `./gradlew :plugin:test --tests 'FQCN.method'` |
+| Full verify | `gradle_run_tasks` `{ "tasks": ["build"], "background": true }` | `./gradlew build` |
+| All plugin tests | `gradle_run_tasks` `{ "tasks": [":plugin:test"], "background": true }` | `./gradlew :plugin:test` |
+| Single test class | `gradle_run_tests` `{ "testClasses": ["FQCN"], "background": true }` | `./gradlew :plugin:test --tests 'FQCN'` |
+| Single test method | `gradle_run_tests` `{ "testMethods": { "FQCN": ["method"] }, "background": true }` | `./gradlew :plugin:test --tests 'FQCN.method'` |
 | Fast compile gate | `gradle_run_tasks` `{ "tasks": [":plugin:compileKotlin"] }` | `./gradlew :plugin:compileKotlin` |
 
 Prefer MCP for all verification. Use shell only when MCP is unresponsive or for final CI parity before merge.

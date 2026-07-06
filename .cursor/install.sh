@@ -2,7 +2,7 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-"${repo_root}/.github/scripts/install-gradle-tapi-mcp.sh"
+bash "${repo_root}/.github/scripts/install-gradle-tapi-mcp.sh"
 
 setup_gh_cli() {
   local gh_source="/exec-daemon/gh"
