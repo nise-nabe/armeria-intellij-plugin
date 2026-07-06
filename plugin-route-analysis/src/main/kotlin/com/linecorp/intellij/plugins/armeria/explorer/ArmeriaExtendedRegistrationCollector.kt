@@ -384,7 +384,9 @@ internal object ArmeriaExtendedRegistrationCollector {
             }
             methodName == "build" -> {
                 val sizeBefore = routes.size
-                tryCollectFluentRoute(call, routes, seenRegistrations, requireBuilderCall = false)
+                if (ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(call)) {
+                    tryCollectFluentRoute(call, routes, seenRegistrations, requireBuilderCall = true)
+                }
                 registrationKey(call)?.let(scopedKeys::add)
                 annotateVirtualHostForCall(call, routes, sizeBefore, hostname)
             }
@@ -396,7 +398,9 @@ internal object ArmeriaExtendedRegistrationCollector {
             }
             methodName in ServiceRegistrationMethod.EXTENDED_METHOD_NAMES -> {
                 val sizeBefore = routes.size
-                collectFromMethodCall(call, routes, seenRegistrations, requireBuilderCall = false)
+                if (ArmeriaBuilderCallHeuristics.looksLikeJavaBuilderCall(call)) {
+                    collectFromMethodCall(call, routes, seenRegistrations, requireBuilderCall = true)
+                }
                 registrationKey(call)?.let(scopedKeys::add)
                 annotateVirtualHostForCall(call, routes, sizeBefore, hostname)
             }

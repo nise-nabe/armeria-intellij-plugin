@@ -10,7 +10,6 @@ import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtLambdaExpression
-import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 internal object ArmeriaKotlinExtendedRegistrationCollector {
@@ -60,7 +59,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
         val pathArg = call.valueArguments.firstOrNull()?.getArgumentExpression()
         when (ServiceRegistrationMethod.fromMethodName(methodName)) {
             ServiceRegistrationMethod.FILE_SERVICE -> {
-                val rawPath = extractKotlinString(pathArg) ?: "/"
+                val rawPath = ArmeriaKotlinExpressionSupport.extractKotlinString(pathArg) ?: "/"
                 val (pathType, normalizedPath) = ArmeriaRouteSupport.parsePathType(rawPath)
                 val target = call.valueArguments.getOrNull(1)?.getArgumentExpression()?.text
                     ?: message("route.explorer.target.fileService")
@@ -77,7 +76,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
                 )
             }
             ServiceRegistrationMethod.HEALTH_CHECK_SERVICE -> {
-                val path = pathArg?.let(::extractKotlinString)?.let(ArmeriaRouteSupport::normalizePath)
+                val path = pathArg?.let(ArmeriaKotlinExpressionSupport::extractKotlinString)?.let(ArmeriaRouteSupport::normalizePath)
                     ?: "/internal/healthcheck"
                 routes += ArmeriaRoute.create(
                     element = call,
@@ -105,7 +104,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
                 )
             }
             ServiceRegistrationMethod.DECORATOR_UNDER -> {
-                val rawPath = extractKotlinString(pathArg) ?: return
+                val rawPath = ArmeriaKotlinExpressionSupport.extractKotlinString(pathArg) ?: return
                 val (pathType, normalizedPath) = ArmeriaRouteSupport.parsePathType(rawPath)
                 val decoratorArg = call.valueArguments.getOrNull(1)?.getArgumentExpression()
                 val decoratorLabel = decoratorArg?.text?.let(ArmeriaDecoratorSupport::labelDecorator)
@@ -133,7 +132,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
     ) {
         val key = registrationKey(call) ?: return
         val pathArg = call.valueArguments.firstOrNull()?.getArgumentExpression()
-        val hostname = extractKotlinString(pathArg) ?: pathArg?.text
+        val hostname = ArmeriaKotlinExpressionSupport.extractKotlinString(pathArg) ?: pathArg?.text
             ?: message("route.explorer.target.virtualHost")
         if (seenRegistrations.add(key)) {
             routes += ArmeriaRoute.create(
@@ -369,7 +368,9 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
             }
             methodName == "build" -> {
                 val sizeBefore = routes.size
-                tryCollectFluentRoute(call, routes, seenRegistrations, requireBuilderCall = false)
+                if (ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(call)) {
+                    tryCollectFluentRoute(call, routes, seenRegistrations, requireBuilderCall = true)
+                }
                 registrationKey(call)?.let(scopedKeys::add)
                 annotateVirtualHostForCall(call, routes, sizeBefore, hostname)
             }
@@ -381,7 +382,9 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
             }
             methodName in ServiceRegistrationMethod.EXTENDED_METHOD_NAMES -> {
                 val sizeBefore = routes.size
-                collectFromKotlinCall(call, methodName, routes, seenRegistrations)
+                if (ArmeriaBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)) {
+                    collectFromKotlinCall(call, methodName, routes, seenRegistrations)
+                }
                 registrationKey(call)?.let(scopedKeys::add)
                 annotateVirtualHostForCall(call, routes, sizeBefore, hostname)
             }
@@ -408,7 +411,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
     private fun toChainStep(call: KtCallExpression): RegistrationChainStep {
         return RegistrationChainStep(
             methodName = resolveCallName(call).orEmpty(),
-            firstStringArg = extractKotlinString(call.valueArguments.firstOrNull()?.getArgumentExpression()),
+            firstStringArg = ArmeriaKotlinExpressionSupport.extractKotlinString(call.valueArguments.firstOrNull()?.getArgumentExpression()),
             rawMethodArgs = call.valueArguments.mapNotNull { it.getArgumentExpression()?.text },
         )
     }
@@ -516,13 +519,6 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
         return when (callee) {
             is KtDotQualifiedExpression -> callee.selectorExpression?.text
             else -> callee.text
-        }
-    }
-
-    private fun extractKotlinString(expression: KtExpression?): String? {
-        return when (expression) {
-            is KtStringTemplateExpression -> expression.entries.joinToString("") { it.text }.trim('"')
-            else -> expression?.text?.trim('"')
         }
     }
 }

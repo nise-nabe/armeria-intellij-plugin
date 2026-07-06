@@ -661,6 +661,32 @@ class ArmeriaRouteDuplicateIndexTest : ArmeriaFixtureTestBase() {
         )
     }
 
+    fun testHealthCheckDuplicateRegistrationLabelIncludesHttpMethod() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/internal/healthcheck", new HealthHandler())
+                        .healthCheckService()
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class HealthHandler {}")
+
+        val hits = ArmeriaRouteDuplicateIndex.duplicateHitsInFile(project, myFixture.file)
+        val healthHit = hits.firstOrNull { it.registrationLabel.startsWith("GET ") }
+        assertNotNull(healthHit)
+        assertEquals("GET /internal/healthcheck", healthHit!!.registrationLabel)
+    }
+
     fun testDuplicateHitsAreIndexedByFile() {
         myFixture.configureByText(
             "First.java",

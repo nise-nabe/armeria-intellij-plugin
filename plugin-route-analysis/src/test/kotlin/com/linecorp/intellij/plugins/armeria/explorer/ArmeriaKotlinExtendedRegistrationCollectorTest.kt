@@ -344,9 +344,60 @@ class ArmeriaKotlinExtendedRegistrationCollectorTest : ArmeriaFixtureTestBase() 
         val routes = ArmeriaRouteCollector.collect(project)
         val fluentRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_FLUENT }
         assertNotNull(fluentRoute)
-        assertEquals(PathType.PREFIX, fluentRoute!!.pathType)
-        assertEquals("/api", fluentRoute.path)
+        assertEquals(PathType.EXACT, fluentRoute!!.pathType)
+        assertEquals("/api/items", fluentRoute.path)
         assertEquals("GET", fluentRoute.httpMethod)
+    }
+
+    fun testCollectKotlinFileServiceFromConstValPath() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import java.io.File
+
+            private const val FILES_PATH = "/files/"
+
+            fun main() {
+                Server.builder()
+                    .fileService(FILES_PATH, File("/tmp"))
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val fileRoute = routes.firstOrNull { it.routeMatch == RouteMatch.FILE_SERVICE }
+        assertNotNull(fileRoute)
+        assertEquals("/files/", fileRoute!!.path)
+    }
+
+    fun testIgnoreNonArmeriaFluentBuildInVirtualHostLambda() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                Server.builder()
+                    .virtualHost("api.example.com") {
+                        OtherBuilder.builder()
+                            .route()
+                            .post("/nope")
+                            .build(Any())
+                            .build()
+                    }
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
     }
 
     private fun registerKotlinExtendedRegistrationStubs() {

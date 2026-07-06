@@ -502,8 +502,8 @@ class ArmeriaExtendedRegistrationCollectorTest : LightJavaCodeInsightFixtureTest
         val routes = ArmeriaRouteCollector.collect(project)
         val fluentRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_FLUENT }
         assertNotNull(fluentRoute)
-        assertEquals(PathType.PREFIX, fluentRoute!!.pathType)
-        assertEquals("/api", fluentRoute.path)
+        assertEquals(PathType.EXACT, fluentRoute!!.pathType)
+        assertEquals("/api/items", fluentRoute.path)
         assertEquals("GET", fluentRoute.httpMethod)
     }
 
@@ -525,6 +525,34 @@ class ArmeriaExtendedRegistrationCollectorTest : LightJavaCodeInsightFixtureTest
 
         val routes = ArmeriaRouteCollector.collect(project)
         assertTrue(routes.none { it.routeMatch == RouteMatch.VIRTUAL_HOST })
+    }
+
+    fun testIgnoreNonArmeriaFluentBuildInVirtualHostLambda() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .virtualHost("api.example.com", vh -> {
+                            OtherBuilder.builder()
+                                .route()
+                                .post("/nope")
+                                .build(new Object())
+                                .build();
+                        })
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
     }
 
     private fun registerArmeriaStubs() {
