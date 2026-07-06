@@ -137,25 +137,39 @@ object ArmeriaRouteDuplicateIndex {
     }
 
     private fun routesOverlap(first: ArmeriaRoute, second: ArmeriaRoute): Boolean =
-        pathsOverlap(first, second)
+        virtualHostsOverlap(first, second) && pathsOverlap(first, second)
+
+    private fun virtualHostsOverlap(first: ArmeriaRoute, second: ArmeriaRoute): Boolean =
+        first.virtualHostName == second.virtualHostName
 
     private fun pathsOverlap(first: ArmeriaRoute, second: ArmeriaRoute): Boolean {
         val firstIsPrefixMount = isPrefixMount(first)
         val secondIsPrefixMount = isPrefixMount(second)
         return when {
             firstIsPrefixMount && secondIsPrefixMount ->
-                pathIsUnder(first.path, second.path) || pathIsUnder(second.path, first.path)
-            firstIsPrefixMount -> pathIsUnder(second.path, first.path)
-            secondIsPrefixMount -> pathIsUnder(first.path, second.path)
+                pathIsUnder(first.path, prefixForMount(first)) ||
+                    pathIsUnder(second.path, prefixForMount(second)) ||
+                    prefixForMount(first) == prefixForMount(second)
+            firstIsPrefixMount -> pathIsUnder(second.path, prefixForMount(first))
+            secondIsPrefixMount -> pathIsUnder(first.path, prefixForMount(second))
+            first.pathType == PathType.REGEX || second.pathType == PathType.REGEX ->
+                first.path == second.path && first.pathType == second.pathType
             else -> first.path == second.path
         }
     }
+
+    private fun prefixForMount(route: ArmeriaRoute): String =
+        when {
+            route.pathType == PathType.GLOB && route.path.endsWith("/**") -> route.path.removeSuffix("/**")
+            else -> route.path
+        }
 
     private fun isPrefixMount(route: ArmeriaRoute): Boolean =
         when (route.routeMatch) {
             RouteMatch.SERVICE_UNDER -> true
             RouteMatch.ANNOTATED_SERVICE -> route.annotatedServiceHasPathPrefix
-            else -> route.pathType == PathType.PREFIX
+            else -> route.pathType == PathType.PREFIX ||
+                (route.pathType == PathType.GLOB && route.path.endsWith("/**"))
         }
 
     private fun pathIsUnder(path: String, prefix: String): Boolean {

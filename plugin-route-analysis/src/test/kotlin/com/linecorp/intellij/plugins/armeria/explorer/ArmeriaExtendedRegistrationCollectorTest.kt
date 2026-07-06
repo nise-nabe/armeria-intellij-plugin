@@ -184,6 +184,88 @@ class ArmeriaExtendedRegistrationCollectorTest : LightJavaCodeInsightFixtureTest
         assertEquals("api.example.com", virtualHostRoute.virtualHostName)
     }
 
+    fun testCollectChainedVirtualHostAnnotatesServiceRoute() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/api", new ApiService())
+                        .virtualHost("api.example.com")
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class ApiService {}")
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val serviceRoute = routes.firstOrNull { it.routeMatch == RouteMatch.SERVICE }
+        assertNotNull(serviceRoute)
+        assertEquals("/api", serviceRoute!!.path)
+        assertEquals("api.example.com", serviceRoute.virtualHostName)
+    }
+
+    fun testCollectRouteDecoratorDefaultPathTypeIsGlob() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.logging.LoggingService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .routeDecorator()
+                        .build(LoggingService.newDecorator())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val decoratorRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_DECORATOR }
+        assertNotNull(decoratorRoute)
+        assertEquals(PathType.GLOB, decoratorRoute!!.pathType)
+        assertEquals("/**", decoratorRoute.path)
+    }
+
+    fun testCollectRouteDecoratorMethodsStripHttpMethodPrefix() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.common.HttpMethod;
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.logging.LoggingService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .routeDecorator()
+                        .methods(HttpMethod.POST, HttpMethod.PUT)
+                        .build(LoggingService.newDecorator())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val decoratorRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_DECORATOR }
+        assertNotNull(decoratorRoute)
+        assertEquals("POST, PUT", decoratorRoute!!.httpMethod)
+    }
+
     fun testCollectRouteDecoratorRegistration() {
         myFixture.configureByText(
             "Main.java",
@@ -357,6 +439,10 @@ class ArmeriaExtendedRegistrationCollectorTest : LightJavaCodeInsightFixtureTest
                     return this;
                 }
 
+                public ServerBuilder methods(Object... methods) {
+                    return this;
+                }
+
                 public ServerBuilder build(Object handler) {
                     return this;
                 }
@@ -398,6 +484,16 @@ class ArmeriaExtendedRegistrationCollectorTest : LightJavaCodeInsightFixtureTest
                 public static Object newDecorator() {
                     return null;
                 }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.common;
+
+            public final class HttpMethod {
+                public static final HttpMethod POST = null;
+                public static final HttpMethod PUT = null;
             }
             """.trimIndent(),
         )

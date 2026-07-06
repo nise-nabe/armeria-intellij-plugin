@@ -41,6 +41,27 @@ class ArmeriaHttpRequestGeneratorTest {
     }
 
     @Test
+    fun supports_healthCheckAndFluentRoutes() {
+        assertTrue(ArmeriaHttpRequestGenerator.supports(route(routeMatch = RouteMatch.HEALTH_CHECK)))
+        assertTrue(ArmeriaHttpRequestGenerator.supports(route(httpMethod = "POST", routeMatch = RouteMatch.ROUTE_FLUENT)))
+    }
+
+    @Test
+    fun supports_rejectsExtendedNonRequestRoutes() {
+        assertFalse(ArmeriaHttpRequestGenerator.supports(route(routeMatch = RouteMatch.FILE_SERVICE)))
+        assertFalse(ArmeriaHttpRequestGenerator.supports(route(routeMatch = RouteMatch.VIRTUAL_HOST)))
+        assertFalse(ArmeriaHttpRequestGenerator.supports(route(routeMatch = RouteMatch.ROUTE_DECORATOR)))
+        assertFalse(ArmeriaHttpRequestGenerator.supports(route(routeMatch = RouteMatch.DECORATOR_UNDER)))
+    }
+
+    @Test
+    fun httpMethod_defaultsHealthCheckAndFluentRoutesToGet() {
+        assertEquals("GET", ArmeriaHttpRequestGenerator.httpMethod(route(routeMatch = RouteMatch.HEALTH_CHECK)))
+        assertEquals("GET", ArmeriaHttpRequestGenerator.httpMethod(route(httpMethod = "", routeMatch = RouteMatch.ROUTE_FLUENT)))
+        assertEquals("POST", ArmeriaHttpRequestGenerator.httpMethod(route(httpMethod = "POST", routeMatch = RouteMatch.ROUTE_FLUENT)))
+    }
+
+    @Test
     fun supports_rejectsNonHttpRoutes() {
         assertFalse(ArmeriaHttpRequestGenerator.supports(route(routeMatch = RouteMatch.ANNOTATED_SERVICE)))
         assertFalse(

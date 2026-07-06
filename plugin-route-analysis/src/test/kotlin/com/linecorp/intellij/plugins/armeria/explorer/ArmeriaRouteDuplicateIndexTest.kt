@@ -464,6 +464,46 @@ class ArmeriaRouteDuplicateIndexTest : ArmeriaFixtureTestBase() {
         )
     }
 
+    fun testSamePathOnDifferentVirtualHostsAreNotDuplicates() {
+        myFixture.configureByText(
+            "FirstMain.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class FirstMain {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/api", new FirstService())
+                        .virtualHost("a.example.com")
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class SecondMain {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/api", new SecondService())
+                        .virtualHost("b.example.com")
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class FirstService {}")
+        myFixture.addClass("package example; public class SecondService {}")
+
+        assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
+    }
+
     fun testDuplicateHitsAreIndexedByFile() {
         myFixture.configureByText(
             "First.java",

@@ -7,6 +7,8 @@ import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiLambdaExpression
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethodCallExpression
+import com.intellij.psi.PsiReferenceExpression
+import com.intellij.psi.PsiStatement
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.message
 
@@ -221,7 +223,7 @@ internal object ArmeriaExtendedRegistrationCollector {
         if (buildCall.methodExpression.referenceName != "build") {
             return null
         }
-        var current = buildCall.methodExpression.qualifierExpression as? PsiMethodCallExpression
+        var current = previousMethodCallInChain(buildCall)
         var httpMethod = ""
         var path = "/"
         var pathType = PathType.EXACT
@@ -273,7 +275,7 @@ internal object ArmeriaExtendedRegistrationCollector {
                     }
                 }
             }
-            current = current.methodExpression.qualifierExpression as? PsiMethodCallExpression
+            current = previousMethodCallInChain(current)
         }
         if (requireRouteAnchor && !foundRoute) {
             return null
@@ -324,28 +326,25 @@ internal object ArmeriaExtendedRegistrationCollector {
         seenRegistrations: MutableSet<String>,
         hostname: String,
     ) {
-        var current: PsiExpression? = virtualHostCall.methodExpression.qualifierExpression
+        var current = previousMethodCallInChain(virtualHostCall)
         while (current != null) {
-            if (current is PsiMethodCallExpression) {
-                val methodName = current.methodExpression.referenceName
-                if (methodName in ServiceRegistrationMethod.METHOD_NAMES - ServiceRegistrationMethod.EXTENDED_METHOD_NAMES &&
-                    looksLikeArmeriaBuilderCall(current)
-                ) {
-                    val added = ArmeriaRouteCollector.addServiceRegistrationFromCall(current, routes, seenRegistrations)
-                    annotateRouteWithVirtualHost(routes, current, hostname, added)
-                }
-                if (methodName in ServiceRegistrationMethod.EXTENDED_METHOD_NAMES &&
-                    methodName != ServiceRegistrationMethod.VIRTUAL_HOST.methodName
-                ) {
-                    val beforeSize = routes.size
-                    collectFromMethodCall(current, routes, seenRegistrations)
-                    annotateRouteWithVirtualHost(routes, current, hostname, routes.size > beforeSize)
-                }
-                current = current.methodExpression.qualifierExpression
-            } else {
-                break
+            val methodName = current.methodExpression.referenceName
+            if (methodName in ServiceRegistrationMethod.METHOD_NAMES - ServiceRegistrationMethod.EXTENDED_METHOD_NAMES &&
+                looksLikeArmeriaBuilderCall(current)
+            ) {
+                val added = ArmeriaRouteCollector.addServiceRegistrationFromCall(current, routes, seenRegistrations)
+                annotateRouteWithVirtualHost(routes, current, hostname, added)
             }
+            if (methodName in ServiceRegistrationMethod.EXTENDED_METHOD_NAMES &&
+                methodName != ServiceRegistrationMethod.VIRTUAL_HOST.methodName
+            ) {
+                val beforeSize = routes.size
+                collectFromMethodCall(current, routes, seenRegistrations)
+                annotateRouteWithVirtualHost(routes, current, hostname, routes.size > beforeSize)
+            }
+            current = previousMethodCallInChain(current)
         }
+        annotatePrecedingRoutesInStatement(virtualHostCall, routes, hostname)
         PsiTreeUtil.findChildrenOfType(virtualHostCall, PsiMethodCallExpression::class.java).forEach { nested ->
             if (nested == virtualHostCall) {
                 return@forEach
@@ -360,6 +359,32 @@ internal object ArmeriaExtendedRegistrationCollector {
         }
     }
 
+    private fun annotatePrecedingRoutesInStatement(
+        anchorCall: PsiMethodCallExpression,
+        routes: MutableList<ArmeriaRoute>,
+        hostname: String,
+    ) {
+        if (anchorCall.methodExpression.referenceName != ServiceRegistrationMethod.VIRTUAL_HOST.methodName) {
+            return
+        }
+        val virtualFile = anchorCall.containingFile.virtualFile ?: return
+        val statement = PsiTreeUtil.getParentOfType(anchorCall, PsiStatement::class.java) ?: return
+        for (index in routes.indices) {
+            val route = routes[index]
+            if (route.routeMatch != RouteMatch.SERVICE || route.virtualHostName.isNotEmpty()) {
+                continue
+            }
+            val element = route.pointer.element ?: continue
+            if (element.containingFile.virtualFile != virtualFile) {
+                continue
+            }
+            if (PsiTreeUtil.getParentOfType(element, PsiStatement::class.java) != statement) {
+                continue
+            }
+            routes[index] = route.copy(virtualHostName = hostname)
+        }
+    }
+
     private fun annotateRouteWithVirtualHost(
         routes: MutableList<ArmeriaRoute>,
         registrationCall: PsiMethodCallExpression,
@@ -370,11 +395,10 @@ internal object ArmeriaExtendedRegistrationCollector {
             annotateLastRouteWithVirtualHost(routes, hostname)
             return
         }
+        val registrationCallKey = registrationKey(registrationCall) ?: return
         val index = routes.indexOfLast { route ->
-            val element = route.pointer.element
-            element != null &&
-                element.containingFile == registrationCall.containingFile &&
-                element.textRange == registrationCall.textRange
+            val element = route.pointer.element as? PsiMethodCallExpression ?: return@indexOfLast false
+            registrationKey(element) == registrationCallKey
         }
         if (index < 0) {
             return
@@ -401,17 +425,20 @@ internal object ArmeriaExtendedRegistrationCollector {
     )
 
     private fun extractRouteDecoratorChain(routeDecoratorCall: PsiMethodCallExpression): RouteDecoratorChainInfo {
+        val outerBuild = findForwardChainedCall(routeDecoratorCall) { call ->
+            call.methodExpression.referenceName == "build" && call.argumentList.expressionCount == 0
+        }
+        val chainCalls = methodCallsBetweenInStatement(routeDecoratorCall, outerBuild)
         var pathPattern = "/**"
-        var pathType = PathType.EXACT
+        var pathType = PathType.GLOB
         var methods = ""
         var decoratorLabel = message("route.explorer.target.routeDecorator")
-        var current: PsiElement? = routeDecoratorCall
-        while (current is PsiMethodCallExpression) {
-            when (current.methodExpression.referenceName) {
+        for (methodCall in chainCalls) {
+            when (methodCall.methodExpression.referenceName) {
                 "path", "pathPrefix", "pathRegex", "pathGlob" -> {
-                    val raw = extractString(current.argumentList.expressions.firstOrNull()) ?: pathPattern
+                    val raw = extractString(methodCall.argumentList.expressions.firstOrNull()) ?: pathPattern
                     val parsed = ArmeriaRouteSupport.parsePathType(
-                        when (current.methodExpression.referenceName) {
+                        when (methodCall.methodExpression.referenceName) {
                             "pathPrefix" -> "prefix:$raw"
                             "pathRegex" -> "regex:$raw"
                             "pathGlob" -> "glob:$raw"
@@ -422,26 +449,103 @@ internal object ArmeriaExtendedRegistrationCollector {
                     pathPattern = parsed.second
                 }
                 "methods", "method" -> {
-                    methods = current.argumentList.expressions.joinToString(", ") { it.text }
+                    methods = methodCall.argumentList.expressions.joinToString(", ") { argument ->
+                        argument.text.removePrefix("HttpMethod.").uppercase()
+                    }
                 }
                 "build" -> {
-                    val decoratorArg = current.argumentList.expressions.firstOrNull()
+                    val decoratorArg = methodCall.argumentList.expressions.firstOrNull()
                     if (decoratorArg != null) {
                         decoratorLabel = ArmeriaDecoratorSupport.labelDecorator(decoratorArg.text)
                     }
                 }
             }
-            current = current.methodExpression.qualifierExpression
         }
         return RouteDecoratorChainInfo(pathPattern, pathType, methods, decoratorLabel)
     }
 
+    private fun methodCallsBetweenInStatement(
+        start: PsiMethodCallExpression,
+        stopExclusive: PsiMethodCallExpression?,
+    ): List<PsiMethodCallExpression> {
+        val statement = PsiTreeUtil.getParentOfType(start, PsiStatement::class.java) ?: return listOf(start)
+        val startOffset = start.textRange.startOffset
+        val stopOffset = stopExclusive?.textRange?.startOffset ?: Int.MAX_VALUE
+        return PsiTreeUtil.findChildrenOfType(statement, PsiMethodCallExpression::class.java)
+            .filter { call -> call.textRange.startOffset in startOffset until stopOffset }
+            .sortedBy { it.textRange.startOffset }
+    }
+
+    private fun previousMethodCallInChain(call: PsiMethodCallExpression): PsiMethodCallExpression? {
+        var expression: PsiElement? = call.methodExpression.qualifierExpression
+        while (expression != null) {
+            when (expression) {
+                is PsiMethodCallExpression -> return expression
+                is PsiReferenceExpression -> expression = expression.qualifier
+                else -> return null
+            }
+        }
+        return null
+    }
+
+    private fun findForwardChainedCall(
+        start: PsiMethodCallExpression,
+        predicate: (PsiMethodCallExpression) -> Boolean,
+    ): PsiMethodCallExpression? {
+        var current: PsiMethodCallExpression? = start
+        while (current != null) {
+            if (predicate(current)) {
+                return current
+            }
+            current = findNextChainedMethodCall(current)
+        }
+        return null
+    }
+
+    private fun findNextChainedMethodCall(call: PsiMethodCallExpression): PsiMethodCallExpression? {
+        var element: PsiElement? = call
+        while (element != null) {
+            val parent = element.parent ?: return null
+            when (parent) {
+                is PsiMethodCallExpression -> {
+                    if (parent.methodExpression.qualifierExpression == element ||
+                        (parent.methodExpression.qualifierExpression as? PsiReferenceExpression)?.qualifier == element
+                    ) {
+                        return parent
+                    }
+                }
+                is PsiReferenceExpression -> {
+                    val grandParent = parent.parent
+                    if (grandParent is PsiMethodCallExpression &&
+                        (grandParent.methodExpression.qualifierExpression == parent ||
+                            (grandParent.methodExpression.qualifierExpression as? PsiReferenceExpression)?.qualifier == parent)
+                    ) {
+                        return grandParent
+                    }
+                }
+            }
+            element = parent
+        }
+        return null
+    }
+
     private fun registrationKey(expression: PsiMethodCallExpression): String? {
         val virtualFile = expression.containingFile?.virtualFile ?: return null
-        return "${virtualFile.path}:${expression.textRange.startOffset}"
+        val methodName = expression.methodExpression.referenceName ?: return null
+        return ArmeriaRouteSupport.registrationKey(
+            virtualFile.path,
+            expression.textRange,
+            methodName,
+        )
     }
 
     private fun looksLikeArmeriaBuilderCall(expression: PsiMethodCallExpression): Boolean {
+        val methodName = expression.methodExpression.referenceName
+        if (methodName == ServiceRegistrationMethod.VIRTUAL_HOST.methodName ||
+            methodName == ServiceRegistrationMethod.ROUTE_DECORATOR.methodName
+        ) {
+            return true
+        }
         val resolvedClass = expression.resolveMethod()?.containingClass?.qualifiedName
         if (resolvedClass?.startsWith(ArmeriaRouteSupport.ARMERIA_SERVER_PACKAGE_PREFIX) == true) {
             return true

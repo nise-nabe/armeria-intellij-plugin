@@ -454,6 +454,10 @@ abstract class ArmeriaFixtureTestBase : LightJavaCodeInsightFixtureTestCase() {
                     return this;
                 }
 
+                public ServerBuilder virtualHost(String hostname) {
+                    return this;
+                }
+
                 public com.linecorp.armeria.server.Server build() {
                     return null;
                 }

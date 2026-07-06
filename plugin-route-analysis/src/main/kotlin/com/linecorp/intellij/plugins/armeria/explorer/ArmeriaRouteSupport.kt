@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.openapi.util.TextRange
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
@@ -364,6 +365,9 @@ object ArmeriaRouteSupport {
     fun looksLikeServerBuilderReceiverText(text: String): Boolean {
         return SERVER_BUILDER_CALL.containsMatchIn(text) || SERVER_BUILDER_IDENTIFIER.containsMatchIn(text)
     }
+
+    fun registrationKey(virtualFilePath: String, textRange: TextRange, methodName: String): String =
+        "$virtualFilePath:${textRange.startOffset}:${textRange.endOffset}:$methodName"
 
     fun referencesArmeriaApplicationInSource(contents: CharSequence): Boolean {
         if (FQCN_SERVER_BUILDER_CALL.containsMatchIn(contents)) {
