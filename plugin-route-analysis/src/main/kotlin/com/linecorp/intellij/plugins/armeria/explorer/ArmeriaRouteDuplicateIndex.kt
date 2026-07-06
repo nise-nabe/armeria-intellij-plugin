@@ -48,7 +48,7 @@ object ArmeriaRouteDuplicateIndex {
         return emptyList()
     }
 
-    internal fun duplicateRegistrationLabel(route: ArmeriaRoute): String = registrationLabel(route)
+    fun duplicateRegistrationLabel(route: ArmeriaRoute): String = registrationLabel(route)
 
     internal fun duplicateGroups(project: Project): List<DuplicateRegistrationGroup> {
         return getIndex(project).groups
