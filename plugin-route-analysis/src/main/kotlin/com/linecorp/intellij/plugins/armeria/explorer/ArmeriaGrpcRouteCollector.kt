@@ -118,3 +118,13 @@ internal object ArmeriaGrpcRouteCollector {
         return results
     }
 }
+
+fun registerArmeriaGrpcProtoRoute(
+    element: PsiElement,
+    fqService: String,
+    methodName: String,
+    routes: MutableList<ArmeriaRoute>,
+    seenProtoRoutes: MutableSet<String>,
+) {
+    ArmeriaGrpcRouteCollector.addProtoRoute(element, fqService, methodName, routes, seenProtoRoutes)
+}

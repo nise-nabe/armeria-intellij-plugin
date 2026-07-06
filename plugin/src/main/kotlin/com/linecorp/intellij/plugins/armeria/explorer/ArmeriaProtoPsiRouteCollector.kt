@@ -5,7 +5,7 @@ import com.intellij.protobuf.lang.psi.PbServiceDefinition
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 
-internal class ArmeriaProtoPsiRouteCollector : ArmeriaProtoRouteCollector {
+class ArmeriaProtoPsiRouteCollector : ArmeriaProtoRouteCollector {
   override fun collectFromFile(
     file: PsiFile,
     routes: MutableList<ArmeriaRoute>,
@@ -25,7 +25,7 @@ internal class ArmeriaProtoPsiRouteCollector : ArmeriaProtoRouteCollector {
       val methods = service.body?.serviceMethodList.orEmpty()
       for (method in methods) {
         val methodName = method.name ?: continue
-        ArmeriaGrpcRouteCollector.addProtoRoute(method, fqService, methodName, routes, seenProtoRoutes)
+        registerArmeriaGrpcProtoRoute(method, fqService, methodName, routes, seenProtoRoutes)
         collected = true
       }
     }
