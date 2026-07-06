@@ -382,9 +382,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
             }
             methodName in ServiceRegistrationMethod.EXTENDED_METHOD_NAMES -> {
                 val sizeBefore = routes.size
-                if (ArmeriaBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)) {
-                    collectFromKotlinCall(call, methodName, routes, seenRegistrations)
-                }
+                collectFromKotlinCall(call, methodName, routes, seenRegistrations)
                 registrationKey(call)?.let(scopedKeys::add)
                 annotateVirtualHostForCall(call, routes, sizeBefore, hostname)
             }
