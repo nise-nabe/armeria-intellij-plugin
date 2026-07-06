@@ -1,19 +1,19 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
-internal data class ScalaServiceRegistrationMatch(
+data class ScalaServiceRegistrationMatch(
     val methodName: String,
     val path: String,
     val targetText: String,
     val startOffset: Int,
 )
 
-internal data class ScalaClientEndpointMatch(
+data class ScalaClientEndpointMatch(
     val clientSimpleName: String,
     val uri: String,
     val startOffset: Int,
 )
 
-internal object ArmeriaScalaTextSupport {
+object ArmeriaScalaTextSupport {
     /**
      * Text-based Scala route scanning uses regex over source text (no Scala PSI).
      *
