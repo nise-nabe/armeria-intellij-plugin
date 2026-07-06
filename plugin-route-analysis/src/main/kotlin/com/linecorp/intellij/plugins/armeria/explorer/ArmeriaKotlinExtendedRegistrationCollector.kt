@@ -1,14 +1,10 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiStatement
 import com.intellij.psi.util.PsiTreeUtil
-import com.intellij.openapi.project.Project
-import com.intellij.psi.PsiManager
-import com.intellij.psi.search.FileTypeIndex
-import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
-import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
@@ -19,22 +15,7 @@ import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 internal object ArmeriaKotlinExtendedRegistrationCollector {
 
-    fun collect(
-        project: Project,
-        scope: GlobalSearchScope,
-        routes: MutableList<ArmeriaRoute>,
-        seenRegistrations: MutableSet<String>,
-    ) {
-        for (virtualFile in FileTypeIndex.getFiles(KotlinFileType.INSTANCE, scope)) {
-            val ktFile = PsiManager.getInstance(project).findFile(virtualFile) as? KtFile ?: continue
-            if (!ArmeriaKotlinRouteCollector.referencesArmeriaKotlinContent(ktFile)) {
-                continue
-            }
-            collectFromFile(ktFile, routes, seenRegistrations)
-        }
-    }
-
-    private fun collectFromFile(
+    fun collectFromFile(
         file: KtFile,
         routes: MutableList<ArmeriaRoute>,
         seenRegistrations: MutableSet<String>,
@@ -48,7 +29,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
             if (methodName !in ServiceRegistrationMethod.EXTENDED_METHOD_NAMES) {
                 return@forEachDescendant
             }
-            if (!ArmeriaKotlinRouteCollector.looksLikeArmeriaBuilderCall(call)) {
+            if (!ArmeriaBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)) {
                 return@forEachDescendant
             }
             collectFromKotlinCall(call, methodName, routes, seenRegistrations)
@@ -151,24 +132,23 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
         seenRegistrations: MutableSet<String>,
     ) {
         val key = registrationKey(call) ?: return
-        if (!seenRegistrations.add(key)) {
-            return
-        }
         val pathArg = call.valueArguments.firstOrNull()?.getArgumentExpression()
         val hostname = extractKotlinString(pathArg) ?: pathArg?.text
             ?: message("route.explorer.target.virtualHost")
-        routes += ArmeriaRoute.create(
-            element = call,
-            protocol = RouteProtocol.HTTP.presentableName(),
-            httpMethod = "",
-            path = "/",
-            target = hostname,
-            routeMatch = RouteMatch.VIRTUAL_HOST,
-            virtualHostName = hostname,
-            decorators = ArmeriaKotlinDecoratorSupport.collectProgrammaticDecorators(call, "/"),
-            timeoutHints = ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(call),
-        )
-        collectNestedRegistrations(call, routes, seenRegistrations, hostname)
+        if (seenRegistrations.add(key)) {
+            routes += ArmeriaRoute.create(
+                element = call,
+                protocol = RouteProtocol.HTTP.presentableName(),
+                httpMethod = "",
+                path = "/",
+                target = hostname,
+                routeMatch = RouteMatch.VIRTUAL_HOST,
+                virtualHostName = hostname,
+                decorators = ArmeriaKotlinDecoratorSupport.collectProgrammaticDecorators(call, "/"),
+                timeoutHints = ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(call),
+            )
+        }
+        collectVirtualHostScopedRegistrations(call, routes, seenRegistrations, hostname)
     }
 
     private fun addWithRoute(
@@ -184,12 +164,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
         val buildCall = findFluentRouteBuildInLambda(lambdaBody)
             ?: findFluentRouteBuildAfterCall(call)
             ?: return
-        val chainInfo = extractFluentRouteChain(buildCall, requireRouteAnchor = false) ?: return
-        val key = registrationKey(buildCall) ?: return
-        if (!seenRegistrations.add(key)) {
-            return
-        }
-        routes += createFluentRoute(buildCall, chainInfo)
+        addFluentRouteFromBuild(buildCall, routes, seenRegistrations, requireRouteAnchor = false)
     }
 
     private fun tryCollectFluentRoute(
@@ -204,10 +179,19 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
         if (buildCall.valueArguments.isEmpty()) {
             return
         }
-        val chainInfo = extractFluentRouteChain(buildCall, requireRouteAnchor = true) ?: return
-        if (requireBuilderCall && !ArmeriaKotlinRouteCollector.looksLikeArmeriaBuilderCall(buildCall)) {
+        if (requireBuilderCall && !ArmeriaBuilderCallHeuristics.looksLikeKotlinBuilderCall(buildCall)) {
             return
         }
+        addFluentRouteFromBuild(buildCall, routes, seenRegistrations, requireRouteAnchor = true)
+    }
+
+    private fun addFluentRouteFromBuild(
+        buildCall: KtCallExpression,
+        routes: MutableList<ArmeriaRoute>,
+        seenRegistrations: MutableSet<String>,
+        requireRouteAnchor: Boolean,
+    ) {
+        val chainInfo = extractFluentRouteChain(buildCall, requireRouteAnchor) ?: return
         val key = registrationKey(buildCall) ?: return
         if (!seenRegistrations.add(key)) {
             return
@@ -232,13 +216,6 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
         )
     }
 
-    private data class FluentRouteChainInfo(
-        val httpMethod: String,
-        val path: String,
-        val pathType: PathType,
-        val target: String,
-    )
-
     private fun extractFluentRouteChain(
         buildCall: KtCallExpression,
         requireRouteAnchor: Boolean,
@@ -246,126 +223,194 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
         if (resolveCallName(buildCall) != "build") {
             return null
         }
+        val steps = mutableListOf<RegistrationChainStep>()
         var current: KtCallExpression? = parentCallExpression(buildCall)
-        var httpMethod = ""
-        var path = "/"
-        var pathType = PathType.EXACT
-        var foundRoute = false
-        var foundPath = false
         while (current != null) {
-            when (resolveCallName(current)) {
-                "route" -> {
-                    foundRoute = true
-                    break
-                }
-                in ServiceRegistrationMethod.FLUENT_ROUTE_HTTP_METHODS -> {
-                    httpMethod = resolveCallName(current)!!.uppercase()
-                    parsePathFromCall(current)?.let { parsed ->
-                        path = parsed.second
-                        pathType = parsed.first
-                        foundPath = true
-                    }
-                }
-                "path" -> parsePathFromCall(current)?.let { parsed ->
-                    path = parsed.second
-                    pathType = parsed.first
-                    foundPath = true
-                }
-                "pathPrefix" -> {
-                    val raw = extractKotlinString(current.valueArguments.firstOrNull()?.getArgumentExpression()) ?: path
-                    val parsed = ArmeriaRouteSupport.parsePathType("prefix:$raw")
-                    pathType = parsed.first
-                    path = parsed.second
-                    foundPath = true
-                }
-                "pathRegex" -> {
-                    val raw = extractKotlinString(current.valueArguments.firstOrNull()?.getArgumentExpression()) ?: path
-                    val parsed = ArmeriaRouteSupport.parsePathType("regex:$raw")
-                    pathType = parsed.first
-                    path = parsed.second
-                    foundPath = true
-                }
-                "pathGlob" -> {
-                    val raw = extractKotlinString(current.valueArguments.firstOrNull()?.getArgumentExpression()) ?: path
-                    val parsed = ArmeriaRouteSupport.parsePathType("glob:$raw")
-                    pathType = parsed.first
-                    path = parsed.second
-                    foundPath = true
-                }
-                "methods", "method" -> {
-                    httpMethod = current.valueArguments.joinToString(", ") { argument ->
-                        argument.getArgumentExpression()?.text?.removePrefix("HttpMethod.")?.uppercase().orEmpty()
-                    }
-                }
-            }
+            steps += toChainStep(current)
             current = parentCallExpression(current)
         }
-        if (requireRouteAnchor && !foundRoute) {
-            return null
-        }
-        if (!requireRouteAnchor && !foundPath) {
-            return null
-        }
         val handlerArg = buildCall.valueArguments.firstOrNull()?.getArgumentExpression()?.text
-        return FluentRouteChainInfo(
-            httpMethod = httpMethod,
-            path = path,
-            pathType = pathType,
-            target = handlerArg ?: message("route.explorer.target.fluentRoute"),
+        return ArmeriaRegistrationChainReducer.reduceFluentRouteChain(
+            stepsFromBuildUpward = steps,
+            requireRouteAnchor = requireRouteAnchor,
+            handlerTarget = handlerArg,
+            defaultTarget = message("route.explorer.target.fluentRoute"),
         )
     }
-
-    private fun parsePathFromCall(call: KtCallExpression): Pair<PathType, String>? {
-        val raw = extractKotlinString(call.valueArguments.firstOrNull()?.getArgumentExpression()) ?: return null
-        return ArmeriaRouteSupport.parsePathType(raw)
-    }
-
-    private data class RouteDecoratorChainInfo(
-        val pathPattern: String,
-        val pathType: PathType,
-        val methods: String,
-        val decoratorLabel: String,
-    )
 
     private fun extractRouteDecoratorChain(routeDecoratorCall: KtCallExpression): RouteDecoratorChainInfo {
         val outerBuild = findForwardChainedCall(routeDecoratorCall) { call ->
             resolveCallName(call) == "build" && call.valueArguments.isEmpty()
         }
         val chainCalls = methodCallsBetweenInStatement(routeDecoratorCall, outerBuild)
-        var pathPattern = "/**"
-        var pathType = PathType.GLOB
-        var methods = ""
-        var decoratorLabel = message("route.explorer.target.routeDecorator")
-        for (call in chainCalls) {
-            when (resolveCallName(call)) {
-                "path", "pathPrefix", "pathRegex", "pathGlob" -> {
-                    val raw = extractKotlinString(call.valueArguments.firstOrNull()?.getArgumentExpression())
-                        ?: pathPattern
-                    val parsed = ArmeriaRouteSupport.parsePathType(
-                        when (resolveCallName(call)) {
-                            "pathPrefix" -> "prefix:$raw"
-                            "pathRegex" -> "regex:$raw"
-                            "pathGlob" -> "glob:$raw"
-                            else -> raw
-                        },
-                    )
-                    pathType = parsed.first
-                    pathPattern = parsed.second
-                }
-                "methods", "method" -> {
-                    methods = call.valueArguments.joinToString(", ") { argument ->
-                        argument.getArgumentExpression()?.text?.removePrefix("HttpMethod.")?.uppercase().orEmpty()
-                    }
-                }
-                "build" -> {
-                    val decoratorArg = call.valueArguments.firstOrNull()?.getArgumentExpression()
-                    if (decoratorArg != null && call.valueArguments.isNotEmpty()) {
-                        decoratorLabel = ArmeriaDecoratorSupport.labelDecorator(decoratorArg.text)
-                    }
-                }
+        val steps = chainCalls.map(::toChainStep)
+        return ArmeriaRegistrationChainReducer.reduceRouteDecoratorChain(
+            steps = steps,
+            defaultDecoratorLabel = message("route.explorer.target.routeDecorator"),
+        )
+    }
+
+    private fun collectVirtualHostScopedRegistrations(
+        virtualHostCall: KtCallExpression,
+        routes: MutableList<ArmeriaRoute>,
+        seenRegistrations: MutableSet<String>,
+        hostname: String,
+    ) {
+        val scopedKeys = linkedSetOf<String>()
+        collectForwardChainedRegistrations(virtualHostCall, routes, seenRegistrations, hostname, scopedKeys)
+        for (argument in virtualHostCall.valueArguments) {
+            val argumentExpression = argument.getArgumentExpression() ?: continue
+            val lambdaBody = (argumentExpression as? KtLambdaExpression
+                ?: argumentExpression.getParentOfType<KtLambdaExpression>(strict = false))
+                ?.bodyExpression
+                ?: continue
+            collectRegistrationsInVirtualHostScope(
+                lambdaBody,
+                virtualHostCall,
+                routes,
+                seenRegistrations,
+                hostname,
+                scopedKeys,
+            )
+        }
+        annotateRoutesByKeys(routes, scopedKeys, hostname) { route ->
+            val element = route.pointer.element as? KtCallExpression ?: return@annotateRoutesByKeys null
+            registrationKey(element)
+        }
+    }
+
+    private fun annotateRoutesByKeys(
+        routes: MutableList<ArmeriaRoute>,
+        registrationKeys: Set<String>,
+        hostname: String,
+        routeKey: (ArmeriaRoute) -> String?,
+    ) {
+        if (registrationKeys.isEmpty()) {
+            return
+        }
+        for (index in routes.indices) {
+            val key = routeKey(routes[index]) ?: continue
+            if (key in registrationKeys) {
+                ArmeriaRouteVirtualHostAnnotator.annotateRouteAt(routes, index, hostname)
             }
         }
-        return RouteDecoratorChainInfo(pathPattern, pathType, methods, decoratorLabel)
+    }
+
+    private fun collectForwardChainedRegistrations(
+        virtualHostCall: KtCallExpression,
+        routes: MutableList<ArmeriaRoute>,
+        seenRegistrations: MutableSet<String>,
+        hostname: String,
+        scopedKeys: MutableSet<String>,
+    ) {
+        var current = findNextChainedCall(virtualHostCall)
+        while (current != null) {
+            val methodName = resolveCallName(current)
+            if (methodName == "build" && current.valueArguments.isEmpty()) {
+                break
+            }
+            processVirtualHostScopedCall(current, routes, seenRegistrations, hostname, scopedKeys)
+            current = findNextChainedCall(current)
+        }
+    }
+
+    private fun collectRegistrationsInVirtualHostScope(
+        root: KtExpression,
+        outerVirtualHostCall: KtCallExpression,
+        routes: MutableList<ArmeriaRoute>,
+        seenRegistrations: MutableSet<String>,
+        hostname: String,
+        scopedKeys: MutableSet<String>,
+    ) {
+        val calls = buildList {
+            if (root is KtCallExpression) {
+                add(root)
+            }
+            root.forEachDescendant { element ->
+                (element as? KtCallExpression)?.let(::add)
+            }
+        }
+        calls.forEach { nested ->
+            if (nested == outerVirtualHostCall || isInsideInnerVirtualHost(nested, outerVirtualHostCall)) {
+                return@forEach
+            }
+            processVirtualHostScopedCall(nested, routes, seenRegistrations, hostname, scopedKeys)
+        }
+    }
+
+    private fun isInsideInnerVirtualHost(
+        element: PsiElement,
+        outerVirtualHostCall: KtCallExpression,
+    ): Boolean {
+        var parent = element.parent
+        while (parent != null && parent != outerVirtualHostCall) {
+            if (parent is KtCallExpression &&
+                resolveCallName(parent) == ServiceRegistrationMethod.VIRTUAL_HOST.methodName &&
+                parent != outerVirtualHostCall
+            ) {
+                return true
+            }
+            parent = parent.parent
+        }
+        return false
+    }
+
+    private fun processVirtualHostScopedCall(
+        call: KtCallExpression,
+        routes: MutableList<ArmeriaRoute>,
+        seenRegistrations: MutableSet<String>,
+        hostname: String,
+        scopedKeys: MutableSet<String>,
+    ) {
+        val methodName = resolveCallName(call) ?: return
+        when {
+            methodName == ServiceRegistrationMethod.VIRTUAL_HOST.methodName -> {
+                addVirtualHost(call, routes, seenRegistrations)
+            }
+            methodName == "build" -> {
+                val sizeBefore = routes.size
+                tryCollectFluentRoute(call, routes, seenRegistrations, requireBuilderCall = false)
+                registrationKey(call)?.let(scopedKeys::add)
+                annotateVirtualHostForCall(call, routes, sizeBefore, hostname)
+            }
+            methodName in CoreServiceRegistrationMethod.METHOD_NAMES -> {
+                val sizeBefore = routes.size
+                ArmeriaKotlinRouteCollector.addServiceRegistrationFromCall(call, routes, seenRegistrations)
+                registrationKey(call)?.let(scopedKeys::add)
+                annotateVirtualHostForCall(call, routes, sizeBefore, hostname)
+            }
+            methodName in ServiceRegistrationMethod.EXTENDED_METHOD_NAMES -> {
+                val sizeBefore = routes.size
+                collectFromKotlinCall(call, methodName, routes, seenRegistrations)
+                registrationKey(call)?.let(scopedKeys::add)
+                annotateVirtualHostForCall(call, routes, sizeBefore, hostname)
+            }
+        }
+    }
+
+    private fun annotateVirtualHostForCall(
+        call: KtCallExpression,
+        routes: MutableList<ArmeriaRoute>,
+        sizeBefore: Int,
+        hostname: String,
+    ) {
+        val key = registrationKey(call)
+        if (key != null) {
+            ArmeriaRouteVirtualHostAnnotator.annotateByKey(routes, key, hostname) { route ->
+                val element = route.pointer.element as? KtCallExpression ?: return@annotateByKey null
+                registrationKey(element)
+            }
+        } else {
+            ArmeriaRouteVirtualHostAnnotator.annotateRoutesAddedSince(routes, sizeBefore, hostname)
+        }
+    }
+
+    private fun toChainStep(call: KtCallExpression): RegistrationChainStep {
+        return RegistrationChainStep(
+            methodName = resolveCallName(call).orEmpty(),
+            firstStringArg = extractKotlinString(call.valueArguments.firstOrNull()?.getArgumentExpression()),
+            rawMethodArgs = call.valueArguments.mapNotNull { it.getArgumentExpression()?.text },
+        )
     }
 
     private fun methodCallsBetweenInStatement(
@@ -385,128 +430,6 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
         return calls.sortedBy { it.textRange.startOffset }
     }
 
-    private fun collectNestedRegistrations(
-        virtualHostCall: KtCallExpression,
-        routes: MutableList<ArmeriaRoute>,
-        seenRegistrations: MutableSet<String>,
-        hostname: String,
-    ) {
-        var current: KtCallExpression? = previousCallInChain(virtualHostCall)
-        while (current != null) {
-            val methodName = resolveCallName(current) ?: break
-            if (methodName in ServiceRegistrationMethod.METHOD_NAMES - ServiceRegistrationMethod.EXTENDED_METHOD_NAMES &&
-                ArmeriaKotlinRouteCollector.looksLikeArmeriaBuilderCall(current)
-            ) {
-                val beforeSize = routes.size
-                ArmeriaKotlinRouteCollector.collectServiceRegistrationsInScope(current, routes, seenRegistrations)
-                annotateRouteWithVirtualHost(routes, current, hostname, routes.size > beforeSize)
-            }
-            if (methodName in ServiceRegistrationMethod.EXTENDED_METHOD_NAMES &&
-                methodName != ServiceRegistrationMethod.VIRTUAL_HOST.methodName
-            ) {
-                val beforeSize = routes.size
-                collectFromKotlinCall(current, methodName, routes, seenRegistrations)
-                annotateRouteWithVirtualHost(routes, current, hostname, routes.size > beforeSize)
-            }
-            current = previousCallInChain(current)
-        }
-        annotatePrecedingRoutesInStatement(virtualHostCall, routes, hostname)
-        virtualHostCall.forEachDescendant { element ->
-            val nested = element as? KtCallExpression ?: return@forEachDescendant
-            if (nested == virtualHostCall) {
-                return@forEachDescendant
-            }
-            annotateNestedVirtualHostRegistration(nested, routes, seenRegistrations, hostname)
-        }
-    }
-
-    private fun annotateNestedVirtualHostRegistration(
-        nested: KtCallExpression,
-        routes: MutableList<ArmeriaRoute>,
-        seenRegistrations: MutableSet<String>,
-        hostname: String,
-    ) {
-        when (resolveCallName(nested)) {
-            "build" -> {
-                val beforeSize = routes.size
-                tryCollectFluentRoute(nested, routes, seenRegistrations, requireBuilderCall = false)
-                annotateRouteWithVirtualHost(routes, nested, hostname, routes.size > beforeSize)
-            }
-            in ServiceRegistrationMethod.CORE_METHOD_NAMES -> {
-                val beforeSize = routes.size
-                ArmeriaKotlinRouteCollector.collectServiceRegistrationsInScope(nested, routes, seenRegistrations)
-                annotateRouteWithVirtualHost(routes, nested, hostname, routes.size > beforeSize)
-            }
-            in ServiceRegistrationMethod.EXTENDED_METHOD_NAMES -> {
-                if (resolveCallName(nested) == ServiceRegistrationMethod.VIRTUAL_HOST.methodName) {
-                    return
-                }
-                val methodName = resolveCallName(nested) ?: return
-                val beforeSize = routes.size
-                collectFromKotlinCall(nested, methodName, routes, seenRegistrations)
-                annotateRouteWithVirtualHost(routes, nested, hostname, routes.size > beforeSize)
-            }
-        }
-    }
-
-    private fun annotatePrecedingRoutesInStatement(
-        anchorCall: KtCallExpression,
-        routes: MutableList<ArmeriaRoute>,
-        hostname: String,
-    ) {
-        if (resolveCallName(anchorCall) != ServiceRegistrationMethod.VIRTUAL_HOST.methodName) {
-            return
-        }
-        val virtualFile = anchorCall.containingKtFile.virtualFile ?: return
-        val statement = anchorCall.getParentOfType<PsiStatement>(strict = false) ?: return
-        for (index in routes.indices) {
-            val route = routes[index]
-            if (route.virtualHostName.isNotEmpty() || route.routeMatch == RouteMatch.VIRTUAL_HOST) {
-                continue
-            }
-            val element = route.pointer.element ?: continue
-            if (element.containingFile.virtualFile != virtualFile) {
-                continue
-            }
-            if (PsiTreeUtil.getParentOfType(element, PsiStatement::class.java) != statement) {
-                continue
-            }
-            routes[index] = route.copy(virtualHostName = hostname)
-        }
-    }
-
-    private fun annotateRouteWithVirtualHost(
-        routes: MutableList<ArmeriaRoute>,
-        registrationCall: KtCallExpression,
-        hostname: String,
-        addedNewRoute: Boolean,
-    ) {
-        if (addedNewRoute) {
-            annotateLastRouteWithVirtualHost(routes, hostname)
-            return
-        }
-        val registrationCallKey = registrationKey(registrationCall) ?: return
-        val index = routes.indexOfLast { route ->
-            val element = route.pointer.element as? KtCallExpression ?: return@indexOfLast false
-            registrationKey(element) == registrationCallKey
-        }
-        if (index < 0) {
-            return
-        }
-        val route = routes[index]
-        if (route.virtualHostName.isEmpty() && route.routeMatch != RouteMatch.VIRTUAL_HOST) {
-            routes[index] = route.copy(virtualHostName = hostname)
-        }
-    }
-
-    private fun annotateLastRouteWithVirtualHost(routes: MutableList<ArmeriaRoute>, hostname: String) {
-        val last = routes.lastOrNull() ?: return
-        if (last.virtualHostName.isNotEmpty() || last.routeMatch == RouteMatch.VIRTUAL_HOST) {
-            return
-        }
-        routes[routes.lastIndex] = last.copy(virtualHostName = hostname)
-    }
-
     private fun parentCallExpression(call: KtCallExpression): KtCallExpression? {
         val parent = call.parent
         return when (parent) {
@@ -517,20 +440,6 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
                     else -> null
                 }
             }
-            else -> null
-        }
-    }
-
-    private fun parentReceiverExpression(call: KtCallExpression): KtExpression? {
-        val parent = call.parent as? KtDotQualifiedExpression ?: return null
-        return parent.receiverExpression
-    }
-
-    private fun previousCallInChain(call: KtCallExpression): KtCallExpression? {
-        val receiver = parentReceiverExpression(call) ?: return null
-        return when (receiver) {
-            is KtCallExpression -> receiver
-            is KtDotQualifiedExpression -> receiver.selectorExpression as? KtCallExpression
             else -> null
         }
     }

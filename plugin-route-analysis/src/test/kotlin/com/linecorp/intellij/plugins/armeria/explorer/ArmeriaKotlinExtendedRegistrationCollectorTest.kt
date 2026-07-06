@@ -56,7 +56,7 @@ class ArmeriaKotlinExtendedRegistrationCollectorTest : ArmeriaFixtureTestBase() 
         assertEquals("/api/items", fluentRoute.path)
     }
 
-    fun testCollectKotlinChainedVirtualHostAnnotatesServiceRoute() {
+    fun testCollectKotlinChainedVirtualHostDoesNotAnnotatePrecedingServiceRoute() {
         myFixture.configureByText(
             "Main.kt",
             """
@@ -78,7 +78,60 @@ class ArmeriaKotlinExtendedRegistrationCollectorTest : ArmeriaFixtureTestBase() 
         val serviceRoute = routes.firstOrNull { it.routeMatch == RouteMatch.SERVICE }
         assertNotNull(serviceRoute)
         assertEquals("/api", serviceRoute!!.path)
+        assertEquals("", serviceRoute.virtualHostName)
+    }
+
+    fun testCollectKotlinVirtualHostThenServiceAnnotatesServiceRoute() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                Server.builder()
+                    .virtualHost("api.example.com")
+                    .service("/api", ApiService())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class ApiService {}")
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val serviceRoute = routes.firstOrNull { it.routeMatch == RouteMatch.SERVICE }
+        assertNotNull(serviceRoute)
+        assertEquals("/api", serviceRoute!!.path)
         assertEquals("api.example.com", serviceRoute.virtualHostName)
+    }
+
+    fun testCollectKotlinNestedVirtualHostLambdaUsesInnerHostname() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                Server.builder()
+                    .virtualHost("outer.example.com") { outer ->
+                        outer.virtualHost("inner.example.com") { inner ->
+                            inner.service("/api", ApiService())
+                        }
+                    }
+                    .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class ApiService {}")
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val serviceRoute = routes.firstOrNull { it.routeMatch == RouteMatch.SERVICE }
+        assertNotNull(serviceRoute)
+        assertEquals("/api", serviceRoute!!.path)
+        assertEquals("inner.example.com", serviceRoute.virtualHostName)
     }
 
     fun testCollectKotlinDecoratorUnderRegistration() {

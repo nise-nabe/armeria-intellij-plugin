@@ -475,8 +475,8 @@ class ArmeriaRouteDuplicateIndexTest : ArmeriaFixtureTestBase() {
             public class FirstMain {
                 public static void main(String[] args) {
                     Server.builder()
-                        .service("/api", new FirstService())
                         .virtualHost("a.example.com")
+                        .service("/api", new FirstService())
                         .build();
                 }
             }
@@ -491,8 +491,8 @@ class ArmeriaRouteDuplicateIndexTest : ArmeriaFixtureTestBase() {
             public class SecondMain {
                 public static void main(String[] args) {
                     Server.builder()
-                        .service("/api", new SecondService())
                         .virtualHost("b.example.com")
+                        .service("/api", new SecondService())
                         .build();
                 }
             }
@@ -501,6 +501,13 @@ class ArmeriaRouteDuplicateIndexTest : ArmeriaFixtureTestBase() {
         myFixture.addClass("package example; public class FirstService {}")
         myFixture.addClass("package example; public class SecondService {}")
 
+        val routes = ArmeriaRouteCollector.collect(project)
+        val serviceRoutes = routes.filter { it.routeMatch == RouteMatch.SERVICE && it.path == "/api" }
+        assertEquals(2, serviceRoutes.size)
+        assertEquals(
+            setOf("a.example.com", "b.example.com"),
+            serviceRoutes.map { it.virtualHostName }.toSet(),
+        )
         assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
     }
 
