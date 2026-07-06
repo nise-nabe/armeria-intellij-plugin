@@ -382,7 +382,12 @@ object ArmeriaRouteCollector {
 
     private fun serviceRegistrationKey(expression: PsiMethodCallExpression): String? {
         val virtualFile = expression.containingFile?.virtualFile ?: return null
-        return "${virtualFile.path}:${expression.textRange.startOffset}"
+        val methodName = expression.methodExpression.referenceName ?: return null
+        return ArmeriaRouteSupport.registrationKey(
+            virtualFile.path,
+            expression.textRange,
+            methodName,
+        )
     }
 
     private fun looksLikeArmeriaBuilderCall(expression: PsiMethodCallExpression): Boolean {

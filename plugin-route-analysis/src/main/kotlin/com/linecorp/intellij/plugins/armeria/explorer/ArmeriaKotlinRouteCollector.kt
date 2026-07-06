@@ -102,6 +102,12 @@ object ArmeriaKotlinRouteCollector {
     }
 
     internal fun looksLikeArmeriaBuilderCall(call: KtCallExpression): Boolean {
+        val methodName = resolveCallName(call)
+        if (methodName == ServiceRegistrationMethod.VIRTUAL_HOST.methodName ||
+            methodName == ServiceRegistrationMethod.ROUTE_DECORATOR.methodName
+        ) {
+            return true
+        }
         if (resolvesToArmeriaServerBuilder(call)) {
             return true
         }
@@ -110,6 +116,10 @@ object ArmeriaKotlinRouteCollector {
             else -> call.parent as? KtDotQualifiedExpression
         }
         if (dotQualified != null && isServerBuilderReceiver(dotQualified.receiverExpression)) {
+            return true
+        }
+        val receiverText = dotQualified?.receiverExpression?.text.orEmpty()
+        if (receiverText.contains("virtualHost") || receiverText.contains("routeDecorator")) {
             return true
         }
         return hasServerBuilderImplicitReceiver(call)
@@ -253,7 +263,11 @@ object ArmeriaKotlinRouteCollector {
         seenServiceRegistrations: MutableSet<String>,
     ) {
         val virtualFile = call.containingKtFile.virtualFile ?: return
-        val registrationKey = "${virtualFile.path}:${call.textRange.startOffset}"
+        val registrationKey = ArmeriaRouteSupport.registrationKey(
+            virtualFile.path,
+            call.textRange,
+            methodName,
+        )
         val arguments = call.valueArguments
         val path = extractRegistrationPath(methodName, arguments) ?: return
         val implementationExpression = resolveServiceExpression(methodName, arguments) ?: return
