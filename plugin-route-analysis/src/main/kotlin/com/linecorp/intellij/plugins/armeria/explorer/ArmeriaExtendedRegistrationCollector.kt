@@ -158,15 +158,16 @@ internal object ArmeriaExtendedRegistrationCollector {
         routes: MutableList<ArmeriaRoute>,
         seenRegistrations: MutableSet<String>,
     ) {
-        val key = registrationKey(expression) ?: return
+        val lambdaBody = (expression.argumentList.expressions.firstOrNull() as? PsiLambdaExpression)?.body ?: return
+        val buildCall = PsiTreeUtil.findChildrenOfType(lambdaBody, PsiMethodCallExpression::class.java)
+            .filter { it.methodExpression.referenceName == "build" }
+            .firstOrNull { extractFluentRouteChain(it, requireRouteAnchor = false) != null }
+            ?: return
+        val chainInfo = extractFluentRouteChain(buildCall, requireRouteAnchor = false) ?: return
+        val key = registrationKey(buildCall) ?: return
         if (!seenRegistrations.add(key)) {
             return
         }
-        val lambdaBody = (expression.argumentList.expressions.firstOrNull() as? PsiLambdaExpression)?.body ?: return
-        val buildCall = PsiTreeUtil.findChildrenOfType(lambdaBody, PsiMethodCallExpression::class.java)
-            .firstOrNull { it.methodExpression.referenceName == "build" }
-            ?: return
-        val chainInfo = extractFluentRouteChain(buildCall, requireRouteAnchor = false) ?: return
         routes += createFluentRoute(buildCall, chainInfo)
     }
 
@@ -176,6 +177,9 @@ internal object ArmeriaExtendedRegistrationCollector {
         seenRegistrations: MutableSet<String>,
     ) {
         if (buildCall.methodExpression.referenceName != "build") {
+            return
+        }
+        if (!looksLikeArmeriaBuilderCall(buildCall)) {
             return
         }
         val chainInfo = extractFluentRouteChain(buildCall, requireRouteAnchor = true) ?: return
