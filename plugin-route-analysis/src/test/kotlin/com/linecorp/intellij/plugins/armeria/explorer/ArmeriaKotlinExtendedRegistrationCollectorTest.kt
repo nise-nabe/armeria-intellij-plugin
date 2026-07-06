@@ -253,6 +253,31 @@ class ArmeriaKotlinExtendedRegistrationCollectorTest : ArmeriaFixtureTestBase() 
         assertEquals("api.example.com", virtualHostRoute!!.virtualHostName)
     }
 
+    fun testCollectKotlinRouteDecoratorDefaultPathTypeIsGlob() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.logging.LoggingService
+
+            fun main() {
+                Server.builder()
+                    .routeDecorator()
+                    .build(LoggingService.newDecorator())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val decoratorRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_DECORATOR }
+        assertNotNull(decoratorRoute)
+        assertEquals(PathType.GLOB, decoratorRoute!!.pathType)
+        assertEquals("/**", decoratorRoute.path)
+    }
+
     fun testCollectKotlinRouteDecoratorRegistration() {
         myFixture.configureByText(
             "Main.kt",
