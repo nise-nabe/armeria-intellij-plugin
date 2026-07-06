@@ -19,6 +19,18 @@ internal object ArmeriaKotlinExpressionSupport {
         while (true) {
             val parent = current.parent ?: break
             if (parent is KtBlockExpression || parent is KtLambdaExpression) {
+                return parent
+            }
+            current = parent
+        }
+        return call
+    }
+
+    fun containingKotlinStatementExpression(call: KtCallExpression): PsiElement {
+        var current: PsiElement = call
+        while (true) {
+            val parent = current.parent ?: break
+            if (parent is KtBlockExpression || parent is KtLambdaExpression) {
                 return current
             }
             current = parent

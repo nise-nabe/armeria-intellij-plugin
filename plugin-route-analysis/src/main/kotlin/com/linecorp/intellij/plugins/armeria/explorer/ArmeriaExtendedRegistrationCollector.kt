@@ -5,7 +5,6 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiLambdaExpression
-import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiStatement
@@ -551,11 +550,6 @@ internal object ArmeriaExtendedRegistrationCollector {
         )
     }
 
-    private fun extractString(expression: PsiExpression?): String? {
-        return when (expression) {
-            null -> null
-            is PsiLiteralExpression -> expression.value as? String
-            else -> expression.text.takeIf { it.isNotBlank() }?.trim('"')
-        }
-    }
+    private fun extractString(expression: PsiExpression?): String? =
+        ArmeriaRouteSupport.extractJavaStringConstant(expression)
 }

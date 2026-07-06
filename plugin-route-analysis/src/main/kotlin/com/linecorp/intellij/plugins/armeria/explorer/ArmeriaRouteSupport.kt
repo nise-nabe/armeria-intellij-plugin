@@ -9,8 +9,11 @@ import com.intellij.psi.PsiMethod
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.PsiAnnotationMemberValue
 import com.intellij.psi.PsiArrayInitializerMemberValue
+import com.intellij.openapi.util.text.StringUtil
+import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiLiteralExpression
+import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiVariable
 
 internal enum class ServiceRegistrationMethod(val methodName: String) {
@@ -300,6 +303,22 @@ object ArmeriaRouteSupport {
             }
         }
         return variable.computeConstantValue() as? String
+    }
+
+    fun extractJavaStringConstant(expression: PsiExpression?): String? {
+        return when (expression) {
+            null -> null
+            is PsiLiteralExpression -> expression.value as? String
+            is PsiReferenceExpression -> {
+                (expression.resolve() as? PsiVariable)?.let(::evaluateJavaStringConstant)
+            }
+            else -> {
+                val constantValue = JavaPsiFacade.getInstance(expression.project)
+                    .constantEvaluationHelper
+                    .computeConstantExpression(expression) as? String
+                constantValue ?: expression.text.takeIf { StringUtil.isNotEmpty(it) }?.trim('"')
+            }
+        }
     }
 
     private fun normalizeServerBuilderTypeText(typeText: String): String {

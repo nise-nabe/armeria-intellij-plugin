@@ -3,11 +3,13 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.intellij.psi.PsiElement
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
+import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtLambdaExpression
+import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 internal object ArmeriaKotlinExtendedRegistrationCollector {
@@ -425,7 +427,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
         start: KtCallExpression,
         stopExclusive: KtCallExpression?,
     ): List<KtCallExpression> {
-        val scope = ArmeriaKotlinExpressionSupport.containingKotlinExpressionScope(start)
+        val scope = ArmeriaKotlinExpressionSupport.containingKotlinStatementExpression(start)
         val startOffset = start.textRange.startOffset
         val stopOffset = stopExclusive?.textRange?.startOffset ?: Int.MAX_VALUE
         val calls = mutableListOf<KtCallExpression>()
@@ -481,7 +483,24 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
     }
 
     private fun findFluentRouteBuildAfterCall(withRouteCall: KtCallExpression): KtCallExpression? {
-        val scope = ArmeriaKotlinExpressionSupport.containingKotlinExpressionScope(withRouteCall)
+        findFluentRouteBuildInScope(
+            ArmeriaKotlinExpressionSupport.containingKotlinStatementExpression(withRouteCall),
+            withRouteCall,
+        )?.let { return it }
+        val blockScope = ArmeriaKotlinExpressionSupport.containingKotlinExpressionScope(withRouteCall)
+        if (blockScope === ArmeriaKotlinExpressionSupport.containingKotlinStatementExpression(withRouteCall)) {
+            return null
+        }
+        if (blockScope is KtBlockExpression && blockScope.parent is KtNamedFunction) {
+            return null
+        }
+        return findFluentRouteBuildInScope(blockScope, withRouteCall)
+    }
+
+    private fun findFluentRouteBuildInScope(
+        scope: PsiElement,
+        withRouteCall: KtCallExpression,
+    ): KtCallExpression? {
         var found: KtCallExpression? = null
         scope.forEachDescendant { element ->
             if (found != null) {

@@ -33,6 +33,33 @@ class ArmeriaExtendedRegistrationCollectorTest : LightJavaCodeInsightFixtureTest
         assertEquals("/files/", fileRoute!!.path)
     }
 
+    fun testCollectFileServiceWithJavaConstantPath() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import java.io.File;
+
+            public class Main {
+                private static final String FILES_PATH = "/files/";
+
+                public static void main(String[] args) {
+                    Server.builder()
+                        .fileService(FILES_PATH, new File("/tmp"))
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val fileRoute = routes.firstOrNull { it.routeMatch == RouteMatch.FILE_SERVICE }
+        assertNotNull(fileRoute)
+        assertEquals("/files/", fileRoute!!.path)
+    }
+
     fun testCollectHealthCheckRegistration() {
         myFixture.configureByText(
             "Main.java",
@@ -374,6 +401,35 @@ class ArmeriaExtendedRegistrationCollectorTest : LightJavaCodeInsightFixtureTest
         val decoratorRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_DECORATOR }
         assertNotNull(decoratorRoute)
         assertEquals("POST, PUT", decoratorRoute!!.httpMethod)
+    }
+
+    fun testCollectRouteDecoratorIgnoresUnrelatedCallsInSameBlock() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.logging.LoggingService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .routeDecorator()
+                        .path("/decorated/**")
+                        .build(LoggingService.newDecorator())
+                        .build();
+                    System.out.println("started");
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val decoratorRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_DECORATOR }
+        assertNotNull(decoratorRoute)
+        assertEquals("/decorated/**", decoratorRoute!!.path)
+        assertEquals(1, routes.count { it.routeMatch == RouteMatch.ROUTE_DECORATOR })
     }
 
     fun testCollectRouteDecoratorRegistration() {
