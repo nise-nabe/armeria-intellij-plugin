@@ -28,19 +28,22 @@ The wrapper `.github/scripts/gradle-mcp-server.sh` sets `GRADLE_PROJECT_DIR` to 
 
 Use `background: true` and poll `gradle_get_build_status` for runs that may exceed ~30s (`build`, `:plugin:test`, cold start).
 
+## Concurrency
+
+Only **one** MCP build per `projectDirectory` at a time. Batch multiple test classes/methods in a **single** `gradle_run_tests` instead of parallel MCP calls. Use `gradle_cancel_build` + poll when you need to stop a stale run.
+
+Do **not** run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` concurrently (IntelliJ test sandbox contention).
+
 ## Common tasks (this repo)
 
 | Goal | MCP |
 |------|-----|
 | Compile | `gradle_run_tasks` `{ "tasks": [":plugin:compileKotlin", ":plugin:compileTestKotlin"] }` |
-| One test class | `gradle_run_tests` `{ "testClasses": ["fully.qualified.ClassName"], "background": true }` |
-| All tests | `gradle_run_tasks` `{ "tasks": [":plugin:test"], "background": true }` |
+| One or more test classes/methods | `gradle_run_tests` `{ "testMethods": { "FQCN": ["method"] }, "background": true }` — batch in one call |
+| All fixture tests | `gradle_run_tasks` `{ "tasks": [":plugin:test"], "background": true }` |
+| Fast unit tests | `gradle_run_tasks` `{ "tasks": [":plugin:fastTest"], "background": true }` |
 | Full verify | `gradle_run_tasks` `{ "tasks": ["build"], "background": true }` |
 
-## Constraints
-
-- One MCP build per `projectDirectory` at a time (`BUILD_ALREADY_RUNNING` on overlap)
-- Do **not** run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` concurrently (IntelliJ test sandbox contention)
-- On MCP timeout: `gradle_list_builds` or read `.gradle/mcp-builds/<buildId>/mcp-result.json`, then shell fallback
+On MCP timeout: `gradle_list_builds` or read `.gradle/mcp-builds/<buildId>/mcp-result.json`, then shell fallback.
 
 Full reference: `.cursor/skills/gradle-tapi-mcp/SKILL.md`

@@ -21,7 +21,7 @@ Read `.cursor/skills/gradle-tapi-mcp/SKILL.md` for the full workflow.
 | Environment / versions | `gradle_get_build_environment` |
 | Module tree | `gradle_get_project_overview` |
 | Compile | `gradle_run_tasks` with `[":plugin:compileKotlin"]` |
-| Tests (one class/method) | `gradle_run_tests` with `background: true` + poll |
+| Tests (batch classes/methods in one call) | `gradle_run_tests` with `background: true` + poll |
 | Full verify | `gradle_run_tasks` with `["build"]`, `background: true` + poll |
 
 Use `background: true` and poll `gradle_get_build_status` for anything that may exceed ~30s (cold start, `:plugin:test`, `build`).
