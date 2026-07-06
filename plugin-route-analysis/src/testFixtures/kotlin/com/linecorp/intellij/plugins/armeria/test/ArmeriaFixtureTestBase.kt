@@ -478,6 +478,10 @@ abstract class ArmeriaFixtureTestBase : LightJavaCodeInsightFixtureTestCase() {
                     return this;
                 }
 
+                public ServerBuilder methods(Object... methods) {
+                    return this;
+                }
+
                 public ServerBuilder pathPrefix(String pathPrefix) {
                     return this;
                 }

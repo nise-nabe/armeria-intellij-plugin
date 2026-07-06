@@ -7,7 +7,6 @@ import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiLambdaExpression
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiReferenceExpression
-import com.intellij.psi.PsiStatement
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.message
 
@@ -188,7 +187,7 @@ internal object ArmeriaExtendedRegistrationCollector {
         if (buildCall.argumentList.expressionCount == 0) {
             return
         }
-        if (requireBuilderCall && !ArmeriaBuilderCallHeuristics.looksLikeJavaBuilderCall(buildCall)) {
+        if (requireBuilderCall && !ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(buildCall)) {
             return
         }
         addFluentRouteFromBuild(buildCall, routes, seenRegistrations, requireRouteAnchor = true)
@@ -454,12 +453,17 @@ internal object ArmeriaExtendedRegistrationCollector {
         start: PsiMethodCallExpression,
         stopExclusive: PsiMethodCallExpression?,
     ): List<PsiMethodCallExpression> {
-        val statement = PsiTreeUtil.getParentOfType(start, PsiStatement::class.java) ?: return listOf(start)
-        val startOffset = start.textRange.startOffset
-        val stopOffset = stopExclusive?.textRange?.startOffset ?: Int.MAX_VALUE
-        return PsiTreeUtil.findChildrenOfType(statement, PsiMethodCallExpression::class.java)
-            .filter { call -> call.textRange.startOffset in startOffset until stopOffset }
-            .sortedBy { it.textRange.startOffset }
+        val calls = mutableListOf(start)
+        var current = start
+        while (true) {
+            val next = findImmediateNextChainedCall(current) ?: break
+            if (next === stopExclusive) {
+                break
+            }
+            calls += next
+            current = next
+        }
+        return calls
     }
 
     private fun previousMethodCallInChain(call: PsiMethodCallExpression): PsiMethodCallExpression? {

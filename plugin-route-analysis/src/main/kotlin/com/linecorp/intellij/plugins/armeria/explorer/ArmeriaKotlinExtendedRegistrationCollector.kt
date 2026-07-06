@@ -178,7 +178,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
         if (buildCall.valueArguments.isEmpty()) {
             return
         }
-        if (requireBuilderCall && !ArmeriaBuilderCallHeuristics.looksLikeKotlinBuilderCall(buildCall)) {
+        if (requireBuilderCall && !ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(buildCall)) {
             return
         }
         addFluentRouteFromBuild(buildCall, routes, seenRegistrations, requireRouteAnchor = true)
@@ -427,17 +427,17 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
         start: KtCallExpression,
         stopExclusive: KtCallExpression?,
     ): List<KtCallExpression> {
-        val scope = ArmeriaKotlinExpressionSupport.containingKotlinStatementExpression(start)
-        val startOffset = start.textRange.startOffset
-        val stopOffset = stopExclusive?.textRange?.startOffset ?: Int.MAX_VALUE
-        val calls = mutableListOf<KtCallExpression>()
-        scope.forEachDescendant { element ->
-            val call = element as? KtCallExpression ?: return@forEachDescendant
-            if (call.textRange.startOffset in startOffset until stopOffset) {
-                calls += call
+        val calls = mutableListOf(start)
+        var current = start
+        while (true) {
+            val next = findNextChainedCall(current) ?: break
+            if (next === stopExclusive) {
+                break
             }
+            calls += next
+            current = next
         }
-        return calls.sortedBy { it.textRange.startOffset }
+        return calls
     }
 
     private fun parentCallExpression(call: KtCallExpression): KtCallExpression? {

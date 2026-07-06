@@ -195,8 +195,21 @@ object ArmeriaRouteDuplicateIndex {
         if (matchesAllHttpMethods(first) || matchesAllHttpMethods(second)) {
             return true
         }
-        return first.httpMethod.equals(second.httpMethod, ignoreCase = true)
+        val firstMethods = parseHttpMethods(first.httpMethod)
+        val secondMethods = parseHttpMethods(second.httpMethod)
+        if (firstMethods.isEmpty() || secondMethods.isEmpty()) {
+            return first.httpMethod.equals(second.httpMethod, ignoreCase = true)
+        }
+        return firstMethods.any { firstMethod ->
+            secondMethods.any { secondMethod -> firstMethod.equals(secondMethod, ignoreCase = true) }
+        }
     }
+
+    private fun parseHttpMethods(httpMethod: String): Set<String> =
+        httpMethod.split(',')
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .toSet()
 
     private fun matchesAllHttpMethods(route: ArmeriaRoute): Boolean =
         when (route.routeMatch) {

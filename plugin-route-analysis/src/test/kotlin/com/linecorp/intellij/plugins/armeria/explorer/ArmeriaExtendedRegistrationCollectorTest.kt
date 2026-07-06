@@ -432,6 +432,38 @@ class ArmeriaExtendedRegistrationCollectorTest : LightJavaCodeInsightFixtureTest
         assertEquals(1, routes.count { it.routeMatch == RouteMatch.ROUTE_DECORATOR })
     }
 
+    fun testCollectRouteDecoratorIgnoresPathCallsInsideDecoratorLambda() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.logging.LoggingService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .routeDecorator()
+                        .path("/decorated/**")
+                        .build(decoratorWithNestedPath(LoggingService.newDecorator()))
+                        .build();
+                }
+
+                private static Object decoratorWithNestedPath(Object decorator) {
+                    LoggingService.builder().path("/wrong/**").build();
+                    return decorator;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val decoratorRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_DECORATOR }
+        assertNotNull(decoratorRoute)
+        assertEquals("/decorated/**", decoratorRoute!!.path)
+    }
+
     fun testCollectRouteDecoratorRegistration() {
         myFixture.configureByText(
             "Main.java",
@@ -788,7 +820,26 @@ class ArmeriaExtendedRegistrationCollectorTest : LightJavaCodeInsightFixtureTest
             package com.linecorp.armeria.server.logging;
 
             public final class LoggingService {
+                public static LoggingServiceBuilder builder() {
+                    return null;
+                }
+
                 public static Object newDecorator() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.logging;
+
+            public final class LoggingServiceBuilder {
+                public LoggingServiceBuilder path(String pathPattern) {
+                    return this;
+                }
+
+                public Object build() {
                     return null;
                 }
             }

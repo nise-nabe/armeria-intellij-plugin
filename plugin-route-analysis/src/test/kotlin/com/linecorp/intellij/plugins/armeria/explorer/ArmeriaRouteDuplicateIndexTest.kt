@@ -581,6 +581,63 @@ class ArmeriaRouteDuplicateIndexTest : ArmeriaFixtureTestBase() {
         assertTrue(groups.single().routes.all { it.routeMatch == RouteMatch.ROUTE_FLUENT })
     }
 
+    fun testFluentRouteWithMultipleMethodsConflictsWithSingleMethodRoute() {
+        myFixture.configureByText(
+            "FirstMain.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.common.HttpMethod;
+            import com.linecorp.armeria.server.Server;
+
+            public class FirstMain {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .route()
+                        .path("/dup")
+                        .methods(HttpMethod.POST, HttpMethod.PUT)
+                        .build(new FirstHandler())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class SecondMain {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .route()
+                        .post("/dup")
+                        .build(new SecondHandler())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.common;
+
+            public final class HttpMethod {
+                public static final HttpMethod POST = new HttpMethod();
+                public static final HttpMethod PUT = new HttpMethod();
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class FirstHandler {}")
+        myFixture.addClass("package example; public class SecondHandler {}")
+
+        val groups = ArmeriaRouteDuplicateIndex.duplicateGroups(project)
+
+        assertEquals(1, groups.size)
+        assertEquals(2, groups.single().routes.size)
+    }
+
     fun testFluentRouteWithPathPrefixConflictsWithAnnotatedRoute() {
         myFixture.configureByText(
             "Main.java",

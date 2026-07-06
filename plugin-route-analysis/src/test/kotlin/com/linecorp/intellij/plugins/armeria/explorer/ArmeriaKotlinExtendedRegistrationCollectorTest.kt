@@ -278,6 +278,36 @@ class ArmeriaKotlinExtendedRegistrationCollectorTest : ArmeriaFixtureTestBase() 
         assertEquals("/decorated/**", decoratorRoute!!.path)
     }
 
+    fun testCollectKotlinRouteDecoratorIgnoresPathCallsInsideDecoratorLambda() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.logging.LoggingService
+
+            fun main() {
+                Server.builder()
+                    .routeDecorator()
+                    .path("/decorated/**")
+                    .build(decoratorWithNestedPath(LoggingService.newDecorator()))
+                    .build()
+            }
+
+            private fun decoratorWithNestedPath(decorator: Any): Any {
+                LoggingService.builder().path("/wrong/**").build()
+                return decorator
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val decoratorRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_DECORATOR }
+        assertNotNull(decoratorRoute)
+        assertEquals("/decorated/**", decoratorRoute!!.path)
+    }
+
     fun testIgnoreNonArmeriaKotlinFluentBuildCalls() {
         myFixture.configureByText(
             "Main.kt",
@@ -525,7 +555,26 @@ class ArmeriaKotlinExtendedRegistrationCollectorTest : ArmeriaFixtureTestBase() 
             package com.linecorp.armeria.server.logging;
 
             public final class LoggingService {
+                public static LoggingServiceBuilder builder() {
+                    return null;
+                }
+
                 public static Object newDecorator() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.logging;
+
+            public final class LoggingServiceBuilder {
+                public LoggingServiceBuilder path(String pathPattern) {
+                    return this;
+                }
+
+                public Object build() {
                     return null;
                 }
             }
