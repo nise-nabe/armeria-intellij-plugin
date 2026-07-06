@@ -199,11 +199,18 @@ class ArmeriaRouteExplorerPanel(
         routeTree.model = DefaultTreeModel(root)
         val selectionRestored = previousSelection != null && restoreTreeSelection(root, previousSelection)
         when {
-            visibleRoutes.isEmpty() -> routeDetailPanel.clear()
-            selectionRestored -> {
-                routeDetailPanel.setRoute(ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent))
+            visibleRoutes.isEmpty() -> {
+                selectedRoute = null
+                routeDetailPanel.clear()
             }
-            else -> routeDetailPanel.setRoute(null)
+            selectionRestored -> {
+                selectedRoute = ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent)
+                routeDetailPanel.setRoute(selectedRoute)
+            }
+            else -> {
+                selectedRoute = null
+                routeDetailPanel.setRoute(null)
+            }
         }
     }
 
