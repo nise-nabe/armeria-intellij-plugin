@@ -20,6 +20,6 @@ When a skill requires `gh` (CI checks, PR comments, API calls):
 
 1. Resolve: `command -v gh` or `/exec-daemon/gh`
 2. Verify: `gh auth status`
-3. If either step fails, stop — do not loop on missing `gh`. Use ManagePullRequest for PRs or `./gradlew build` for local verification.
+3. If either step fails, stop — do not loop on missing `gh`. Use ManagePullRequest for PRs or Gradle MCP (`gradle_run_tasks` `["build"]`) for local verification.
 
 Do not install `gh` in agent sessions. See `.cursor/skills/cloud-github/SKILL.md`.

@@ -6,5 +6,6 @@
 - Prefer small, focused changes in the existing feature areas: module/project generation, route explorer, inspections, and run configuration support.
 - Route user-visible strings through `message(...)` and add the corresponding keys to `plugin/src/main/resources/messages/ArmeriaBundle.properties` instead of hard-coding UI text.
 - Reuse existing IntelliJ PSI and platform APIs already used in the plugin instead of introducing parallel abstractions.
-- Validate changes with `./gradlew --no-daemon :plugin:compileKotlin :plugin:test`.
+- **Gradle tasks:** prefer the `gradle` MCP server (`nise-nabe/gradle-tapi-mcp-server` v0.3.3) configured in `.github/mcp.json`. Read `.github/skills/gradle-tapi-mcp/SKILL.md` for workflows. Use `gradle_run_tasks` / `gradle_run_tests` with `background: true` and poll `gradle_get_build_status` for long runs. Fall back to `./gradlew` only when MCP is unavailable.
+- Validate changes with MCP: `gradle_run_tasks` `[":plugin:compileKotlin", ":plugin:compileTestKotlin"]`, then `gradle_run_tests` for changed test classes (one at a time, background + poll). Before finishing, run `gradle_run_tasks` `["build"]` with `background: true` (or shell `./gradlew build` if MCP times out).
 - The build targets IntelliJ IDEA Ultimate `2026.1.3` and uses the Java 21 JetBrains toolchain, so keep new code compatible with that environment.

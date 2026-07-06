@@ -1,0 +1,35 @@
+---
+description: Prefer Gradle Tooling API MCP server for Gradle tasks; shell ./gradlew is fallback only
+alwaysApply: true
+---
+
+# Gradle tasks via MCP
+
+For **all Gradle task execution and build verification** in this repository, prefer the `gradle` MCP server (`nise-nabe/gradle-tapi-mcp-server` v0.3.3) over shell `./gradlew`.
+
+## Before running tasks
+
+1. `gradle_connection_status` — confirm `connectedAny: true`
+2. If not connected, `gradle_connect` with the repository root (or rely on `GRADLE_PROJECT_DIR` from `.cursor/mcp.json` / `.github/scripts/gradle-mcp-server.sh`)
+
+Read `.cursor/skills/gradle-tapi-mcp/SKILL.md` for the full workflow.
+
+## Default tools
+
+| Goal | MCP tool |
+|------|----------|
+| Environment / versions | `gradle_get_build_environment` |
+| Module tree | `gradle_get_project_overview` |
+| Compile | `gradle_run_tasks` with `[":plugin:compileKotlin"]` |
+| Tests (one class/method) | `gradle_run_tests` with `background: true` + poll |
+| Full verify | `gradle_run_tasks` with `["build"]`, `background: true` + poll |
+
+Use `background: true` and poll `gradle_get_build_status` for anything that may exceed ~30s (cold start, `:plugin:test`, `build`).
+
+## Shell fallback only when
+
+- MCP tools time out or the server is unresponsive (poll `gradle_list_builds` / read `.gradle/mcp-builds/<buildId>/mcp-result.json` first)
+- `BUILD_ALREADY_RUNNING` and you cannot cancel the in-flight MCP build
+- PR / CI parity requires `./gradlew build` after MCP verification passes
+
+Do **not** run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` on the same checkout concurrently.
