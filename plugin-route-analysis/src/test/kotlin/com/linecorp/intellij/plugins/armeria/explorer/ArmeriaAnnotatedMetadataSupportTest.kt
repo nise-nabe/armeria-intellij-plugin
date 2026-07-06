@@ -1,12 +1,13 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 import com.linecorp.intellij.plugins.armeria.message
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
-class ArmeriaAnnotatedMetadataSupportTest : LightJavaCodeInsightFixtureTestCase() {
-    override fun setUp() {
-        super.setUp()
-        registerStubs()
+class ArmeriaAnnotatedMetadataSupportTest : ArmeriaFixtureTestBase() {
+    override fun registerArmeriaStubs() {
+        registerArmeriaAnnotationStubs()
+        registerArmeriaBlockingAnnotationStubs()
+        registerContentAnnotationStubs()
     }
 
     fun testCollectContentHintsForAnnotatedRoute() {
@@ -166,63 +167,6 @@ class ArmeriaAnnotatedMetadataSupportTest : LightJavaCodeInsightFixtureTestCase(
         assertEquals(
             listOf(message("route.explorer.hint.description", "Shared summary.")),
             route.contentHints,
-        )
-    }
-
-    private fun registerStubs() {
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.annotation;
-            public @interface Get { String value() default ""; String path() default ""; }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.annotation;
-            public @interface Post { String value() default ""; String path() default ""; }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.annotation;
-            public @interface Param { String value() default ""; }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.annotation;
-            public @interface StatusCode { int value(); }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.annotation;
-            public @interface Consumes { String[] value(); }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.annotation;
-            public @interface Produces { String[] value(); }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.annotation;
-            public @interface MatchesHeader { String value(); }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.annotation;
-            public @interface Blocking {}
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.annotation;
-            public @interface Description { String value() default ""; }
-            """.trimIndent(),
         )
     }
 }

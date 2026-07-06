@@ -54,7 +54,6 @@ internal object ArmeriaAnnotatedMetadataSupport {
             .filter { it.qualifiedName == annotationFqn }
             .flatMap { annotation ->
                 ArmeriaRouteSupport.extractStrings(annotation.findDeclaredAttributeValue("value"))
-                    .ifEmpty { ArmeriaRouteSupport.extractStrings(annotation.findDeclaredAttributeValue("types")) }
             }
             .distinct()
         if (types.isEmpty()) {
