@@ -184,7 +184,7 @@ class ArmeriaExtendedRegistrationCollectorTest : LightJavaCodeInsightFixtureTest
         assertEquals("api.example.com", virtualHostRoute.virtualHostName)
     }
 
-    fun testCollectChainedVirtualHostAnnotatesServiceRoute() {
+    fun testCollectChainedVirtualHostDoesNotAnnotatePrecedingServiceRoute() {
         myFixture.configureByText(
             "Main.java",
             """
@@ -208,7 +208,92 @@ class ArmeriaExtendedRegistrationCollectorTest : LightJavaCodeInsightFixtureTest
         val serviceRoute = routes.firstOrNull { it.routeMatch == RouteMatch.SERVICE }
         assertNotNull(serviceRoute)
         assertEquals("/api", serviceRoute!!.path)
+        assertEquals("", serviceRoute.virtualHostName)
+    }
+
+    fun testCollectVirtualHostThenServiceAnnotatesServiceRoute() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .virtualHost("api.example.com")
+                        .service("/api", new ApiService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class ApiService {}")
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val serviceRoute = routes.firstOrNull { it.routeMatch == RouteMatch.SERVICE }
+        assertNotNull(serviceRoute)
+        assertEquals("/api", serviceRoute!!.path)
         assertEquals("api.example.com", serviceRoute.virtualHostName)
+    }
+
+    fun testCollectVirtualHostChainAnnotatesOnlyPostVirtualHostService() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/default", new ApiService())
+                        .virtualHost("api.example.com")
+                        .service("/hosted", new ApiService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class ApiService {}")
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val defaultRoute = routes.firstOrNull { it.path == "/default" }
+        val hostedRoute = routes.firstOrNull { it.path == "/hosted" }
+        assertNotNull(defaultRoute)
+        assertNotNull(hostedRoute)
+        assertEquals("", defaultRoute!!.virtualHostName)
+        assertEquals("api.example.com", hostedRoute!!.virtualHostName)
+    }
+
+    fun testCollectNestedVirtualHostLambdaUsesInnerHostname() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .virtualHost("outer.example.com", outer -> outer
+                            .virtualHost("inner.example.com", inner -> inner
+                                .service("/api", new ApiService())))
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class ApiService {}")
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val serviceRoute = routes.firstOrNull { it.routeMatch == RouteMatch.SERVICE }
+        assertNotNull(serviceRoute)
+        assertEquals("/api", serviceRoute!!.path)
+        assertEquals("inner.example.com", serviceRoute.virtualHostName)
     }
 
     fun testCollectRouteDecoratorDefaultPathTypeIsGlob() {

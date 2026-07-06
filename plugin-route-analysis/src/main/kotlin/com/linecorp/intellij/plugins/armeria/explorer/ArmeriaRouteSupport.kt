@@ -36,7 +36,7 @@ internal enum class ServiceRegistrationMethod(val methodName: String) {
             WITH_ROUTE.methodName,
             DECORATOR_UNDER.methodName,
         )
-        val CORE_METHOD_NAMES: Set<String> = METHOD_NAMES - EXTENDED_METHOD_NAMES
+        val CORE_METHOD_NAMES: Set<String> = CoreServiceRegistrationMethod.METHOD_NAMES
         val FLUENT_ROUTE_HTTP_METHODS: Set<String> = setOf(
             "get", "head", "post", "put", "delete", "options", "patch", "trace",
         )

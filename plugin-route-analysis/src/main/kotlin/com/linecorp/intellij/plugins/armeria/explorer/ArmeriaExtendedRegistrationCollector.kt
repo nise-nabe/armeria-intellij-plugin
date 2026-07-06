@@ -28,6 +28,15 @@ internal object ArmeriaExtendedRegistrationCollector {
         })
     }
 
+    fun visitMethodCallExpression(
+        expression: PsiMethodCallExpression,
+        routes: MutableList<ArmeriaRoute>,
+        seenRegistrations: MutableSet<String>,
+    ) {
+        collectFromMethodCall(expression, routes, seenRegistrations)
+        tryCollectFluentRoute(expression, routes, seenRegistrations)
+    }
+
     fun collectFromMethodCall(
         expression: PsiMethodCallExpression,
         routes: MutableList<ArmeriaRoute>,
@@ -38,7 +47,7 @@ internal object ArmeriaExtendedRegistrationCollector {
         if (methodName !in ServiceRegistrationMethod.EXTENDED_METHOD_NAMES) {
             return
         }
-        if (requireBuilderCall && !looksLikeArmeriaBuilderCall(expression)) {
+        if (requireBuilderCall && !ArmeriaBuilderCallHeuristics.looksLikeJavaBuilderCall(expression)) {
             return
         }
         when (ServiceRegistrationMethod.fromMethodName(methodName)) {
@@ -109,24 +118,23 @@ internal object ArmeriaExtendedRegistrationCollector {
         seenRegistrations: MutableSet<String>,
     ) {
         val key = registrationKey(expression) ?: return
-        if (!seenRegistrations.add(key)) {
-            return
-        }
         val hostname = extractString(expression.argumentList.expressions.firstOrNull())
             ?: expression.argumentList.expressions.firstOrNull()?.text
             ?: message("route.explorer.target.virtualHost")
-        routes += ArmeriaRoute.create(
-            element = expression,
-            protocol = RouteProtocol.HTTP.presentableName(),
-            httpMethod = "",
-            path = "/",
-            target = hostname,
-            routeMatch = RouteMatch.VIRTUAL_HOST,
-            virtualHostName = hostname,
-            decorators = ArmeriaDecoratorSupport.collectProgrammaticDecorators(expression, "/"),
-            timeoutHints = ArmeriaTimeoutSupport.collectBuilderTimeoutHints(expression),
-        )
-        collectNestedRegistrations(expression, routes, seenRegistrations, hostname)
+        if (seenRegistrations.add(key)) {
+            routes += ArmeriaRoute.create(
+                element = expression,
+                protocol = RouteProtocol.HTTP.presentableName(),
+                httpMethod = "",
+                path = "/",
+                target = hostname,
+                routeMatch = RouteMatch.VIRTUAL_HOST,
+                virtualHostName = hostname,
+                decorators = ArmeriaDecoratorSupport.collectProgrammaticDecorators(expression, "/"),
+                timeoutHints = ArmeriaTimeoutSupport.collectBuilderTimeoutHints(expression),
+            )
+        }
+        collectVirtualHostScopedRegistrations(expression, routes, seenRegistrations, hostname)
     }
 
     private fun addDecoratorUnder(
@@ -166,12 +174,7 @@ internal object ArmeriaExtendedRegistrationCollector {
             .filter { it.methodExpression.referenceName == "build" }
             .firstOrNull { extractFluentRouteChain(it, requireRouteAnchor = false) != null }
             ?: return
-        val chainInfo = extractFluentRouteChain(buildCall, requireRouteAnchor = false) ?: return
-        val key = registrationKey(buildCall) ?: return
-        if (!seenRegistrations.add(key)) {
-            return
-        }
-        routes += createFluentRoute(buildCall, chainInfo)
+        addFluentRouteFromBuild(buildCall, routes, seenRegistrations, requireRouteAnchor = false)
     }
 
     private fun tryCollectFluentRoute(
@@ -186,10 +189,19 @@ internal object ArmeriaExtendedRegistrationCollector {
         if (buildCall.argumentList.expressionCount == 0) {
             return
         }
-        if (requireBuilderCall && !looksLikeArmeriaBuilderCall(buildCall)) {
+        if (requireBuilderCall && !ArmeriaBuilderCallHeuristics.looksLikeJavaBuilderCall(buildCall)) {
             return
         }
-        val chainInfo = extractFluentRouteChain(buildCall, requireRouteAnchor = true) ?: return
+        addFluentRouteFromBuild(buildCall, routes, seenRegistrations, requireRouteAnchor = true)
+    }
+
+    private fun addFluentRouteFromBuild(
+        buildCall: PsiMethodCallExpression,
+        routes: MutableList<ArmeriaRoute>,
+        seenRegistrations: MutableSet<String>,
+        requireRouteAnchor: Boolean,
+    ) {
+        val chainInfo = extractFluentRouteChain(buildCall, requireRouteAnchor) ?: return
         val key = registrationKey(buildCall) ?: return
         if (!seenRegistrations.add(key)) {
             return
@@ -214,13 +226,6 @@ internal object ArmeriaExtendedRegistrationCollector {
         )
     }
 
-    private data class FluentRouteChainInfo(
-        val httpMethod: String,
-        val path: String,
-        val pathType: PathType,
-        val target: String,
-    )
-
     private fun extractFluentRouteChain(
         buildCall: PsiMethodCallExpression,
         requireRouteAnchor: Boolean,
@@ -228,78 +233,19 @@ internal object ArmeriaExtendedRegistrationCollector {
         if (buildCall.methodExpression.referenceName != "build") {
             return null
         }
+        val steps = mutableListOf<RegistrationChainStep>()
         var current = previousMethodCallInChain(buildCall)
-        var httpMethod = ""
-        var path = "/"
-        var pathType = PathType.EXACT
-        var foundRoute = false
-        var foundPath = false
         while (current != null) {
-            when (current.methodExpression.referenceName) {
-                "route" -> {
-                    foundRoute = true
-                    break
-                }
-                in ServiceRegistrationMethod.FLUENT_ROUTE_HTTP_METHODS -> {
-                    httpMethod = current.methodExpression.referenceName!!.uppercase()
-                    parsePathFromCall(current)?.let { parsed ->
-                        path = parsed.second
-                        pathType = parsed.first
-                        foundPath = true
-                    }
-                }
-                "path" -> parsePathFromCall(current)?.let { parsed ->
-                    path = parsed.second
-                    pathType = parsed.first
-                    foundPath = true
-                }
-                "pathPrefix" -> {
-                    val raw = extractString(current.argumentList.expressions.firstOrNull()) ?: path
-                    val parsed = ArmeriaRouteSupport.parsePathType("prefix:$raw")
-                    pathType = parsed.first
-                    path = parsed.second
-                    foundPath = true
-                }
-                "pathRegex" -> {
-                    val raw = extractString(current.argumentList.expressions.firstOrNull()) ?: path
-                    val parsed = ArmeriaRouteSupport.parsePathType("regex:$raw")
-                    pathType = parsed.first
-                    path = parsed.second
-                    foundPath = true
-                }
-                "pathGlob" -> {
-                    val raw = extractString(current.argumentList.expressions.firstOrNull()) ?: path
-                    val parsed = ArmeriaRouteSupport.parsePathType("glob:$raw")
-                    pathType = parsed.first
-                    path = parsed.second
-                    foundPath = true
-                }
-                "methods", "method" -> {
-                    httpMethod = current.argumentList.expressions.joinToString(", ") { argument ->
-                        argument.text.removePrefix("HttpMethod.").uppercase()
-                    }
-                }
-            }
+            steps += toChainStep(current)
             current = previousMethodCallInChain(current)
         }
-        if (requireRouteAnchor && !foundRoute) {
-            return null
-        }
-        if (!requireRouteAnchor && !foundPath) {
-            return null
-        }
         val handlerArg = buildCall.argumentList.expressions.firstOrNull()?.text
-        return FluentRouteChainInfo(
-            httpMethod = httpMethod,
-            path = path,
-            pathType = pathType,
-            target = handlerArg ?: message("route.explorer.target.fluentRoute"),
+        return ArmeriaRegistrationChainReducer.reduceFluentRouteChain(
+            stepsFromBuildUpward = steps,
+            requireRouteAnchor = requireRouteAnchor,
+            handlerTarget = handlerArg,
+            defaultTarget = message("route.explorer.target.fluentRoute"),
         )
-    }
-
-    private fun parsePathFromCall(call: PsiMethodCallExpression): Pair<PathType, String>? {
-        val raw = extractString(call.argumentList.expressions.firstOrNull()) ?: return null
-        return ArmeriaRouteSupport.parsePathType(raw)
     }
 
     private fun addRouteDecorator(
@@ -325,169 +271,173 @@ internal object ArmeriaExtendedRegistrationCollector {
         )
     }
 
-    private fun collectNestedRegistrations(
+    private fun collectVirtualHostScopedRegistrations(
         virtualHostCall: PsiMethodCallExpression,
         routes: MutableList<ArmeriaRoute>,
         seenRegistrations: MutableSet<String>,
         hostname: String,
     ) {
-        var current = previousMethodCallInChain(virtualHostCall)
-        while (current != null) {
-            val methodName = current.methodExpression.referenceName
-            if (methodName in ServiceRegistrationMethod.METHOD_NAMES - ServiceRegistrationMethod.EXTENDED_METHOD_NAMES &&
-                looksLikeArmeriaBuilderCall(current)
-            ) {
-                val added = ArmeriaRouteCollector.addServiceRegistrationFromCall(current, routes, seenRegistrations)
-                annotateRouteWithVirtualHost(routes, current, hostname, added)
-            }
-            if (methodName in ServiceRegistrationMethod.EXTENDED_METHOD_NAMES &&
-                methodName != ServiceRegistrationMethod.VIRTUAL_HOST.methodName
-            ) {
-                val beforeSize = routes.size
-                collectFromMethodCall(current, routes, seenRegistrations)
-                annotateRouteWithVirtualHost(routes, current, hostname, routes.size > beforeSize)
-            }
-            current = previousMethodCallInChain(current)
+        val scopedKeys = linkedSetOf<String>()
+        collectForwardChainedRegistrations(virtualHostCall, routes, seenRegistrations, hostname, scopedKeys)
+        for (argument in virtualHostCall.argumentList.expressions) {
+            val lambdaBody = (argument as? PsiLambdaExpression)?.body ?: continue
+            collectRegistrationsInVirtualHostScope(
+                lambdaBody,
+                virtualHostCall,
+                routes,
+                seenRegistrations,
+                hostname,
+                scopedKeys,
+            )
         }
-        annotatePrecedingRoutesInStatement(virtualHostCall, routes, hostname)
-        PsiTreeUtil.findChildrenOfType(virtualHostCall, PsiMethodCallExpression::class.java).forEach { nested ->
-            if (nested == virtualHostCall) {
-                return@forEach
-            }
-            annotateNestedVirtualHostRegistration(nested, routes, seenRegistrations, hostname)
+        annotateRoutesByKeys(routes, scopedKeys, hostname) { route ->
+            val element = route.pointer.element as? PsiMethodCallExpression ?: return@annotateRoutesByKeys null
+            registrationKey(element)
         }
     }
 
-    private fun annotateNestedVirtualHostRegistration(
-        nested: PsiMethodCallExpression,
+    private fun annotateRoutesByKeys(
+        routes: MutableList<ArmeriaRoute>,
+        registrationKeys: Set<String>,
+        hostname: String,
+        routeKey: (ArmeriaRoute) -> String?,
+    ) {
+        if (registrationKeys.isEmpty()) {
+            return
+        }
+        for (index in routes.indices) {
+            val key = routeKey(routes[index]) ?: continue
+            if (key in registrationKeys) {
+                ArmeriaRouteVirtualHostAnnotator.annotateRouteAt(routes, index, hostname)
+            }
+        }
+    }
+
+    private fun collectForwardChainedRegistrations(
+        virtualHostCall: PsiMethodCallExpression,
         routes: MutableList<ArmeriaRoute>,
         seenRegistrations: MutableSet<String>,
         hostname: String,
+        scopedKeys: MutableSet<String>,
     ) {
-        when (nested.methodExpression.referenceName) {
-            "build" -> {
-                val beforeSize = routes.size
-                tryCollectFluentRoute(nested, routes, seenRegistrations, requireBuilderCall = false)
-                annotateRouteWithVirtualHost(routes, nested, hostname, routes.size > beforeSize)
+        var current = findImmediateNextChainedCall(virtualHostCall)
+        while (current != null) {
+            val methodName = current.methodExpression.referenceName
+            if (methodName == "build" && current.argumentList.expressionCount == 0) {
+                break
             }
-            in ServiceRegistrationMethod.CORE_METHOD_NAMES -> {
-                val added = ArmeriaRouteCollector.addServiceRegistrationFromCall(nested, routes, seenRegistrations)
-                annotateRouteWithVirtualHost(routes, nested, hostname, added)
+            processVirtualHostScopedCall(current, routes, seenRegistrations, hostname, scopedKeys)
+            current = findImmediateNextChainedCall(current)
+        }
+    }
+
+    private fun collectRegistrationsInVirtualHostScope(
+        root: PsiElement,
+        outerVirtualHostCall: PsiMethodCallExpression,
+        routes: MutableList<ArmeriaRoute>,
+        seenRegistrations: MutableSet<String>,
+        hostname: String,
+        scopedKeys: MutableSet<String>,
+    ) {
+        val methodCalls = buildList {
+            if (root is PsiMethodCallExpression) {
+                add(root)
             }
-            in ServiceRegistrationMethod.EXTENDED_METHOD_NAMES -> {
-                if (nested.methodExpression.referenceName == ServiceRegistrationMethod.VIRTUAL_HOST.methodName) {
-                    return
-                }
-                val beforeSize = routes.size
-                collectFromMethodCall(nested, routes, seenRegistrations, requireBuilderCall = false)
-                annotateRouteWithVirtualHost(routes, nested, hostname, routes.size > beforeSize)
+            addAll(PsiTreeUtil.findChildrenOfType(root, PsiMethodCallExpression::class.java))
+        }
+        methodCalls.forEach { nested ->
+            if (nested == outerVirtualHostCall || isInsideInnerVirtualHost(nested, outerVirtualHostCall)) {
+                return@forEach
+            }
+            processVirtualHostScopedCall(nested, routes, seenRegistrations, hostname, scopedKeys)
+        }
+    }
+
+    private fun isInsideInnerVirtualHost(
+        element: PsiElement,
+        outerVirtualHostCall: PsiMethodCallExpression,
+    ): Boolean {
+        var parent = element.parent
+        while (parent != null && parent != outerVirtualHostCall) {
+            if (parent is PsiMethodCallExpression &&
+                parent.methodExpression.referenceName == ServiceRegistrationMethod.VIRTUAL_HOST.methodName &&
+                parent != outerVirtualHostCall
+            ) {
+                return true
+            }
+            parent = parent.parent
+        }
+        return false
+    }
+
+    private fun processVirtualHostScopedCall(
+        call: PsiMethodCallExpression,
+        routes: MutableList<ArmeriaRoute>,
+        seenRegistrations: MutableSet<String>,
+        hostname: String,
+        scopedKeys: MutableSet<String>,
+    ) {
+        val methodName = call.methodExpression.referenceName ?: return
+        when {
+            methodName == ServiceRegistrationMethod.VIRTUAL_HOST.methodName -> {
+                addVirtualHost(call, routes, seenRegistrations)
+            }
+            methodName == "build" -> {
+                val sizeBefore = routes.size
+                tryCollectFluentRoute(call, routes, seenRegistrations, requireBuilderCall = false)
+                registrationKey(call)?.let(scopedKeys::add)
+                annotateVirtualHostForCall(call, routes, sizeBefore, hostname)
+            }
+            methodName in CoreServiceRegistrationMethod.METHOD_NAMES -> {
+                val sizeBefore = routes.size
+                ArmeriaRouteCollector.addServiceRegistrationFromCall(call, routes, seenRegistrations)
+                registrationKey(call)?.let(scopedKeys::add)
+                annotateVirtualHostForCall(call, routes, sizeBefore, hostname)
+            }
+            methodName in ServiceRegistrationMethod.EXTENDED_METHOD_NAMES -> {
+                val sizeBefore = routes.size
+                collectFromMethodCall(call, routes, seenRegistrations, requireBuilderCall = false)
+                registrationKey(call)?.let(scopedKeys::add)
+                annotateVirtualHostForCall(call, routes, sizeBefore, hostname)
             }
         }
     }
 
-    private fun annotatePrecedingRoutesInStatement(
-        anchorCall: PsiMethodCallExpression,
+    private fun annotateVirtualHostForCall(
+        call: PsiMethodCallExpression,
         routes: MutableList<ArmeriaRoute>,
+        sizeBefore: Int,
         hostname: String,
     ) {
-        if (anchorCall.methodExpression.referenceName != ServiceRegistrationMethod.VIRTUAL_HOST.methodName) {
-            return
-        }
-        val virtualFile = anchorCall.containingFile.virtualFile ?: return
-        val statement = PsiTreeUtil.getParentOfType(anchorCall, PsiStatement::class.java) ?: return
-        for (index in routes.indices) {
-            val route = routes[index]
-            if (route.virtualHostName.isNotEmpty() || route.routeMatch == RouteMatch.VIRTUAL_HOST) {
-                continue
+        val key = registrationKey(call)
+        if (key != null) {
+            ArmeriaRouteVirtualHostAnnotator.annotateByKey(routes, key, hostname) { route ->
+                val element = route.pointer.element as? PsiMethodCallExpression ?: return@annotateByKey null
+                registrationKey(element)
             }
-            val element = route.pointer.element ?: continue
-            if (element.containingFile.virtualFile != virtualFile) {
-                continue
-            }
-            if (PsiTreeUtil.getParentOfType(element, PsiStatement::class.java) != statement) {
-                continue
-            }
-            routes[index] = route.copy(virtualHostName = hostname)
+        } else {
+            ArmeriaRouteVirtualHostAnnotator.annotateRoutesAddedSince(routes, sizeBefore, hostname)
         }
     }
-
-    private fun annotateRouteWithVirtualHost(
-        routes: MutableList<ArmeriaRoute>,
-        registrationCall: PsiMethodCallExpression,
-        hostname: String,
-        addedNewRoute: Boolean,
-    ) {
-        if (addedNewRoute) {
-            annotateLastRouteWithVirtualHost(routes, hostname)
-            return
-        }
-        val registrationCallKey = registrationKey(registrationCall) ?: return
-        val index = routes.indexOfLast { route ->
-            val element = route.pointer.element as? PsiMethodCallExpression ?: return@indexOfLast false
-            registrationKey(element) == registrationCallKey
-        }
-        if (index < 0) {
-            return
-        }
-        val route = routes[index]
-        if (route.virtualHostName.isEmpty() && route.routeMatch != RouteMatch.VIRTUAL_HOST) {
-            routes[index] = route.copy(virtualHostName = hostname)
-        }
-    }
-
-    private fun annotateLastRouteWithVirtualHost(routes: MutableList<ArmeriaRoute>, hostname: String) {
-        val last = routes.lastOrNull() ?: return
-        if (last.virtualHostName.isNotEmpty() || last.routeMatch == RouteMatch.VIRTUAL_HOST) {
-            return
-        }
-        routes[routes.lastIndex] = last.copy(virtualHostName = hostname)
-    }
-
-    private data class RouteDecoratorChainInfo(
-        val pathPattern: String,
-        val pathType: PathType,
-        val methods: String,
-        val decoratorLabel: String,
-    )
 
     private fun extractRouteDecoratorChain(routeDecoratorCall: PsiMethodCallExpression): RouteDecoratorChainInfo {
         val outerBuild = findForwardChainedCall(routeDecoratorCall) { call ->
             call.methodExpression.referenceName == "build" && call.argumentList.expressionCount == 0
         }
         val chainCalls = methodCallsBetweenInStatement(routeDecoratorCall, outerBuild)
-        var pathPattern = "/**"
-        var pathType = PathType.GLOB
-        var methods = ""
-        var decoratorLabel = message("route.explorer.target.routeDecorator")
-        for (methodCall in chainCalls) {
-            when (methodCall.methodExpression.referenceName) {
-                "path", "pathPrefix", "pathRegex", "pathGlob" -> {
-                    val raw = extractString(methodCall.argumentList.expressions.firstOrNull()) ?: pathPattern
-                    val parsed = ArmeriaRouteSupport.parsePathType(
-                        when (methodCall.methodExpression.referenceName) {
-                            "pathPrefix" -> "prefix:$raw"
-                            "pathRegex" -> "regex:$raw"
-                            "pathGlob" -> "glob:$raw"
-                            else -> raw
-                        },
-                    )
-                    pathType = parsed.first
-                    pathPattern = parsed.second
-                }
-                "methods", "method" -> {
-                    methods = methodCall.argumentList.expressions.joinToString(", ") { argument ->
-                        argument.text.removePrefix("HttpMethod.").uppercase()
-                    }
-                }
-                "build" -> {
-                    val decoratorArg = methodCall.argumentList.expressions.firstOrNull()
-                    if (decoratorArg != null) {
-                        decoratorLabel = ArmeriaDecoratorSupport.labelDecorator(decoratorArg.text)
-                    }
-                }
-            }
-        }
-        return RouteDecoratorChainInfo(pathPattern, pathType, methods, decoratorLabel)
+        val steps = chainCalls.map(::toChainStep)
+        return ArmeriaRegistrationChainReducer.reduceRouteDecoratorChain(
+            steps = steps,
+            defaultDecoratorLabel = message("route.explorer.target.routeDecorator"),
+        )
+    }
+
+    private fun toChainStep(call: PsiMethodCallExpression): RegistrationChainStep {
+        return RegistrationChainStep(
+            methodName = call.methodExpression.referenceName.orEmpty(),
+            firstStringArg = extractString(call.argumentList.expressions.firstOrNull()),
+            rawMethodArgs = call.argumentList.expressions.map { it.text },
+        )
     }
 
     private fun methodCallsBetweenInStatement(
@@ -528,6 +478,31 @@ internal object ArmeriaExtendedRegistrationCollector {
         return null
     }
 
+    private fun findImmediateNextChainedCall(call: PsiMethodCallExpression): PsiMethodCallExpression? {
+        var element: PsiElement? = call
+        while (element != null) {
+            val parent = element.parent ?: return null
+            when (parent) {
+                is PsiReferenceExpression -> {
+                    val grandParent = parent.parent
+                    if (grandParent is PsiMethodCallExpression &&
+                        grandParent.methodExpression == parent &&
+                        grandParent !== call
+                    ) {
+                        return grandParent
+                    }
+                }
+                is PsiMethodCallExpression -> {
+                    if (parent.methodExpression.qualifierExpression == element && parent !== call) {
+                        return parent
+                    }
+                }
+            }
+            element = parent
+        }
+        return null
+    }
+
     private fun findNextChainedMethodCall(call: PsiMethodCallExpression): PsiMethodCallExpression? {
         var element: PsiElement? = call
         while (element != null) {
@@ -563,16 +538,6 @@ internal object ArmeriaExtendedRegistrationCollector {
             expression.textRange,
             methodName,
         )
-    }
-
-    private fun looksLikeArmeriaBuilderCall(expression: PsiMethodCallExpression): Boolean {
-        val resolvedClass = expression.resolveMethod()?.containingClass?.qualifiedName
-        if (resolvedClass?.startsWith(ArmeriaRouteSupport.ARMERIA_SERVER_PACKAGE_PREFIX) == true) {
-            return true
-        }
-        val qualifierText = expression.methodExpression.qualifierExpression?.text ?: return false
-        return ArmeriaRouteSupport.looksLikeServerBuilderReceiverText(qualifierText) ||
-            qualifierText.contains("routeDecorator")
     }
 
     private fun extractString(expression: PsiExpression?): String? {
