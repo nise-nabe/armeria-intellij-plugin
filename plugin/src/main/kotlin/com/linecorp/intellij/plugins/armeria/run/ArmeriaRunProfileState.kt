@@ -14,6 +14,8 @@ import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.execution.util.JavaParametersUtil
 import com.intellij.ide.browsers.OpenUrlHyperlinkInfo
 import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.project.DumbService
+import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.openapi.roots.ModuleRootManager
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaDocServiceSupport
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRoute
@@ -55,11 +57,19 @@ class ArmeriaRunProfileState(
     }
 
     private fun resolveDocServiceUrl(): String? {
+        val project = configuration.project
         val module = configuration.getConfigurationModule().module ?: return null
-        val routes = ReadAction.compute<List<ArmeriaRoute>, RuntimeException> {
-            ArmeriaRouteCollector.collect(configuration.project)
+        if (DumbService.isDumb(project)) {
+            return null
         }
-        return ArmeriaDocServiceSupport.primaryUrl(routes.filter { it.moduleName == module.name })
+        return try {
+            val routes = ReadAction.compute<List<ArmeriaRoute>, RuntimeException> {
+                ArmeriaRouteCollector.collect(project)
+            }
+            ArmeriaDocServiceSupport.primaryUrl(routes.filter { it.moduleName == module.name })
+        } catch (_: IndexNotReadyException) {
+            null
+        }
     }
 
     private fun printDocServiceHint(result: ExecutionResult, url: String) {
