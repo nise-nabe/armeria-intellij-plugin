@@ -126,10 +126,17 @@ class ArmeriaHttpRequestGeneratorTest {
     }
 
     @Test
-    fun supports_annotatedServiceWithPathPrefix() {
+    fun supports_rejectsAnnotatedServiceWithPathPrefix() {
         val route = route(routeMatch = RouteMatch.ANNOTATED_SERVICE, annotatedServiceHasPathPrefix = true, path = "/api")
 
-        assertTrue(ArmeriaHttpRequestGenerator.supports(route))
+        assertFalse(ArmeriaHttpRequestGenerator.supports(route))
+    }
+
+    @Test
+    fun supports_rejectsGrpcRegistrationMount() {
+        val route = route(protocol = "gRPC", path = "/grpc", routeMatch = RouteMatch.NON_HTTP)
+
+        assertFalse(ArmeriaHttpRequestGenerator.supports(route))
     }
 
     @Test
@@ -147,23 +154,61 @@ class ArmeriaHttpRequestGeneratorTest {
         assertEquals("armeria-grpc-example.EchoService-Echo.http", ArmeriaHttpRequestGenerator.fileName(route))
     }
 
+    @Test
+    fun requestText_grpcProtoRoute() {
+        val route = route(
+            protocol = "gRPC",
+            path = "/example.EchoService/Echo",
+            target = "example.EchoService.Echo",
+            routeMatch = RouteMatch.NON_HTTP,
+        )
+
+        assertEquals(
+            """
+            ### gRPC example.EchoService.Echo
+            GRPC http://localhost:8080/example.EchoService/Echo
+
+            # Invoke via DocService: http://localhost:8080/docs
+
+            """.trimIndent() + "\n",
+            ArmeriaHttpRequestGenerator.requestText(route),
+        )
+    }
+
+    @Test
+    fun requestText_preservesRegexPath() {
+        val route = route(httpMethod = "GET", path = """\d{2,3}""", pathType = PathType.REGEX)
+
+        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("""http://localhost:8080\d{2,3}"""))
+    }
+
+    @Test
+    fun requestText_substitutesConstrainedPathVariables() {
+        val route = route(httpMethod = "GET", path = "/users/{id:\\d+}")
+
+        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("/users/1"))
+    }
+
     private fun route(
         httpMethod: String = "GET",
         path: String = "/api",
         protocol: String = "HTTP",
         routeMatch: RouteMatch = RouteMatch.ANNOTATED_HTTP,
         annotatedServiceHasPathPrefix: Boolean = false,
+        pathType: PathType = PathType.EXACT,
+        target: String = "Handler",
     ): ArmeriaRoute {
         return ArmeriaRoute(
             protocol = protocol,
             httpMethod = httpMethod,
             path = path,
-            target = "Handler",
+            target = target,
             routeMatch = routeMatch,
             moduleName = "app",
             targetUnresolved = false,
             isDocService = false,
             annotatedServiceHasPathPrefix = annotatedServiceHasPathPrefix,
+            pathType = pathType,
             decorators = emptyList(),
             exceptionHandlers = emptyList(),
             pointer = TestPsiPointer,
