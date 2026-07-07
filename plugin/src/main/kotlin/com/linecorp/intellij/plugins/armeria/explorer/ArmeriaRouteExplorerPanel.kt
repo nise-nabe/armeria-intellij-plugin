@@ -15,7 +15,6 @@ import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
-import com.intellij.pom.Navigatable
 import com.intellij.ui.ColoredTreeCellRenderer
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.SimpleTextAttributes
@@ -310,16 +309,7 @@ class ArmeriaRouteExplorerPanel(
 
     private fun navigateToSelection() {
         val route = selectedRouteFromTree() ?: return
-        ReadAction.nonBlocking<Navigatable?> {
-            val element = route.pointer.element as? Navigatable
-            element?.takeIf { it.canNavigate() }
-        }
-            .inSmartMode(project)
-            .expireWith(this)
-            .finishOnUiThread(ModalityState.any()) { navigatable ->
-                navigatable?.navigate(true)
-            }
-            .submit(AppExecutorUtil.getAppExecutorService())
+        ArmeriaRouteNavigation.navigateToPointer(project, route.pointer, parentDisposable = this)
     }
 
     private fun selectedRouteFromTree(): ArmeriaRoute? {

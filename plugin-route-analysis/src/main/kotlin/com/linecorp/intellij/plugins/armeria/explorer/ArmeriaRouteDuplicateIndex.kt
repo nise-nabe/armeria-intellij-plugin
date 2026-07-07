@@ -38,18 +38,6 @@ object ArmeriaRouteDuplicateIndex {
         return getIndex(project).hitsByVirtualFile[virtualFile].orEmpty()
     }
 
-    fun conflictingRoutes(project: Project, element: PsiElement): List<ArmeriaRoute> {
-        for (group in duplicateGroups(project)) {
-            val current = group.routes.find { routeMatchesElement(it.pointer.element, element) } ?: continue
-            return group.routes.filter { route ->
-                route !== current && routesOverlap(current, route) && httpMethodsOverlap(current, route)
-            }
-        }
-        return emptyList()
-    }
-
-    fun duplicateRegistrationLabel(route: ArmeriaRoute): String = registrationLabel(route)
-
     internal fun duplicateGroups(project: Project): List<DuplicateRegistrationGroup> {
         return getIndex(project).groups
     }
@@ -248,6 +236,7 @@ object ArmeriaRouteDuplicateIndex {
                         pointer = route.pointer,
                         registrationLabel = registrationLabel(route),
                         registrationCount = overlappingRouteCount(route, group.routes),
+                        conflictingRoutes = buildConflictingRoutes(route, group.routes),
                     ),
                 )
             }
@@ -258,21 +247,32 @@ object ArmeriaRouteDuplicateIndex {
     private fun overlappingRouteCount(route: ArmeriaRoute, routes: List<ArmeriaRoute>): Int =
         routes.count { routesOverlap(route, it) && httpMethodsOverlap(route, it) }
 
-    private fun registrationLabel(route: ArmeriaRoute): String =
+    internal fun registrationLabel(route: ArmeriaRoute): String =
         when (route.routeMatch) {
             RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME, RouteMatch.HEALTH_CHECK ->
                 "${route.httpMethod} ${route.path}"
             else -> route.path
         }
 
-    private fun routeMatchesElement(routeElement: PsiElement?, element: PsiElement): Boolean {
-        if (routeElement == null) {
-            return false
+    private fun buildConflictingRoutes(current: ArmeriaRoute, groupRoutes: List<ArmeriaRoute>): List<ConflictingRouteRegistration> {
+        val conflicts = groupRoutes.filter { route ->
+            route !== current && routesOverlap(current, route) && httpMethodsOverlap(current, route)
         }
-        if (routeElement == element) {
-            return true
+        val baseLabels = conflicts.map(::registrationLabel)
+        return conflicts.map { route ->
+            ConflictingRouteRegistration(
+                pointer = route.pointer,
+                navigationLabel = disambiguatedNavigationLabel(route, registrationLabel(route), baseLabels),
+            )
         }
-        return routeElement.navigationElement == element.navigationElement
+    }
+
+    private fun disambiguatedNavigationLabel(route: ArmeriaRoute, baseLabel: String, peerLabels: List<String>): String {
+        if (peerLabels.count { it == baseLabel } <= 1) {
+            return baseLabel
+        }
+        val sourceHint = route.resolveSourceHint()
+        return if (sourceHint.isNotEmpty()) "$baseLabel ($sourceHint)" else baseLabel
     }
 }
 
@@ -280,10 +280,16 @@ data class DuplicateRegistrationGroup(
     val routes: List<ArmeriaRoute>,
 )
 
+data class ConflictingRouteRegistration(
+    val pointer: SmartPsiElementPointer<PsiElement>,
+    val navigationLabel: String,
+)
+
 data class DuplicateRegistrationHit(
     val pointer: SmartPsiElementPointer<PsiElement>,
     val registrationLabel: String,
     val registrationCount: Int,
+    val conflictingRoutes: List<ConflictingRouteRegistration>,
 )
 
 private data class DuplicateRegistrationIndex(

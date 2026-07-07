@@ -28,7 +28,7 @@ open class ArmeriaDuplicateRegistrationInspection : LocalInspectionTool() {
                             hit.registrationLabel,
                             hit.registrationCount,
                         ),
-                        *DuplicateRegistrationQuickFixes.forElement(holder.project, element),
+                        *NavigateToConflictingRouteQuickFix.forConflicts(hit.conflictingRoutes),
                     )
                 }
             }
