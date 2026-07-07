@@ -126,13 +126,6 @@ class ArmeriaHttpRequestGeneratorTest {
     }
 
     @Test
-    fun supports_rejectsAnnotatedServiceWithPathPrefix() {
-        val route = route(routeMatch = RouteMatch.ANNOTATED_SERVICE, annotatedServiceHasPathPrefix = true, path = "/api")
-
-        assertFalse(ArmeriaHttpRequestGenerator.supports(route))
-    }
-
-    @Test
     fun supports_rejectsGrpcRegistrationMount() {
         val route = route(protocol = "gRPC", path = "/grpc", routeMatch = RouteMatch.NON_HTTP)
 
@@ -189,12 +182,49 @@ class ArmeriaHttpRequestGeneratorTest {
         assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("/users/1"))
     }
 
+    @Test
+    fun requestText_substitutesConstrainedPathVariablesWithWhitespace() {
+        val route = route(httpMethod = "GET", path = "/users/{id :\\d+}")
+
+        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("/users/1"))
+    }
+
+    @Test
+    fun httpMethod_errorsForUnsupportedNonHttpRoute() {
+        val route = route(protocol = "Thrift", routeMatch = RouteMatch.NON_HTTP)
+
+        val error = runCatching { ArmeriaHttpRequestGenerator.httpMethod(route) }.exceptionOrNull()
+
+        assertTrue(error is IllegalStateException)
+        assertTrue(error!!.message!!.contains("NON_HTTP"))
+    }
+
+    @Test
+    fun requestText_grpcProtoRouteNormalizesTrailingSlashBaseUrl() {
+        val route = route(
+            protocol = "gRPC",
+            path = "/example.EchoService/Echo",
+            target = "example.EchoService.Echo",
+            routeMatch = RouteMatch.NON_HTTP,
+        )
+
+        assertEquals(
+            """
+            ### gRPC example.EchoService.Echo
+            GRPC http://localhost:8080/example.EchoService/Echo
+
+            # Invoke via DocService: http://localhost:8080/docs
+
+            """.trimIndent() + "\n",
+            ArmeriaHttpRequestGenerator.requestText(route, "http://localhost:8080/"),
+        )
+    }
+
     private fun route(
         httpMethod: String = "GET",
         path: String = "/api",
         protocol: String = "HTTP",
         routeMatch: RouteMatch = RouteMatch.ANNOTATED_HTTP,
-        annotatedServiceHasPathPrefix: Boolean = false,
         pathType: PathType = PathType.EXACT,
         target: String = "Handler",
     ): ArmeriaRoute {
@@ -207,7 +237,6 @@ class ArmeriaHttpRequestGeneratorTest {
             moduleName = "app",
             targetUnresolved = false,
             isDocService = false,
-            annotatedServiceHasPathPrefix = annotatedServiceHasPathPrefix,
             pathType = pathType,
             decorators = emptyList(),
             exceptionHandlers = emptyList(),

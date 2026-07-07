@@ -27,7 +27,13 @@ object ArmeriaHttpRequestGenerator {
             RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME -> route.httpMethod
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.HEALTH_CHECK, RouteMatch.ROUTE_FLUENT ->
                 route.httpMethod.ifBlank { "GET" }
-            RouteMatch.NON_HTTP -> "POST"
+            RouteMatch.NON_HTTP -> {
+                if (isGrpcRoute(route)) {
+                    "POST"
+                } else {
+                    error("Unsupported route match: ${route.routeMatch}")
+                }
+            }
             RouteMatch.ANNOTATED_SERVICE, RouteMatch.FILE_SERVICE, RouteMatch.VIRTUAL_HOST,
             RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
             -> error("Unsupported route match: ${route.routeMatch}")
@@ -44,14 +50,15 @@ object ArmeriaHttpRequestGenerator {
     }
 
     fun requestText(route: ArmeriaRoute, baseUrl: String = DEFAULT_BASE_URL): String {
+        val normalizedBaseUrl = normalizeBaseUrl(baseUrl)
         if (isGrpcRoute(route)) {
-            return grpcRequestText(route, baseUrl)
+            return grpcRequestText(route, normalizedBaseUrl)
         }
         val method = httpMethod(route)
         val resolvedPath = pathWithPlaceholders(route.path, route.pathType)
         return buildString {
             appendLine("### ${route.path}")
-            appendLine("$method $baseUrl$resolvedPath")
+            appendLine("$method $normalizedBaseUrl$resolvedPath")
             appendLine("Accept: application/json")
             appendLine()
         }
@@ -68,14 +75,17 @@ object ArmeriaHttpRequestGenerator {
     }
 
     private fun grpcRequestText(route: ArmeriaRoute, baseUrl: String): String {
+        val grpcPath = route.path.trim('/')
         return buildString {
             appendLine("### gRPC ${route.target}")
-            appendLine("GRPC $baseUrl/${route.path.trim('/')}")
+            appendLine("GRPC $baseUrl/$grpcPath")
             appendLine()
-            appendLine("# Invoke via DocService: ${baseUrl}/docs")
+            appendLine("# Invoke via DocService: $baseUrl/docs")
             appendLine()
         }
     }
+
+    private fun normalizeBaseUrl(baseUrl: String): String = baseUrl.trimEnd('/')
 
     private fun pathWithPlaceholders(path: String, pathType: PathType): String {
         if (pathType == PathType.REGEX || pathType == PathType.GLOB) {
@@ -89,8 +99,9 @@ object ArmeriaHttpRequestGenerator {
     }
 
     private fun braceVariableName(capture: String): String {
-        val colonIndex = capture.indexOf(':')
-        return if (colonIndex < 0) capture else capture.substring(0, colonIndex)
+        val trimmed = capture.trim()
+        val colonIndex = trimmed.indexOf(':')
+        return if (colonIndex < 0) trimmed else trimmed.substring(0, colonIndex).trim()
     }
 
     private fun sampleValue(name: String): String = when {
