@@ -148,6 +148,19 @@ class ArmeriaHttpRequestGeneratorTest {
     }
 
     @Test
+    fun supports_grpcRouteWithoutPackage() {
+        val route = route(
+            protocol = "gRPC",
+            path = "/Greeter/Ping",
+            target = "Greeter.Ping",
+            routeMatch = RouteMatch.NON_HTTP,
+        )
+
+        assertTrue(ArmeriaHttpRequestGenerator.supports(route))
+        assertEquals("armeria-grpc-Greeter-Ping.http", ArmeriaHttpRequestGenerator.fileName(route))
+    }
+
+    @Test
     fun requestText_grpcProtoRoute() {
         val route = route(
             protocol = "gRPC",
@@ -187,6 +200,35 @@ class ArmeriaHttpRequestGeneratorTest {
         val route = route(httpMethod = "GET", path = "/users/{id :\\d+}")
 
         assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("/users/1"))
+    }
+
+    @Test
+    fun requestText_substitutesConstrainedPathVariablesWithQuantifierBraces() {
+        val route = route(httpMethod = "GET", path = "/users/{id:\\d{2,3}}")
+
+        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("/users/1"))
+        assertFalse(ArmeriaHttpRequestGenerator.requestText(route).contains("/users/1}"))
+    }
+
+    @Test
+    fun requestText_grpcProtoRouteWithoutPackage() {
+        val route = route(
+            protocol = "gRPC",
+            path = "/Greeter/Ping",
+            target = "Greeter.Ping",
+            routeMatch = RouteMatch.NON_HTTP,
+        )
+
+        assertEquals(
+            """
+            ### gRPC Greeter.Ping
+            GRPC http://localhost:8080/Greeter/Ping
+
+            # Invoke via DocService: http://localhost:8080/docs
+
+            """.trimIndent() + "\n",
+            ArmeriaHttpRequestGenerator.requestText(route),
+        )
     }
 
     @Test

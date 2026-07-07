@@ -6,9 +6,8 @@ object ArmeriaHttpRequestGenerator {
     const val DEFAULT_BASE_URL = "http://localhost:8080"
 
     private val NON_SLUG_CHARACTERS = Regex("[^a-zA-Z0-9._-]")
-    private val BRACE_PATH_VARIABLE = Regex("""\{([^}]+)}""")
     private val COLON_PATH_VARIABLE = Regex(""":([A-Za-z_][A-Za-z0-9_]*)""")
-    private val GRPC_METHOD_PATH = Regex("""^/[^/]+\.[^/]+/[^/]+$""")
+    private val GRPC_METHOD_PATH = Regex("""^/[^/]+/[^/]+$""")
 
     fun supports(route: ArmeriaRoute): Boolean {
         return when (route.routeMatch) {
@@ -91,11 +90,50 @@ object ArmeriaHttpRequestGenerator {
         if (pathType == PathType.REGEX || pathType == PathType.GLOB) {
             return path
         }
-        var resolved = BRACE_PATH_VARIABLE.replace(path) { match ->
-            sampleValue(braceVariableName(match.groupValues[1]))
-        }
+        var resolved = replaceBracePathVariables(path)
         resolved = COLON_PATH_VARIABLE.replace(resolved) { match -> sampleValue(match.groupValues[1]) }
         return resolved
+    }
+
+    private fun replaceBracePathVariables(path: String): String {
+        val result = StringBuilder()
+        var index = 0
+        while (index < path.length) {
+            if (path[index] == '{') {
+                val end = findMatchingBrace(path, index)
+                if (end < 0) {
+                    result.append(path[index])
+                    index++
+                    continue
+                }
+                val capture = path.substring(index + 1, end)
+                result.append(sampleValue(braceVariableName(capture)))
+                index = end + 1
+            } else {
+                result.append(path[index])
+                index++
+            }
+        }
+        return result.toString()
+    }
+
+    private fun findMatchingBrace(path: String, start: Int): Int {
+        if (start >= path.length || path[start] != '{') {
+            return -1
+        }
+        var depth = 0
+        for (index in start until path.length) {
+            when (path[index]) {
+                '{' -> depth++
+                '}' -> {
+                    depth--
+                    if (depth == 0) {
+                        return index
+                    }
+                }
+            }
+        }
+        return -1
     }
 
     private fun braceVariableName(capture: String): String {
