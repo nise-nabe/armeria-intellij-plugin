@@ -7,11 +7,17 @@ on:
     paths:
       - .github/workflows/copilot-setup-steps.yml
       - .github/scripts/install-kotlin-lsp.sh
+      - .github/scripts/install-gradle-tapi-mcp.sh
+      - .github/scripts/gradle-mcp-server.sh
+      - .github/mcp.json
       - .github/lsp.json
   pull_request:
     paths:
       - .github/workflows/copilot-setup-steps.yml
       - .github/scripts/install-kotlin-lsp.sh
+      - .github/scripts/install-gradle-tapi-mcp.sh
+      - .github/scripts/gradle-mcp-server.sh
+      - .github/mcp.json
       - .github/lsp.json
 
 
@@ -38,4 +44,13 @@ jobs:
       - name: Install JetBrains Kotlin language server
         run: bash .github/scripts/install-kotlin-lsp.sh
 
-      - run: ./gradlew assemble
+      - name: Verify Gradle Tooling API MCP server
+        run: test -f "${HOME}/.local/share/gradle-tapi-mcp-server/gradle-tapi-mcp-server.jar"
+
+      - name: Verify Kotlin language server
+        run: test -x "${HOME}/.local/bin/kotlin-lsp"
+
+      # Warm the Gradle daemon without requiring the checked-out branch to compile.
+      # Feature branches may be mid-change; assemble failures should not block Copilot setup.
+      - name: Warm Gradle daemon
+        run: ./gradlew --version
