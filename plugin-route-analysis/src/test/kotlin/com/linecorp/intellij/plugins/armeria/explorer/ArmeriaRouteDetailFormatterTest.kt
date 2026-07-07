@@ -250,6 +250,37 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
         )
     }
 
+    fun testAttachmentsLine_includesContentHints() {
+        val route = ArmeriaRoute(
+            protocol = "HTTP",
+            httpMethod = "POST",
+            path = "/users/{id}",
+            target = "example.UserService",
+            routeMatch = RouteMatch.ANNOTATED_HTTP,
+            moduleName = "app",
+            targetUnresolved = false,
+            isDocService = false,
+            annotatedServiceHasPathPrefix = false,
+            decorators = emptyList(),
+            exceptionHandlers = emptyList(),
+            contentHints = listOf(
+                message("route.explorer.hint.statusCode", "201"),
+                message("route.explorer.hint.consumes", "application/json"),
+            ),
+            pointer = TestPsiPointer,
+        )
+
+        val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
+
+        assertEquals(
+            message(
+                "route.explorer.detail.content",
+                route.contentHints.joinToString(" · "),
+            ),
+            attachments,
+        )
+    }
+
     fun testRegistrationSummary_extendedRouteMatches() {
         assertEquals(
             "Server.builder().fileService(\"/files/\", …)",

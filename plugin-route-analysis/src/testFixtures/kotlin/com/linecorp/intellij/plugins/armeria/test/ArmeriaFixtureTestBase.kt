@@ -85,6 +85,51 @@ abstract class ArmeriaFixtureTestBase : LightJavaCodeInsightFixtureTestCase() {
         )
     }
 
+    protected fun registerContentAnnotationStubs() {
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation;
+
+            public @interface Param { String value() default ""; }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation;
+
+            public @interface StatusCode { int value(); }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation;
+
+            public @interface Consumes { String[] value(); }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation;
+
+            public @interface Produces { String[] value(); }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation;
+
+            public @interface MatchesHeader { String value(); }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation;
+
+            public @interface Description { String value() default ""; }
+            """.trimIndent(),
+        )
+    }
+
     protected fun registerResolvableArmeriaServerStubs() {
         myFixture.addClass(
             """
