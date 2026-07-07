@@ -12,16 +12,49 @@ import com.intellij.psi.JavaPsiFacade
 internal object ArmeriaDecoratorSupport {
     internal data class DecoratorCandidate(val label: String, val pathPattern: String?)
 
-    private val KNOWN_DECORATOR_BUNDLE_KEYS = mapOf(
-        "LoggingService" to "route.explorer.decorator.logging",
-        "CorsService" to "route.explorer.decorator.cors",
-        "AuthService" to "route.explorer.decorator.auth",
-        "MetricCollectingService" to "route.explorer.decorator.metrics",
-        "EncodingService" to "route.explorer.decorator.encoding",
-        "DecodingService" to "route.explorer.decorator.decoding",
-        "CacheControlDecorator" to "route.explorer.decorator.cacheControl",
-        "WebSocketService" to "route.explorer.decorator.webSocket",
+    private data class DecoratorInfo(val labelKey: String, val observabilityKey: String? = null)
+
+    private val KNOWN_DECORATORS = mapOf(
+        "LoggingService" to DecoratorInfo("route.explorer.decorator.logging", "route.explorer.observability.logging"),
+        "CorsService" to DecoratorInfo("route.explorer.decorator.cors"),
+        "AuthService" to DecoratorInfo("route.explorer.decorator.auth", "route.explorer.observability.auth"),
+        "MetricCollectingService" to DecoratorInfo("route.explorer.decorator.metrics", "route.explorer.observability.metrics"),
+        "EncodingService" to DecoratorInfo("route.explorer.decorator.encoding"),
+        "DecodingService" to DecoratorInfo("route.explorer.decorator.decoding"),
+        "CacheControlDecorator" to DecoratorInfo("route.explorer.decorator.cacheControl"),
+        "WebSocketService" to DecoratorInfo("route.explorer.decorator.webSocket"),
+        "BraveService" to DecoratorInfo("route.explorer.decorator.brave", "route.explorer.observability.tracing"),
+        "ThrottlingService" to DecoratorInfo("route.explorer.decorator.throttling", "route.explorer.observability.throttling"),
+        "PrometheusMetricCollectingService" to DecoratorInfo(
+            "route.explorer.decorator.prometheus",
+            "route.explorer.observability.prometheus",
+        ),
+        "Bucket4jService" to DecoratorInfo("route.explorer.decorator.bucket4j", "route.explorer.observability.rateLimit"),
     )
+
+    private val KNOWN_DECORATOR_BUNDLE_KEYS = KNOWN_DECORATORS.mapValues { it.value.labelKey }
+
+    fun observabilitySignals(decoratorLabels: List<String>): List<String> {
+        val signals = linkedSetOf<String>()
+        for (label in decoratorLabels) {
+            val observabilityKey = observabilityKeyForLabel(label) ?: continue
+            signals += message(observabilityKey)
+        }
+        return signals.toList()
+    }
+
+    private fun observabilityKeyForLabel(label: String): String? {
+        val normalized = label.removeSuffix("::class.java").removeSuffix("::class").removeSuffix(".class")
+        val simpleName = normalized.substringAfterLast('.').removeSuffix("()")
+        KNOWN_DECORATORS[simpleName]?.observabilityKey?.let { return it }
+        for ((_, info) in KNOWN_DECORATORS) {
+            val observabilityKey = info.observabilityKey ?: continue
+            if (label == message(info.labelKey)) {
+                return observabilityKey
+            }
+        }
+        return null
+    }
 
     fun collectProgrammaticDecorators(element: PsiMethodCallExpression, registrationPath: String): List<String> {
         val candidates = linkedSetOf<DecoratorCandidate>()
