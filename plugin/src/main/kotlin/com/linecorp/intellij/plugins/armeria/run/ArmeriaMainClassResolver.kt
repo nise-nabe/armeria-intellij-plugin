@@ -19,13 +19,25 @@ internal object ArmeriaMainClassResolver {
         }
 
         PsiTreeUtil.getParentOfType(element, false, PsiClass::class.java)
-            ?.takeIf(PsiMethodUtil::hasMainInClass)
+            ?.takeIf(::isJvmMainClass)
             ?.let { return it }
 
         if (!isKotlinPluginAvailable()) {
             return null
         }
         return ArmeriaKotlinMainClassSupport.findMainClass(element)
+    }
+
+    private fun isJvmMainClass(psiClass: PsiClass): Boolean {
+        if (PsiMethodUtil.hasMainInClass(psiClass) ||
+            PsiMethodUtil.hasMainMethod(psiClass) ||
+            PsiMethodUtil.findMainMethod(psiClass) != null
+        ) {
+            return true
+        }
+        return psiClass.methods.any { method ->
+            method.name == "main" && method.hasModifierProperty(com.intellij.psi.PsiModifier.STATIC)
+        }
     }
 
     private fun isKotlinPluginAvailable(): Boolean =
