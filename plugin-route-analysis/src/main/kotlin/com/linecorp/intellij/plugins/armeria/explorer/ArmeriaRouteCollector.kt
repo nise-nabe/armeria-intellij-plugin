@@ -4,6 +4,7 @@ import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiElement
@@ -12,6 +13,7 @@ import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.util.CachedValue
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
@@ -21,24 +23,47 @@ import org.jetbrains.kotlin.psi.KtFile
 object ArmeriaRouteCollector {
 
     private val KOTLIN_PLUGIN_ID = PluginId.getId("org.jetbrains.kotlin")
+    private val PROJECT_ROUTES_KEY =
+        Key.create<CachedValue<List<ArmeriaRoute>>>("armeria.routeCollector.projectRoutes")
+    private val PROJECT_ROUTES_WITH_PROTO_KEY =
+        Key.create<CachedValue<List<ArmeriaRoute>>>("armeria.routeCollector.projectRoutesWithProto")
 
     fun collect(project: Project, includeProtoRoutes: Boolean = false): List<ArmeriaRoute> {
         val metrics = ArmeriaRouteCollectionMetrics()
         val startedAt = System.nanoTime()
         val routes = ArmeriaRouteCollectionMetrics.runWith(metrics) {
-            val cachedRoutes = CachedValuesManager.getManager(project).getCachedValue(project) {
-                computeProjectRoutes(project)
-            }
-            if (includeProtoRoutes) {
-                mergeProtoRoutesIfEnabled(project, cachedRoutes)
+            if (includeProtoRoutes && ArmeriaGrpcRouteCollector.isProtoRouteDiscoveryEnabled()) {
+                cachedProjectRoutesWithProto(project)
             } else {
-                cachedRoutes
+                cachedProjectRoutes(project)
             }
         }
         metrics.elapsedMs = (System.nanoTime() - startedAt) / 1_000_000
         ArmeriaRouteCollectionMetrics.logIfEnabled(metrics.snapshot())
         return routes
     }
+
+    private fun cachedProjectRoutes(project: Project): List<ArmeriaRoute> =
+        CachedValuesManager.getManager(project).getCachedValue(
+            project,
+            PROJECT_ROUTES_KEY,
+            { computeProjectRoutes(project) },
+            false,
+        )
+
+    private fun cachedProjectRoutesWithProto(project: Project): List<ArmeriaRoute> =
+        CachedValuesManager.getManager(project).getCachedValue(
+            project,
+            PROJECT_ROUTES_WITH_PROTO_KEY,
+            {
+                val baseRoutes = cachedProjectRoutes(project)
+                CachedValueProvider.Result.create(
+                    mergeProtoRoutes(project, baseRoutes),
+                    PsiModificationTracker.MODIFICATION_COUNT,
+                )
+            },
+            false,
+        )
 
     private fun computeProjectRoutes(project: Project): CachedValueProvider.Result<List<ArmeriaRoute>> {
         val scope = collectionScope(project)
@@ -103,10 +128,7 @@ object ArmeriaRouteCollector {
         )
     }
 
-    private fun mergeProtoRoutesIfEnabled(project: Project, baseRoutes: List<ArmeriaRoute>): List<ArmeriaRoute> {
-        if (!ArmeriaGrpcRouteCollector.isProtoRouteDiscoveryEnabled()) {
-            return baseRoutes
-        }
+    private fun mergeProtoRoutes(project: Project, baseRoutes: List<ArmeriaRoute>): List<ArmeriaRoute> {
         val scope = collectionScope(project)
         val routes = baseRoutes.toMutableList()
         ArmeriaGrpcRouteCollector.collect(project, scope, routes)

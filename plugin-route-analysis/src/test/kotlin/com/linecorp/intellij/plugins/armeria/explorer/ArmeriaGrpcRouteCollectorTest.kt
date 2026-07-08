@@ -289,4 +289,31 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertNotNull(routes.firstOrNull { it.path == "/grpc" })
         assertNotNull(routes.firstOrNull { it.path == "/com.example.Greeter/SayHello" })
     }
+
+    fun testProtoRouteMergeIsCachedAcrossCollectCalls() {
+        myFixture.configureByText(
+            "greeter.proto",
+            """
+            syntax = "proto3";
+            package com.example;
+
+            service Greeter {
+              rpc SayHello(HelloRequest) returns (HelloResponse);
+            }
+            """.trimIndent(),
+        )
+
+        val first = ArmeriaRouteCollector.collect(project, includeProtoRoutes = true)
+        val firstScan = ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned
+        assertEquals(listOf("/com.example.Greeter/SayHello"), first.map { it.path })
+        assertTrue(firstScan > 0)
+
+        val second = ArmeriaRouteCollector.collect(project, includeProtoRoutes = true)
+        val secondScan = ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned
+        assertEquals(first.map { it.path }, second.map { it.path })
+        assertEquals(0, secondScan)
+
+        val withoutProto = ArmeriaRouteCollector.collect(project, includeProtoRoutes = false)
+        assertTrue(withoutProto.none { it.path == "/com.example.Greeter/SayHello" })
+    }
 }
