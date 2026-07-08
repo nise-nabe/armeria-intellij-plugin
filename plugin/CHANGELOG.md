@@ -11,6 +11,8 @@
 
 ### Fixed
 
+- Armeria run configuration discovery now resolves Kotlin top-level `fun main()` via the file facade (`MainKt`), matching New Project Wizard Kotlin templates.
+
 ### Security
 
 ## [0.1.0] - 2026-07-04

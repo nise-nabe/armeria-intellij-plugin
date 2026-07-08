@@ -28,7 +28,9 @@ class ArmeriaRunConfigurationEditor(private val project: Project) : SettingsEdit
             val chooser = TreeClassChooserFactory.getInstance(project).createWithInnerClassesScopeChooser(
                 message("armeria.run.configuration.main.class.chooser.title"),
                 searchScope,
-                { PsiMethodUtil.hasMainInClass(it) },
+                { psiClass ->
+                    PsiMethodUtil.hasMainInClass(psiClass) || PsiMethodUtil.hasMainMethod(psiClass)
+                },
                 null,
             )
             chooser.showDialog()
