@@ -4,6 +4,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiVariable
 import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
+import org.jetbrains.kotlin.psi.KtCollectionLiteralExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtLambdaExpression
@@ -52,6 +53,14 @@ object ArmeriaKotlinExpressionSupport {
             is KtNameReferenceExpression -> extractKotlinStringFromReference(unwrapped)
             else -> unwrapped.text.trim('"').takeIf { it.isNotEmpty() }
         }
+    }
+
+    fun extractKotlinStrings(expression: KtExpression?): List<String> {
+        val unwrapped = unwrapKotlinExpression(expression) ?: return emptyList()
+        if (unwrapped is KtCollectionLiteralExpression) {
+            return unwrapped.getInnerExpressions().mapNotNull(::extractKotlinString)
+        }
+        return extractKotlinString(unwrapped)?.let { listOf(it) }.orEmpty()
     }
 
     private fun extractKotlinStringFromReference(expression: KtExpression): String? {

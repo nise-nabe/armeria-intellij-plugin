@@ -3,6 +3,8 @@
 ## [Unreleased]
 ### Added
 
+- Added a Kotlin class-scoped duplicate annotated route inspection, matching the Java inspection message and excluding those duplicates from the module-wide registration inspection.
+
 ### Changed
 
 ### Deprecated
