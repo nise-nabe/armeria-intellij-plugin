@@ -172,6 +172,33 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertEquals("Query.health", routes.single().target)
     }
 
+    fun testDuplicateGraphqlRoutesAreDeduplicated() {
+        registerArmeriaIdlStubs()
+        myFixture.configureByText(
+            "schema.graphql",
+            """
+            type Query {
+                user: User
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "schema.graphqls",
+            """
+            type Query {
+                user: User
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+            .filter { it.protocol == RouteProtocol.GRAPHQL.presentableName() }
+
+        assertEquals(1, routes.size)
+        assertEquals("Query.user", routes.single().target)
+        assertEquals(ArmeriaIdlRouteSupport.DEFAULT_GRAPHQL_MOUNT_PATH, routes.single().path)
+    }
+
     fun testCollectThriftRoutesWhenThriftOnClasspath() {
         registerArmeriaIdlStubs()
         myFixture.configureByText(
@@ -192,6 +219,33 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertEquals("HelloService.sayHello", route.target)
         assertEquals(RouteMatch.NON_HTTP, route.routeMatch)
         assertTrue(route.httpMethod.isBlank())
+    }
+
+    fun testDuplicateThriftRoutesAreDeduplicated() {
+        registerArmeriaIdlStubs()
+        myFixture.configureByText(
+            "hello.thrift",
+            """
+            service HelloService {
+                string sayHello(1: string name),
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "hello-copy.thrift",
+            """
+            service HelloService {
+                string sayHello(1: string name),
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+            .filter { it.protocol == RouteProtocol.THRIFT.presentableName() }
+
+        assertEquals(1, routes.size)
+        assertEquals("/HelloService", routes.single().path)
+        assertEquals("HelloService.sayHello", routes.single().target)
     }
 
     fun testSkipIdlRoutesWhenProtocolNotOnClasspath() {

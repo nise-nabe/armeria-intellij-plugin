@@ -18,16 +18,24 @@ internal object ArmeriaGraphqlRouteCollector {
         if (!ArmeriaIdlRouteSupport.isGraphqlOnClasspath(project, scope)) {
             return
         }
+        val seenGraphqlRoutes = mutableSetOf<String>()
         for (extension in GRAPHQL_EXTENSIONS) {
             for (virtualFile in FilenameIndex.getAllFilesByExt(project, extension, scope)) {
                 val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: continue
                 for (operation in parseOperations(psiFile.text)) {
+                    val target = "${operation.operationType}.${operation.fieldName}"
+                    val dedupeKey =
+                        "${ArmeriaRouteMetadata.moduleName(psiFile)}:" +
+                            "${ArmeriaIdlRouteSupport.DEFAULT_GRAPHQL_MOUNT_PATH}:$target"
+                    if (!seenGraphqlRoutes.add(dedupeKey)) {
+                        continue
+                    }
                     routes += ArmeriaRoute.create(
                         element = psiFile,
                         protocol = RouteProtocol.GRAPHQL.presentableName(),
                         httpMethod = "",
                         path = ArmeriaIdlRouteSupport.DEFAULT_GRAPHQL_MOUNT_PATH,
-                        target = "${operation.operationType}.${operation.fieldName}",
+                        target = target,
                         routeMatch = RouteMatch.NON_HTTP,
                     )
                 }
