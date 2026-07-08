@@ -3,6 +3,8 @@
 ## [Unreleased]
 ### Added
 
+- Added fixture regression tests for duplicate route and duplicate registration inspections (Java and Kotlin).
+
 ### Changed
 
 ### Deprecated
@@ -12,6 +14,7 @@
 ### Fixed
 
 - Armeria run configuration discovery now resolves Kotlin top-level `fun main()` via the file facade (`MainKt`), matching New Project Wizard Kotlin templates.
+- DocService runtime sync activates the Armeria Services tool window when needed so synced routes can be applied even if Route Explorer was never opened.
 
 ### Security
 

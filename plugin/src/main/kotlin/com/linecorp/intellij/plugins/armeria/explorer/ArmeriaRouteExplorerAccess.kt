@@ -13,4 +13,31 @@ object ArmeriaRouteExplorerAccess {
             .mapNotNull { it.component as? ArmeriaRouteExplorerPanel }
             .firstOrNull()
     }
+
+    /**
+     * Returns the Route Explorer panel, activating the Armeria Services tool window first when needed
+     * so [ArmeriaRouteExplorerToolWindowFactory] can create content.
+     */
+    fun ensurePanel(project: Project, onReady: (ArmeriaRouteExplorerPanel?) -> Unit) {
+        if (project.isDisposed) {
+            onReady(null)
+            return
+        }
+        findPanel(project)?.let {
+            onReady(it)
+            return
+        }
+        val toolWindow = ToolWindowManager.getInstance(project).getToolWindow(TOOL_WINDOW_ID)
+        if (toolWindow == null) {
+            onReady(null)
+            return
+        }
+        toolWindow.activate({
+            if (project.isDisposed) {
+                onReady(null)
+                return@activate
+            }
+            onReady(findPanel(project))
+        }, true, false)
+    }
 }
