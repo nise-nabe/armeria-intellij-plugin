@@ -3,6 +3,8 @@
 ## [Unreleased]
 ### Added
 
+- Added fixture regression tests for duplicate route and duplicate registration inspections (Java and Kotlin).
+
 ### Changed
 
 ### Deprecated

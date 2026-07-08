@@ -1,5 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.inspection
 
+import com.intellij.codeInsight.daemon.impl.HighlightInfo
+import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.testFramework.PlatformTestUtil
@@ -45,6 +47,48 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
         assertTrue("Expected Extra.java among open files but found $openFileNames", "Extra.java" in openFileNames)
     }
 
+    fun testCrossFileAnnotatedRoutesAreHighlighted() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class Second {
+                @Get("/shared")
+                public String second() {
+                    return "second";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "First.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class First {
+                @Get("/shared")
+                public String first() {
+                    return "first";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.enableInspections(ArmeriaDuplicateRegistrationInspection())
+        val warnings = warningHighlights()
+
+        assertEquals(1, warnings.size)
+        assertEquals(
+            message("inspection.duplicate.registration.problem", "GET /shared", 2),
+            warnings.single().description,
+        )
+        assertEquals("first", warnings.single().text)
+    }
+
     fun testKotlinInspectionHighlightsDuplicateAndOffersNavigateQuickFix() {
         myFixture.configureByText(
             "First.kt",
@@ -85,6 +129,32 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
             it.text == expectedQuickFixName
         }
         assertEquals(1, quickFixes.size)
+    }
+
+    fun testInClassJavaAnnotatedDuplicatesAreNotReportedByRegistrationInspection() {
+        myFixture.configureByText(
+            "BadService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class BadService {
+                @Get("/dup")
+                public String first() {
+                    return "first";
+                }
+
+                @Get("/dup")
+                public String second() {
+                    return "second";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.enableInspections(ArmeriaDuplicateRegistrationInspection())
+        assertTrue(warningHighlights().isEmpty())
     }
 
     private fun waitForConflictingFileToOpen(expectedFileName: String) {
@@ -138,4 +208,7 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
         myFixture.addClass("package example; public class FirstService {}")
         myFixture.addClass("package example; public class SecondService {}")
     }
+
+    private fun warningHighlights(): List<HighlightInfo> =
+        myFixture.doHighlighting().filter { it.severity == HighlightSeverity.WARNING }
 }
