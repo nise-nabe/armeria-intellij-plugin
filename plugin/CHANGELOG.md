@@ -12,6 +12,7 @@
 ### Fixed
 
 - Armeria run configuration discovery now resolves Kotlin top-level `fun main()` via the file facade (`MainKt`), matching New Project Wizard Kotlin templates.
+- Route Explorer Refresh no longer clears DocService-synced runtime routes; synced routes stay until the next sync replaces them.
 
 ### Security
 
