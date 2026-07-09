@@ -12,7 +12,7 @@ IntelliJ Platform plugin for Armeria. Gradle multi-project build: `build-logic` 
 
 ### MCP: Gradle Tooling API (default for Gradle tasks)
 
-The `gradle` MCP server (`nise-nabe/gradle-tapi-mcp-server` v0.3.3) is configured in `.cursor/mcp.json`. The install script downloads the release JAR to `~/.local/share/gradle-tapi-mcp-server/`, verifies its SHA-256, and exposes it via a stable `gradle-tapi-mcp-server.jar` symlink. `GRADLE_PROJECT_DIR` is set to the workspace root.
+The `gradle` MCP server (`nise-nabe/gradle-tapi-mcp-server` v0.4.0) is configured in `.cursor/mcp.json`. The install script downloads the release JAR to `~/.local/share/gradle-tapi-mcp-server/`, verifies its SHA-256, and exposes it via a stable `gradle-tapi-mcp-server.jar` symlink. `GRADLE_PROJECT_DIR` is set to the workspace root.
 
 **Use MCP for all Gradle task execution and verification** unless MCP is unresponsive or returns `BUILD_ALREADY_RUNNING` that cannot be cancelled. See `.cursor/rules/gradle-mcp.mdc` and `.cursor/skills/gradle-tapi-mcp/SKILL.md`.
 
