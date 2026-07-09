@@ -2,7 +2,7 @@
 
 ## Cursor Cloud specific instructions
 
-IntelliJ Platform plugin for Armeria. Gradle multi-project build (`build-logic` + `plugin`). No web UI or Docker services.
+IntelliJ Platform plugin for Armeria. Gradle multi-project build: `build-logic` plus four subprojects — `plugin-shared`, `plugin-route-analysis`, `plugin-wizard`, and the aggregating `plugin` (see `settings.gradle.kts`). No web UI, standalone server, or Docker services; the deliverable is an IDE plugin, verified headlessly through the IntelliJ Platform test harness.
 
 ### Prerequisites
 
@@ -71,8 +71,17 @@ There is no separate lint task; `build` is the compile/test gate.
 
 | Path | Role |
 |------|------|
-| `plugin/` | Plugin sources, resources, tests, `CHANGELOG.md` |
+| `plugin/` | Aggregating plugin: `plugin.xml`, client tool window, run configs, resources, `CHANGELOG.md`; depends on the three modules below |
+| `plugin-shared/` | Shared PSI/util code and test fixtures used by the other modules |
+| `plugin-route-analysis/` | Route Explorer engine (`ArmeriaRouteCollector`, DocService/gRPC/Spring collectors); most `test` + `fastTest` suites live here |
+| `plugin-wizard/` | New-project / module wizard + file templates (`plugin-wizard:test`) |
 | `build-logic/` | Shared IntelliJ Platform Gradle conventions |
 | `gradle/libs.versions.toml` | Version pins (Kotlin, IPGP, IDEA platform) |
 
-Main Kotlin code: `plugin/src/main/kotlin/com/linecorp/intellij/plugins/armeria/`. User-visible strings go through `message(...)` and `ArmeriaBundle.properties`.
+Main Kotlin code lives under `<module>/src/main/kotlin/com/linecorp/intellij/plugins/armeria/`. User-visible strings go through `message(...)` and `ArmeriaBundle.properties`. CI (`.github/workflows/main.yml`) runs per-module test tasks (`:plugin-wizard:test`, `:plugin-route-analysis:fastTest`, `:plugin-route-analysis:test`, `:plugin:test`) then `./gradlew build -x test` on Java 25.
+
+### Running the plugin (headless cloud caveat)
+
+`:plugin:runIde` launches **IntelliJ IDEA Ultimate** (`plugin/build.gradle.kts`) on the VNC display (`DISPLAY=:1`). In the offline cloud sandbox it hangs during startup awaiting `LicensingFacade` (AI-promo / Ultimate licensing) and never reaches the Welcome screen without a JetBrains license and network to JetBrains services. Disabling `org.jetbrains.completion.full.line` in the sandbox `config/disabled_plugins.txt` clears one promo stall but startup still blocks. For headless verification, exercise the plugin through the platform test suites (they run the real plugin code, e.g. `ArmeriaRouteCollector.collect` discovering routes from Java/Kotlin PSI) instead of the GUI.
+
+Also note: MCP `gradle_run_tasks ["build"]` (full build) can fail at `:*:instrumentTestCode` under this repo's parallel configuration cache (an MCP-recorder interaction); use shell `./gradlew build` for the full gate. MCP `gradle_run_tasks`/`gradle_run_tests` for compile and individual test classes work fine.
