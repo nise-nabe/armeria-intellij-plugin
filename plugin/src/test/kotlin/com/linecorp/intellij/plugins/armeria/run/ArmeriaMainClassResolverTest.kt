@@ -70,8 +70,9 @@ class ArmeriaMainClassResolverTest : LightJavaCodeInsightFixtureTestCase() {
             import com.linecorp.armeria.server.Server;
 
             public class Main {
-                public static void m<caret>ain() {
+                public static int m<caret>ain(String[] args) {
                     Server.builder().http(8080).build();
+                    return 0;
                 }
             }
             """.trimIndent(),
