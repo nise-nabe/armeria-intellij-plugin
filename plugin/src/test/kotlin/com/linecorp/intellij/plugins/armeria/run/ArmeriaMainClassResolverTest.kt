@@ -60,4 +60,23 @@ class ArmeriaMainClassResolverTest : LightJavaCodeInsightFixtureTestCase() {
 
         assertNull(ArmeriaMainClassResolver.findArmeriaMainClass(myFixture.file.findElementAt(myFixture.caretOffset)))
     }
+
+    fun testIgnoresInvalidStaticMainSignature() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void m<caret>ain() {
+                    Server.builder().http(8080).build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertNull(ArmeriaMainClassResolver.findArmeriaMainClass(myFixture.file.findElementAt(myFixture.caretOffset)))
+    }
 }
