@@ -28,17 +28,10 @@ internal object ArmeriaMainClassResolver {
         return ArmeriaKotlinMainClassSupport.findMainClass(element)
     }
 
-    private fun isJvmMainClass(psiClass: PsiClass): Boolean {
-        if (PsiMethodUtil.hasMainInClass(psiClass) ||
+    private fun isJvmMainClass(psiClass: PsiClass): Boolean =
+        PsiMethodUtil.hasMainInClass(psiClass) ||
             PsiMethodUtil.hasMainMethod(psiClass) ||
             PsiMethodUtil.findMainMethod(psiClass) != null
-        ) {
-            return true
-        }
-        return psiClass.methods.any { method ->
-            method.name == "main" && method.hasModifierProperty(com.intellij.psi.PsiModifier.STATIC)
-        }
-    }
 
     private fun isKotlinPluginAvailable(): Boolean =
         PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
