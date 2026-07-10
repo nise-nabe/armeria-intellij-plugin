@@ -12,7 +12,7 @@ IntelliJ Platform plugin for Armeria. Gradle multi-project build: `build-logic` 
 
 ### MCP: Gradle Tooling API (default for Gradle tasks)
 
-The `gradle` MCP server (`nise-nabe/gradle-tapi-mcp-server` v0.4.0) is configured in `.cursor/mcp.json`. The install script downloads the release JAR to `~/.local/share/gradle-tapi-mcp-server/`, verifies its SHA-256, and exposes it via a stable `gradle-tapi-mcp-server.jar` symlink. `GRADLE_PROJECT_DIR` is set to the workspace root.
+The `gradle` MCP server (`nise-nabe/gradle-tapi-mcp-server` v0.4.1) is configured in `.cursor/mcp.json`. The install script downloads the release JAR to `~/.local/share/gradle-tapi-mcp-server/`, verifies its SHA-256, and exposes it via a stable `gradle-tapi-mcp-server.jar` symlink. `GRADLE_PROJECT_DIR` is set to the workspace root.
 
 **Use MCP for all Gradle task execution and verification** unless MCP is unresponsive or returns `BUILD_ALREADY_RUNNING` that cannot be cancelled. See `.cursor/rules/gradle-mcp.mdc` and `.cursor/skills/gradle-tapi-mcp/SKILL.md`.
 
@@ -83,5 +83,3 @@ Main Kotlin code lives under `<module>/src/main/kotlin/com/linecorp/intellij/plu
 ### Running the plugin (headless cloud caveat)
 
 `:plugin:runIde` launches **IntelliJ IDEA Ultimate** (`plugin/build.gradle.kts`) on the VNC display (`DISPLAY=:1`). In the offline cloud sandbox it hangs during startup awaiting `LicensingFacade` (AI-promo / Ultimate licensing) and never reaches the Welcome screen without a JetBrains license and network to JetBrains services. Disabling `org.jetbrains.completion.full.line` in the sandbox `config/disabled_plugins.txt` clears one promo stall but startup still blocks. For headless verification, exercise the plugin through the platform test suites (they run the real plugin code, e.g. `ArmeriaRouteCollector.collect` discovering routes from Java/Kotlin PSI) instead of the GUI.
-
-Also note: MCP `gradle_run_tasks ["build"]` (full build) can fail at `:*:instrumentTestCode` under this repo's parallel configuration cache (an MCP-recorder interaction); use shell `./gradlew build` for the full gate. MCP `gradle_run_tasks`/`gradle_run_tests` for compile and individual test classes work fine.

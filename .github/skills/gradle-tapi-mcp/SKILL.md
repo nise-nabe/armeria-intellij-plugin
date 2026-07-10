@@ -8,7 +8,7 @@ description: >-
 
 # Gradle Tooling API MCP (Copilot / GitHub Agents)
 
-This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.4.0:
+This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.4.1:
 
 | Environment | Config | Install |
 |-------------|--------|---------|
@@ -32,14 +32,14 @@ Use `background: true` and poll `gradle_get_build_status` for runs that may exce
 
 Only **one** MCP build per `projectDirectory` at a time. Batch multiple test classes/methods in a **single** `gradle_run_tests` instead of parallel MCP calls. Use `gradle_cancel_build` + poll when you need to stop a stale run.
 
-Do **not** run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` concurrently (IntelliJ test sandbox contention).
+Do **not** run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` concurrently (IntelliJ test sandbox contention). In this multi-project repo, `testClasses`/`testMethods` require `taskPath` or `tasks` (e.g. `taskPath: ":plugin:test"`).
 
 ## Common tasks (this repo)
 
 | Goal | MCP |
 |------|-----|
 | Compile | `gradle_run_tasks` `{ "tasks": [":plugin:compileKotlin", ":plugin:compileTestKotlin"] }` |
-| One or more test classes/methods | `gradle_run_tests` `{ "testMethods": { "FQCN": ["method"] }, "background": true }` — batch in one call |
+| One or more test classes/methods | `gradle_run_tests` `{ "taskPath": ":plugin:test", "testMethods": { "FQCN": ["method"] }, "background": true }` — batch in one call |
 | All fixture tests | `gradle_run_tasks` `{ "tasks": [":plugin:test"], "background": true }` |
 | Fast unit tests | `gradle_run_tasks` `{ "tasks": [":plugin:fastTest"], "background": true }` |
 | Full verify | `gradle_run_tasks` `{ "tasks": ["build"], "background": true }` |

@@ -8,7 +8,7 @@ description: >-
 
 # Gradle Tooling API MCP
 
-This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.4.0 in `.cursor/mcp.json` (Cursor) and `.github/mcp.json` (Copilot). The JAR is installed by `.cursor/install.sh` or `.github/scripts/install-gradle-tapi-mcp.sh` to `~/.local/share/gradle-tapi-mcp-server/gradle-tapi-mcp-server.jar`. At MCP server launch, `GRADLE_PROJECT_DIR` is set to the workspace/git root.
+This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.4.1 in `.cursor/mcp.json` (Cursor) and `.github/mcp.json` (Copilot). The JAR is installed by `.cursor/install.sh` or `.github/scripts/install-gradle-tapi-mcp.sh` to `~/.local/share/gradle-tapi-mcp-server/gradle-tapi-mcp-server.jar`. At MCP server launch, `GRADLE_PROJECT_DIR` is set to the workspace/git root.
 
 The MCP server may report `loading` for a few seconds on first use; call `gradle_connection_status` before other tools.
 
@@ -24,7 +24,7 @@ When using Cursor `mcp_get_tools`:
 
 ## Workflow (token-efficient)
 
-1. `gradle_connection_status` — confirm connected (`connectedAny: true`); if not, `gradle_connect` with the repository root
+1. `gradle_connection_status` — confirm connected (`connectedAny: true`); if not, `gradle_connect` with the repository root. Use `refresh: true` when `runtimeStackAvailable` is false and you need resolved Gradle/Java versions without a separate `gradle_get_build_environment` call.
 2. `gradle_get_build_environment` — resolved Gradle/Java versions (`versionInfo` on Gradle 9.4+)
 3. `gradle_get_project_overview` — module hierarchy (`build-logic`, `plugin`)
 4. `gradle_run_tasks` / `gradle_run_tests` when verification is needed
@@ -74,6 +74,7 @@ There is no `projectPath` filter on model tools — they return the project tree
 
 ```json
 {
+  "taskPath": ":plugin:test",
   "testMethods": {
     "com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteTreeBuilderTest": ["buildRoot_groupsRoutesByModule"],
     "com.linecorp.intellij.plugins.armeria.other.OtherTest": ["testX"]
@@ -84,6 +85,8 @@ There is no `projectPath` filter on model tools — they return the project tree
 
 Do **not** run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` on the same checkout concurrently — IntelliJ Platform test workers compete for the same sandbox and can hang for many minutes.
 
+In multi-project builds, `gradle_run_tests` with `testClasses` or `testMethods` requires `taskPath` or `tasks` to scope the test task (e.g. `taskPath: ":plugin:test"`). Unscoped class/method selection returns `INVALID_ARGUMENT`.
+
 ## When to use MCP vs shell
 
 | Scenario | Prefer |
@@ -92,8 +95,8 @@ Do **not** run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` on the 
 | Compile check (`:plugin:compileKotlin`), daemon warm | MCP `gradle_run_tasks` foreground — sub-second to ~2s, clean JSON |
 | Compile check, cold start (first MCP build in session) | MCP `gradle_run_tasks` with `background: true` + poll |
 | Full `build` or `:plugin:test` | MCP with `background: true` + poll `gradle_get_build_status` |
-| Single test class (daemon + sandbox warm) | MCP `gradle_run_tests` with **one** class, `background: true` + polling — often ~5s |
-| Single test method | MCP `gradle_run_tests` with `testMethods: { "ClassName": ["methodName"] }`, or `testClasses: ["ClassName.methodName"]` (auto-normalized) |
+| Single test class (daemon + sandbox warm) | MCP `gradle_run_tests` with **one** class and `taskPath: ":plugin:test"`, `background: true` + polling — often ~5s |
+| Single test method | MCP `gradle_run_tests` with `taskPath: ":plugin:test"` and `testMethods: { "ClassName": ["methodName"] }`, or `testClasses: ["ClassName.methodName"]` (auto-normalized) |
 | MCP server unresponsive / all tools timeout | **Shell** `./gradlew` after `gradle_list_builds` / disk recovery |
 | PR / CI parity check (after MCP verify) | Shell `./gradlew build` when you need exact CI command parity |
 
@@ -149,6 +152,7 @@ Or for test selection:
 
 ```json
 {
+  "taskPath": ":plugin:test",
   "testMethods": {
     "com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteTreeBuilderTest": ["buildRoot_groupsRoutesByModule"]
   },
@@ -203,9 +207,9 @@ If every MCP call times out but `./gradlew` still works:
 | All plugin tests | `gradle_run_tasks` `{ "tasks": [":plugin:test"], "background": true }` | `./gradlew :plugin:test` |
 | Fast unit tests | `gradle_run_tasks` `{ "tasks": [":plugin:fastTest"], "background": true }` | `./gradlew :plugin:fastTest` |
 | All checks (fixture + fast) | `gradle_run_tasks` `{ "tasks": [":plugin:check"], "background": true }` | `./gradlew :plugin:check` |
-| Single test class | `gradle_run_tests` `{ "testClasses": ["FQCN"], "background": true }` | `./gradlew :plugin:test --tests 'FQCN'` |
-| Multiple test classes/methods | `gradle_run_tests` `{ "testMethods": { ... }, "background": true }` | `./gradlew :plugin:test --tests 'FQCN'` per class |
-| Single test method | `gradle_run_tests` `{ "testMethods": { "FQCN": ["method"] }, "background": true }` | `./gradlew :plugin:test --tests 'FQCN.method'` |
+| Single test class | `gradle_run_tests` `{ "taskPath": ":plugin:test", "testClasses": ["FQCN"], "background": true }` | `./gradlew :plugin:test --tests 'FQCN'` |
+| Multiple test classes/methods | `gradle_run_tests` `{ "taskPath": ":plugin:test", "testMethods": { ... }, "background": true }` | `./gradlew :plugin:test --tests 'FQCN'` per class |
+| Single test method | `gradle_run_tests` `{ "taskPath": ":plugin:test", "testMethods": { "FQCN": ["method"] }, "background": true }` | `./gradlew :plugin:test --tests 'FQCN.method'` |
 | Fast compile gate | `gradle_run_tasks` `{ "tasks": [":plugin:compileKotlin"] }` | `./gradlew :plugin:compileKotlin` |
 
 Prefer MCP for all verification. Use shell only when MCP is unresponsive or for final CI parity before merge.
@@ -250,6 +254,7 @@ Then rerun `:plugin:test` or `build` via shell or MCP (background + polling).
 |---------|--------|
 | `error.code: NOT_CONNECTED` | `gradle_connect` or restart the MCP server |
 | `error.code: BUILD_ALREADY_RUNNING` | Poll `gradle_get_build_status`, `gradle_cancel_build` if stale, or batch tests into one `gradle_run_tests` |
+| `error.code: INVALID_ARGUMENT` on `gradle_run_tests` | Add `taskPath` or `tasks` when using `testClasses`/`testMethods` in this multi-project repo |
 | MCP call timed out but Gradle may still be running | `gradle_list_builds` or poll `.gradle/mcp-builds/<buildId>/`; prefer on-disk `gradle-result.json` when memory status is stale |
 | Huge MCP responses | Keep `includeTasks` / `includeTaskSelectors` false unless filtering |
 | Declared Java vs daemon Java differ | Report both toolchain declaration (files) and daemon Java (MCP) |
@@ -258,6 +263,6 @@ Then rerun `:plugin:test` or `build` via shell or MCP (background + polling).
 
 Full tool reference and advanced workflows live in the upstream repository:
 
-- [README (v0.4.0)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/v0.4.0/README.md)
+- [README (v0.4.1)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/v0.4.1/README.md)
 - [gradle-tapi-mcp skill](https://github.com/nise-nabe/gradle-tapi-mcp-server/tree/main/skills/gradle-tapi-mcp)
 - [Tool reference (reference.md)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/main/skills/gradle-tapi-mcp/reference.md)
