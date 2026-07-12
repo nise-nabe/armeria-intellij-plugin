@@ -8,7 +8,7 @@ description: >-
 
 # Gradle Tooling API MCP (Copilot / GitHub Agents)
 
-This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.4.2:
+This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.5.0:
 
 | Environment | Config | Install |
 |-------------|--------|---------|
@@ -44,6 +44,6 @@ Do **not** run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` concurr
 | Fast unit tests | `gradle_run_tasks` `{ "tasks": [":plugin:fastTest"], "background": true }` |
 | Full verify | `gradle_run_tasks` `{ "tasks": ["build"], "background": true }` |
 
-If MCP is unresponsive: `gradle_list_builds` or poll `gradle_get_build_status` with the `buildId` (v0.4.2+ reconciles disk records automatically), then shell fallback.
+If MCP is unresponsive: `gradle_list_builds` or poll `gradle_get_build_status` with the `buildId` (reconciles disk records automatically), then shell fallback.
 
 Full reference: `.cursor/skills/gradle-tapi-mcp/SKILL.md`
