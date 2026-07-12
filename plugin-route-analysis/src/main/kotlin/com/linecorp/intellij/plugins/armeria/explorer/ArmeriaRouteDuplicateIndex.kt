@@ -258,17 +258,18 @@ object ArmeriaRouteDuplicateIndex {
         val conflicts = groupRoutes.filter { route ->
             route !== current && routesOverlap(current, route) && httpMethodsOverlap(current, route)
         }
-        val baseLabels = conflicts.map(::registrationLabel)
+        val labelCounts = conflicts.groupingBy(::registrationLabel).eachCount()
         return conflicts.map { route ->
+            val baseLabel = registrationLabel(route)
             ConflictingRouteRegistration(
                 pointer = route.pointer,
-                navigationLabel = disambiguatedNavigationLabel(route, registrationLabel(route), baseLabels),
+                navigationLabel = disambiguatedNavigationLabel(route, baseLabel, labelCounts.getValue(baseLabel)),
             )
         }
     }
 
-    private fun disambiguatedNavigationLabel(route: ArmeriaRoute, baseLabel: String, peerLabels: List<String>): String {
-        if (peerLabels.count { it == baseLabel } <= 1) {
+    private fun disambiguatedNavigationLabel(route: ArmeriaRoute, baseLabel: String, labelCount: Int): String {
+        if (labelCount <= 1) {
             return baseLabel
         }
         val sourceHint = route.resolveSourceHint()

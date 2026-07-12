@@ -21,6 +21,7 @@ object ArmeriaRouteNavigation {
                 ?: (element?.navigationElement as? Navigatable)?.takeIf { it.canNavigate() }
         }
             .inSmartMode(project)
+            .expireWith(project)
             .let { coordinator ->
                 if (parentDisposable != null) coordinator.expireWith(parentDisposable) else coordinator
             }
