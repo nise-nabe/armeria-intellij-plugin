@@ -80,14 +80,6 @@ class ArmeriaRouteNavigationSupportTest : LightJavaCodeInsightFixtureTestCase() 
 
     fun testKotlinRoutePathFromAnnotatedHandler() {
         myFixture.configureByText(
-            "Annotations.kt",
-            """
-            package com.linecorp.armeria.server.annotation
-            annotation class Get(val value: String = "", val path: String = "")
-            annotation class PathPrefix(val value: String)
-            """.trimIndent(),
-        )
-        myFixture.configureByText(
             "HelloService.kt",
             """
             package example
@@ -109,13 +101,6 @@ class ArmeriaRouteNavigationSupportTest : LightJavaCodeInsightFixtureTestCase() 
     }
 
     fun testRelatedItemsBetweenKotlinHandlerAndRegistration() {
-        myFixture.configureByText(
-            "Get.kt",
-            """
-            package com.linecorp.armeria.server.annotation
-            annotation class Get(val value: String = "")
-            """.trimIndent(),
-        )
         val helloServiceFile = myFixture.configureByText(
             "HelloService.kt",
             """
@@ -190,13 +175,6 @@ class ArmeriaRouteNavigationSupportTest : LightJavaCodeInsightFixtureTestCase() 
     }
 
     fun testRelatedItemsWithKotlinVariableReference() {
-        myFixture.configureByText(
-            "Get.kt",
-            """
-            package com.linecorp.armeria.server.annotation
-            annotation class Get(val value: String = "")
-            """.trimIndent(),
-        )
         val helloServiceFile = myFixture.configureByText(
             "HelloService.kt",
             """
