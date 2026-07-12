@@ -2,6 +2,8 @@ package com.linecorp.intellij.plugins.armeria.marker
 
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
+import com.intellij.openapi.project.DumbService
+import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.editor.ArmeriaRouteNavigationSupport
@@ -17,7 +19,14 @@ import org.jetbrains.kotlin.psi.KtValueArgument
 
 internal class ArmeriaKotlinRouteLineMarkerProvider : LineMarkerProvider {
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
-        return annotatedKotlinMarker(element) ?: kotlinServiceRegistrationMarker(element)
+        if (DumbService.isDumb(element.project)) {
+            return null
+        }
+        return try {
+            annotatedKotlinMarker(element) ?: kotlinServiceRegistrationMarker(element)
+        } catch (_: IndexNotReadyException) {
+            null
+        }
     }
 
     private fun annotatedKotlinMarker(element: PsiElement): LineMarkerInfo<*>? {

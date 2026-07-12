@@ -182,8 +182,8 @@ class ArmeriaRouteLineMarkerProviderTest : LightJavaCodeInsightFixtureTestCase()
             package com.linecorp.armeria.server.annotation;
 
             public @interface Get {
-                String value() default "";
-                String path() default "";
+                String[] value() default {};
+                String[] path() default {};
             }
             """.trimIndent(),
         )
