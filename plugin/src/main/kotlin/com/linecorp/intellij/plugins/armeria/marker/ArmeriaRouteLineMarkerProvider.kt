@@ -10,10 +10,9 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.ArmeriaIcons
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaKotlinExpressionSupport
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaKotlinRouteCollector
+import com.linecorp.intellij.plugins.armeria.editor.ArmeriaRouteNavigationSupport
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteCollector
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.ServiceRegistrationMethod
-import com.linecorp.intellij.plugins.armeria.inspection.ArmeriaKotlinMethodRoute
 import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
@@ -36,15 +35,9 @@ internal class ArmeriaRouteLineMarkerProvider : LineMarkerProvider {
         if (element != method.nameIdentifier) {
             return null
         }
-        val annotation = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return null
-        val classPrefix = ArmeriaRouteSupport.extractPrimaryPath(
-            method.containingClass?.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION),
-        )
-        val path = ArmeriaRouteSupport.combinePaths(
-            classPrefix,
-            ArmeriaRouteSupport.extractPrimaryPath(annotation.first).ifBlank { "/" },
-        )
-        return createMarker(method.nameIdentifier ?: method, message("marker.route.annotated", annotation.second, path))
+        val annotation = ArmeriaRouteNavigationSupport.httpMethod(method) ?: return null
+        val path = ArmeriaRouteNavigationSupport.routePath(method)
+        return createMarker(method.nameIdentifier ?: method, message("marker.route.annotated", annotation, path))
     }
 
     private fun annotatedKotlinMarker(element: PsiElement): LineMarkerInfo<*>? {
@@ -54,9 +47,9 @@ internal class ArmeriaRouteLineMarkerProvider : LineMarkerProvider {
         if (element != function.nameIdentifier) {
             return null
         }
-        val route = ArmeriaKotlinMethodRoute.from(function) ?: return null
-        val path = route.paths.firstOrNull().orEmpty()
-        return createMarker(function.nameIdentifier ?: function, message("marker.route.annotated", route.httpMethod, path))
+        val httpMethod = ArmeriaRouteNavigationSupport.httpMethod(function) ?: return null
+        val path = ArmeriaRouteNavigationSupport.routePath(function)
+        return createMarker(function.nameIdentifier ?: function, message("marker.route.annotated", httpMethod, path))
     }
 
     private fun kotlinServiceRegistrationMarker(element: PsiElement): LineMarkerInfo<*>? {
@@ -155,6 +148,6 @@ internal class ArmeriaRouteLineMarkerProvider : LineMarkerProvider {
     }
 
     companion object {
-        private val SERVICE_REGISTRATION_METHODS = ServiceRegistrationMethod.METHOD_NAMES
+        private val SERVICE_REGISTRATION_METHODS = ServiceRegistrationMethod.CORE_METHOD_NAMES
     }
 }

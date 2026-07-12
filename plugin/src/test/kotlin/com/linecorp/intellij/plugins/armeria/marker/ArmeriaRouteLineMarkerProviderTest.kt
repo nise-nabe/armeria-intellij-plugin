@@ -112,6 +112,32 @@ class ArmeriaRouteLineMarkerProviderTest : LightJavaCodeInsightFixtureTestCase()
         assertEquals(ArmeriaIcons.Armeria, marker!!.icon)
     }
 
+    fun testExtendedRegistrationMethodsDoNotGetMarkers() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .virtualHost("example.com")
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val fileText = myFixture.file.text
+        val virtualHostIndex = fileText.indexOf("virtualHost")
+        val element = myFixture.file.findElementAt(virtualHostIndex)!!
+        val marker = provider.getLineMarkerInfo(element)
+
+        assertNull(marker)
+    }
+
     private fun registerArmeriaStubs() {
         myFixture.addClass(
             """
@@ -140,6 +166,9 @@ class ArmeriaRouteLineMarkerProviderTest : LightJavaCodeInsightFixtureTestCase()
 
             public class ServerBuilder {
                 public ServerBuilder service(String path, Object handler) {
+                    return this;
+                }
+                public ServerBuilder virtualHost(String hostname) {
                     return this;
                 }
                 public Server build() {

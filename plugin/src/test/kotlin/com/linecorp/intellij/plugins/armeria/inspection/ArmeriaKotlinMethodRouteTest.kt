@@ -1,7 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.inspection
 
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
-import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
 
@@ -96,6 +96,71 @@ class ArmeriaKotlinMethodRouteTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals(setOf("/hello", "/goodbye"), routes.flatMap { it.paths }.toSet())
     }
 
+    fun testDetectsRoutesInsideObjectDeclaration() {
+        val file = configureKotlinService(
+            """
+            object HelloService {
+                @Get("/hello")
+                fun hello(): String = "hello"
+            }
+            """.trimIndent(),
+        )
+        val route = functionsIn(file).mapNotNull(ArmeriaKotlinMethodRoute::from).single()
+
+        assertEquals(listOf("/hello"), route.paths)
+    }
+
+    fun testFormatsTypedHandlerPaths() {
+        val file = configureKotlinService(
+            """
+            class HelloService {
+                @Get("prefix:/hello")
+                fun hello(): String = "hello"
+            }
+            """.trimIndent(),
+        )
+        val route = functionsIn(file).mapNotNull(ArmeriaKotlinMethodRoute::from).single()
+
+        assertEquals(listOf("prefix:/hello"), route.paths)
+    }
+
+    fun testCombinesClassPrefixWithTypedHandlerPath() {
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation;
+            public @interface PathPrefix { String value() default ""; }
+            """.trimIndent(),
+        )
+        val file = configureKotlinService(
+            """
+            import com.linecorp.armeria.server.annotation.PathPrefix
+
+            @PathPrefix("/api")
+            class HelloService {
+                @Get("prefix:/hello")
+                fun hello(): String = "hello"
+            }
+            """.trimIndent(),
+        )
+        val route = functionsIn(file).mapNotNull(ArmeriaKotlinMethodRoute::from).single()
+
+        assertEquals(listOf("prefix:/api/hello"), route.paths)
+    }
+
+    fun testCollectsMultiplePathsFromAnnotation() {
+        val file = configureKotlinService(
+            """
+            class HelloService {
+                @Get("/one", "/two")
+                fun hello(): String = "hello"
+            }
+            """.trimIndent(),
+        )
+        val route = functionsIn(file).mapNotNull(ArmeriaKotlinMethodRoute::from).single()
+
+        assertEquals(listOf("/one", "/two"), route.paths)
+    }
+
     private fun configureKotlinService(body: String) =
         myFixture.configureByText(
             "HelloService.kt",
@@ -109,7 +174,7 @@ class ArmeriaKotlinMethodRouteTest : LightJavaCodeInsightFixtureTestCase() {
         ) as KtFile
 
     private fun functionsIn(file: KtFile): List<KtNamedFunction> {
-        val klass = file.declarations.filterIsInstance<KtClass>().single()
-        return klass.declarations.filterIsInstance<KtNamedFunction>()
+        val container = file.declarations.filterIsInstance<KtClassOrObject>().single()
+        return container.declarations.filterIsInstance<KtNamedFunction>()
     }
 }
