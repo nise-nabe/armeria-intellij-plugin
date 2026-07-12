@@ -1,8 +1,8 @@
 [versions]
 jdk = "21"
 kotlin = "2.4.0"
-intellij-platform-plugin = "2.18.1"
-idea-platform = "2026.1.3"
+intellij-platform-plugin = "2.17.0"
+idea-platform = "2026.1.4"
 changelog = "2.5.0"
 junit4 = "4.13.2"
 velocity = "2.4.1"
