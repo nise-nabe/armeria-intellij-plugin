@@ -24,8 +24,9 @@ do not read the full skill unless Gradle MCP fails.
 
 ## Phase 1 — Fetch comments (minimal payload)
 
-**Do not** call `gh api repos/.../pulls/{n}/comments` without a filter — the REST
-endpoint returns full `diff_hunk` per comment (~50 KB for a typical Copilot review).
+**Do not** call `gh api repos/.../pulls/{n}/comments` — the REST endpoint always
+includes `diff_hunk` per comment (~50 KB for a typical Copilot review) and there is
+no query parameter to omit it.
 
 ### Preferred: GraphQL (resolved state + metadata only)
 
@@ -84,15 +85,16 @@ gh pr view N --json headRefName,baseRefName,title
 ```
 
 Review comments still require the GraphQL query above. There is no lightweight REST
-alternative: avoid `gh pr view N --comments` on large reviews (overview noise) and avoid
-`gh api repos/.../pulls/{n}/comments` (includes `diff_hunk` per comment). Retry or paginate
+alternative: `gh pr view N --comments` shows only issue-style conversation comments, not
+inline code review threads (and `gh pr view --json reviews` omits line comments too). Avoid
+`gh api repos/.../pulls/{n}/comments` (always includes `diff_hunk`). Retry or paginate
 GraphQL instead.
 
 ### Checkout once
 
 ```bash
 git fetch origin <headRefName>
-git checkout <headRefName>
+git checkout -B <headRefName> origin/<headRefName>
 ```
 
 Do not explore the repo on `main` if the PR branch exists.
