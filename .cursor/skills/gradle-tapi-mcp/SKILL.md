@@ -8,7 +8,7 @@ description: >-
 
 # Gradle Tooling API MCP
 
-This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.4.1 in `.cursor/mcp.json` (Cursor) and `.github/mcp.json` (Copilot). The JAR is installed by `.cursor/install.sh` or `.github/scripts/install-gradle-tapi-mcp.sh` to `~/.local/share/gradle-tapi-mcp-server/gradle-tapi-mcp-server.jar`. At MCP server launch, `GRADLE_PROJECT_DIR` is set to the workspace/git root.
+This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.4.2 in `.cursor/mcp.json` (Cursor) and `.github/mcp.json` (Copilot). The JAR is installed by `.cursor/install.sh` or `.github/scripts/install-gradle-tapi-mcp.sh` to `~/.local/share/gradle-tapi-mcp-server/gradle-tapi-mcp-server.jar`. At MCP server launch, `GRADLE_PROJECT_DIR` is set to the workspace/git root.
 
 The MCP server may report `loading` for a few seconds on first use; call `gradle_connection_status` before other tools.
 
@@ -135,9 +135,9 @@ After the sandbox is warm, single-class MCP runs often finish in a few seconds. 
 
 **Disk-only polling** (MCP restart or in-memory record evicted): `includeOutput=true` still returns empty streams until the build finishes and MCP writes `stdout.log` / `stderr.log`.
 
-### Default: background + poll for anything that may exceed ~30s
+### Long or cold builds: background + poll (or rely on auto-detach)
 
-MCP clients commonly time out around 60s. Gradle may finish successfully even when the initiating call returns `Request timed out`.
+v0.4.2+ auto-detaches foreground builds before the MCP client times out, returning a `buildId` you can poll. For cold starts (`build`, `:plugin:test`) or anything that may exceed ~30s, prefer explicit `background: true` so polling starts immediately.
 
 1. Start with `background: true`:
 
@@ -164,9 +164,9 @@ Or for test selection:
 
 3. Read `outcome`, `buildSummary`, and `statusSource` (`memory` or `disk`) from the poll response. Use `includeProgress: true` for task/test events; set `includeOutput: true` only if you need truncated logs.
 
-While `status` is `running`, memory status wins and disk `events.ndjson` task events are merged into progress. When memory and disk disagree (e.g. after MCP restart or in-memory record eviction), prefer on-disk `gradle-result.json` while Gradle is still active.
+`gradle_get_build_status` reconciles memory and disk records (v0.4.2+). While `status` is `running`, disk `events.ndjson` task events are merged into progress.
 
-**If the start call times out:** run `gradle_list_builds` (if MCP responds) or `ls .gradle/mcp-builds/` and poll the most recent `buildId` with `gradle_get_build_status`.
+If you lose the `buildId`, use `gradle_list_builds` and poll the most recent entry.
 
 **Foreground is fine when the daemon and outputs are warm** — e.g. repeated `:plugin:compileKotlin` after a recent build often completes in under 1s.
 
@@ -180,21 +180,21 @@ While `status` is `running`, memory status wins and disk `events.ndjson` task ev
 ./gradlew build
 ```
 
-### Disk recovery when MCP is stuck
+### Disk recovery when MCP is unresponsive
 
 Build records persist under `.gradle/mcp-builds/<buildId>/` even when the MCP server stops responding.
 
 | File | Use |
 |------|-----|
-| `mcp-result.json` | Terminal MCP outcome when Gradle finished but MCP cannot answer |
-| `gradle-result.json` | Authoritative Gradle init-script result while running or on memory/disk mismatch |
+| `mcp-result.json` | Terminal MCP outcome (reconciled with `gradle-result.json` in v0.4.2+) |
+| `gradle-result.json` | Gradle init-script status while running |
 | `stdout.log` / `stderr.log` | Full captured output after the build ends |
 | `events.ndjson` | Task/test progress events |
 
 If every MCP call times out but `./gradlew` still works:
 
 1. List recent builds: `gradle_list_builds` (if MCP responds) or `ls .gradle/mcp-builds/`
-2. Poll or read `.gradle/mcp-builds/<buildId>/mcp-result.json` for `status`, `outcome`, and `buildSummary`
+2. Poll `gradle_get_build_status` with the `buildId`, or read `.gradle/mcp-builds/<buildId>/mcp-result.json` when MCP cannot answer at all
 3. Avoid starting new MCP test runs until the environment recovers (restart the MCP server / agent session if needed)
 
 ## Repo-specific tips
@@ -253,9 +253,9 @@ Then rerun `:plugin:test` or `build` via shell or MCP (background + polling).
 | Symptom | Action |
 |---------|--------|
 | `error.code: NOT_CONNECTED` | `gradle_connect` or restart the MCP server |
-| `error.code: BUILD_ALREADY_RUNNING` | Poll `gradle_get_build_status`, `gradle_cancel_build` if stale, or batch tests into one `gradle_run_tests` |
+| `error.code: BUILD_ALREADY_RUNNING` | Poll `gradle_get_build_status`, `gradle_cancel_build` if stale (`not_running` = already finished), or batch tests into one `gradle_run_tests` |
 | `error.code: INVALID_ARGUMENT` on `gradle_run_tests` | Add `taskPath` or `tasks` when using `testClasses`/`testMethods` in this multi-project repo |
-| MCP call timed out but Gradle may still be running | `gradle_list_builds` or poll `.gradle/mcp-builds/<buildId>/`; prefer on-disk `gradle-result.json` when memory status is stale |
+| MCP call timed out but Gradle may still be running | Foreground runs auto-detach in v0.4.2+; otherwise `gradle_list_builds` and poll `gradle_get_build_status` |
 | Huge MCP responses | Keep `includeTasks` / `includeTaskSelectors` false unless filtering |
 | Declared Java vs daemon Java differ | Report both toolchain declaration (files) and daemon Java (MCP) |
 
@@ -263,6 +263,6 @@ Then rerun `:plugin:test` or `build` via shell or MCP (background + polling).
 
 Full tool reference and advanced workflows live in the upstream repository:
 
-- [README (v0.4.1)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/v0.4.1/README.md)
+- [README (v0.4.2)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/v0.4.2/README.md)
 - [gradle-tapi-mcp skill](https://github.com/nise-nabe/gradle-tapi-mcp-server/tree/main/skills/gradle-tapi-mcp)
 - [Tool reference (reference.md)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/main/skills/gradle-tapi-mcp/reference.md)
