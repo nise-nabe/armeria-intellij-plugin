@@ -29,6 +29,12 @@ endpoint returns full `diff_hunk` per comment (~50 KB for a typical Copilot revi
 
 ### Preferred: GraphQL (resolved state + metadata only)
 
+The query below caps at **100 review threads** and **5 comments per thread** (`first` limits).
+That is enough for typical Copilot/Thermos reviews; for larger PRs, paginate with
+`pageInfo { hasNextPage endCursor }` on `reviewThreads` (and on `comments` inside a thread
+when a thread has more than five replies) instead of raising `first` blindly — token cost
+grows with every extra node.
+
 ```bash
 gh api graphql -f query='
 {
@@ -38,10 +44,12 @@ gh api graphql -f query='
       headRefName
       baseRefName
       reviewThreads(first: 100) {
+        pageInfo { hasNextPage endCursor }
         nodes {
           id
           isResolved
           comments(first: 5) {
+            pageInfo { hasNextPage endCursor }
             nodes {
               databaseId
               body
@@ -66,13 +74,19 @@ Extract:
 | `body` + `path` + `line` | Triage and locate code |
 | `headRefName` | Checkout branch |
 
-### Fallback: unresolved threads only
+### Fallback: PR metadata only (not review threads)
+
+When you need branch names before running GraphQL (or to recover from a GraphQL failure),
+fetch PR metadata separately — **`gh pr view` does not return review threads or comment bodies**:
 
 ```bash
 gh pr view N --json headRefName,baseRefName,title
 ```
 
-Use GraphQL above; avoid `gh pr view N --comments` for large reviews (duplicates overview noise).
+Review comments still require the GraphQL query above. There is no lightweight REST
+alternative: avoid `gh pr view N --comments` on large reviews (overview noise) and avoid
+`gh api repos/.../pulls/{n}/comments` (includes `diff_hunk` per comment). Retry or paginate
+GraphQL instead.
 
 ### Checkout once
 
@@ -185,7 +199,7 @@ Report in the user’s language:
 
 | Anti-pattern | Cost | Alternative |
 |--------------|------|-------------|
-| REST `/pulls/comments` with diff_hunks | ~12k tok | GraphQL without hunks |
+| REST `/pulls/comments` with `diff_hunk` | ~12k tok | GraphQL without hunks |
 | 45+ tool rounds (fix → test → fix → test) | ~30k tok cumulative | Batch fixes, one verify |
 | Full file Write after Read | ~6k tok per file | StrReplace hunks |
 | `gradle_get_build_status` + `includeOutput: true` every 30s while running | Growing stdout each poll | Poll without output until terminal |
