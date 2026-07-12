@@ -30,6 +30,7 @@ testing {
             useJUnit(libs.versions.junit4.get())
             dependencies {
                 implementation(testFixtures(project()))
+                implementation(testFixtures(project(":plugin-route-analysis")))
                 implementation(libs.velocity.engine.core)
                 implementation(libs.junit4)
             }

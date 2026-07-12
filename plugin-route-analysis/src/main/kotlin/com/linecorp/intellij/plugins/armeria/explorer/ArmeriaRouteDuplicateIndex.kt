@@ -4,6 +4,7 @@ import com.intellij.lang.java.JavaLanguage
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiMethod
@@ -41,6 +42,10 @@ object ArmeriaRouteDuplicateIndex {
     internal fun duplicateGroups(project: Project): List<DuplicateRegistrationGroup> {
         return getIndex(project).groups
     }
+
+    /** Exposed for regression tests that simulate duplicate [ArmeriaRoute] entries in a group. */
+    internal fun duplicateHitsForGroups(groups: List<DuplicateRegistrationGroup>): Map<VirtualFile, List<DuplicateRegistrationHit>> =
+        buildHitsByVirtualFile(groups)
 
     internal fun findDuplicateGroups(routes: List<ArmeriaRoute>): List<DuplicateRegistrationGroup> {
         val groups = mutableListOf<DuplicateRegistrationGroup>()
@@ -231,11 +236,13 @@ object ArmeriaRouteDuplicateIndex {
                     continue
                 }
                 val virtualFile = element.containingFile?.virtualFile ?: continue
+                val conflictingRoutes = buildConflictingRoutes(route, group.routes)
                 hitsByVirtualFile.getOrPut(virtualFile) { mutableListOf() }.add(
                     DuplicateRegistrationHit(
                         pointer = route.pointer,
                         registrationLabel = registrationLabel(route),
-                        registrationCount = overlappingRouteCount(route, group.routes),
+                        registrationCount = conflictingRoutes.size + 1,
+                        conflictingRoutes = conflictingRoutes,
                     ),
                 )
             }
@@ -243,25 +250,65 @@ object ArmeriaRouteDuplicateIndex {
         return hitsByVirtualFile
     }
 
-    private fun overlappingRouteCount(route: ArmeriaRoute, routes: List<ArmeriaRoute>): Int =
-        routes.count { routesOverlap(route, it) && httpMethodsOverlap(route, it) }
-
-    private fun registrationLabel(route: ArmeriaRoute): String =
+    internal fun registrationLabel(route: ArmeriaRoute): String =
         when (route.routeMatch) {
             RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME, RouteMatch.HEALTH_CHECK ->
                 "${route.httpMethod} ${route.path}"
             else -> route.path
         }
+
+    private fun buildConflictingRoutes(current: ArmeriaRoute, groupRoutes: List<ArmeriaRoute>): List<ConflictingRouteRegistration> {
+        val currentElement = current.pointer.element
+        val conflicts = groupRoutes.filter { route ->
+            val element = route.pointer.element
+            element != null &&
+                element !== currentElement &&
+                routesOverlap(current, route) &&
+                httpMethodsOverlap(current, route)
+        }.distinctBy { it.pointer.element }
+        val labelCounts = conflicts.groupingBy(::registrationLabel).eachCount()
+        return conflicts.map { route ->
+            val baseLabel = registrationLabel(route)
+            ConflictingRouteRegistration(
+                pointer = route.pointer,
+                navigationLabel = disambiguatedNavigationLabel(route, baseLabel, labelCounts.getValue(baseLabel)),
+            )
+        }
+    }
+
+    private fun disambiguatedNavigationLabel(route: ArmeriaRoute, baseLabel: String, labelCount: Int): String {
+        if (labelCount <= 1) {
+            return baseLabel
+        }
+        val sourceHint = route.compactNavigationSourceHint()
+        return if (sourceHint.isNotEmpty()) "$baseLabel ($sourceHint)" else baseLabel
+    }
+
+    private fun ArmeriaRoute.compactNavigationSourceHint(): String {
+        val element = pointer.element ?: return ""
+        val containingFile = element.containingFile ?: return ""
+        val virtualFile = containingFile.virtualFile ?: return ""
+        val document = PsiDocumentManager.getInstance(element.project).getDocument(containingFile)
+            ?: return virtualFile.name
+        val line = document.getLineNumber(element.textRange.startOffset) + 1
+        return "${virtualFile.name}:$line"
+    }
 }
 
 data class DuplicateRegistrationGroup(
     val routes: List<ArmeriaRoute>,
 )
 
+data class ConflictingRouteRegistration(
+    val pointer: SmartPsiElementPointer<PsiElement>,
+    val navigationLabel: String,
+)
+
 data class DuplicateRegistrationHit(
     val pointer: SmartPsiElementPointer<PsiElement>,
     val registrationLabel: String,
     val registrationCount: Int,
+    val conflictingRoutes: List<ConflictingRouteRegistration>,
 )
 
 private data class DuplicateRegistrationIndex(
