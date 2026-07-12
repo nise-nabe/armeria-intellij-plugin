@@ -14,6 +14,12 @@ class ArmeriaKotlinMethodRouteTest : LightJavaCodeInsightFixtureTestCase() {
             public @interface Get { String value() default ""; String path() default ""; }
             """.trimIndent(),
         )
+        myFixture.addClass(
+            """
+            package example.other;
+            public @interface Get { String value() default ""; }
+            """.trimIndent(),
+        )
     }
 
     fun testDetectsDuplicateKotlinAnnotatedRoutes() {
@@ -37,6 +43,39 @@ class ArmeriaKotlinMethodRouteTest : LightJavaCodeInsightFixtureTestCase() {
             .filterValues { it > 1 }
 
         assertEquals(setOf("GET" to "/hello"), duplicateKeys.keys)
+    }
+
+    fun testPrefersValueOverPathAnnotationArgument() {
+        val file = configureKotlinService(
+            """
+            class HelloService {
+                @Get(value = "/value", path = "/path")
+                fun hello(): String = "hello"
+            }
+            """.trimIndent(),
+        )
+        val route = functionsIn(file).mapNotNull(ArmeriaKotlinMethodRoute::from).single()
+
+        assertEquals(listOf("/value"), route.paths)
+    }
+
+    fun testIgnoresNonArmeriaGetAnnotation() {
+        val file = myFixture.configureByText(
+            "HelloService.kt",
+            """
+            package example
+
+            import example.other.Get
+
+            class HelloService {
+                @Get("/other")
+                fun hello(): String = "hello"
+            }
+            """.trimIndent(),
+        ) as KtFile
+        val routes = functionsIn(file).mapNotNull(ArmeriaKotlinMethodRoute::from)
+
+        assertTrue(routes.isEmpty())
     }
 
     fun testAllowsDistinctPaths() {
