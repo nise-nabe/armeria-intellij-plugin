@@ -271,6 +271,56 @@ class ArmeriaRouteNavigationSupportTest : LightJavaCodeInsightFixtureTestCase() 
         assertEquals("prefix:/api/hello", ArmeriaRouteNavigationSupport.routePath(method))
     }
 
+    fun testFindClassByTargetResolvesSimpleClassName() {
+        myFixture.addClass("package services; public class HelloService {}")
+
+        val resolved = ArmeriaRouteNavigationSupport.findClassByTarget(project, "HelloService")
+
+        assertNotNull(resolved)
+        assertEquals("services.HelloService", resolved!!.qualifiedName)
+    }
+
+    fun testFindClassByTargetReturnsNullWhenAmbiguous() {
+        myFixture.addClass("package foo; public class Dup {}")
+        myFixture.addClass("package bar; public class Dup {}")
+
+        assertNull(ArmeriaRouteNavigationSupport.findClassByTarget(project, "Dup"))
+    }
+
+    fun testRelatedHandlersResolvesUnqualifiedServiceClass() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package app;
+
+            import com.linecorp.armeria.server.Server;
+            import services.HelloService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder().annotatedService(new HelloService()).build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package services;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class HelloService {
+                @Get("/hello")
+                public String hello() { return "hello"; }
+            }
+            """.trimIndent(),
+        )
+
+        val handler = findMethod("services.HelloService", "hello")
+        val registration = ArmeriaRouteNavigationSupport.relatedRegistrations(handler).single()
+        assertEquals(1, ArmeriaRouteNavigationSupport.relatedHandlers(registration).size)
+    }
+
     private fun findMethod(className: String, name: String): PsiMethod {
         val clazz = JavaPsiFacade.getInstance(project).findClass(
             className,

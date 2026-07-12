@@ -145,7 +145,7 @@ internal object ArmeriaKotlinRouteNavigationSupport {
         val implementation = kotlinServiceImplementationExpression(call) ?: return null
         resolveServiceClassFromImplementation(implementation)?.let { return it }
         return (implementation as? PsiExpression)?.let { psiExpression ->
-            ArmeriaRouteNavigationSupport.findClassByFqn(call.project, extractArmeriaRouteTarget(psiExpression))
+            ArmeriaRouteNavigationSupport.findClassByTarget(call.project, extractArmeriaRouteTarget(psiExpression))
         }
     }
 
@@ -166,7 +166,7 @@ internal object ArmeriaKotlinRouteNavigationSupport {
             classFromResolved(reference?.references?.firstOrNull()?.resolve())?.let { return it }
         }
         return (initializer as? PsiExpression)?.let { expression ->
-            ArmeriaRouteNavigationSupport.findClassByFqn(property.project, extractArmeriaRouteTarget(expression))
+            ArmeriaRouteNavigationSupport.findClassByTarget(property.project, extractArmeriaRouteTarget(expression))
         }
     }
 

@@ -17,6 +17,7 @@ import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiVariable
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.search.PsiShortNamesCache
 import com.intellij.psi.search.searches.ReferencesSearch
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteCollector
@@ -157,6 +158,17 @@ internal object ArmeriaRouteNavigationSupport {
         return JavaPsiFacade.getInstance(project).findClass(target, GlobalSearchScope.projectScope(project))
     }
 
+    fun findClassByTarget(project: Project, target: String): PsiClass? {
+        if (target.isBlank()) {
+            return null
+        }
+        if (target.contains('.')) {
+            return findClassByFqn(project, target)
+        }
+        val scope = GlobalSearchScope.projectScope(project)
+        return PsiShortNamesCache.getInstance(project).getClassesByName(target, scope).singleOrNull()
+    }
+
     private fun routePathsForJavaMethod(method: PsiMethod): List<String> {
         val annotation = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return emptyList()
         val classPrefix = ArmeriaRouteSupport.extractPrimaryPath(
@@ -221,7 +233,7 @@ internal object ArmeriaRouteNavigationSupport {
             ArmeriaKotlinRouteNavigationSupport.resolveServiceClassFromImplementation(expression)?.let { return it }
         }
         return (expression as? PsiExpression)?.let { psiExpression ->
-            findClassByFqn(project, extractArmeriaRouteTarget(psiExpression))
+            findClassByTarget(project, extractArmeriaRouteTarget(psiExpression))
         }
     }
 
