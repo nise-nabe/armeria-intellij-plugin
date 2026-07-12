@@ -279,11 +279,12 @@ internal object ArmeriaRouteNavigationSupport {
         var current: PsiClass? = serviceClass
         while (current != null) {
             for (method in current.allMethods) {
+                val kotlinFunction = method.originalElement as? KtNamedFunction
                 when {
-                    ArmeriaRouteSupport.findRouteAnnotation(method) != null -> handlers += method
-                    else -> (method.originalElement as? KtNamedFunction)
-                        ?.takeIf { ArmeriaKotlinMethodRoute.from(it) != null }
-                        ?.let { handlers += it }
+                    kotlinFunction != null && ArmeriaKotlinMethodRoute.from(kotlinFunction) != null ->
+                        handlers += kotlinFunction
+                    ArmeriaRouteSupport.findRouteAnnotation(method) != null ->
+                        handlers += method
                 }
             }
             current = current.superClass
@@ -354,7 +355,7 @@ internal object ArmeriaRouteNavigationSupport {
         }
     }
 
-    private val SERVICE_REGISTRATION_METHOD_NAMES = ServiceRegistrationMethod.METHOD_NAMES
+    private val SERVICE_REGISTRATION_METHOD_NAMES = ServiceRegistrationMethod.CORE_METHOD_NAMES
 
     private val INDEXED_REGISTRATION_METHOD_NAMES = setOf(
         ServiceRegistrationMethod.ANNOTATED_SERVICE.methodName,

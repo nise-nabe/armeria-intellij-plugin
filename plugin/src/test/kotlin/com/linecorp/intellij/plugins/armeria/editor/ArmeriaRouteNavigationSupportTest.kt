@@ -30,6 +30,30 @@ class ArmeriaRouteNavigationSupportTest : LightJavaCodeInsightFixtureTestCase() 
         assertEquals("/api/hello", ArmeriaRouteNavigationSupport.routePath(method))
     }
 
+    fun testRelatedItemsBetweenHandlerAndServiceRegistration() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example; import com.linecorp.armeria.server.Server;
+            public class Main { public static void main(String[] a) {
+                Server.builder().service("/api", new HelloService()).build();
+            }}
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example; import com.linecorp.armeria.server.annotation.Get;
+            public class HelloService { @Get("/hello") public String hello() { return "hello"; } }
+            """.trimIndent(),
+        )
+        val handler = findMethod("hello")
+        assertEquals(1, ArmeriaRouteNavigationSupport.relatedRegistrations(handler).size)
+        val reg = ArmeriaRouteNavigationSupport.relatedRegistrations(handler).single()
+        assertTrue(reg is com.intellij.psi.PsiMethodCallExpression)
+        assertEquals("service", (reg as com.intellij.psi.PsiMethodCallExpression).methodExpression.referenceName)
+        assertEquals(1, ArmeriaRouteNavigationSupport.relatedHandlers(reg).size)
+    }
+
     fun testRelatedItemsBetweenHandlerAndRegistration() {
         myFixture.configureByText(
             "Main.java",
