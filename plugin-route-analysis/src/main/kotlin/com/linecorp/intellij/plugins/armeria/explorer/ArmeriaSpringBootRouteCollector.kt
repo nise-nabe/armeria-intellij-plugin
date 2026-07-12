@@ -67,7 +67,7 @@ internal object ArmeriaSpringBootRouteCollector {
         }
         method.body?.accept(object : JavaRecursiveElementWalkingVisitor() {
             override fun visitMethodCallExpression(expression: PsiMethodCallExpression) {
-                ArmeriaRouteCollector.collectServiceRegistrationFromMethodCall(
+                ArmeriaRouteCollectorServiceRegistration.collectServiceRegistrationFromMethodCall(
                     expression,
                     routes,
                     seenServiceRegistrations,

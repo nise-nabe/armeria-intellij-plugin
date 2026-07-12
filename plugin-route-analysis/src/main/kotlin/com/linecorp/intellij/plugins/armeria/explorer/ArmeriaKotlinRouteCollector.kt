@@ -127,7 +127,7 @@ object ArmeriaKotlinRouteCollector {
         val targetExpression = extractKotlinTargetExpression(unwrappedImplementation)
         val target = renderKotlinTarget(targetExpression)
         val targetUnresolved = isUnresolvedKotlinTarget(targetExpression, target)
-        ArmeriaRouteCollector.addServiceRegistrationRoute(
+        ArmeriaRouteCollectorServiceRegistration.addServiceRegistrationRoute(
             element = call,
             registrationKey = registrationKey,
             methodName = methodName,

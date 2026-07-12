@@ -10,14 +10,10 @@ import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
-import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
-import com.intellij.ui.ColoredTreeCellRenderer
 import com.intellij.ui.OnePixelSplitter
-import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.TreeUIHelper
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
@@ -34,9 +30,7 @@ import javax.swing.JPanel
 import javax.swing.JTree
 import javax.swing.KeyStroke
 import javax.swing.event.TreeSelectionEvent
-import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
-import javax.swing.tree.TreePath
 
 class ArmeriaRouteExplorerPanel(
     private val project: Project,
@@ -86,10 +80,10 @@ class ArmeriaRouteExplorerPanel(
             it.targetComponent = this
         }.component
 
-        routeTree.cellRenderer = RouteTreeCellRenderer()
+        routeTree.cellRenderer = ArmeriaRouteExplorerTreeRenderer()
         TreeUIHelper.getInstance().installTreeSpeedSearch(
             routeTree,
-            { path: TreePath ->
+            { path: javax.swing.tree.TreePath ->
                 val node = path.lastPathComponent
                 when (val userObject = (node as? javax.swing.tree.DefaultMutableTreeNode)?.userObject) {
                     is ArmeriaRouteTreeBuilder.RouteNode -> userObject.route.speedSearchText
@@ -197,7 +191,8 @@ class ArmeriaRouteExplorerPanel(
         val visibleRoutes = filterRoutes(allRoutes())
         val root = ArmeriaRouteTreeBuilder.buildRoot(visibleRoutes)
         routeTree.model = DefaultTreeModel(root)
-        val selectionRestored = previousSelection != null && restoreTreeSelection(root, previousSelection)
+        val selectionRestored = previousSelection != null &&
+            ArmeriaRouteExplorerFiltering.restoreTreeSelection(routeTree, root, previousSelection)
         when {
             visibleRoutes.isEmpty() -> {
                 selectedRoute = null
@@ -218,12 +213,12 @@ class ArmeriaRouteExplorerPanel(
         val collectedRoutes = allRoutes()
         statusLabel.text = if (
             currentModuleOnly &&
-            selectedEditorModule() == null &&
+            ArmeriaRouteExplorerFiltering.selectedEditorModule(project) == null &&
             collectedRoutes.isNotEmpty()
         ) {
             message("route.explorer.summary.moduleFilterNoEditor")
         } else {
-            summary(filterRoutes(collectedRoutes))
+            ArmeriaRouteExplorerFiltering.summary(filterRoutes(collectedRoutes))
         }
     }
 
@@ -235,77 +230,8 @@ class ArmeriaRouteExplorerPanel(
         }
     }
 
-    private fun restoreTreeSelection(root: DefaultMutableTreeNode, route: ArmeriaRoute): Boolean {
-        for (moduleIndex in 0 until root.childCount) {
-            val moduleNode = root.getChildAt(moduleIndex) as DefaultMutableTreeNode
-            val module = moduleNode.userObject as? ArmeriaRouteTreeBuilder.ModuleNode ?: continue
-            if (module.name != route.moduleName) {
-                continue
-            }
-            for (routeIndex in 0 until moduleNode.childCount) {
-                val routeNode = moduleNode.getChildAt(routeIndex) as DefaultMutableTreeNode
-                val visibleRoute = (routeNode.userObject as? ArmeriaRouteTreeBuilder.RouteNode)?.route ?: continue
-                if (routesMatch(visibleRoute, route)) {
-                    routeTree.selectionPath = TreePath(routeNode.path)
-                    return true
-                }
-            }
-        }
-        return false
-    }
-
-    private fun routesMatch(left: ArmeriaRoute, right: ArmeriaRoute): Boolean {
-        return left.moduleName == right.moduleName &&
-            left.path == right.path &&
-            left.target == right.target &&
-            left.routeMatch == right.routeMatch &&
-            left.httpMethod == right.httpMethod
-    }
-
-    private fun filterRoutes(routes: List<ArmeriaRoute>): List<ArmeriaRoute> {
-        val withoutRuntime = routes.filter { it.routeMatch != RouteMatch.RUNTIME }
-        val runtimeOnly = routes.filter { it.routeMatch == RouteMatch.RUNTIME }
-        if (!currentModuleOnly) {
-            return withoutRuntime + runtimeOnly
-        }
-        val selectedModule = selectedEditorModule() ?: return runtimeOnly
-        return withoutRuntime.filter { it.moduleName == selectedModule.name } + runtimeOnly
-    }
-
-    private fun selectedEditorModule(): com.intellij.openapi.module.Module? {
-        val file = FileEditorManager.getInstance(project).selectedFiles.firstOrNull() ?: return null
-        return ModuleUtilCore.findModuleForFile(file, project)
-    }
-
-    private fun summary(collectedRoutes: List<ArmeriaRoute>): String {
-        if (collectedRoutes.isEmpty()) {
-            return message("route.explorer.summary.empty")
-        }
-        val docServiceDetected = collectedRoutes.any { it.isDocService }
-        val runtimeCount = collectedRoutes.count { it.routeMatch == RouteMatch.RUNTIME }
-        return buildString {
-            append(message("route.explorer.summary.routes", collectedRoutes.size))
-            append(" · ")
-            append(
-                collectedRoutes.groupBy { it.protocol }.entries.joinToString {
-                    message("route.explorer.summary.protocolBreakdown", it.key, it.value.size)
-                },
-            )
-            if (docServiceDetected) {
-                append(" · ")
-                append(message("route.explorer.summary.docService"))
-            }
-            if (runtimeCount > 0) {
-                append(" · ")
-                append(message("route.explorer.summary.runtime", runtimeCount))
-            }
-            val observability = ArmeriaObservabilitySummary.summarize(collectedRoutes)
-            if (observability.isNotEmpty()) {
-                append(" · ")
-                append(observability)
-            }
-        }
-    }
+    private fun filterRoutes(routes: List<ArmeriaRoute>): List<ArmeriaRoute> =
+        ArmeriaRouteExplorerFiltering.filterRoutes(project, routes, currentModuleOnly)
 
     private fun navigateToSelection() {
         val route = selectedRouteFromTree() ?: return
@@ -321,39 +247,4 @@ class ArmeriaRouteExplorerPanel(
     }
 
     override fun dispose() = Unit
-
-    private inner class RouteTreeCellRenderer : ColoredTreeCellRenderer() {
-        override fun customizeCellRenderer(
-            tree: JTree,
-            value: Any?,
-            selected: Boolean,
-            expanded: Boolean,
-            leaf: Boolean,
-            row: Int,
-            hasFocus: Boolean,
-        ) {
-            toolTipText = null
-            val node = value as? javax.swing.tree.DefaultMutableTreeNode ?: return
-            when (val userObject = node.userObject) {
-                is ArmeriaRouteTreeBuilder.ModuleNode -> {
-                    append(message("route.explorer.tree.module", userObject.name, userObject.routeCount), SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES)
-                }
-                is ArmeriaRouteTreeBuilder.RouteNode -> renderRoute(userObject.route)
-            }
-        }
-
-        private fun renderRoute(route: ArmeriaRoute) {
-            val pillLabel = ArmeriaHttpMethodPill.pillLabel(route)
-            toolTipText = buildString {
-                append(route.methodLabel)
-                append(' ')
-                append(route.path)
-                append(" → ")
-                append(route.shortTarget)
-            }
-            append(ArmeriaHttpMethodPill.pillText(pillLabel), ArmeriaHttpMethodPill.textAttributes(route))
-            append("  ", SimpleTextAttributes.REGULAR_ATTRIBUTES)
-            append(route.path, SimpleTextAttributes.REGULAR_ATTRIBUTES)
-        }
-    }
 }
