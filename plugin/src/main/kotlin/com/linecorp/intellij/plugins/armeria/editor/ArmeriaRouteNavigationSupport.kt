@@ -4,11 +4,14 @@ import com.intellij.navigation.GotoRelatedItem
 import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiClassType
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiIdentifier
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
+import com.intellij.psi.PsiReferenceExpression
+import com.intellij.psi.PsiVariable
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.searches.ReferencesSearch
 import com.intellij.psi.util.PsiTreeUtil
@@ -27,6 +30,7 @@ import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
+import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtValueArgument
 
 internal object ArmeriaRouteNavigationSupport {
@@ -53,8 +57,8 @@ internal object ArmeriaRouteNavigationSupport {
     }
 
     fun routePath(handler: PsiElement): String = when (handler) {
-        is PsiMethod -> routePathForJavaMethod(handler)
-        is KtNamedFunction -> ArmeriaKotlinMethodRoute.from(handler)?.paths?.firstOrNull().orEmpty()
+        is PsiMethod -> routePathsForJavaMethod(handler).joinToString(", ")
+        is KtNamedFunction -> ArmeriaKotlinMethodRoute.from(handler)?.paths?.joinToString(", ").orEmpty()
         else -> ""
     }
 
@@ -92,13 +96,17 @@ internal object ArmeriaRouteNavigationSupport {
             )
         }
 
-    private fun routePathForJavaMethod(method: PsiMethod): String {
-        val annotation = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return ""
+    private fun routePathsForJavaMethod(method: PsiMethod): List<String> {
+        val annotation = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return emptyList()
         val classPrefix = ArmeriaRouteSupport.extractPrimaryPath(
             method.containingClass?.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION),
         )
-        val path = ArmeriaRouteSupport.extractPaths(annotation.first).firstOrNull().orEmpty().ifBlank { "/" }
-        return ArmeriaRouteSupport.combinePaths(classPrefix, ArmeriaRouteSupport.normalizePath(path))
+        return ArmeriaRouteSupport.extractPaths(annotation.first)
+            .ifEmpty { listOf("/") }
+            .map { path ->
+                val normalized = path.ifBlank { "/" }
+                ArmeriaRouteSupport.combinePaths(classPrefix, ArmeriaRouteSupport.normalizePath(normalized))
+            }
     }
 
     private fun methodFromElement(element: PsiElement): PsiMethod? = when (element) {
@@ -115,39 +123,37 @@ internal object ArmeriaRouteNavigationSupport {
     private fun findRegistrationsForServiceClass(serviceClass: PsiClass, project: Project): List<PsiElement> {
         val registrations = linkedSetOf<PsiElement>()
         val scope = GlobalSearchScope.projectScope(project)
-        val searchTargets = mutableListOf<PsiElement>()
-        searchTargets += serviceClass
-        val ktClass = serviceClass.originalElement as? KtClass
-        if (ktClass != null) {
-            searchTargets += ktClass
-            ktClass.primaryConstructor?.let { searchTargets += it }
-        }
-        for (target in searchTargets) {
-            collectRegistrationsFromReferences(target, serviceClass, registrations)
+        val builderClass = JavaPsiFacade.getInstance(project)
+            .findClass(ArmeriaRouteSupport.SERVER_BUILDER_CLASS, scope)
+            ?: return emptyList()
+        for (methodName in INDEXED_REGISTRATION_METHOD_NAMES) {
+            for (method in builderClass.findMethodsByName(methodName, false)) {
+                ReferencesSearch.search(method, scope).forEach { reference ->
+                    collectRegistrationFromReference(reference.element, serviceClass, registrations)
+                }
+            }
         }
         return registrations.toList()
     }
 
-    private fun collectRegistrationsFromReferences(
-        target: PsiElement,
+    private fun collectRegistrationFromReference(
+        element: PsiElement,
         serviceClass: PsiClass,
         registrations: MutableSet<PsiElement>,
     ) {
-        ReferencesSearch.search(target, GlobalSearchScope.projectScope(target.project)).forEach { reference ->
-            val javaCall = PsiTreeUtil.getParentOfType(reference.element, PsiMethodCallExpression::class.java)
-            if (javaCall != null && isJavaServiceRegistrationCall(javaCall)) {
-                val resolvedClass = resolveServiceClassFromJavaCall(javaCall) ?: return@forEach
-                if (serviceTypesMatch(serviceClass, resolvedClass)) {
-                    registrations += javaCall
-                }
-                return@forEach
+        val javaCall = PsiTreeUtil.getParentOfType(element, PsiMethodCallExpression::class.java, false)
+        if (javaCall != null && isJavaServiceRegistrationCall(javaCall)) {
+            val resolvedClass = resolveServiceClassFromJavaCall(javaCall) ?: return
+            if (serviceTypesMatch(serviceClass, resolvedClass)) {
+                registrations += javaCall
             }
-            val kotlinCall = kotlinRegistrationCallFromReference(reference.element)
-            if (kotlinCall != null) {
-                val resolvedClass = resolveServiceClassFromKotlinCall(kotlinCall) ?: return@forEach
-                if (serviceTypesMatch(serviceClass, resolvedClass)) {
-                    registrations += kotlinCall
-                }
+            return
+        }
+        val kotlinCall = kotlinRegistrationCallFromReference(element)
+        if (kotlinCall != null) {
+            val resolvedClass = resolveServiceClassFromKotlinCall(kotlinCall) ?: return
+            if (serviceTypesMatch(serviceClass, resolvedClass)) {
+                registrations += kotlinCall
             }
         }
     }
@@ -208,17 +214,7 @@ internal object ArmeriaRouteNavigationSupport {
     }
 
     private fun resolveServiceClassFromImplementation(expression: PsiElement, project: Project): PsiClass? {
-        if (expression is PsiExpression) {
-            val target = extractArmeriaRouteTarget(expression)
-            return findClassByTarget(project, target)
-        }
-        if (expression is KtExpression) {
-            return resolveKotlinImplementationClass(expression, project)
-        }
-        return null
-    }
-
-    private fun resolveKotlinImplementationClass(expression: KtExpression, project: Project): PsiClass? {
+        resolvedClassFromReference(expression)?.let { return it }
         when (expression) {
             is KtCallExpression -> {
                 val reference = when (val callee = expression.calleeExpression) {
@@ -226,33 +222,56 @@ internal object ArmeriaRouteNavigationSupport {
                     is KtDotQualifiedExpression -> callee.selectorExpression as? KtNameReferenceExpression
                     else -> null
                 }
-                classFromResolved(reference?.references?.firstOrNull()?.resolve(), project)?.let { return it }
-            }
-            is KtNameReferenceExpression -> {
-                classFromResolved(expression.references.firstOrNull()?.resolve(), project)?.let { return it }
+                classFromResolved(reference?.references?.firstOrNull()?.resolve())?.let { return it }
             }
         }
-        return (expression as? PsiExpression)?.let {
-            findClassByTarget(project, extractArmeriaRouteTarget(it))
+        return (expression as? PsiExpression)?.let { psiExpression ->
+            findClassByFqn(project, extractArmeriaRouteTarget(psiExpression))
         }
     }
 
-    private fun classFromResolved(resolved: PsiElement?, project: Project): PsiClass? = when (resolved) {
-        is PsiClass -> resolved
-        is PsiMethod -> resolved.takeIf { it.isConstructor }?.containingClass
-        is KtClass -> resolved.toLightClass()
-        is KtConstructor<*> -> resolved.getContainingClassOrObject().toLightClass()
+    private fun resolvedClassFromReference(expression: PsiElement): PsiClass? = when (expression) {
+        is PsiReferenceExpression -> classFromResolved(expression.resolve())
+        is KtNameReferenceExpression -> classFromResolved(expression.references.firstOrNull()?.resolve())
         else -> null
     }
 
-    private fun findClassByTarget(project: Project, target: String): PsiClass? {
-        val facade = JavaPsiFacade.getInstance(project)
-        val scope = GlobalSearchScope.projectScope(project)
-        facade.findClass(target, scope)?.let { return it }
-        if (!target.contains('.')) {
-            return facade.findClass("example.$target", scope)
+    private fun classFromResolved(resolved: PsiElement?): PsiClass? = when (resolved) {
+        is PsiClass -> resolved
+        is PsiMethod -> resolved.takeIf { it.isConstructor }?.containingClass
+        is PsiVariable -> (resolved.type as? PsiClassType)?.resolve()
+        is KtClass -> resolved.toLightClass()
+        is KtConstructor<*> -> resolved.getContainingClassOrObject().toLightClass()
+        is KtProperty -> classFromKotlinProperty(resolved)
+        else -> null
+    }
+
+    private fun classFromKotlinProperty(property: KtProperty): PsiClass? {
+        property.typeReference?.references?.firstOrNull()?.resolve()?.let { typeResolved ->
+            when (typeResolved) {
+                is PsiClass -> return typeResolved
+                is KtClass -> return typeResolved.toLightClass()
+            }
         }
-        return null
+        val initializer = property.initializer ?: return null
+        if (initializer is KtCallExpression) {
+            val reference = when (val callee = initializer.calleeExpression) {
+                is KtNameReferenceExpression -> callee
+                is KtDotQualifiedExpression -> callee.selectorExpression as? KtNameReferenceExpression
+                else -> null
+            }
+            classFromResolved(reference?.references?.firstOrNull()?.resolve())?.let { return it }
+        }
+        return (initializer as? PsiExpression)?.let { expression ->
+            findClassByFqn(property.project, extractArmeriaRouteTarget(expression))
+        }
+    }
+
+    private fun findClassByFqn(project: Project, target: String): PsiClass? {
+        if (target.isBlank() || !target.contains('.')) {
+            return null
+        }
+        return JavaPsiFacade.getInstance(project).findClass(target, GlobalSearchScope.projectScope(project))
     }
 
     private fun annotatedHandlersInClass(serviceClass: PsiClass): List<PsiElement> {
@@ -336,4 +355,10 @@ internal object ArmeriaRouteNavigationSupport {
     }
 
     private val SERVICE_REGISTRATION_METHOD_NAMES = ServiceRegistrationMethod.METHOD_NAMES
+
+    private val INDEXED_REGISTRATION_METHOD_NAMES = setOf(
+        ServiceRegistrationMethod.ANNOTATED_SERVICE.methodName,
+        ServiceRegistrationMethod.SERVICE.methodName,
+        ServiceRegistrationMethod.SERVICE_UNDER.methodName,
+    )
 }

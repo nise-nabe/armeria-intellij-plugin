@@ -130,9 +130,106 @@ class ArmeriaRouteNavigationSupportTest : LightJavaCodeInsightFixtureTestCase() 
         assertTrue(ArmeriaRouteNavigationSupport.relatedRegistrations(function).single() is KtCallExpression)
     }
 
-    private fun findMethod(name: String): PsiMethod {
+    fun testRelatedItemsWithJavaVariableReference() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package com.acme;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    HelloService service = new HelloService();
+                    Server.builder().annotatedService(service).build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.acme;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class HelloService {
+                @Get("/hello")
+                public String hello() { return "hello"; }
+            }
+            """.trimIndent(),
+        )
+
+        val handler = findMethod("com.acme.HelloService", "hello")
+        assertEquals(1, ArmeriaRouteNavigationSupport.relatedRegistrations(handler).size)
+        val registration = ArmeriaRouteNavigationSupport.relatedRegistrations(handler).single()
+        assertEquals(1, ArmeriaRouteNavigationSupport.relatedHandlers(registration).size)
+    }
+
+    fun testRelatedItemsWithKotlinVariableReference() {
+        myFixture.configureByText(
+            "Get.kt",
+            """
+            package com.linecorp.armeria.server.annotation
+            annotation class Get(val value: String = "")
+            """.trimIndent(),
+        )
+        val helloServiceFile = myFixture.configureByText(
+            "HelloService.kt",
+            """
+            package com.acme
+
+            import com.linecorp.armeria.server.annotation.Get
+
+            class HelloService {
+                @Get("/hello")
+                fun hello(): String = "hello"
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package com.acme
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                val service = HelloService()
+                Server.builder()
+                    .annotatedService(service)
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val function = PsiTreeUtil.findChildOfType(helloServiceFile, KtNamedFunction::class.java)!!
+        assertEquals(1, ArmeriaRouteNavigationSupport.relatedRegistrations(function).size)
+        val registration = ArmeriaRouteNavigationSupport.relatedRegistrations(function).single()
+        assertEquals(1, ArmeriaRouteNavigationSupport.relatedHandlers(registration).size)
+    }
+
+    fun testRoutePathJoinsMultiplePaths() {
+        myFixture.configureByText(
+            "MultiPathService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class MultiPathService {
+                @Get({"/one", "/two"})
+                public String multi() { return "multi"; }
+            }
+            """.trimIndent(),
+        )
+
+        val method = findMethod("example.MultiPathService", "multi")
+        assertEquals("/one, /two", ArmeriaRouteNavigationSupport.routePath(method))
+    }
+
+    private fun findMethod(className: String, name: String): PsiMethod {
         val clazz = JavaPsiFacade.getInstance(project).findClass(
-            "example.HelloService",
+            className,
             GlobalSearchScope.projectScope(project),
         )
         assertNotNull(clazz)
@@ -140,6 +237,8 @@ class ArmeriaRouteNavigationSupportTest : LightJavaCodeInsightFixtureTestCase() 
         assertNotNull(method)
         return method!!
     }
+
+    private fun findMethod(name: String): PsiMethod = findMethod("example.HelloService", name)
 
     private fun registerArmeriaStubs() {
         myFixture.addClass("package com.linecorp.armeria.server.annotation; public @interface Get { String value() default \"\"; String path() default \"\"; }")
