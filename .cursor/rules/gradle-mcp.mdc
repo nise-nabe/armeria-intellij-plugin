@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Gradle tasks via MCP
 
-For **all Gradle task execution and build verification** in this repository, prefer the `gradle` MCP server (`nise-nabe/gradle-tapi-mcp-server` v0.4.1) over shell `./gradlew`.
+For **all Gradle task execution and build verification** in this repository, prefer the `gradle` MCP server (`nise-nabe/gradle-tapi-mcp-server` v0.4.2) over shell `./gradlew`.
 
 ## Before running tasks
 
@@ -28,7 +28,7 @@ Use `background: true` and poll `gradle_get_build_status` for anything that may 
 
 ## Shell fallback only when
 
-- MCP tools time out or the server is unresponsive (poll `gradle_list_builds` / read `.gradle/mcp-builds/<buildId>/mcp-result.json` first)
+- MCP tools time out or the server is unresponsive (poll `gradle_list_builds` / `gradle_get_build_status` first)
 - `BUILD_ALREADY_RUNNING` and you cannot cancel the in-flight MCP build
 - PR / CI parity requires `./gradlew build` after MCP verification passes
 
