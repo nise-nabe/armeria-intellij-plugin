@@ -165,7 +165,7 @@ internal object ArmeriaExtendedRegistrationCollectorVirtualHost {
                     return
                 }
                 val sizeBefore = routes.size
-                ArmeriaRouteCollector.addServiceRegistrationFromCall(call, routes, seenRegistrations)
+                ArmeriaRouteCollectorServiceRegistration.addServiceRegistrationFromCall(call, routes, seenRegistrations)
                 ArmeriaJavaRegistrationChainSupport.registrationKey(call)?.let(scopedKeys::add)
                 annotateVirtualHostForCall(call, routes, sizeBefore, hostname)
             }
