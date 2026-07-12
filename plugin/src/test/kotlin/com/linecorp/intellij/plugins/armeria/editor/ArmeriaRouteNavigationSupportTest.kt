@@ -271,6 +271,27 @@ class ArmeriaRouteNavigationSupportTest : LightJavaCodeInsightFixtureTestCase() 
         assertEquals("prefix:/api/hello", ArmeriaRouteNavigationSupport.routePath(method))
     }
 
+    fun testRoutePathPreservesRegexPathTypePrefix() {
+        myFixture.configureByText(
+            "RegexService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.PathPrefix;
+
+            @PathPrefix("regex:^/api")
+            public class RegexService {
+                @Get("regex:^/hello$")
+                public String hello() { return "hello"; }
+            }
+            """.trimIndent(),
+        )
+
+        val method = findMethod("example.RegexService", "hello")
+        assertEquals("regex:^/api/hello$", ArmeriaRouteNavigationSupport.routePath(method))
+    }
+
     fun testFindClassByTargetResolvesSimpleClassName() {
         myFixture.addClass("package services; public class HelloService {}")
 

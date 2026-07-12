@@ -2,13 +2,11 @@ package com.linecorp.intellij.plugins.armeria.editor
 
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiVariable
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaKotlinRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.ServiceRegistrationMethod
-import com.linecorp.intellij.plugins.armeria.explorer.extractArmeriaRouteTarget
 import com.linecorp.intellij.plugins.armeria.inspection.ArmeriaKotlinMethodRoute
 import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -144,9 +142,10 @@ internal object ArmeriaKotlinRouteNavigationSupport {
     private fun resolveServiceClassFromKotlinCall(call: KtCallExpression): PsiClass? {
         val implementation = kotlinServiceImplementationExpression(call) ?: return null
         resolveServiceClassFromImplementation(implementation)?.let { return it }
-        return (implementation as? PsiExpression)?.let { psiExpression ->
-            ArmeriaRouteNavigationSupport.findClassByTarget(call.project, extractArmeriaRouteTarget(psiExpression))
-        }
+        return ArmeriaRouteNavigationSupport.findClassByTarget(
+            call.project,
+            extractKotlinRouteTarget(implementation),
+        )
     }
 
     private fun classFromKotlinProperty(property: KtProperty): PsiClass? {
@@ -165,8 +164,25 @@ internal object ArmeriaKotlinRouteNavigationSupport {
             }
             classFromResolved(reference?.references?.firstOrNull()?.resolve())?.let { return it }
         }
-        return (initializer as? PsiExpression)?.let { expression ->
-            ArmeriaRouteNavigationSupport.findClassByTarget(property.project, extractArmeriaRouteTarget(expression))
+        return ArmeriaRouteNavigationSupport.findClassByTarget(
+            property.project,
+            extractKotlinRouteTarget(initializer),
+        )
+    }
+
+    private fun extractKotlinRouteTarget(expression: KtExpression): String {
+        return when (expression) {
+            is KtCallExpression -> {
+                val callee = expression.calleeExpression
+                val reference = when (callee) {
+                    is KtNameReferenceExpression -> callee
+                    is KtDotQualifiedExpression -> callee.selectorExpression as? KtNameReferenceExpression
+                    else -> null
+                }
+                reference?.getReferencedName() ?: expression.text.trim()
+            }
+            is KtNameReferenceExpression -> expression.getReferencedName()
+            else -> expression.text.trim()
         }
     }
 

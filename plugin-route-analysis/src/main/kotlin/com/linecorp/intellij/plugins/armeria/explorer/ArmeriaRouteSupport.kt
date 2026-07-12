@@ -214,14 +214,43 @@ object ArmeriaRouteSupport {
     }
 
     fun formatAnnotatedHandlerPath(classPrefix: String, rawPath: String): String {
-        val (pathType, normalizedPath) = parsePathType(rawPath.ifBlank { "/" })
-        val combined = combinePaths(classPrefix, normalizedPath)
-        return when (pathType) {
-            PathType.EXACT -> combined
-            PathType.PREFIX -> "prefix:$combined"
-            PathType.REGEX -> "regex:$combined"
-            PathType.GLOB -> "glob:$combined"
+        val (handlerPathType, handlerPath) = parsePathType(rawPath.ifBlank { "/" })
+        val (prefixPathType, prefixPath) = parsePathType(classPrefix.ifBlank { "/" })
+        val combinedBody = combineAnnotatedPathBodies(prefixPathType, prefixPath, handlerPathType, handlerPath)
+        val displayType = if (handlerPathType != PathType.EXACT) handlerPathType else prefixPathType
+        return when (displayType) {
+            PathType.EXACT -> combinedBody
+            PathType.PREFIX -> "prefix:$combinedBody"
+            PathType.REGEX -> "regex:$combinedBody"
+            PathType.GLOB -> "glob:$combinedBody"
         }
+    }
+
+    private fun combineAnnotatedPathBodies(
+        prefixPathType: PathType,
+        prefixPath: String,
+        handlerPathType: PathType,
+        handlerPath: String,
+    ): String {
+        if (prefixPath == "/" || prefixPath.isBlank()) {
+            return handlerPath
+        }
+        if (handlerPath == "/" || handlerPath.isBlank()) {
+            return prefixPath
+        }
+        if (prefixPathType == PathType.EXACT && handlerPathType == PathType.EXACT) {
+            return combinePaths(prefixPath, handlerPath)
+        }
+        if (prefixPathType == PathType.REGEX || handlerPathType == PathType.REGEX) {
+            return joinRegexPathBodies(prefixPath, handlerPath)
+        }
+        return combinePaths(prefixPath, handlerPath)
+    }
+
+    private fun joinRegexPathBodies(prefix: String, handler: String): String {
+        val normalizedPrefix = prefix.trim().removeSuffix("$")
+        val normalizedHandler = handler.trim().removePrefix("^")
+        return normalizedPrefix + normalizedHandler
     }
 
     fun extractPathAnnotations(method: PsiMethod): List<String> {
