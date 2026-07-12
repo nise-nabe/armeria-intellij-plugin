@@ -161,7 +161,7 @@ Follow **`gradle-tapi-mcp`** constraints:
 
 1. `gradle_connection_status` — stop if not connected.
 2. **One** `gradle_run_tasks` batching `compileKotlin` plus the test source-set compile task for the suite you will run (`compileTestKotlin` for `:test`; `compileFastTestKotlin` or `fastTestClasses` for `:fastTest` — `src/fastTest` is not covered by `compileTestKotlin`), `background: true` on cold start.
-3. Poll `gradle_get_build_status` until terminal — **do not** set `includeOutput: true` while `status: running` (reduces duplicate stdout in agent context). Enable output only on failure.
+3. Poll `gradle_get_build_status` until terminal — omit `includeOutput` while `status: running` unless you need live logs (use `sinceStdoutOffset` / `sinceStderrOffset` for incremental deltas). On failure, read `testFailures` / `buildSummary.failureSummary` before enabling full `includeOutput`.
 4. **One** `gradle_run_tests` batching all affected test classes/methods in a single call.
 5. On failure, rerun **only** the failing method(s) — not the full class suite.
 
@@ -205,7 +205,7 @@ Report in the user’s language:
 - [ ] ≤ 1 branch checkout
 - [ ] Files read with offset/limit or Grep, not full-file unless refactoring
 - [ ] Gradle: ≤ 1 compile + ≤ 2 test MCP calls (full batch + optional single-method retry)
-- [ ] No `sleep` polling loops longer than needed — poll every 15–30s, no `includeOutput` until failed
+- [ ] No `sleep` polling loops longer than needed — poll every 15–30s; prefer `testFailures` over `includeOutput` on test failure
 - [ ] `resolve_comment` batched in one agent turn (parallel tool calls)
 - [ ] Did not re-read `gradle-tapi-mcp` or `AGENTS.md` in full
 
@@ -216,7 +216,7 @@ Report in the user’s language:
 | REST `/pulls/comments` with `diff_hunk` | ~12k tok | GraphQL without hunks |
 | 45+ tool rounds (fix → test → fix → test) | ~30k tok cumulative | Batch fixes, one verify |
 | Full file Write after Read | ~6k tok per file | StrReplace hunks |
-| `gradle_get_build_status` + `includeOutput: true` every 30s while running | Growing stdout each poll | Poll without output until terminal |
+| `gradle_get_build_status` + `includeOutput: true` every 30s while running | Growing stdout each poll | Omit output while running, or use `sinceStdoutOffset` / `sinceStderrOffset` deltas |
 | Reading 16 KB gradle skill for a compile+test | ~4k tok | Use table above |
 | Six sequential `resolve_comment` turns | 6 round-trips | Parallel in one message |
 
