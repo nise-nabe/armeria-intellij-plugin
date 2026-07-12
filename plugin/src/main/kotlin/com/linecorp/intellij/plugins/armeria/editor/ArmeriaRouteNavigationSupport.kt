@@ -162,8 +162,11 @@ internal object ArmeriaRouteNavigationSupport {
         val classPrefix = ArmeriaRouteSupport.extractPrimaryPath(
             method.containingClass?.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION),
         )
-        return ArmeriaRouteSupport.extractPaths(annotation.first)
-            .ifEmpty { listOf("/") }
+        return buildList {
+            addAll(ArmeriaRouteSupport.extractPaths(annotation.first))
+            addAll(ArmeriaRouteSupport.extractPathAnnotations(method))
+        }.ifEmpty { listOf("/") }
+            .distinct()
             .map { path -> ArmeriaRouteSupport.formatAnnotatedHandlerPath(classPrefix, path) }
     }
 

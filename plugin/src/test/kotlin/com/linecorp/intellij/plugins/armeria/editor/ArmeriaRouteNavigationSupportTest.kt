@@ -229,6 +229,27 @@ class ArmeriaRouteNavigationSupportTest : LightJavaCodeInsightFixtureTestCase() 
         assertEquals("/one, /two", ArmeriaRouteNavigationSupport.routePath(method))
     }
 
+    fun testRoutePathJoinsGetAnnotationWithPathAnnotation() {
+        myFixture.configureByText(
+            "PathAnnotationService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.Path;
+
+            public class PathAnnotationService {
+                @Get
+                @Path("/hello")
+                public String hello() { return "hello"; }
+            }
+            """.trimIndent(),
+        )
+
+        val method = findMethod("example.PathAnnotationService", "hello")
+        assertEquals("/hello", ArmeriaRouteNavigationSupport.routePath(method))
+    }
+
     fun testRoutePathPreservesPathTypePrefix() {
         myFixture.configureByText(
             "PrefixService.java",
@@ -265,6 +286,7 @@ class ArmeriaRouteNavigationSupportTest : LightJavaCodeInsightFixtureTestCase() 
 
     private fun registerArmeriaStubs() {
         myFixture.addClass("package com.linecorp.armeria.server.annotation; public @interface Get { String[] value() default {}; String[] path() default {}; }")
+        myFixture.addClass("package com.linecorp.armeria.server.annotation; public @interface Path { String[] value() default {}; }")
         myFixture.addClass("package com.linecorp.armeria.server.annotation; public @interface PathPrefix { String value(); }")
         myFixture.addClass("package com.linecorp.armeria.server; public final class Server { public static ServerBuilder builder() { return null; } }")
         myFixture.addClass(
