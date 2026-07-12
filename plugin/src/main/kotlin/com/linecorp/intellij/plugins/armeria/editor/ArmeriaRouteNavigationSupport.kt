@@ -14,7 +14,10 @@ import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiIdentifier
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
+import com.intellij.psi.PsiNewExpression
+import com.intellij.psi.PsiParenthesizedExpression
 import com.intellij.psi.PsiReferenceExpression
+import com.intellij.psi.PsiTypeCastExpression
 import com.intellij.psi.PsiVariable
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.PsiShortNamesCache
@@ -232,8 +235,20 @@ internal object ArmeriaRouteNavigationSupport {
         if (isKotlinPluginAvailable()) {
             ArmeriaKotlinRouteNavigationSupport.resolveServiceClassFromImplementation(expression)?.let { return it }
         }
-        return (expression as? PsiExpression)?.let { psiExpression ->
-            findClassByTarget(project, extractArmeriaRouteTarget(psiExpression))
+        val psiExpression = expression as? PsiExpression ?: return null
+        classFromNewExpression(psiExpression)?.let { return it }
+        return findClassByTarget(project, extractArmeriaRouteTarget(psiExpression))
+    }
+
+    private fun classFromNewExpression(expression: PsiExpression): PsiClass? {
+        var current: PsiExpression = expression
+        while (true) {
+            when (current) {
+                is PsiNewExpression -> return classFromResolved(current.classReference?.resolve())
+                is PsiTypeCastExpression -> current = current.operand ?: return null
+                is PsiParenthesizedExpression -> current = current.expression ?: return null
+                else -> return null
+            }
         }
     }
 

@@ -217,13 +217,23 @@ object ArmeriaRouteSupport {
         val (handlerPathType, handlerPath) = parsePathType(rawPath.ifBlank { "/" })
         val (prefixPathType, prefixPath) = parsePathType(classPrefix.ifBlank { "/" })
         val combinedBody = combineAnnotatedPathBodies(prefixPathType, prefixPath, handlerPathType, handlerPath)
-        val displayType = if (handlerPathType != PathType.EXACT) handlerPathType else prefixPathType
+        val displayType = annotatedPathDisplayType(prefixPathType, handlerPathType)
         return when (displayType) {
             PathType.EXACT -> combinedBody
             PathType.PREFIX -> "prefix:$combinedBody"
             PathType.REGEX -> "regex:$combinedBody"
             PathType.GLOB -> "glob:$combinedBody"
         }
+    }
+
+    private fun annotatedPathDisplayType(prefixPathType: PathType, handlerPathType: PathType): PathType {
+        if (prefixPathType == PathType.REGEX || handlerPathType == PathType.REGEX) {
+            return PathType.REGEX
+        }
+        if (handlerPathType != PathType.EXACT) {
+            return handlerPathType
+        }
+        return prefixPathType
     }
 
     private fun combineAnnotatedPathBodies(

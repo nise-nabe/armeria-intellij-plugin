@@ -308,6 +308,41 @@ class ArmeriaRouteNavigationSupportTest : LightJavaCodeInsightFixtureTestCase() 
         assertNull(ArmeriaRouteNavigationSupport.findClassByTarget(project, "Dup"))
     }
 
+    fun testRelatedHandlersResolvesNewExpressionWhenSimpleNameIsAmbiguous() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package app;
+
+            import com.linecorp.armeria.server.Server;
+            import services.HelloService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder().annotatedService(new HelloService()).build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package services;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class HelloService {
+                @Get("/hello")
+                public String hello() { return "hello"; }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package other; public class HelloService {}")
+
+        val handler = findMethod("services.HelloService", "hello")
+        val registration = ArmeriaRouteNavigationSupport.relatedRegistrations(handler).single()
+        assertEquals(1, ArmeriaRouteNavigationSupport.relatedHandlers(registration).size)
+    }
+
     fun testRelatedHandlersResolvesUnqualifiedServiceClass() {
         myFixture.configureByText(
             "Main.java",
