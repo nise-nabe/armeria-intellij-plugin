@@ -15,8 +15,9 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
         configureDuplicateServiceRegistrationFixture()
 
         myFixture.enableInspections(ArmeriaDuplicateRegistrationInspection())
+        val expectedDescription = message("inspection.duplicate.registration.problem", "/dup", 2)
         val duplicateHighlights = myFixture.doHighlighting().filter {
-            it.description?.contains("conflicting registrations") == true
+            it.description == expectedDescription
         }
 
         assertEquals(1, duplicateHighlights.size)
@@ -73,8 +74,9 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
         )
 
         myFixture.enableInspections(ArmeriaDuplicateRegistrationKotlinInspection())
+        val expectedDescription = message("inspection.duplicate.registration.problem", "GET /shared", 2)
         val duplicateHighlights = myFixture.doHighlighting().filter {
-            it.description?.contains("conflicting registrations") == true
+            it.description == expectedDescription
         }
 
         assertEquals(1, duplicateHighlights.size)

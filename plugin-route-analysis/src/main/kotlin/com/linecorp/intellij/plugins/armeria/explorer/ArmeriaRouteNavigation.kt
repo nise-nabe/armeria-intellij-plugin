@@ -15,16 +15,15 @@ object ArmeriaRouteNavigation {
         pointer: SmartPsiElementPointer<PsiElement>,
         parentDisposable: Disposable? = null,
     ) {
-        val coordinator = ReadAction.nonBlocking<Navigatable?> {
+        ReadAction.nonBlocking<Navigatable?> {
             val element = pointer.element
             (element as? Navigatable)?.takeIf { it.canNavigate() }
                 ?: (element?.navigationElement as? Navigatable)?.takeIf { it.canNavigate() }
         }
             .inSmartMode(project)
-        if (parentDisposable != null) {
-            coordinator.expireWith(parentDisposable)
-        }
-        coordinator
+            .let { coordinator ->
+                if (parentDisposable != null) coordinator.expireWith(parentDisposable) else coordinator
+            }
             .finishOnUiThread(ModalityState.any()) { navigatable ->
                 navigatable?.navigate(true)
             }
