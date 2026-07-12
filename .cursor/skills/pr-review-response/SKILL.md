@@ -160,15 +160,16 @@ git commit -m "fix: address PR <N> review comments"
 Follow **`gradle-tapi-mcp`** constraints:
 
 1. `gradle_connection_status` — stop if not connected.
-2. **One** `gradle_run_tasks` with `[":<module>:compileKotlin", ":<module>:compileTestKotlin"]`, `background: true` on cold start.
+2. **One** `gradle_run_tasks` batching `compileKotlin` plus the test source-set compile task for the suite you will run (`compileTestKotlin` for `:test`; `compileFastTestKotlin` or `fastTestClasses` for `:fastTest` — `src/fastTest` is not covered by `compileTestKotlin`), `background: true` on cold start.
 3. Poll `gradle_get_build_status` until terminal — **do not** set `includeOutput: true` while `status: running` (reduces duplicate stdout in agent context). Enable output only on failure.
 4. **One** `gradle_run_tests` batching all affected test classes/methods in a single call.
 5. On failure, rerun **only** the failing method(s) — not the full class suite.
 
 | Changed code in | Compile | Tests |
 |-----------------|---------|-------|
-| `plugin/` | `:plugin:compileKotlin` | `:plugin:test` |
-| `plugin-route-analysis/` | `:plugin-route-analysis:compileKotlin` | `:plugin-route-analysis:fastTest` or `:test` |
+| `plugin/` | `:plugin:compileKotlin`, `:plugin:compileTestKotlin` | `:plugin:test` |
+| `plugin-route-analysis/` (`src/test`) | `:plugin-route-analysis:compileKotlin`, `:plugin-route-analysis:compileTestKotlin` | `:plugin-route-analysis:test` |
+| `plugin-route-analysis/` (`src/fastTest`) | `:plugin-route-analysis:compileKotlin`, `:plugin-route-analysis:compileFastTestKotlin` | `:plugin-route-analysis:fastTest` |
 
 Do **not** run `build` for review-fix verification unless the PR touched build logic or CI parity is explicitly required.
 
