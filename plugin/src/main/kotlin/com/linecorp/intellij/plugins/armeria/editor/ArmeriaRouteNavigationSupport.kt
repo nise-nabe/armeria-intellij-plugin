@@ -137,7 +137,7 @@ internal object ArmeriaRouteNavigationSupport {
             .findClass(ArmeriaRouteSupport.SERVER_BUILDER_CLASS, scope)
             ?: return emptyList()
         try {
-            for (methodName in INDEXED_REGISTRATION_METHOD_NAMES) {
+            for (methodName in serviceRegistrationMethodNames) {
                 for (method in builderClass.findMethodsByName(methodName, false)) {
                     ReferencesSearch.search(method, scope).forEach { reference ->
                         collectRegistrationFromReference(reference.element, serviceClass, registrations)
@@ -323,10 +323,4 @@ internal object ArmeriaRouteNavigationSupport {
     private fun isKotlinPluginAvailable(): Boolean = PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
 
     private fun isIndexUnavailable(project: Project): Boolean = DumbService.isDumb(project)
-
-    private val INDEXED_REGISTRATION_METHOD_NAMES = setOf(
-        ServiceRegistrationMethod.ANNOTATED_SERVICE.methodName,
-        ServiceRegistrationMethod.SERVICE.methodName,
-        ServiceRegistrationMethod.SERVICE_UNDER.methodName,
-    )
 }

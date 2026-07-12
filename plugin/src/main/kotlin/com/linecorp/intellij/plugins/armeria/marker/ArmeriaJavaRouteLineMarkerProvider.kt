@@ -31,7 +31,7 @@ internal class ArmeriaJavaRouteLineMarkerProvider : LineMarkerProvider {
     }
 
     private fun annotatedJavaMarker(element: PsiElement): LineMarkerInfo<*>? {
-        val method = (element as? PsiMethod)
+        val method = (element.parent as? PsiMethod)
             ?: PsiTreeUtil.getParentOfType(element, PsiMethod::class.java, false)
             ?: return null
         if (element != method.nameIdentifier) {
