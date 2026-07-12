@@ -28,17 +28,6 @@ import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.psi.KtFile
 
-internal enum class RouteProtocol(private val messageKey: String) {
-    HTTP("route.explorer.protocol.http"),
-    GRPC("route.explorer.protocol.grpc"),
-    DOC_SERVICE("route.explorer.protocol.docService"),
-    GRAPHQL("route.explorer.protocol.graphql"),
-    THRIFT("route.explorer.protocol.thrift"),
-    ;
-
-    fun presentableName(): String = message(messageKey)
-}
-
 object ArmeriaRouteCollector {
 
     private val KOTLIN_PLUGIN_ID = PluginId.getId("org.jetbrains.kotlin")
