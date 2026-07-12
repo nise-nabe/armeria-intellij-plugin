@@ -43,6 +43,10 @@ object ArmeriaRouteDuplicateIndex {
         return getIndex(project).groups
     }
 
+    /** Exposed for regression tests that simulate duplicate [ArmeriaRoute] entries in a group. */
+    internal fun duplicateHitsForGroups(groups: List<DuplicateRegistrationGroup>): Map<VirtualFile, List<DuplicateRegistrationHit>> =
+        buildHitsByVirtualFile(groups)
+
     internal fun findDuplicateGroups(routes: List<ArmeriaRoute>): List<DuplicateRegistrationGroup> {
         val groups = mutableListOf<DuplicateRegistrationGroup>()
         for ((_, moduleRoutes) in routes.filter { it.routeMatch in CHECKED_MATCHES }.groupBy { it.moduleName }) {
@@ -254,9 +258,14 @@ object ArmeriaRouteDuplicateIndex {
         }
 
     private fun buildConflictingRoutes(current: ArmeriaRoute, groupRoutes: List<ArmeriaRoute>): List<ConflictingRouteRegistration> {
+        val currentElement = current.pointer.element
         val conflicts = groupRoutes.filter { route ->
-            route !== current && routesOverlap(current, route) && httpMethodsOverlap(current, route)
-        }
+            val element = route.pointer.element
+            element != null &&
+                element !== currentElement &&
+                routesOverlap(current, route) &&
+                httpMethodsOverlap(current, route)
+        }.distinctBy { it.pointer.element }
         val labelCounts = conflicts.groupingBy(::registrationLabel).eachCount()
         return conflicts.map { route ->
             val baseLabel = registrationLabel(route)

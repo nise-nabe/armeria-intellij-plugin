@@ -206,6 +206,49 @@ class ArmeriaRouteDuplicateIndexTest : ArmeriaFixtureTestBase() {
         assertTrue(labels.all { it.startsWith("/dup (") })
     }
 
+    fun testConflictingRoutesDeduplicateSharedPsiElements() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/dup", new FirstService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Extra {
+                public static void register(com.linecorp.armeria.server.ServerBuilder sb) {
+                    sb.service("/dup", new SecondService());
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class FirstService {}")
+        myFixture.addClass("package example; public class SecondService {}")
+
+        val group = ArmeriaRouteDuplicateIndex.duplicateGroups(project).single()
+        val inflatedGroup = DuplicateRegistrationGroup(group.routes + group.routes.last())
+        val mainFile = myFixture.findClass("example.Main").containingFile.virtualFile!!
+        val hit = ArmeriaRouteDuplicateIndex.duplicateHitsForGroups(listOf(inflatedGroup))[mainFile]!!.single()
+
+        assertEquals(2, hit.registrationCount)
+        assertEquals(1, hit.conflictingRoutes.size)
+        assertEquals("/dup", hit.conflictingRoutes.single().navigationLabel)
+    }
+
     fun testInClassJavaAnnotatedDuplicatesAreExcluded() {
         myFixture.configureByText(
             "BadService.java",
