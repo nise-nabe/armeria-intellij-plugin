@@ -30,9 +30,7 @@ internal class ArmeriaKotlinRouteLineMarkerProvider : LineMarkerProvider {
     }
 
     private fun annotatedKotlinMarker(element: PsiElement): LineMarkerInfo<*>? {
-        val function = (element as? KtNamedFunction)
-            ?: PsiTreeUtil.getParentOfType(element, KtNamedFunction::class.java, false)
-            ?: return null
+        val function = element.parent as? KtNamedFunction ?: return null
         if (element != function.nameIdentifier) {
             return null
         }

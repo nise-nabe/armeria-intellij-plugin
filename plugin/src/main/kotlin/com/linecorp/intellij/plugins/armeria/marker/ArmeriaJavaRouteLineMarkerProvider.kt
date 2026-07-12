@@ -6,6 +6,7 @@ import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiExpression
+import com.intellij.psi.PsiIdentifier
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.util.PsiTreeUtil
@@ -16,6 +17,9 @@ import com.linecorp.intellij.plugins.armeria.message
 
 internal class ArmeriaJavaRouteLineMarkerProvider : LineMarkerProvider {
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
+        if (element !is PsiIdentifier) {
+            return null
+        }
         if (DumbService.isDumb(element.project)) {
             return null
         }

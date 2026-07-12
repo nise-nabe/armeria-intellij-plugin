@@ -1,5 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.editor
 
+import com.intellij.openapi.project.DumbService
+import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
@@ -25,14 +27,14 @@ internal object ArmeriaKotlinRouteNavigationSupport {
 
     fun annotatedKotlinRouteFunction(element: PsiElement): PsiElement? {
         val function = kotlinFunctionFromElement(element) ?: return null
-        return function.takeIf { ArmeriaKotlinMethodRoute.from(it) != null }
+        return function.takeIf { kotlinMethodRoute(it) != null }
     }
 
     fun httpMethod(handler: PsiElement): String? =
-        (handler as? KtNamedFunction)?.let { ArmeriaKotlinMethodRoute.from(it)?.httpMethod }
+        (handler as? KtNamedFunction)?.let { kotlinMethodRoute(it)?.httpMethod }
 
     fun routePath(handler: PsiElement): String =
-        (handler as? KtNamedFunction)?.let { ArmeriaKotlinMethodRoute.from(it)?.paths?.joinToString(", ") }.orEmpty()
+        (handler as? KtNamedFunction)?.let { kotlinMethodRoute(it)?.paths?.joinToString(", ") }.orEmpty()
 
     fun relatedRegistrations(handler: PsiElement): List<PsiElement> {
         val function = handler as? KtNamedFunction ?: return emptyList()
@@ -61,7 +63,7 @@ internal object ArmeriaKotlinRouteNavigationSupport {
 
     fun annotatedHandlerFromMethod(method: PsiMethod): PsiElement? {
         val kotlinFunction = method.originalElement as? KtNamedFunction ?: return null
-        return kotlinFunction.takeIf { ArmeriaKotlinMethodRoute.from(it) != null }
+        return kotlinFunction.takeIf { kotlinMethodRoute(it) != null }
     }
 
     fun resolvedClassFromReference(expression: PsiElement): PsiClass? = when (expression) {
@@ -112,6 +114,17 @@ internal object ArmeriaKotlinRouteNavigationSupport {
     fun handlerNavigationElement(handler: PsiElement): PsiElement {
         val function = handler as? KtNamedFunction ?: return handler
         return function.nameIdentifier ?: handler
+    }
+
+    private fun kotlinMethodRoute(function: KtNamedFunction): ArmeriaKotlinMethodRoute? {
+        if (DumbService.isDumb(function.project)) {
+            return null
+        }
+        return try {
+            ArmeriaKotlinMethodRoute.from(function)
+        } catch (_: IndexNotReadyException) {
+            null
+        }
     }
 
     private fun kotlinFunctionFromElement(element: PsiElement): KtNamedFunction? = when (element) {
