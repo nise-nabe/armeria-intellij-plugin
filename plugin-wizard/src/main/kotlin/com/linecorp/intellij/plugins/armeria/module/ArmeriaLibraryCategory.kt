@@ -5,7 +5,6 @@ package com.linecorp.intellij.plugins.armeria.module
 import com.intellij.ide.starters.local.Library
 import com.intellij.ide.starters.local.LibraryCategory
 import com.intellij.ide.starters.shared.LibraryLink
-import com.intellij.ide.starters.shared.LibraryLinkType
 import com.linecorp.intellij.plugins.armeria.ArmeriaIcons
 import com.linecorp.intellij.plugins.armeria.message
 
