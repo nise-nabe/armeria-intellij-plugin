@@ -164,10 +164,7 @@ internal object ArmeriaRouteNavigationSupport {
         )
         return ArmeriaRouteSupport.extractPaths(annotation.first)
             .ifEmpty { listOf("/") }
-            .map { path ->
-                val normalized = path.ifBlank { "/" }
-                ArmeriaRouteSupport.combinePaths(classPrefix, ArmeriaRouteSupport.normalizePath(normalized))
-            }
+            .map { path -> ArmeriaRouteSupport.formatAnnotatedHandlerPath(classPrefix, path) }
     }
 
     private fun methodFromElement(element: PsiElement): PsiMethod? = when (element) {

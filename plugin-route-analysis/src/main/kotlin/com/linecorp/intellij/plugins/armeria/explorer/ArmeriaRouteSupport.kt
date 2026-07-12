@@ -213,6 +213,17 @@ object ArmeriaRouteSupport {
         }
     }
 
+    fun formatAnnotatedHandlerPath(classPrefix: String, rawPath: String): String {
+        val (pathType, normalizedPath) = parsePathType(rawPath.ifBlank { "/" })
+        val combined = combinePaths(classPrefix, normalizedPath)
+        return when (pathType) {
+            PathType.EXACT -> combined
+            PathType.PREFIX -> "prefix:$combined"
+            PathType.REGEX -> "regex:$combined"
+            PathType.GLOB -> "glob:$combined"
+        }
+    }
+
     fun extractPathAnnotations(method: PsiMethod): List<String> {
         return method.annotations
             .filter { it.qualifiedName == PATH_ANNOTATION }
