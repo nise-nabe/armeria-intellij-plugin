@@ -138,3 +138,6 @@ internal object ArmeriaRouteTargetExtractor {
         }
     }
 }
+
+fun extractArmeriaRouteTarget(expression: PsiExpression): String =
+    ArmeriaRouteTargetExtractor.extractTarget(expression)

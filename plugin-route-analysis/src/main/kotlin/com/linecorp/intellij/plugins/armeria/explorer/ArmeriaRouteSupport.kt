@@ -89,6 +89,63 @@ object ArmeriaRouteSupport {
         return if (candidate.startsWith("/")) candidate else "/$candidate"
     }
 
+    fun formatAnnotatedHandlerPath(classPrefix: String, rawPath: String): String {
+        val (handlerPathType, handlerPath) = parsePathType(rawPath.ifBlank { "/" })
+        val (prefixPathType, prefixPath) = parsePathType(classPrefix.ifBlank { "/" })
+        val combinedBody = combineAnnotatedPathBodies(prefixPathType, prefixPath, handlerPathType, handlerPath)
+        val displayType = annotatedPathDisplayType(prefixPathType, handlerPathType)
+        return when (displayType) {
+            PathType.EXACT -> combinedBody
+            PathType.PREFIX -> "prefix:$combinedBody"
+            PathType.REGEX -> "regex:$combinedBody"
+            PathType.GLOB -> "glob:$combinedBody"
+        }
+    }
+
+    private fun annotatedPathDisplayType(prefixPathType: PathType, handlerPathType: PathType): PathType {
+        if (prefixPathType == PathType.REGEX || handlerPathType == PathType.REGEX) {
+            return PathType.REGEX
+        }
+        if (handlerPathType != PathType.EXACT) {
+            return handlerPathType
+        }
+        return prefixPathType
+    }
+
+    private fun combineAnnotatedPathBodies(
+        prefixPathType: PathType,
+        prefixPath: String,
+        handlerPathType: PathType,
+        handlerPath: String,
+    ): String {
+        if (prefixPath == "/" || prefixPath.isBlank()) {
+            return handlerPath
+        }
+        if (handlerPath == "/" || handlerPath.isBlank()) {
+            return prefixPath
+        }
+        if (prefixPathType == PathType.EXACT && handlerPathType == PathType.EXACT) {
+            return combinePaths(prefixPath, handlerPath)
+        }
+        if (prefixPathType == PathType.REGEX || handlerPathType == PathType.REGEX) {
+            return joinRegexPathBodies(prefixPath, handlerPath)
+        }
+        return combinePaths(prefixPath, handlerPath)
+    }
+
+    private fun joinRegexPathBodies(prefix: String, handler: String): String {
+        val prefixBody = prefix.trim().removeSuffix("$")
+        val trimmedHandler = handler.trim()
+        val handlerHadStartAnchor = trimmedHandler.startsWith("^")
+        val handlerBody = trimmedHandler.removePrefix("^")
+        val combined = prefixBody + handlerBody
+        return if (handlerHadStartAnchor && !prefixBody.startsWith("^")) {
+            "^$combined"
+        } else {
+            combined
+        }
+    }
+
     fun decoratorPathPatternAppliesToRoute(pattern: String, routePath: String): Boolean {
         val normalizedPattern = normalizePath(pattern.trim().trim('"'))
         val normalizedRoute = normalizePath(routePath)
