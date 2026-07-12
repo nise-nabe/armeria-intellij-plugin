@@ -17,11 +17,13 @@ before requesting review.
 - Before opening or updating a PR (especially feature/fix PRs with plugin code)
 - When Copilot review has flagged similar issues on prior PRs in the same area
 - At the start of work in a new area — pick the specialized skill below first
+- **After review comments arrive** — switch to `pr-review-response` for triage, batch fixes, and resolving threads efficiently
 
 ## Specialized skills (read the relevant one during implementation)
 
 | Area | Skill |
 |------|-------|
+| **Addressing PR review comments** | `pr-review-response` |
 | UI, run configs, tool windows, inspections, module placement | `intellij-armeria-plugin` |
 | Route/client PSI collectors, duplicates, virtualHost | `armeria-route-psi-analysis` |
 | Gradle build/test via MCP | `gradle-tapi-mcp` |
