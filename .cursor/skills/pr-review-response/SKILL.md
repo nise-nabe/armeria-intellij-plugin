@@ -24,6 +24,13 @@ do not read the full skill unless Gradle MCP fails.
 
 ## Phase 1 — Fetch comments (minimal payload)
 
+Before any `gh` call in Cursor Cloud (see `.cursor/rules/cloud-github.mdc`):
+
+1. Resolve: `command -v gh` or `/exec-daemon/gh`
+2. Verify: `gh auth status`
+3. If either step fails, stop — do not install `gh` in agent sessions. Use
+   **ManagePullRequest** for PR create/update/resolve; retry GraphQL only after auth works.
+
 **Do not** call `gh api repos/.../pulls/{n}/comments` — the REST endpoint always
 includes `diff_hunk` per comment (~50 KB for a typical Copilot review) and there is
 no query parameter to omit it.
@@ -56,6 +63,9 @@ gh api graphql -f query='
               body
               path
               line
+              originalLine
+              startLine
+              originalStartLine
               author { login }
             }
           }
@@ -72,7 +82,7 @@ Extract:
 |-------|-----|
 | `databaseId` | `ManagePullRequest` `resolve_comment` `comment_id` |
 | `isResolved` | Skip already resolved |
-| `body` + `path` + `line` | Triage and locate code |
+| `body` + `path` + line fields | Triage and locate code — prefer `line`; when `line` is null (outdated thread), use `originalLine`; for multi-line comments use `startLine` / `originalStartLine` |
 | `headRefName` | Checkout branch |
 
 ### Fallback: PR metadata only (not review threads)
@@ -125,7 +135,7 @@ Skip invalid comments with a brief PR reply; do not implement speculative fixes.
 | Do | Don't |
 |----|-------|
 | `Grep` for symbol / line from comment | Read entire large files |
-| `Read` with `offset`/`limit` around `line` | Re-read files already in context |
+| `Read` with `offset`/`limit` around `line` (or `originalLine` when outdated) | Re-read files already in context |
 | Read **one** specialized skill for the area | Read `gradle-tapi-mcp` in full |
 | Follow `copilot-review-preflight` checklist | Re-fetch PR comments |
 
@@ -189,6 +199,7 @@ Report in the user’s language:
 
 ## Token budget checklist
 
+- [ ] `gh` preflight (`command -v gh`, `gh auth status`) before GraphQL
 - [ ] GraphQL used instead of REST review comments API
 - [ ] ≤ 1 branch checkout
 - [ ] Files read with offset/limit or Grep, not full-file unless refactoring
