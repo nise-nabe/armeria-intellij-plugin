@@ -102,10 +102,17 @@ internal object ArmeriaRouteNavigationSupport {
 
     fun relatedHandlerGotoItems(context: PsiElement): List<GotoRelatedItem> =
         relatedHandlers(context).map { handler ->
-            GotoRelatedItem(
-                handlerNavigationElement(handler),
-                message("editor.route.gotoRelated.handler", httpMethod(handler).orEmpty(), routePath(handler)),
+            val label = message(
+                "editor.route.gotoRelated.handler",
+                httpMethod(handler).orEmpty(),
+                routePath(handler),
             )
+            object : GotoRelatedItem(
+                handlerNavigationElement(handler),
+                message("editor.route.gotoRelated.handlers"),
+            ) {
+                override fun getCustomName(): String = label
+            }
         }
 
     fun findRegistrationsForServiceClass(serviceClass: PsiClass, project: Project): List<PsiElement> {

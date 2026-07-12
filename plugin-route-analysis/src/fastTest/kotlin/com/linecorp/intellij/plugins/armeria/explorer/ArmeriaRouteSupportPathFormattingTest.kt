@@ -37,4 +37,12 @@ class ArmeriaRouteSupportPathFormattingTest {
             ArmeriaRouteSupport.formatAnnotatedHandlerPath("regex:^/api", "prefix:/hello"),
         )
     }
+
+    @Test
+    fun formatAnnotatedHandlerPath_preservesRegexStartAnchorWhenExactPrefixCombinesWithRegexHandler() {
+        assertEquals(
+            "regex:^/api/hello$",
+            ArmeriaRouteSupport.formatAnnotatedHandlerPath("/api", "regex:^/hello$"),
+        )
+    }
 }

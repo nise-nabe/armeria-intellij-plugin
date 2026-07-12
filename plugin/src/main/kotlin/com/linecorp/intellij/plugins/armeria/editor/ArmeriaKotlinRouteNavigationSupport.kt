@@ -10,7 +10,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.ServiceRegistrationMethod
 import com.linecorp.intellij.plugins.armeria.inspection.ArmeriaKotlinMethodRoute
 import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.psi.KtCallExpression
-import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtConstructor
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
@@ -36,7 +36,8 @@ internal object ArmeriaKotlinRouteNavigationSupport {
 
     fun relatedRegistrations(handler: PsiElement): List<PsiElement> {
         val function = handler as? KtNamedFunction ?: return emptyList()
-        val serviceClass = PsiTreeUtil.getParentOfType(function, KtClass::class.java)?.toLightClass() ?: return emptyList()
+        val serviceClass = PsiTreeUtil.getParentOfType(function, KtClassOrObject::class.java)?.toLightClass()
+            ?: return emptyList()
         return ArmeriaRouteNavigationSupport.findRegistrationsForServiceClass(serviceClass, function.project)
     }
 
@@ -72,7 +73,7 @@ internal object ArmeriaKotlinRouteNavigationSupport {
         is PsiClass -> resolved
         is PsiMethod -> resolved.takeIf { it.isConstructor }?.containingClass
         is PsiVariable -> (resolved.type as? com.intellij.psi.PsiClassType)?.resolve()
-        is KtClass -> resolved.toLightClass()
+        is KtClassOrObject -> resolved.toLightClass()
         is KtConstructor<*> -> resolved.getContainingClassOrObject().toLightClass()
         is KtProperty -> classFromKotlinProperty(resolved)
         else -> null
@@ -152,7 +153,7 @@ internal object ArmeriaKotlinRouteNavigationSupport {
         property.typeReference?.references?.firstOrNull()?.resolve()?.let { typeResolved ->
             when (typeResolved) {
                 is PsiClass -> return typeResolved
-                is KtClass -> return typeResolved.toLightClass()
+                is KtClassOrObject -> return typeResolved.toLightClass()
             }
         }
         val initializer = property.initializer ?: return null

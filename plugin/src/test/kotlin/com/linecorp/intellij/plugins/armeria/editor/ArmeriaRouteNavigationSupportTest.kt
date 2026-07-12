@@ -210,6 +210,41 @@ class ArmeriaRouteNavigationSupportTest : LightJavaCodeInsightFixtureTestCase() 
         assertEquals(1, ArmeriaRouteNavigationSupport.relatedHandlers(registration).size)
     }
 
+    fun testRelatedItemsWithKotlinObjectDeclaration() {
+        val helloServiceFile = myFixture.configureByText(
+            "HelloService.kt",
+            """
+            package com.acme
+
+            import com.linecorp.armeria.server.annotation.Get
+
+            object HelloService {
+                @Get("/hello")
+                fun hello(): String = "hello"
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package com.acme
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                Server.builder()
+                    .annotatedService(HelloService)
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val function = PsiTreeUtil.findChildOfType(helloServiceFile, KtNamedFunction::class.java)!!
+        assertEquals(1, ArmeriaRouteNavigationSupport.relatedRegistrations(function).size)
+        val registration = ArmeriaRouteNavigationSupport.relatedRegistrations(function).single()
+        assertEquals(1, ArmeriaRouteNavigationSupport.relatedHandlers(registration).size)
+    }
+
     fun testRoutePathJoinsMultiplePaths() {
         myFixture.configureByText(
             "MultiPathService.java",

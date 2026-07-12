@@ -258,9 +258,16 @@ object ArmeriaRouteSupport {
     }
 
     private fun joinRegexPathBodies(prefix: String, handler: String): String {
-        val normalizedPrefix = prefix.trim().removeSuffix("$")
-        val normalizedHandler = handler.trim().removePrefix("^")
-        return normalizedPrefix + normalizedHandler
+        val prefixBody = prefix.trim().removeSuffix("$")
+        val trimmedHandler = handler.trim()
+        val handlerHadStartAnchor = trimmedHandler.startsWith("^")
+        val handlerBody = trimmedHandler.removePrefix("^")
+        val combined = prefixBody + handlerBody
+        return if (handlerHadStartAnchor && !prefixBody.startsWith("^")) {
+            "^$combined"
+        } else {
+            combined
+        }
     }
 
     fun extractPathAnnotations(method: PsiMethod): List<String> {
