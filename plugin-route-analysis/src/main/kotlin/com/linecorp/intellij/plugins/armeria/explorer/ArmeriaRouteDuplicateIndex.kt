@@ -231,21 +231,19 @@ object ArmeriaRouteDuplicateIndex {
                     continue
                 }
                 val virtualFile = element.containingFile?.virtualFile ?: continue
+                val conflictingRoutes = buildConflictingRoutes(route, group.routes)
                 hitsByVirtualFile.getOrPut(virtualFile) { mutableListOf() }.add(
                     DuplicateRegistrationHit(
                         pointer = route.pointer,
                         registrationLabel = registrationLabel(route),
-                        registrationCount = overlappingRouteCount(route, group.routes),
-                        conflictingRoutes = buildConflictingRoutes(route, group.routes),
+                        registrationCount = conflictingRoutes.size + 1,
+                        conflictingRoutes = conflictingRoutes,
                     ),
                 )
             }
         }
         return hitsByVirtualFile
     }
-
-    private fun overlappingRouteCount(route: ArmeriaRoute, routes: List<ArmeriaRoute>): Int =
-        routes.count { routesOverlap(route, it) && httpMethodsOverlap(route, it) }
 
     internal fun registrationLabel(route: ArmeriaRoute): String =
         when (route.routeMatch) {
