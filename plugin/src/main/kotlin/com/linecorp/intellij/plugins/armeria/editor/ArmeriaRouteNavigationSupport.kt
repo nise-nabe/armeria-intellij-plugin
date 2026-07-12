@@ -68,13 +68,20 @@ internal object ArmeriaRouteNavigationSupport {
         if (isIndexUnavailable(handler.project)) {
             return emptyList()
         }
-        return when (handler) {
-            is PsiMethod -> findRegistrationsForServiceClass(handler.containingClass ?: return emptyList(), handler.project)
-            else -> if (isKotlinPluginAvailable()) {
-                ArmeriaKotlinRouteNavigationSupport.relatedRegistrations(handler)
-            } else {
-                emptyList()
+        return try {
+            when (handler) {
+                is PsiMethod -> findRegistrationsForServiceClass(
+                    handler.containingClass ?: return emptyList(),
+                    handler.project,
+                )
+                else -> if (isKotlinPluginAvailable()) {
+                    ArmeriaKotlinRouteNavigationSupport.relatedRegistrations(handler)
+                } else {
+                    emptyList()
+                }
             }
+        } catch (_: IndexNotReadyException) {
+            emptyList()
         }
     }
 
@@ -82,14 +89,19 @@ internal object ArmeriaRouteNavigationSupport {
         if (isIndexUnavailable(context.project)) {
             return emptyList()
         }
-        javaRegistrationCallFromContext(context)?.let { call ->
-            val serviceClass = resolveServiceClassFromJavaCall(call) ?: return emptyList()
-            return annotatedHandlersInClass(serviceClass)
+        return try {
+            javaRegistrationCallFromContext(context)?.let { call ->
+                val serviceClass = resolveServiceClassFromJavaCall(call) ?: return emptyList()
+                return annotatedHandlersInClass(serviceClass)
+            }
+            if (isKotlinPluginAvailable()) {
+                ArmeriaKotlinRouteNavigationSupport.relatedHandlers(context)
+            } else {
+                emptyList()
+            }
+        } catch (_: IndexNotReadyException) {
+            emptyList()
         }
-        if (isKotlinPluginAvailable()) {
-            return ArmeriaKotlinRouteNavigationSupport.relatedHandlers(context)
-        }
-        return emptyList()
     }
 
     fun relatedGotoItems(handler: PsiElement): List<GotoRelatedItem> =
