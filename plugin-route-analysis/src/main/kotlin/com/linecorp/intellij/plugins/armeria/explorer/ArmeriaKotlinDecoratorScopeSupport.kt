@@ -11,9 +11,9 @@ import org.jetbrains.kotlin.psi.KtValueArgument
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 internal object ArmeriaKotlinDecoratorScopeSupport {
-    val IMPLICIT_RECEIVER_SCOPE_METHODS = setOf("apply", "run")
-    val EXPLICIT_PARAMETER_SCOPE_METHODS = setOf("also", "let")
-    val BUILDER_SCOPE_METHODS = IMPLICIT_RECEIVER_SCOPE_METHODS + EXPLICIT_PARAMETER_SCOPE_METHODS
+    private val IMPLICIT_RECEIVER_SCOPE_METHODS = setOf("apply", "run")
+    private val EXPLICIT_PARAMETER_SCOPE_METHODS = setOf("also", "let")
+    private val BUILDER_SCOPE_METHODS = IMPLICIT_RECEIVER_SCOPE_METHODS + EXPLICIT_PARAMETER_SCOPE_METHODS
 
     fun collectKotlinDecoratorsFromPrecedingScopeBlocks(
         registrationCall: KtCallExpression,
