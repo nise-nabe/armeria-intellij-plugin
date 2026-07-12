@@ -1,10 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiReferenceExpression
-import com.intellij.psi.PsiVariable
 
 internal object ArmeriaJavaBuilderCallHeuristics {
     fun looksLikeJavaBuilderCall(expression: PsiMethodCallExpression): Boolean {

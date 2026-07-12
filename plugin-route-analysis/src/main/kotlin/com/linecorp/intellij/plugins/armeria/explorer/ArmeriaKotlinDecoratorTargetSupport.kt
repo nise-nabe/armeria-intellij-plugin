@@ -1,7 +1,5 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
-import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiVariable
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClassLiteralExpression
@@ -11,7 +9,6 @@ import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
-import org.jetbrains.kotlin.psi.KtValueArgument
 
 internal object ArmeriaKotlinDecoratorTargetSupport {
     fun extractKotlinDecoratorCandidate(call: KtCallExpression): ArmeriaDecoratorSupport.DecoratorCandidate? {
