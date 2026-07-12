@@ -1,13 +1,15 @@
 package com.linecorp.intellij.plugins.armeria.marker
 
 import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 import com.linecorp.intellij.plugins.armeria.ArmeriaIcons
 import org.jetbrains.kotlin.psi.KtNamedFunction
 
 class ArmeriaRouteLineMarkerProviderTest : LightJavaCodeInsightFixtureTestCase() {
-    private val provider = ArmeriaRouteLineMarkerProvider()
+    private val javaProvider = ArmeriaJavaRouteLineMarkerProvider()
+    private val kotlinProvider = ArmeriaKotlinRouteLineMarkerProvider()
 
     override fun setUp() {
         super.setUp()
@@ -32,7 +34,7 @@ class ArmeriaRouteLineMarkerProviderTest : LightJavaCodeInsightFixtureTestCase()
         )
 
         val method = PsiTreeUtil.findChildOfType(myFixture.file, PsiMethod::class.java)!!
-        val marker = provider.getLineMarkerInfo(method.nameIdentifier!!)
+        val marker = javaProvider.getLineMarkerInfo(method.nameIdentifier!!)
 
         assertNotNull(marker)
         assertEquals(ArmeriaIcons.Armeria, marker!!.icon)
@@ -54,7 +56,7 @@ class ArmeriaRouteLineMarkerProviderTest : LightJavaCodeInsightFixtureTestCase()
         )
 
         val function = PsiTreeUtil.findChildOfType(myFixture.file, KtNamedFunction::class.java)!!
-        val marker = provider.getLineMarkerInfo(function.nameIdentifier!!)
+        val marker = kotlinProvider.getLineMarkerInfo(function.nameIdentifier!!)
 
         assertNotNull(marker)
         assertEquals(ArmeriaIcons.Armeria, marker!!.icon)
@@ -81,10 +83,46 @@ class ArmeriaRouteLineMarkerProviderTest : LightJavaCodeInsightFixtureTestCase()
         val fileText = myFixture.file.text
         val serviceIndex = fileText.indexOf("service")
         val element = myFixture.file.findElementAt(serviceIndex)!!
-        val marker = provider.getLineMarkerInfo(element)
+        val marker = javaProvider.getLineMarkerInfo(element)
 
         assertNotNull(marker)
         assertEquals(ArmeriaIcons.Armeria, marker!!.icon)
+    }
+
+    fun testJavaServiceRegistrationMarkerResolvesStringConstant() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                private static final String API_PATH = "/api";
+
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service(API_PATH, new Object())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val fileText = myFixture.file.text
+        val serviceIndex = fileText.indexOf("service")
+        val element = myFixture.file.findElementAt(serviceIndex)!!
+        val serviceCall = PsiTreeUtil.findChildrenOfType(myFixture.file, PsiMethodCallExpression::class.java)
+            .first { it.methodExpression.referenceName == "service" }
+        val path = ArmeriaJavaRouteLineMarkerProvider.javaRegistrationPath(
+            "service",
+            serviceCall.argumentList.expressions.toList(),
+        )
+
+        assertEquals("/api", path)
+        val marker = javaProvider.getLineMarkerInfo(element)
+
+        assertNotNull(marker)
     }
 
     fun testKotlinServiceRegistrationMarker() {
@@ -106,7 +144,7 @@ class ArmeriaRouteLineMarkerProviderTest : LightJavaCodeInsightFixtureTestCase()
         val fileText = myFixture.file.text
         val serviceIndex = fileText.indexOf("service")
         val element = myFixture.file.findElementAt(serviceIndex)!!
-        val marker = provider.getLineMarkerInfo(element)
+        val marker = kotlinProvider.getLineMarkerInfo(element)
 
         assertNotNull(marker)
         assertEquals(ArmeriaIcons.Armeria, marker!!.icon)
@@ -133,7 +171,7 @@ class ArmeriaRouteLineMarkerProviderTest : LightJavaCodeInsightFixtureTestCase()
         val fileText = myFixture.file.text
         val virtualHostIndex = fileText.indexOf("virtualHost")
         val element = myFixture.file.findElementAt(virtualHostIndex)!!
-        val marker = provider.getLineMarkerInfo(element)
+        val marker = javaProvider.getLineMarkerInfo(element)
 
         assertNull(marker)
     }

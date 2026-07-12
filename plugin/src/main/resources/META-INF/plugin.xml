@@ -48,7 +48,7 @@
                      defaultValue="true"
                      description="Include gRPC routes parsed from .proto files in Route Explorer"/>
         <codeInsight.lineMarkerProvider language="JAVA"
-                                        implementationClass="com.linecorp.intellij.plugins.armeria.marker.ArmeriaRouteLineMarkerProvider"/>
+                                        implementationClass="com.linecorp.intellij.plugins.armeria.marker.ArmeriaJavaRouteLineMarkerProvider"/>
         <gotoRelatedProvider implementation="com.linecorp.intellij.plugins.armeria.editor.ArmeriaRouteGotoRelatedProvider" />
 
         <!-- Run configuration -->

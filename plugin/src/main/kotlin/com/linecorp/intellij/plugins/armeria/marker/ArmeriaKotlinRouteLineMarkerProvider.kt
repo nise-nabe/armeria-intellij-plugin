@@ -2,16 +2,11 @@ package com.linecorp.intellij.plugins.armeria.marker
 
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
-import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiMethod
-import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.util.PsiTreeUtil
-import com.linecorp.intellij.plugins.armeria.ArmeriaIcons
+import com.linecorp.intellij.plugins.armeria.editor.ArmeriaRouteNavigationSupport
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaKotlinExpressionSupport
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaKotlinRouteCollector
-import com.linecorp.intellij.plugins.armeria.editor.ArmeriaRouteNavigationSupport
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.ServiceRegistrationMethod
 import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -20,24 +15,9 @@ import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtValueArgument
 
-internal class ArmeriaRouteLineMarkerProvider : LineMarkerProvider {
+internal class ArmeriaKotlinRouteLineMarkerProvider : LineMarkerProvider {
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
-        return annotatedJavaMarker(element)
-            ?: annotatedKotlinMarker(element)
-            ?: kotlinServiceRegistrationMarker(element)
-            ?: javaServiceRegistrationMarker(element)
-    }
-
-    private fun annotatedJavaMarker(element: PsiElement): LineMarkerInfo<*>? {
-        val method = (element as? PsiMethod)
-            ?: PsiTreeUtil.getParentOfType(element, PsiMethod::class.java, false)
-            ?: return null
-        if (element != method.nameIdentifier) {
-            return null
-        }
-        val annotation = ArmeriaRouteNavigationSupport.httpMethod(method) ?: return null
-        val path = ArmeriaRouteNavigationSupport.routePath(method)
-        return createMarker(method.nameIdentifier ?: method, message("marker.route.annotated", annotation, path))
+        return annotatedKotlinMarker(element) ?: kotlinServiceRegistrationMarker(element)
     }
 
     private fun annotatedKotlinMarker(element: PsiElement): LineMarkerInfo<*>? {
@@ -49,7 +29,10 @@ internal class ArmeriaRouteLineMarkerProvider : LineMarkerProvider {
         }
         val httpMethod = ArmeriaRouteNavigationSupport.httpMethod(function) ?: return null
         val path = ArmeriaRouteNavigationSupport.routePath(function)
-        return createMarker(function.nameIdentifier ?: function, message("marker.route.annotated", httpMethod, path))
+        return ArmeriaRouteLineMarkerSupport.createMarker(
+            function.nameIdentifier ?: function,
+            message("marker.route.annotated", httpMethod, path),
+        )
     }
 
     private fun kotlinServiceRegistrationMarker(element: PsiElement): LineMarkerInfo<*>? {
@@ -59,36 +42,17 @@ internal class ArmeriaRouteLineMarkerProvider : LineMarkerProvider {
             return null
         }
         val methodName = kotlinCallName(call) ?: return null
-        if (methodName !in SERVICE_REGISTRATION_METHODS) {
+        if (methodName !in ArmeriaRouteLineMarkerSupport.SERVICE_REGISTRATION_METHODS) {
             return null
         }
         if (!ArmeriaKotlinRouteCollector.looksLikeArmeriaBuilderCall(call)) {
             return null
         }
         val path = kotlinRegistrationPath(methodName, call.valueArguments) ?: "/"
-        return createMarker(element, message("marker.route.registration", methodName, path))
-    }
-
-    private fun javaServiceRegistrationMarker(element: PsiElement): LineMarkerInfo<*>? {
-        val call = PsiTreeUtil.getParentOfType(element, PsiMethodCallExpression::class.java, false) ?: return null
-        if (element != call.methodExpression.referenceNameElement) {
-            return null
-        }
-        val methodName = call.methodExpression.referenceName ?: return null
-        if (methodName !in SERVICE_REGISTRATION_METHODS) {
-            return null
-        }
-        if (!ArmeriaRouteCollector.looksLikeArmeriaBuilderCall(call)) {
-            return null
-        }
-        val path = when (methodName) {
-            "annotatedService" -> {
-                val args = call.argumentList.expressions
-                if (args.size > 1) args[0].text.trim('"') else "/"
-            }
-            else -> call.argumentList.expressions.firstOrNull()?.text?.trim('"') ?: "/"
-        }
-        return createMarker(element, message("marker.route.registration", methodName, path))
+        return ArmeriaRouteLineMarkerSupport.createMarker(
+            element,
+            message("marker.route.registration", methodName, path),
+        )
     }
 
     private fun isOnReferenceName(element: PsiElement, referenceName: PsiElement): Boolean {
@@ -133,21 +97,5 @@ internal class ArmeriaRouteLineMarkerProvider : LineMarkerProvider {
                 }
             else -> null
         }
-    }
-
-    private fun createMarker(element: PsiElement, tooltip: String): LineMarkerInfo<PsiElement> {
-        return LineMarkerInfo(
-            element,
-            element.textRange,
-            ArmeriaIcons.Armeria,
-            { tooltip },
-            null,
-            GutterIconRenderer.Alignment.CENTER,
-            { message("marker.route.title") },
-        )
-    }
-
-    companion object {
-        private val SERVICE_REGISTRATION_METHODS = ServiceRegistrationMethod.CORE_METHOD_NAMES
     }
 }
