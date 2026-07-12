@@ -3,6 +3,15 @@
     <extensions defaultExtensionNs="com.intellij">
         <localInspection language="kotlin"
                          bundle="messages.ArmeriaBundle"
+                         key="inspection.duplicate.route.kotlin.display.name"
+                         groupBundle="messages.ArmeriaBundle"
+                         groupKey="inspection.group.armeria"
+                         shortName="ArmeriaDuplicateRouteKotlin"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaDuplicateRouteKotlinInspection" />
+        <localInspection language="kotlin"
+                         bundle="messages.ArmeriaBundle"
                          key="inspection.duplicate.registration.kotlin.display.name"
                          groupBundle="messages.ArmeriaBundle"
                          groupKey="inspection.group.armeria"

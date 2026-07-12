@@ -281,7 +281,7 @@ class ArmeriaRouteDuplicateIndexCoreTest : ArmeriaFixtureTestBase() {
     }
 
 
-    fun testInClassKotlinAnnotatedDuplicatesAreReported() {
+    fun testInClassKotlinAnnotatedDuplicatesAreExcluded() {
         myFixture.configureByText(
             "BadService.kt",
             """
@@ -299,15 +299,7 @@ class ArmeriaRouteDuplicateIndexCoreTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val groups = ArmeriaRouteDuplicateIndex.duplicateGroups(project)
-
-        assertEquals(1, groups.size)
-        assertEquals(2, groups.single().routes.size)
-
-        val hits = ArmeriaRouteDuplicateIndex.duplicateHitsInFile(project, myFixture.file)
-        assertEquals(2, hits.size)
-        assertEquals(setOf("GET /dup"), hits.map { it.registrationLabel }.toSet())
-        assertTrue(hits.all { it.registrationCount == 2 })
+        assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
     }
 
 
