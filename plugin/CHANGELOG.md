@@ -12,7 +12,6 @@
 ### Fixed
 
 - Armeria run configuration discovery now resolves Kotlin top-level `fun main()` via the file facade (`MainKt`), matching New Project Wizard Kotlin templates.
-- Deduplicated GraphQL and Thrift IDL routes in Route Explorer when the same operation appears in multiple schema files.
 
 ### Security
 

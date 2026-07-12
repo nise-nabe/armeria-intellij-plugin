@@ -79,4 +79,8 @@ There is no separate lint task; `build` is the compile/test gate.
 | `build-logic/` | Shared IntelliJ Platform Gradle conventions |
 | `gradle/libs.versions.toml` | Version pins (Kotlin, IPGP, IDEA platform) |
 
-Main Kotlin packages live under each module's `src/main/kotlin/com/linecorp/intellij/plugins/armeria/`. User-visible strings go through `message(...)` and `ArmeriaBundle.properties`.
+Main Kotlin packages live under each module's `src/main/kotlin/com/linecorp/intellij/plugins/armeria/`. User-visible strings go through `message(...)` and `ArmeriaBundle.properties`. CI (`.github/workflows/main.yml`) runs per-module test tasks (`:plugin-wizard:test`, `:plugin-route-analysis:fastTest`, `:plugin-route-analysis:test`, `:plugin:test`) then `./gradlew build -x test` on Java 25.
+
+### Running the plugin (headless cloud caveat)
+
+`:plugin:runIde` launches **IntelliJ IDEA Ultimate** (`plugin/build.gradle.kts`) on the VNC display (`DISPLAY=:1`). In the offline cloud sandbox it hangs during startup awaiting `LicensingFacade` (AI-promo / Ultimate licensing) and never reaches the Welcome screen without a JetBrains license and network to JetBrains services. Disabling `org.jetbrains.completion.full.line` in the sandbox `config/disabled_plugins.txt` clears one promo stall but startup still blocks. For headless verification, exercise the plugin through the platform test suites (they run the real plugin code, e.g. `ArmeriaRouteCollector.collect` discovering routes from Java/Kotlin PSI) instead of the GUI.

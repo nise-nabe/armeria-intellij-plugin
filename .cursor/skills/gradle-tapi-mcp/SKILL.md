@@ -208,9 +208,9 @@ If every MCP call times out but `./gradlew` still works:
 | Route-analysis fixture tests | `gradle_run_tasks` `{ "tasks": [":plugin-route-analysis:test"], "background": true }` | `./gradlew :plugin-route-analysis:test` |
 | Fast unit tests | `gradle_run_tasks` `{ "tasks": [":plugin-route-analysis:fastTest"], "background": true }` | `./gradlew :plugin-route-analysis:fastTest` |
 | Route-analysis checks (fixture + fast) | `gradle_run_tasks` `{ "tasks": [":plugin-route-analysis:check"], "background": true }` | `./gradlew :plugin-route-analysis:check` |
-| Single test class | `gradle_run_tests` `{ "testClasses": ["FQCN"], "background": true }` | `./gradlew :plugin:test --tests 'FQCN'` |
-| Multiple test classes/methods | `gradle_run_tests` `{ "testMethods": { ... }, "background": true }` | `./gradlew :plugin:test --tests 'FQCN'` per class |
-| Single test method | `gradle_run_tests` `{ "testMethods": { "FQCN": ["method"] }, "background": true }` | `./gradlew :plugin:test --tests 'FQCN.method'` |
+| Single test class | `gradle_run_tests` `{ "taskPath": ":plugin-route-analysis:test", "testClasses": ["FQCN"], "background": true }` | `./gradlew :plugin-route-analysis:test --tests 'FQCN'` |
+| Multiple test classes/methods | `gradle_run_tests` `{ "taskPath": ":plugin-route-analysis:test", "testMethods": { ... }, "background": true }` | `./gradlew :plugin-route-analysis:test --tests 'FQCN'` per class |
+| Single test method | `gradle_run_tests` `{ "taskPath": ":plugin-route-analysis:test", "testMethods": { "FQCN": ["method"] }, "background": true }` | `./gradlew :plugin-route-analysis:test --tests 'FQCN.method'` |
 | Fast compile gate | `gradle_run_tasks` `{ "tasks": [":plugin:compileKotlin"] }` | `./gradlew :plugin:compileKotlin` |
 
 Prefer MCP for all verification. Use shell only when MCP is unresponsive or for final CI parity before merge.

@@ -39,7 +39,7 @@ Do **not** run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` concurr
 | Goal | MCP |
 |------|-----|
 | Compile | `gradle_run_tasks` `{ "tasks": [":plugin:compileKotlin", ":plugin:compileTestKotlin"] }` |
-| One or more test classes/methods | `gradle_run_tests` `{ "testMethods": { "FQCN": ["method"] }, "background": true }` — batch in one call |
+| One or more test classes/methods | `gradle_run_tests` `{ "taskPath": ":plugin-route-analysis:test", "testMethods": { "FQCN": ["method"] }, "background": true }` — batch in one call |
 | Plugin fixture tests | `gradle_run_tasks` `{ "tasks": [":plugin:test"], "background": true }` |
 | Route-analysis fixture tests | `gradle_run_tasks` `{ "tasks": [":plugin-route-analysis:test"], "background": true }` |
 | Fast unit tests | `gradle_run_tasks` `{ "tasks": [":plugin-route-analysis:fastTest"], "background": true }` |
