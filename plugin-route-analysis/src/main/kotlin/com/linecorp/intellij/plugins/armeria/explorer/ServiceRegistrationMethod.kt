@@ -1,6 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
-internal enum class ServiceRegistrationMethod(val methodName: String) {
+enum class ServiceRegistrationMethod(val methodName: String) {
     SERVICE("service"),
     SERVICE_UNDER("serviceUnder"),
     ANNOTATED_SERVICE("annotatedService"),

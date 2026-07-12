@@ -6,6 +6,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaKotlinRouteCollecto
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtNamedFunction
 
 internal data class ArmeriaKotlinMethodRoute(
@@ -19,7 +20,7 @@ internal data class ArmeriaKotlinMethodRoute(
                 val method = ArmeriaRouteSupport.routeAnnotations[qualifiedName] ?: return@firstNotNullOfOrNull null
                 entry to method
             } ?: return null
-            val classPrefix = PsiTreeUtil.getParentOfType(function, KtClass::class.java)?.annotationEntries
+            val classPrefix = PsiTreeUtil.getParentOfType(function, KtClassOrObject::class.java)?.annotationEntries
                 ?.firstOrNull { it.qualifiedName() == ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION }
                 ?.let(::extractPathPrefix)
                 .orEmpty()
@@ -29,7 +30,7 @@ internal data class ArmeriaKotlinMethodRoute(
                     .filter { it.qualifiedName() == ArmeriaRouteSupport.PATH_ANNOTATION }
                     .forEach { addAll(extractPaths(it)) }
             }.ifEmpty { listOf("/") }
-                .map { rawPath -> ArmeriaRouteSupport.combinePaths(classPrefix, rawPath) }
+                .map { rawPath -> ArmeriaRouteSupport.formatAnnotatedHandlerPath(classPrefix, rawPath) }
                 .distinct()
             return ArmeriaKotlinMethodRoute(methodAnnotation.second, paths)
         }

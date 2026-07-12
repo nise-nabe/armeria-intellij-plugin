@@ -161,6 +161,9 @@ object ArmeriaRouteCollector {
         return ArmeriaRouteSupport.referencesArmeriaInText(file.viewProvider.contents)
     }
 
+    fun looksLikeArmeriaBuilderCall(expression: PsiMethodCallExpression): Boolean =
+        ArmeriaBuilderCallHeuristics.looksLikeJavaBuilderCall(expression)
+
     internal fun collectProgrammaticDecorators(element: PsiElement, registrationPath: String): List<String> {
         if (element is PsiMethodCallExpression) {
             return ArmeriaDecoratorSupport.collectProgrammaticDecorators(element, registrationPath)
