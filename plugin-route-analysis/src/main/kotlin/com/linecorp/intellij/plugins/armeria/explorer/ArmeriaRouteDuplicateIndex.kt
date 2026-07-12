@@ -4,6 +4,7 @@ import com.intellij.lang.java.JavaLanguage
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiMethod
@@ -270,8 +271,18 @@ object ArmeriaRouteDuplicateIndex {
         if (labelCount <= 1) {
             return baseLabel
         }
-        val sourceHint = route.resolveSourceHint()
+        val sourceHint = route.compactNavigationSourceHint()
         return if (sourceHint.isNotEmpty()) "$baseLabel ($sourceHint)" else baseLabel
+    }
+
+    private fun ArmeriaRoute.compactNavigationSourceHint(): String {
+        val element = pointer.element ?: return ""
+        val containingFile = element.containingFile ?: return ""
+        val virtualFile = containingFile.virtualFile ?: return ""
+        val document = PsiDocumentManager.getInstance(element.project).getDocument(containingFile)
+            ?: return virtualFile.name
+        val line = document.getLineNumber(element.textRange.startOffset) + 1
+        return "${virtualFile.name}:$line"
     }
 }
 

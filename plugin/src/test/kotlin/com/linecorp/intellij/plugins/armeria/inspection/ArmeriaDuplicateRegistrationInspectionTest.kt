@@ -97,6 +97,12 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
             }
             Thread.sleep(50)
         }
+        PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+        val openFileNames = FileEditorManager.getInstance(project).openFiles.map { it.name }
+        assertTrue(
+            "Timed out waiting for $expectedFileName to open; open files: $openFileNames",
+            expectedFileName in openFileNames,
+        )
     }
 
     private fun configureDuplicateServiceRegistrationFixture() {
