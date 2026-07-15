@@ -1,7 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
@@ -17,9 +16,9 @@ internal data class SpringArmeriaPortBinding(
 internal data class SpringArmeriaConfig(
     val ports: List<SpringArmeriaPortBinding> = emptyList(),
     val includes: Set<String> = emptySet(),
-    val docsPath: String = "/internal/docs",
-    val healthPath: String = "/internal/healthcheck",
-    val metricsPath: String = "/internal/metrics",
+    val docsPath: String = ArmeriaSpringYamlRouteCollector.DEFAULT_DOCS_PATH,
+    val healthPath: String = ArmeriaSpringYamlRouteCollector.DEFAULT_HEALTH_PATH,
+    val metricsPath: String = ArmeriaSpringYamlRouteCollector.DEFAULT_METRICS_PATH,
     val internalServicesPort: String? = null,
 )
 
@@ -31,11 +30,11 @@ internal object ArmeriaSpringYamlRouteCollector {
     private val APPLICATION_FILE_PATTERN = Regex("""^application(-[\w.-]+)?\.(yml|yaml|properties)$""")
     private val PROPERTIES_PORT_PATTERN = Regex("""\barmeria\.ports\[(\d+)]\.port\s*=\s*(\d+)""")
     private val PROPERTIES_PROTOCOL_PATTERN =
-        Regex("""\barmeria\.ports\[(\d+)]\.protocols(?:\[(\d+)])?\s*=\s*(\w+)""")
+        Regex("""\barmeria\.ports\[(\d+)]\.protocols(?:\[(\d+)])?\s*=\s*(.+)""")
     private val PROPERTIES_INCLUDE_PATTERN =
-        Regex("""\barmeria\.internal-services\.include(?:\[\d+])?\s*=\s*(.+)""")
+        Regex("""\barmeria\.(?:internal-services|internalServices)\.include(?:\[\d+])?\s*=\s*(.+)""")
     private val PROPERTIES_INTERNAL_PORT_PATTERN =
-        Regex("""\barmeria\.internal-services\.port\s*=\s*(\d+)""")
+        Regex("""\barmeria\.(?:internal-services|internalServices)\.port\s*=\s*(\d+)""")
     private val PROPERTIES_DOCS_PATH_PATTERN =
         Regex("""\barmeria\.(?:docs-path|docsPath)\s*=\s*(\S+)""")
     private val PROPERTIES_HEALTH_PATH_PATTERN =
@@ -44,6 +43,55 @@ internal object ArmeriaSpringYamlRouteCollector {
         Regex("""\barmeria\.(?:metrics-path|metricsPath)\s*=\s*(\S+)""")
 
     private val INTERNAL_SERVICE_IDS = setOf("docs", "health", "metrics", "actuator")
+
+    private data class InternalServiceSpec(
+        val id: String,
+        val path: (SpringArmeriaConfig) -> String,
+        val messageKey: String,
+        val protocol: String,
+        val httpMethod: String,
+        val isDocService: Boolean,
+        val dedupePrefix: String,
+    )
+
+    private val INTERNAL_SERVICE_SPECS = listOf(
+        InternalServiceSpec(
+            id = "docs",
+            path = { it.docsPath },
+            messageKey = "route.explorer.spring.docService",
+            protocol = RouteProtocol.DOC_SERVICE.presentableName(),
+            httpMethod = "",
+            isDocService = true,
+            dedupePrefix = "docs",
+        ),
+        InternalServiceSpec(
+            id = "health",
+            path = { it.healthPath },
+            messageKey = "route.explorer.spring.healthCheck",
+            protocol = RouteProtocol.HTTP.presentableName(),
+            httpMethod = "GET",
+            isDocService = false,
+            dedupePrefix = "health",
+        ),
+        InternalServiceSpec(
+            id = "metrics",
+            path = { it.metricsPath },
+            messageKey = "route.explorer.spring.metrics",
+            protocol = RouteProtocol.HTTP.presentableName(),
+            httpMethod = "GET",
+            isDocService = false,
+            dedupePrefix = "metrics",
+        ),
+        InternalServiceSpec(
+            id = "actuator",
+            path = { "/actuator" },
+            messageKey = "route.explorer.spring.actuator",
+            protocol = RouteProtocol.HTTP.presentableName(),
+            httpMethod = "GET",
+            isDocService = false,
+            dedupePrefix = "actuator",
+        ),
+    )
 
     fun collect(
         project: Project,
@@ -107,9 +155,21 @@ internal object ArmeriaSpringYamlRouteCollector {
         val protocolsByIndex = mutableMapOf<Int, MutableList<Pair<Int, String>>>()
         PROPERTIES_PROTOCOL_PATTERN.findAll(text).forEach { match ->
             val portIndex = match.groupValues[1].toInt()
-            val protocolIndex = match.groupValues[2].toIntOrNull() ?: 0
-            val protocol = match.groupValues[3].uppercase()
-            protocolsByIndex.getOrPut(portIndex) { mutableListOf() } += protocolIndex to protocol
+            val protocolIndex = match.groupValues[2].toIntOrNull()
+            val protocols = splitScalarList(match.groupValues[3]).map { it.uppercase() }
+            if (protocols.isEmpty()) {
+                return@forEach
+            }
+            val bucket = protocolsByIndex.getOrPut(portIndex) { mutableListOf() }
+            if (protocolIndex != null) {
+                // Indexed form: armeria.ports[N].protocols[M]=http
+                bucket += protocolIndex to protocols.first()
+            } else {
+                // Comma / space list: armeria.ports[N].protocols=http,https
+                protocols.forEachIndexed { offset, protocol ->
+                    bucket += offset to protocol
+                }
+            }
         }
         val ports = portsByIndex.entries
             .sortedBy { it.key }
@@ -171,71 +231,23 @@ internal object ArmeriaSpringYamlRouteCollector {
         if (includes.isEmpty()) {
             return
         }
+        // Config-sourced internal services use NON_HTTP so they do not participate in
+        // duplicate-registration analysis (e.g. against serviceUnder("/")).
         val portSuffix = config.internalServicesPort?.let { " · :$it" }.orEmpty()
-        if ("docs" in includes) {
+        for (spec in INTERNAL_SERVICE_SPECS) {
+            if (spec.id !in includes) {
+                continue
+            }
+            val path = spec.path(config)
             addConfigRoute(
                 element = element,
-                path = config.docsPath,
-                target = profileAwareTarget(
-                    message("route.explorer.spring.docService") + portSuffix,
-                    profile,
-                ),
-                protocol = RouteProtocol.DOC_SERVICE.presentableName(),
-                httpMethod = "",
+                path = path,
+                target = profileAwareTarget(message(spec.messageKey) + portSuffix, profile),
+                protocol = spec.protocol,
+                httpMethod = spec.httpMethod,
                 routeMatch = RouteMatch.NON_HTTP,
-                isDocService = true,
-                dedupeKey = profileAwareKey("docs:${config.docsPath}", profile),
-                routes = routes,
-                seenConfigRoutes = seenConfigRoutes,
-            )
-        }
-        if ("health" in includes) {
-            addConfigRoute(
-                element = element,
-                path = config.healthPath,
-                target = profileAwareTarget(
-                    message("route.explorer.spring.healthCheck") + portSuffix,
-                    profile,
-                ),
-                protocol = RouteProtocol.HTTP.presentableName(),
-                httpMethod = "GET",
-                routeMatch = RouteMatch.HEALTH_CHECK,
-                isDocService = false,
-                dedupeKey = profileAwareKey("health:${config.healthPath}", profile),
-                routes = routes,
-                seenConfigRoutes = seenConfigRoutes,
-            )
-        }
-        if ("metrics" in includes) {
-            addConfigRoute(
-                element = element,
-                path = config.metricsPath,
-                target = profileAwareTarget(
-                    message("route.explorer.spring.metrics") + portSuffix,
-                    profile,
-                ),
-                protocol = RouteProtocol.HTTP.presentableName(),
-                httpMethod = "GET",
-                routeMatch = RouteMatch.SERVICE,
-                isDocService = false,
-                dedupeKey = profileAwareKey("metrics:${config.metricsPath}", profile),
-                routes = routes,
-                seenConfigRoutes = seenConfigRoutes,
-            )
-        }
-        if ("actuator" in includes) {
-            addConfigRoute(
-                element = element,
-                path = "/actuator",
-                target = profileAwareTarget(
-                    message("route.explorer.spring.actuator") + portSuffix,
-                    profile,
-                ),
-                protocol = RouteProtocol.HTTP.presentableName(),
-                httpMethod = "GET",
-                routeMatch = RouteMatch.SERVICE,
-                isDocService = false,
-                dedupeKey = profileAwareKey("actuator", profile),
+                isDocService = spec.isDocService,
+                dedupeKey = profileAwareKey("${spec.dedupePrefix}:$path", profile),
                 routes = routes,
                 seenConfigRoutes = seenConfigRoutes,
             )
@@ -316,31 +328,35 @@ internal object ArmeriaSpringYamlRouteCollector {
         return raw.map { it.lowercase() }.filter { it in INTERNAL_SERVICE_IDS }.toSet()
     }
 
-    private fun parseIncludeTokens(raw: String): Set<String> {
+    private fun parseIncludeTokens(raw: String): Set<String> =
+        splitScalarList(raw).map { it.lowercase() }.toSet()
+
+    private fun splitScalarList(raw: String): List<String> {
         val normalized = raw.trim()
             .removePrefix("[")
             .removeSuffix("]")
             .trim()
         if (normalized.isEmpty()) {
-            return emptySet()
+            return emptyList()
         }
         return normalized.split(',', ' ', '\t')
-            .map { it.trim().trimQuotes().lowercase() }
+            .map { it.trim().trimQuotes() }
             .filter { it.isNotEmpty() }
-            .toSet()
     }
 
     private fun extractTopLevelBlock(text: String, key: String): String? {
         val lines = text.lineSequence().toList()
         val startIndex = lines.indexOfFirst { line ->
+            if (line.takeWhile { it.isWhitespace() }.isNotEmpty()) {
+                return@indexOfFirst false
+            }
             val trimmed = line.trim()
             !trimmed.startsWith("#") && matchesYamlKey(trimmed, key)
         }
         if (startIndex < 0) {
             return null
         }
-        val parentIndent = lines[startIndex].takeWhile { it.isWhitespace() }.length
-        return collectIndentedBlock(lines, startIndex, parentIndent)
+        return collectIndentedBlock(lines, startIndex, parentIndent = 0)
     }
 
     private fun extractChildBlock(parentBlock: String, vararg keys: String): String? {
@@ -474,28 +490,26 @@ internal object ArmeriaSpringYamlRouteCollector {
 
     private val LIST_ITEM_PREFIX = Regex("""^(\s*)- """)
 
-    private fun splitInlineYamlValues(raw: String): List<String> {
-        val normalized = raw.trim()
-            .removePrefix("[")
-            .removeSuffix("]")
-            .trim()
-        if (normalized.isEmpty()) {
-            return emptyList()
-        }
-        if (normalized.contains(',')) {
-            return normalized.split(',').map { it.trim().trimQuotes() }.filter { it.isNotEmpty() }
-        }
-        return listOf(normalized.trimQuotes())
-    }
+    private fun splitInlineYamlValues(raw: String): List<String> = splitScalarList(raw)
 
     private fun readYamlScalar(block: String?, vararg keys: String): String? {
         if (block.isNullOrBlank()) {
             return null
         }
         val keySet = keys.toSet()
+        var topIndent: Int? = null
         for (line in block.lineSequence()) {
+            if (line.isBlank() || line.trimStart().startsWith("#")) {
+                continue
+            }
+            val indent = line.takeWhile { it.isWhitespace() }.length
+            if (topIndent == null) {
+                topIndent = indent
+            } else if (indent > topIndent) {
+                continue
+            }
             val trimmed = line.trim()
-            if (trimmed.startsWith("#") || !trimmed.contains(':')) {
+            if (!trimmed.contains(':')) {
                 continue
             }
             val key = trimmed.substringBefore(':').trim()

@@ -166,6 +166,34 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
     }
 
     @Test
+    fun parseProperties_acceptsCamelCaseInternalServices() {
+        val config = ArmeriaSpringYamlRouteCollector.parseProperties(
+            """
+            armeria.internalServices.include=docs,metrics
+            armeria.internalServices.port=19090
+            """.trimIndent(),
+        )
+
+        assertEquals(setOf("docs", "metrics"), config.includes)
+        assertEquals("19090", config.internalServicesPort)
+    }
+
+    @Test
+    fun parseProperties_commaSeparatedProtocols() {
+        val config = ArmeriaSpringYamlRouteCollector.parseProperties(
+            """
+            armeria.ports[0].port=8080
+            armeria.ports[0].protocols=http,https
+            """.trimIndent(),
+        )
+
+        assertEquals(
+            listOf(SpringArmeriaPortBinding("8080", listOf("HTTP", "HTTPS"))),
+            config.ports,
+        )
+    }
+
+    @Test
     fun parseProperties_includeAllAndIndexedIncludeEntries() {
         val all = ArmeriaSpringYamlRouteCollector.parseProperties(
             "armeria.internal-services.include=all",
@@ -197,5 +225,24 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
         assertEquals(listOf(SpringArmeriaPortBinding("8080", listOf("HTTP"))), config.ports)
         assertTrue(config.ports.none { it.port == "9999" })
+    }
+
+    @Test
+    fun parseYaml_ignoresNestedArmeriaKey() {
+        val config = ArmeriaSpringYamlRouteCollector.parseYaml(
+            """
+            wrapper:
+              armeria:
+                ports:
+                  - port: 9999
+                    protocols: HTTP
+            armeria:
+              ports:
+                - port: 8080
+                  protocols: HTTP
+            """.trimIndent(),
+        )
+
+        assertEquals(listOf(SpringArmeriaPortBinding("8080", listOf("HTTP"))), config.ports)
     }
 }
