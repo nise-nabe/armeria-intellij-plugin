@@ -390,11 +390,15 @@ internal object ArmeriaSpringYamlRouteCollector {
             val indent = line.takeWhile { it.isWhitespace() }.length
             val trimmed = line.trimStart()
             if (trimmed.startsWith("- ")) {
-                if (current.isNotEmpty()) {
-                    items += current.joinToString("\n")
+                if (itemIndent < 0 || indent <= itemIndent) {
+                    if (current.isNotEmpty()) {
+                        items += current.joinToString("\n")
+                    }
+                    current = mutableListOf(line)
+                    itemIndent = indent
+                } else {
+                    current += line
                 }
-                current = mutableListOf(line)
-                itemIndent = indent
                 continue
             }
             if (itemIndent >= 0 && indent > itemIndent) {
@@ -409,11 +413,15 @@ internal object ArmeriaSpringYamlRouteCollector {
 
     private fun parseYamlMapping(itemText: String): Map<String, List<String>> {
         val values = linkedMapOf<String, MutableList<String>>()
-        // Normalize the leading "- " so sibling keys share a common indent base.
-        val lines = itemText.lineSequence().map { line ->
-            val match = LIST_ITEM_PREFIX.find(line) ?: return@map line
+        // Normalize only the leading list marker on the first line so sibling keys share indent.
+        val rawLines = itemText.lineSequence().toList()
+        val lines = rawLines.mapIndexed { index, line ->
+            if (index != 0) {
+                return@mapIndexed line
+            }
+            val match = LIST_ITEM_PREFIX.find(line) ?: return@mapIndexed line
             match.groupValues[1] + "  " + line.substring(match.range.last + 1)
-        }.toList()
+        }
         var index = 0
         while (index < lines.size) {
             val line = lines[index]
