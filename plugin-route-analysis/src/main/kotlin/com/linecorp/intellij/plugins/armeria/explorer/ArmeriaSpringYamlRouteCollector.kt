@@ -9,18 +9,41 @@ import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.message
 
+internal data class SpringArmeriaPortBinding(
+    val port: String,
+    val protocols: List<String>,
+)
+
+internal data class SpringArmeriaConfig(
+    val ports: List<SpringArmeriaPortBinding> = emptyList(),
+    val includes: Set<String> = emptySet(),
+    val docsPath: String = "/internal/docs",
+    val healthPath: String = "/internal/healthcheck",
+    val metricsPath: String = "/internal/metrics",
+    val internalServicesPort: String? = null,
+)
+
 internal object ArmeriaSpringYamlRouteCollector {
+    const val DEFAULT_DOCS_PATH = "/internal/docs"
+    const val DEFAULT_HEALTH_PATH = "/internal/healthcheck"
+    const val DEFAULT_METRICS_PATH = "/internal/metrics"
+
     private val APPLICATION_FILE_PATTERN = Regex("""^application(-[\w.-]+)?\.(yml|yaml|properties)$""")
-    private val DOCS_PATH_PATTERN = Regex("""\b(?:docs-path|docsPath)\s*[:=]\s*["']?([^"'\s#]+)["']?""")
-    private val HEALTH_PATH_PATTERN = Regex("""\b(?:health-check-path|healthCheckPath)\s*[:=]\s*["']?([^"'\s#]+)["']?""")
-    private val METRICS_PATH_PATTERN = Regex("""\b(?:metrics-path|metricsPath)\s*[:=]\s*["']?([^"'\s#]+)["']?""")
-    private val PROPERTIES_PORT_PATTERN = Regex("""\barmeria\.ports\[\d+]\.port\s*=\s*(\d+)""")
-    private val PROPERTIES_PROTOCOL_PATTERN = Regex("""\barmeria\.ports\[(\d+)]\.protocols\[(\d+)]\s*=\s*(\w+)""")
-    private val PROPERTIES_INCLUDE_PATTERN = Regex("""\barmeria\.internal-services\.include\s*=\s*(.+)""")
-    private val YAML_PORT_ITEM_PATTERN = Regex(
-        """- port:\s*(\d+)(?:\s*\n(?:[ \t][^\n]*\n)*?)[ \t]+protocols:\s*\n[ \t]+- (\w+)""",
-        RegexOption.MULTILINE,
-    )
+    private val PROPERTIES_PORT_PATTERN = Regex("""\barmeria\.ports\[(\d+)]\.port\s*=\s*(\d+)""")
+    private val PROPERTIES_PROTOCOL_PATTERN =
+        Regex("""\barmeria\.ports\[(\d+)]\.protocols(?:\[(\d+)])?\s*=\s*(\w+)""")
+    private val PROPERTIES_INCLUDE_PATTERN =
+        Regex("""\barmeria\.internal-services\.include(?:\[\d+])?\s*=\s*(.+)""")
+    private val PROPERTIES_INTERNAL_PORT_PATTERN =
+        Regex("""\barmeria\.internal-services\.port\s*=\s*(\d+)""")
+    private val PROPERTIES_DOCS_PATH_PATTERN =
+        Regex("""\barmeria\.(?:docs-path|docsPath)\s*=\s*(\S+)""")
+    private val PROPERTIES_HEALTH_PATH_PATTERN =
+        Regex("""\barmeria\.(?:health-check-path|healthCheckPath)\s*=\s*(\S+)""")
+    private val PROPERTIES_METRICS_PATH_PATTERN =
+        Regex("""\barmeria\.(?:metrics-path|metricsPath)\s*=\s*(\S+)""")
+
+    private val INTERNAL_SERVICE_IDS = setOf("docs", "health", "metrics", "actuator")
 
     fun collect(
         project: Project,
@@ -28,9 +51,15 @@ internal object ArmeriaSpringYamlRouteCollector {
         routes: MutableList<ArmeriaRoute>,
         seenConfigRoutes: MutableSet<String>,
     ) {
-        collectByExtension(project, scope, "yml", routes, seenConfigRoutes)
-        collectByExtension(project, scope, "yaml", routes, seenConfigRoutes)
-        collectByExtension(project, scope, "properties", routes, seenConfigRoutes)
+        for (extension in listOf("yml", "yaml", "properties")) {
+            for (virtualFile in FilenameIndex.getAllFilesByExt(project, extension, scope)) {
+                if (!isApplicationConfigFile(virtualFile.name)) {
+                    continue
+                }
+                val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: continue
+                collectFromPsiFile(psiFile, routes, seenConfigRoutes)
+            }
+        }
     }
 
     internal fun collectFromPsiFile(
@@ -42,227 +71,154 @@ internal object ArmeriaSpringYamlRouteCollector {
         if (!text.contains("armeria")) {
             return
         }
-        if (psiFile.name.endsWith(".properties")) {
-            collectFromProperties(psiFile, text, routes, seenConfigRoutes)
+        val config = if (psiFile.name.endsWith(".properties")) {
+            parseProperties(text)
         } else {
-            collectFromYaml(psiFile, text, routes, seenConfigRoutes)
+            parseYaml(text)
         }
+        emitRoutes(config, psiFile, profileFromFileName(psiFile.name), routes, seenConfigRoutes)
     }
 
-    private fun collectByExtension(
-        project: Project,
-        scope: GlobalSearchScope,
-        extension: String,
-        routes: MutableList<ArmeriaRoute>,
-        seenConfigRoutes: MutableSet<String>,
-    ) {
-        for (virtualFile in FilenameIndex.getAllFilesByExt(project, extension, scope)) {
-            if (!isApplicationConfigFile(virtualFile.name)) {
-                continue
-            }
-            collectFromFile(project, virtualFile, routes, seenConfigRoutes)
-        }
+    internal fun parseYaml(text: String): SpringArmeriaConfig {
+        val armeriaBlock = extractTopLevelBlock(text, "armeria") ?: return SpringArmeriaConfig()
+        val ports = parseYamlPorts(extractChildBlock(armeriaBlock, "ports"))
+        val internalServicesBlock = extractChildBlock(armeriaBlock, "internal-services", "internalServices")
+        val includes = parseYamlInclude(internalServicesBlock)
+        val internalServicesPort = readYamlScalar(internalServicesBlock, "port")
+        return SpringArmeriaConfig(
+            ports = ports,
+            includes = includes,
+            docsPath = readYamlScalar(armeriaBlock, "docs-path", "docsPath") ?: DEFAULT_DOCS_PATH,
+            healthPath = readYamlScalar(armeriaBlock, "health-check-path", "healthCheckPath")
+                ?: DEFAULT_HEALTH_PATH,
+            metricsPath = readYamlScalar(armeriaBlock, "metrics-path", "metricsPath") ?: DEFAULT_METRICS_PATH,
+            internalServicesPort = internalServicesPort,
+        )
     }
 
-    private fun isApplicationConfigFile(name: String): Boolean = APPLICATION_FILE_PATTERN.matches(name)
-
-    private fun collectFromFile(
-        project: Project,
-        virtualFile: VirtualFile,
-        routes: MutableList<ArmeriaRoute>,
-        seenConfigRoutes: MutableSet<String>,
-    ) {
-        val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: return
-        val text = psiFile.text
-        if (!text.contains("armeria")) {
-            return
-        }
-        if (virtualFile.name.endsWith(".properties")) {
-            collectFromProperties(psiFile, text, routes, seenConfigRoutes)
-        } else {
-            collectFromYaml(psiFile, text, routes, seenConfigRoutes)
-        }
-    }
-
-    private fun collectFromYaml(
-        psiFile: PsiFile,
-        text: String,
-        routes: MutableList<ArmeriaRoute>,
-        seenConfigRoutes: MutableSet<String>,
-    ) {
-        if (!text.contains("armeria:")) {
-            return
-        }
-        val docsPath = DOCS_PATH_PATTERN.find(text)?.groupValues?.get(1) ?: "/internal/docs"
-        val healthPath = HEALTH_PATH_PATTERN.find(text)?.groupValues?.get(1) ?: "/internal/healthcheck"
-        val metricsPath = METRICS_PATH_PATTERN.find(text)?.groupValues?.get(1) ?: "/internal/metrics"
-        val includes = parseYamlInternalServicesInclude(text)
-
-        collectPortRoutesFromYaml(psiFile, text, routes, seenConfigRoutes)
-        collectInternalServiceRoutes(psiFile, includes, docsPath, healthPath, metricsPath, routes, seenConfigRoutes)
-    }
-
-    private fun collectFromProperties(
-        psiFile: PsiFile,
-        text: String,
-        routes: MutableList<ArmeriaRoute>,
-        seenConfigRoutes: MutableSet<String>,
-    ) {
+    internal fun parseProperties(text: String): SpringArmeriaConfig {
         if (!text.contains("armeria.")) {
-            return
+            return SpringArmeriaConfig()
         }
-        val docsPath = DOCS_PATH_PATTERN.find(text)?.groupValues?.get(1) ?: "/internal/docs"
-        val healthPath = HEALTH_PATH_PATTERN.find(text)?.groupValues?.get(1) ?: "/internal/healthcheck"
-        val metricsPath = METRICS_PATH_PATTERN.find(text)?.groupValues?.get(1) ?: "/internal/metrics"
-        val includes = parseIncludeList(PROPERTIES_INCLUDE_PATTERN.find(text)?.groupValues?.get(1).orEmpty())
-
-        val protocolsByPortIndex = mutableMapOf<Int, String>()
+        val portsByIndex = mutableMapOf<Int, String>()
+        PROPERTIES_PORT_PATTERN.findAll(text).forEach { match ->
+            portsByIndex[match.groupValues[1].toInt()] = match.groupValues[2]
+        }
+        val protocolsByIndex = mutableMapOf<Int, MutableList<Pair<Int, String>>>()
         PROPERTIES_PROTOCOL_PATTERN.findAll(text).forEach { match ->
             val portIndex = match.groupValues[1].toInt()
-            protocolsByPortIndex[portIndex] = match.groupValues[3].uppercase()
+            val protocolIndex = match.groupValues[2].toIntOrNull() ?: 0
+            val protocol = match.groupValues[3].uppercase()
+            protocolsByIndex.getOrPut(portIndex) { mutableListOf() } += protocolIndex to protocol
         }
-        PROPERTIES_PORT_PATTERN.findAll(text).forEachIndexed { index, match ->
-            val port = match.groupValues[1]
-            val protocol = protocolsByPortIndex[index] ?: "HTTP"
-            addConfigRoute(
-                element = psiFile,
-                path = "/",
-                target = message("route.explorer.spring.port", port, protocol),
-                protocol = message("route.explorer.protocol.http"),
-                isDocService = false,
-                dedupeKey = "port:$port:$protocol",
-                routes = routes,
-                seenConfigRoutes = seenConfigRoutes,
-            )
+        val ports = portsByIndex.entries
+            .sortedBy { it.key }
+            .map { (index, port) ->
+                val protocols = protocolsByIndex[index]
+                    ?.sortedBy { it.first }
+                    ?.map { it.second }
+                    ?.distinct()
+                    .orEmpty()
+                    .ifEmpty { listOf("HTTP") }
+                SpringArmeriaPortBinding(port = port, protocols = protocols)
+            }
+
+        val includes = mutableSetOf<String>()
+        PROPERTIES_INCLUDE_PATTERN.findAll(text).forEach { match ->
+            includes += parseIncludeTokens(match.groupValues[1])
         }
-        collectInternalServiceRoutes(psiFile, includes, docsPath, healthPath, metricsPath, routes, seenConfigRoutes)
+        return SpringArmeriaConfig(
+            ports = ports,
+            includes = expandIncludes(includes),
+            docsPath = PROPERTIES_DOCS_PATH_PATTERN.find(text)?.groupValues?.get(1)?.trimQuotes()
+                ?: DEFAULT_DOCS_PATH,
+            healthPath = PROPERTIES_HEALTH_PATH_PATTERN.find(text)?.groupValues?.get(1)?.trimQuotes()
+                ?: DEFAULT_HEALTH_PATH,
+            metricsPath = PROPERTIES_METRICS_PATH_PATTERN.find(text)?.groupValues?.get(1)?.trimQuotes()
+                ?: DEFAULT_METRICS_PATH,
+            internalServicesPort = PROPERTIES_INTERNAL_PORT_PATTERN.find(text)?.groupValues?.get(1),
+        )
     }
 
-    private fun collectPortRoutesFromYaml(
-        psiFile: PsiFile,
-        text: String,
-        routes: MutableList<ArmeriaRoute>,
-        seenConfigRoutes: MutableSet<String>,
-    ) {
-        val portsSection = extractYamlSubsection(text, "armeria", "ports") ?: return
-        val seenPorts = mutableSetOf<String>()
-        YAML_PORT_ITEM_PATTERN.findAll(portsSection).forEach { match ->
-            val port = match.groupValues[1]
-            if (!seenPorts.add(port)) {
-                return@forEach
-            }
-            val protocol = match.groupValues[2].uppercase()
-            addConfigRoute(
-                element = psiFile,
-                path = "/",
-                target = message("route.explorer.spring.port", port, protocol),
-                protocol = message("route.explorer.protocol.http"),
-                isDocService = false,
-                dedupeKey = "port:$port:$protocol",
-                routes = routes,
-                seenConfigRoutes = seenConfigRoutes,
-            )
-        }
-    }
-
-    private fun parseYamlInternalServicesInclude(text: String): Set<String> {
-        val includeLine = extractYamlSubsection(text, "armeria", "internal-services")
-            ?.lineSequence()
-            ?.map { it.trim() }
-            ?.firstOrNull { it.startsWith("include:") }
-            ?: return emptySet()
-        val raw = includeLine.substringAfter("include:").trim()
-        return parseIncludeList(raw)
-    }
-
-    internal fun extractYamlSubsection(text: String, parentKey: String, childKey: String): String? {
-        val lines = text.lineSequence().toList()
-        val parentIndex = lines.indexOfFirst { line ->
-            val trimmed = line.trim()
-            trimmed == "$parentKey:" || trimmed.startsWith("$parentKey:")
-        }
-        if (parentIndex < 0) {
-            return null
-        }
-        val parentIndent = lines[parentIndex].takeWhile { it.isWhitespace() }.length
-        for (index in parentIndex + 1 until lines.size) {
-            val line = lines[index]
-            if (line.isBlank() || line.trimStart().startsWith("#")) {
-                continue
-            }
-            val indent = line.takeWhile { it.isWhitespace() }.length
-            if (indent <= parentIndent && line.trim().endsWith(":")) {
-                break
-            }
-            val trimmed = line.trim()
-            if (trimmed != "$childKey:" && !trimmed.startsWith("$childKey:")) {
-                continue
-            }
-            val childIndent = indent
-            val childLines = mutableListOf<String>()
-            for (childIndex in index until lines.size) {
-                val childLine = lines[childIndex]
-                if (childLine.isBlank() || childLine.trimStart().startsWith("#")) {
-                    if (childLines.isNotEmpty()) {
-                        childLines += childLine
-                    }
-                    continue
-                }
-                val childLineIndent = childLine.takeWhile { it.isWhitespace() }.length
-                if (childIndex > index && childLineIndent <= childIndent && !childLine.trim().startsWith("-")) {
-                    break
-                }
-                childLines += childLine
-            }
-            return childLines.joinToString("\n")
-        }
-        return null
-    }
-
-    private fun collectInternalServiceRoutes(
+    internal fun emitRoutes(
+        config: SpringArmeriaConfig,
         element: PsiElement,
-        includes: Set<String>,
-        docsPath: String,
-        healthPath: String,
-        metricsPath: String,
+        profile: String?,
         routes: MutableList<ArmeriaRoute>,
         seenConfigRoutes: MutableSet<String>,
     ) {
+        for (binding in config.ports) {
+            val protocolLabel = binding.protocols.joinToString(", ")
+            val primaryProtocol = binding.protocols.firstOrNull() ?: "HTTP"
+            addConfigRoute(
+                element = element,
+                path = "/",
+                target = profileAwareTarget(
+                    message("route.explorer.spring.port", binding.port, protocolLabel),
+                    profile,
+                ),
+                protocol = primaryProtocol,
+                httpMethod = "",
+                routeMatch = RouteMatch.NON_HTTP,
+                isDocService = false,
+                dedupeKey = profileAwareKey("port:${binding.port}:$protocolLabel", profile),
+                routes = routes,
+                seenConfigRoutes = seenConfigRoutes,
+            )
+        }
+
+        val includes = config.includes
         if (includes.isEmpty()) {
             return
         }
-        if ("all" in includes || "docs" in includes) {
+        val portSuffix = config.internalServicesPort?.let { " · :$it" }.orEmpty()
+        if ("docs" in includes) {
             addConfigRoute(
                 element = element,
-                path = docsPath,
-                target = message("route.explorer.spring.docService"),
-                protocol = message("route.explorer.protocol.docService"),
+                path = config.docsPath,
+                target = profileAwareTarget(
+                    message("route.explorer.spring.docService") + portSuffix,
+                    profile,
+                ),
+                protocol = RouteProtocol.DOC_SERVICE.presentableName(),
+                httpMethod = "",
+                routeMatch = RouteMatch.NON_HTTP,
                 isDocService = true,
-                dedupeKey = "docs:$docsPath",
+                dedupeKey = profileAwareKey("docs:${config.docsPath}", profile),
                 routes = routes,
                 seenConfigRoutes = seenConfigRoutes,
             )
         }
-        if ("all" in includes || "health" in includes) {
+        if ("health" in includes) {
             addConfigRoute(
                 element = element,
-                path = healthPath,
-                target = message("route.explorer.spring.healthCheck"),
-                protocol = message("route.explorer.protocol.http"),
+                path = config.healthPath,
+                target = profileAwareTarget(
+                    message("route.explorer.spring.healthCheck") + portSuffix,
+                    profile,
+                ),
+                protocol = RouteProtocol.HTTP.presentableName(),
+                httpMethod = "GET",
+                routeMatch = RouteMatch.HEALTH_CHECK,
                 isDocService = false,
-                dedupeKey = "health:$healthPath",
+                dedupeKey = profileAwareKey("health:${config.healthPath}", profile),
                 routes = routes,
                 seenConfigRoutes = seenConfigRoutes,
             )
         }
-        if ("all" in includes || "metrics" in includes) {
+        if ("metrics" in includes) {
             addConfigRoute(
                 element = element,
-                path = metricsPath,
-                target = message("route.explorer.spring.metrics"),
-                protocol = message("route.explorer.protocol.http"),
+                path = config.metricsPath,
+                target = profileAwareTarget(
+                    message("route.explorer.spring.metrics") + portSuffix,
+                    profile,
+                ),
+                protocol = RouteProtocol.HTTP.presentableName(),
+                httpMethod = "GET",
+                routeMatch = RouteMatch.SERVICE,
                 isDocService = false,
-                dedupeKey = "metrics:$metricsPath",
+                dedupeKey = profileAwareKey("metrics:${config.metricsPath}", profile),
                 routes = routes,
                 seenConfigRoutes = seenConfigRoutes,
             )
@@ -271,21 +227,291 @@ internal object ArmeriaSpringYamlRouteCollector {
             addConfigRoute(
                 element = element,
                 path = "/actuator",
-                target = message("route.explorer.spring.actuator"),
-                protocol = message("route.explorer.protocol.http"),
+                target = profileAwareTarget(
+                    message("route.explorer.spring.actuator") + portSuffix,
+                    profile,
+                ),
+                protocol = RouteProtocol.HTTP.presentableName(),
+                httpMethod = "GET",
+                routeMatch = RouteMatch.SERVICE,
                 isDocService = false,
-                dedupeKey = "actuator",
+                dedupeKey = profileAwareKey("actuator", profile),
                 routes = routes,
                 seenConfigRoutes = seenConfigRoutes,
             )
         }
     }
 
+    private fun isApplicationConfigFile(name: String): Boolean = APPLICATION_FILE_PATTERN.matches(name)
+
+    private fun profileFromFileName(name: String): String? {
+        val match = APPLICATION_FILE_PATTERN.matchEntire(name) ?: return null
+        val suffix = match.groupValues[1]
+        return suffix.removePrefix("-").takeIf { it.isNotEmpty() }
+    }
+
+    private fun parseYamlPorts(portsBlock: String?): List<SpringArmeriaPortBinding> {
+        if (portsBlock.isNullOrBlank()) {
+            return emptyList()
+        }
+        val items = splitYamlListItems(portsBlock)
+        val bindings = mutableListOf<SpringArmeriaPortBinding>()
+        val seenPorts = mutableSetOf<String>()
+        for (item in items) {
+            val values = parseYamlMapping(item)
+            val port = values["port"]?.firstOrNull() ?: continue
+            if (!seenPorts.add(port)) {
+                continue
+            }
+            val protocols = values["protocols"]
+                ?.map { it.uppercase() }
+                ?.distinct()
+                .orEmpty()
+                .ifEmpty { listOf("HTTP") }
+            bindings += SpringArmeriaPortBinding(port = port, protocols = protocols)
+        }
+        return bindings
+    }
+
+    private fun parseYamlInclude(internalServicesBlock: String?): Set<String> {
+        if (internalServicesBlock.isNullOrBlank()) {
+            return emptySet()
+        }
+        val lines = internalServicesBlock.lineSequence().toList()
+        val includeIndex = lines.indexOfFirst { line ->
+            val trimmed = line.trim()
+            trimmed == "include:" || trimmed.startsWith("include:")
+        }
+        if (includeIndex < 0) {
+            return emptySet()
+        }
+        val includeLine = lines[includeIndex]
+        val inline = includeLine.substringAfter("include:", missingDelimiterValue = "").trim()
+        val tokens = mutableListOf<String>()
+        if (inline.isNotEmpty()) {
+            tokens += parseIncludeTokens(inline)
+        }
+        val includeIndent = includeLine.takeWhile { it.isWhitespace() }.length
+        for (index in includeIndex + 1 until lines.size) {
+            val line = lines[index]
+            if (line.isBlank() || line.trimStart().startsWith("#")) {
+                continue
+            }
+            val indent = line.takeWhile { it.isWhitespace() }.length
+            if (indent <= includeIndent) {
+                break
+            }
+            val trimmed = line.trim()
+            if (trimmed.startsWith("- ")) {
+                tokens += parseIncludeTokens(trimmed.removePrefix("- ").trim())
+            }
+        }
+        return expandIncludes(tokens.toSet())
+    }
+
+    private fun expandIncludes(raw: Set<String>): Set<String> {
+        if (raw.any { it.equals("all", ignoreCase = true) }) {
+            return INTERNAL_SERVICE_IDS
+        }
+        return raw.map { it.lowercase() }.filter { it in INTERNAL_SERVICE_IDS }.toSet()
+    }
+
+    private fun parseIncludeTokens(raw: String): Set<String> {
+        val normalized = raw.trim()
+            .removePrefix("[")
+            .removeSuffix("]")
+            .trim()
+        if (normalized.isEmpty()) {
+            return emptySet()
+        }
+        return normalized.split(',', ' ', '\t')
+            .map { it.trim().trimQuotes().lowercase() }
+            .filter { it.isNotEmpty() }
+            .toSet()
+    }
+
+    private fun extractTopLevelBlock(text: String, key: String): String? {
+        val lines = text.lineSequence().toList()
+        val startIndex = lines.indexOfFirst { line ->
+            val trimmed = line.trim()
+            !trimmed.startsWith("#") && matchesYamlKey(trimmed, key)
+        }
+        if (startIndex < 0) {
+            return null
+        }
+        val parentIndent = lines[startIndex].takeWhile { it.isWhitespace() }.length
+        return collectIndentedBlock(lines, startIndex, parentIndent)
+    }
+
+    private fun extractChildBlock(parentBlock: String, vararg keys: String): String? {
+        val lines = parentBlock.lineSequence().toList()
+        val startIndex = lines.indexOfFirst { line ->
+            val trimmed = line.trim()
+            !trimmed.startsWith("#") && keys.any { matchesYamlKey(trimmed, it) }
+        }
+        if (startIndex < 0) {
+            return null
+        }
+        val childIndent = lines[startIndex].takeWhile { it.isWhitespace() }.length
+        return collectIndentedBlock(lines, startIndex, childIndent)
+    }
+
+    private fun collectIndentedBlock(lines: List<String>, startIndex: Int, parentIndent: Int): String {
+        val childLines = mutableListOf<String>()
+        for (index in startIndex + 1 until lines.size) {
+            val line = lines[index]
+            if (line.isBlank() || line.trimStart().startsWith("#")) {
+                if (childLines.isNotEmpty()) {
+                    childLines += line
+                }
+                continue
+            }
+            val indent = line.takeWhile { it.isWhitespace() }.length
+            if (indent <= parentIndent) {
+                break
+            }
+            childLines += line
+        }
+        return childLines.joinToString("\n")
+    }
+
+    private fun splitYamlListItems(block: String): List<String> {
+        val lines = block.lineSequence().toList()
+        val items = mutableListOf<String>()
+        var current = mutableListOf<String>()
+        var itemIndent = -1
+        for (line in lines) {
+            if (line.isBlank() || line.trimStart().startsWith("#")) {
+                if (current.isNotEmpty()) {
+                    current += line
+                }
+                continue
+            }
+            val indent = line.takeWhile { it.isWhitespace() }.length
+            val trimmed = line.trimStart()
+            if (trimmed.startsWith("- ")) {
+                if (current.isNotEmpty()) {
+                    items += current.joinToString("\n")
+                }
+                current = mutableListOf(line)
+                itemIndent = indent
+                continue
+            }
+            if (itemIndent >= 0 && indent > itemIndent) {
+                current += line
+            }
+        }
+        if (current.isNotEmpty()) {
+            items += current.joinToString("\n")
+        }
+        return items
+    }
+
+    private fun parseYamlMapping(itemText: String): Map<String, List<String>> {
+        val values = linkedMapOf<String, MutableList<String>>()
+        // Normalize the leading "- " so sibling keys share a common indent base.
+        val lines = itemText.lineSequence().map { line ->
+            val match = LIST_ITEM_PREFIX.find(line) ?: return@map line
+            match.groupValues[1] + "  " + line.substring(match.range.last + 1)
+        }.toList()
+        var index = 0
+        while (index < lines.size) {
+            val line = lines[index]
+            if (line.isBlank() || line.trimStart().startsWith("#")) {
+                index++
+                continue
+            }
+            val trimmed = line.trim()
+            if (!trimmed.contains(':')) {
+                index++
+                continue
+            }
+            val key = trimmed.substringBefore(':').trim()
+            val inlineValue = trimmed.substringAfter(':', missingDelimiterValue = "").trim()
+            val keyIndent = line.takeWhile { it.isWhitespace() }.length
+            if (inlineValue.isNotEmpty()) {
+                values.getOrPut(key) { mutableListOf() } += splitInlineYamlValues(inlineValue)
+                index++
+                continue
+            }
+            val nested = mutableListOf<String>()
+            var nestedIndex = index + 1
+            while (nestedIndex < lines.size) {
+                val nestedLine = lines[nestedIndex]
+                if (nestedLine.isBlank() || nestedLine.trimStart().startsWith("#")) {
+                    nestedIndex++
+                    continue
+                }
+                val nestedIndent = nestedLine.takeWhile { it.isWhitespace() }.length
+                if (nestedIndent <= keyIndent) {
+                    break
+                }
+                val nestedTrimmed = nestedLine.trim()
+                if (nestedTrimmed.startsWith("- ")) {
+                    nested += nestedTrimmed.removePrefix("- ").trim().trimQuotes()
+                } else if (nestedTrimmed.contains(':')) {
+                    break
+                } else {
+                    nested += nestedTrimmed.trimQuotes()
+                }
+                nestedIndex++
+            }
+            if (nested.isNotEmpty()) {
+                values.getOrPut(key) { mutableListOf() } += nested
+            }
+            index = nestedIndex
+        }
+        return values
+    }
+
+    private val LIST_ITEM_PREFIX = Regex("""^(\s*)- """)
+
+    private fun splitInlineYamlValues(raw: String): List<String> {
+        val normalized = raw.trim()
+            .removePrefix("[")
+            .removeSuffix("]")
+            .trim()
+        if (normalized.isEmpty()) {
+            return emptyList()
+        }
+        if (normalized.contains(',')) {
+            return normalized.split(',').map { it.trim().trimQuotes() }.filter { it.isNotEmpty() }
+        }
+        return listOf(normalized.trimQuotes())
+    }
+
+    private fun readYamlScalar(block: String?, vararg keys: String): String? {
+        if (block.isNullOrBlank()) {
+            return null
+        }
+        val keySet = keys.toSet()
+        for (line in block.lineSequence()) {
+            val trimmed = line.trim()
+            if (trimmed.startsWith("#") || !trimmed.contains(':')) {
+                continue
+            }
+            val key = trimmed.substringBefore(':').trim()
+            if (key !in keySet) {
+                continue
+            }
+            val value = trimmed.substringAfter(':', missingDelimiterValue = "").trim()
+            if (value.isNotEmpty()) {
+                return value.trimQuotes()
+            }
+        }
+        return null
+    }
+
+    private fun matchesYamlKey(trimmed: String, key: String): Boolean =
+        trimmed == "$key:" || trimmed.startsWith("$key:")
+
     private fun addConfigRoute(
         element: PsiElement,
         path: String,
         target: String,
         protocol: String,
+        httpMethod: String,
+        routeMatch: RouteMatch,
         isDocService: Boolean,
         dedupeKey: String,
         routes: MutableList<ArmeriaRoute>,
@@ -298,17 +524,20 @@ internal object ArmeriaSpringYamlRouteCollector {
         routes += ArmeriaRoute.create(
             element = element,
             protocol = protocol,
-            httpMethod = "",
+            httpMethod = httpMethod,
             path = path,
             target = target,
-            routeMatch = RouteMatch.NON_HTTP,
+            routeMatch = routeMatch,
             isDocService = isDocService,
         )
     }
 
-    private fun parseIncludeList(raw: String): Set<String> =
-        raw.split(',', ' ', '\t')
-            .map { it.trim().lowercase().removeSurrounding("\"", "\"").removeSurrounding("'", "'") }
-            .filter { it.isNotEmpty() }
-            .toSet()
+    private fun profileAwareTarget(base: String, profile: String?): String =
+        if (profile.isNullOrEmpty()) base else "$base [$profile]"
+
+    private fun profileAwareKey(base: String, profile: String?): String =
+        if (profile.isNullOrEmpty()) base else "$base@$profile"
+
+    private fun String.trimQuotes(): String =
+        trim().removeSurrounding("\"").removeSurrounding("'")
 }
