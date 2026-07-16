@@ -2,7 +2,6 @@ package com.linecorp.intellij.plugins.armeria.intention
 
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
 
@@ -30,13 +29,9 @@ internal object ArmeriaIntentionSupport {
         return candidate
     }
 
-    fun suggestPath(serviceClass: PsiClass, methodName: String): String {
-        val classPrefix = ArmeriaRouteSupport.extractPrimaryPath(
-            serviceClass.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION),
-        )
-        val path = if (classPrefix.isBlank()) "/$methodName" else "${classPrefix.trimEnd('/')}/$methodName"
-        return ArmeriaRouteSupport.normalizePath(path)
-    }
+    /** Method-relative path only; class `@PathPrefix` is composed at runtime. */
+    fun suggestPath(methodName: String): String =
+        ArmeriaRouteSupport.normalizePath("/$methodName")
 
     private fun isAnnotatedServiceCandidate(serviceClass: PsiClass): Boolean {
         if (serviceClass.isInterface || serviceClass.isEnum || serviceClass.isAnnotationType) {
@@ -45,12 +40,6 @@ internal object ArmeriaIntentionSupport {
         if (serviceClass.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION) != null) {
             return true
         }
-        if (serviceClass.methods.any { ArmeriaRouteSupport.findRouteAnnotation(it) != null }) {
-            return true
-        }
-        val file = serviceClass.containingFile as? PsiJavaFile ?: return false
-        return file.importList?.allImportStatements?.any { import ->
-            import.text.contains("com.linecorp.armeria.server.annotation")
-        } == true
+        return serviceClass.methods.any { ArmeriaRouteSupport.findRouteAnnotation(it) != null }
     }
 }

@@ -4,6 +4,8 @@
 ### Added
 
 - Extended Armeria Clients explorer with Retrofit/WebClient transport detection, client decorator collection, EndpointGroup usage, and a structured detail panel.
+- Live templates for annotated route methods, `Server.builder()`, and `WebClient` decorator chains (Java/Kotlin)
+- Intention action to generate `@Get` route method stubs in annotated Java service classes
 
 ### Changed
 

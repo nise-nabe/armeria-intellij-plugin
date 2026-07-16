@@ -21,5 +21,6 @@
                          implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaDuplicateRegistrationKotlinInspection" />
         <codeInsight.lineMarkerProvider language="kotlin"
                                         implementationClass="com.linecorp.intellij.plugins.armeria.marker.ArmeriaKotlinRouteLineMarkerProvider"/>
+        <defaultLiveTemplates file="liveTemplates/ArmeriaKotlin.xml"/>
     </extensions>
 </idea-plugin>

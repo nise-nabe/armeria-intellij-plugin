@@ -36,6 +36,62 @@ class ArmeriaGenerateRouteMethodIntentionTest : LightJavaCodeInsightFixtureTestC
         assertTrue(updated.contains("@Get(\"/handler\")"))
         assertTrue(updated.contains("public String handler()"))
         assertTrue(updated.contains("return \"\";"))
+        assertFalse(updated.contains("com.linecorp.armeria.server.annotation.Get"))
+    }
+
+    fun testPathPrefixUsesRelativeMethodPath() {
+        myFixture.configureByText(
+            "PrefixedService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.PathPrefix;
+
+            @PathPrefix("/v1")
+            public class PrefixedService {
+                <caret>
+            }
+            """.trimIndent(),
+        )
+
+        val intention = ArmeriaGenerateRouteMethodIntention()
+        val element = myFixture.file.findElementAt(myFixture.editor.caretModel.offset)!!
+        assertTrue(intention.isAvailable(myFixture.project, myFixture.editor, element))
+
+        intention.invoke(myFixture.project, myFixture.editor, element)
+
+        val updated = myFixture.editor.document.text
+        assertTrue(updated.contains("@Get(\"/handler\")"))
+        assertFalse(updated.contains("@Get(\"/v1/handler\")"))
+    }
+
+    fun testSuggestsUniqueMethodNameOnCollision() {
+        myFixture.configureByText(
+            "CollisionService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class CollisionService {
+                @Get("/handler")
+                public String handler() {
+                    return "exists";
+                }
+                <caret>
+            }
+            """.trimIndent(),
+        )
+
+        val intention = ArmeriaGenerateRouteMethodIntention()
+        val element = myFixture.file.findElementAt(myFixture.editor.caretModel.offset)!!
+        assertTrue(intention.isAvailable(myFixture.project, myFixture.editor, element))
+
+        intention.invoke(myFixture.project, myFixture.editor, element)
+
+        val updated = myFixture.editor.document.text
+        assertTrue(updated.contains("@Get(\"/handler2\")"))
+        assertTrue(updated.contains("public String handler2()"))
     }
 
     fun testNotAvailableOutsideAnnotatedServiceClass() {
@@ -45,6 +101,27 @@ class ArmeriaGenerateRouteMethodIntentionTest : LightJavaCodeInsightFixtureTestC
             package example;
 
             public class Plain {
+                <caret>
+            }
+            """.trimIndent(),
+        )
+
+        val intention = ArmeriaGenerateRouteMethodIntention()
+        val element = myFixture.file.findElementAt(myFixture.editor.caretModel.offset)!!
+        assertFalse(intention.isAvailable(myFixture.project, myFixture.editor, element))
+    }
+
+    fun testNotAvailableForUnrelatedAnnotationImportOnly() {
+        myFixture.configureByText(
+            "ParamOnly.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Param;
+
+            public class ParamOnly {
+                public void use(@Param("id") String id) {
+                }
                 <caret>
             }
             """.trimIndent(),
@@ -71,6 +148,15 @@ class ArmeriaGenerateRouteMethodIntentionTest : LightJavaCodeInsightFixtureTestC
             package com.linecorp.armeria.server.annotation;
 
             public @interface PathPrefix {
+                String value();
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation;
+
+            public @interface Param {
                 String value();
             }
             """.trimIndent(),
