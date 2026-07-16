@@ -40,7 +40,7 @@ internal object ArmeriaClientEndpointGroupSupport {
         val call = expression as? KtCallExpression
         if (call != null) {
             val receiver = when (val callee = call.calleeExpression) {
-                is KtDotQualifiedExpression -> callee.receiverExpression?.text
+                is KtDotQualifiedExpression -> callee.receiverExpression.text
                 else -> (call.parent as? KtDotQualifiedExpression)?.receiverExpression?.text
             }
             val arguments = call.valueArguments.mapNotNull { it.getArgumentExpression() }

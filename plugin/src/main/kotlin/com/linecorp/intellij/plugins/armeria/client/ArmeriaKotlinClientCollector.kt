@@ -126,10 +126,10 @@ internal object ArmeriaKotlinClientCollector {
         val firstArg = arguments.firstOrNull() ?: return null
         val webClientInfo = extractWebClientTransport(firstArg)
         if (webClientInfo != null) {
-            val (uri, innerDecorators) = webClientInfo
             return ClientMetadata(
-                uri = uri,
-                decorators = (decorators + innerDecorators).distinct(),
+                uri = webClientInfo.uri,
+                decorators = (decorators + webClientInfo.decorators).distinct(),
+                endpointGroup = webClientInfo.endpointGroup,
                 transport = message("client.explorer.transport.webClient"),
             )
         }
@@ -145,8 +145,15 @@ internal object ArmeriaKotlinClientCollector {
         return ClientMetadata(uri = uri, decorators = decorators)
     }
 
-    private fun extractWebClientTransport(expression: KtExpression): Pair<String, List<String>>? {
-        val call = expression as? KtCallExpression
+    private data class WebClientTransportInfo(
+        val uri: String,
+        val decorators: List<String>,
+        val endpointGroup: String? = null,
+    )
+
+    private fun extractWebClientTransport(expression: KtExpression): WebClientTransportInfo? {
+        val unwrapped = unwrapKotlinExpression(expression) ?: return null
+        val call = callExpressionInChain(unwrapped)
         if (call != null) {
             val methodName = resolveCallName(call)
             val resolvedClass = resolveContainingClass(call)
@@ -158,16 +165,20 @@ internal object ArmeriaKotlinClientCollector {
             }
             if (ArmeriaClientSupport.isWebClientClass(resolvedClass) && methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES) {
                 val arguments = call.valueArguments.mapNotNull { it.getArgumentExpression() }
+                val decorators = ArmeriaKotlinClientDecoratorSupport.collectKotlinClientDecorators(call)
                 if (arguments.size >= 2 && isEndpointGroupArgument(arguments[1])) {
-                    val uri = ArmeriaClientEndpointGroupSupport.extractKotlinEndpointGroupUri(arguments[1]) ?: return null
-                    return uri to ArmeriaKotlinClientDecoratorSupport.collectKotlinClientDecorators(call)
+                    val endpointGroup = ArmeriaClientEndpointGroupSupport.labelKotlinEndpointGroup(arguments[1])
+                        ?: return null
+                    val uri = ArmeriaClientEndpointGroupSupport.extractKotlinEndpointGroupUri(arguments[1])
+                        ?: endpointGroup
+                    return WebClientTransportInfo(uri = uri, decorators = decorators, endpointGroup = endpointGroup)
                 }
                 val uri = extractKotlinString(arguments.firstOrNull()) ?: return null
-                return uri to ArmeriaKotlinClientDecoratorSupport.collectKotlinClientDecorators(call)
+                return WebClientTransportInfo(uri = uri, decorators = decorators)
             }
         }
-        if (expression is KtNameReferenceExpression) {
-            val resolved = expression.references.firstOrNull()?.resolve()
+        if (unwrapped is KtNameReferenceExpression) {
+            val resolved = unwrapped.references.firstOrNull()?.resolve()
             if (resolved is KtProperty) {
                 return extractWebClientTransport(resolved.initializer ?: return null)
             }

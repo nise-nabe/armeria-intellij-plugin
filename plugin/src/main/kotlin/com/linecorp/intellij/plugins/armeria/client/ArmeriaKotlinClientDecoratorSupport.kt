@@ -21,17 +21,16 @@ internal object ArmeriaKotlinClientDecoratorSupport {
         factoryCall: KtCallExpression,
         decorators: LinkedHashSet<String>,
     ) {
-        var current: KtExpression = factoryCall
+        var current: KtCallExpression = factoryCall
         while (true) {
-            val parent = current.parent
-            val parentCall = parent as? KtCallExpression ?: break
-            if (kotlinChainReceiver(parentCall) != current) {
+            val next = findNextChainedCall(current) ?: break
+            if (next === current) {
                 break
             }
-            if (isKotlinClientDecoratorCall(parentCall)) {
-                extractKotlinDecoratorLabel(parentCall)?.let { decorators += it }
+            if (isKotlinClientDecoratorCall(next)) {
+                extractKotlinDecoratorLabel(next)?.let { decorators += it }
             }
-            current = parentCall
+            current = next
         }
     }
 
@@ -41,11 +40,34 @@ internal object ArmeriaKotlinClientDecoratorSupport {
     ) {
         var current: KtExpression? = kotlinChainReceiver(expression)
         while (current != null) {
-            val decoratorCall = current as? KtCallExpression
+            val decoratorCall = asKotlinCallExpression(current)
             if (decoratorCall != null && isKotlinClientDecoratorCall(decoratorCall)) {
                 extractKotlinDecoratorLabel(decoratorCall)?.let { decorators += it }
             }
-            current = kotlinChainReceiver(current)
+            val next = kotlinChainReceiver(current)
+            current = if (next === current) null else next
+        }
+    }
+
+    private fun findNextChainedCall(call: KtCallExpression): KtCallExpression? {
+        val parent = call.parent
+        if (parent is KtDotQualifiedExpression && parent.receiverExpression == call) {
+            return parent.selectorExpression as? KtCallExpression
+        }
+        if (parent is KtDotQualifiedExpression) {
+            val grandParent = parent.parent as? KtDotQualifiedExpression
+            if (grandParent != null && grandParent.receiverExpression == parent) {
+                return grandParent.selectorExpression as? KtCallExpression
+            }
+        }
+        return null
+    }
+
+    private fun asKotlinCallExpression(expression: KtExpression): KtCallExpression? {
+        return when (expression) {
+            is KtCallExpression -> expression
+            is KtDotQualifiedExpression -> expression.selectorExpression as? KtCallExpression
+            else -> null
         }
     }
 
@@ -76,7 +98,13 @@ internal object ArmeriaKotlinClientDecoratorSupport {
 
     private fun extractKotlinDecoratorTarget(expression: KtExpression): String {
         return when (expression) {
-            is KtDotQualifiedExpression -> expression.text
+            is KtCallExpression -> {
+                when (val callee = expression.calleeExpression) {
+                    is KtDotQualifiedExpression -> callee.receiverExpression.text
+                    else -> expression.text
+                }
+            }
+            is KtDotQualifiedExpression -> expression.receiverExpression.text
             is KtNameReferenceExpression -> {
                 val resolved = expression.references.firstOrNull()?.resolve()
                 when (resolved) {
@@ -98,15 +126,22 @@ internal object ArmeriaKotlinClientDecoratorSupport {
     }
 
     private fun kotlinChainReceiver(expression: KtExpression): KtExpression? {
-        val parent = expression.parent
-        return when (parent) {
-            is KtDotQualifiedExpression -> parent.receiverExpression
+        val receiver = when (expression) {
+            is KtDotQualifiedExpression -> expression.receiverExpression
             is KtCallExpression -> {
-                val callee = parent.calleeExpression as? KtDotQualifiedExpression ?: return null
-                if (callee.selectorExpression == expression) callee.receiverExpression else null
+                val parent = expression.parent
+                if (parent is KtDotQualifiedExpression && parent.selectorExpression == expression) {
+                    parent.receiverExpression
+                } else {
+                    when (val callee = expression.calleeExpression) {
+                        is KtDotQualifiedExpression -> callee.receiverExpression
+                        else -> null
+                    }
+                }
             }
             else -> null
-        }?.let { unwrapKotlinExpression(it) }
+        } ?: return null
+        return unwrapKotlinExpression(receiver)
     }
 
     private fun unwrapKotlinExpression(expression: KtExpression): KtExpression {

@@ -153,10 +153,10 @@ object ArmeriaClientCollector {
         val firstArg = arguments.firstOrNull() ?: return null
         val webClientInfo = extractWebClientTransport(firstArg)
         if (webClientInfo != null) {
-            val (uri, innerDecorators) = webClientInfo
             return ClientMetadata(
-                uri = uri,
-                decorators = (decorators + innerDecorators).distinct(),
+                uri = webClientInfo.uri,
+                decorators = (decorators + webClientInfo.decorators).distinct(),
+                endpointGroup = webClientInfo.endpointGroup,
                 transport = message("client.explorer.transport.webClient"),
             )
         }
@@ -172,7 +172,13 @@ object ArmeriaClientCollector {
         return ClientMetadata(uri = uri, decorators = decorators)
     }
 
-    private fun extractWebClientTransport(expression: PsiExpression): Pair<String, List<String>>? {
+    private data class WebClientTransportInfo(
+        val uri: String,
+        val decorators: List<String>,
+        val endpointGroup: String? = null,
+    )
+
+    private fun extractWebClientTransport(expression: PsiExpression): WebClientTransportInfo? {
         val call = expression as? PsiMethodCallExpression
         if (call != null) {
             val methodName = call.methodExpression.referenceName
@@ -185,12 +191,16 @@ object ArmeriaClientCollector {
             }
             if (ArmeriaClientSupport.isWebClientClass(resolvedClass) && methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES) {
                 val arguments = call.argumentList.expressions
+                val decorators = ArmeriaClientDecoratorSupport.collectJavaClientDecorators(call)
                 if (arguments.size >= 2 && isEndpointGroupArgument(arguments[1])) {
-                    val uri = ArmeriaClientEndpointGroupSupport.extractJavaEndpointGroupUri(arguments[1]) ?: return null
-                    return uri to ArmeriaClientDecoratorSupport.collectJavaClientDecorators(call)
+                    val endpointGroup = ArmeriaClientEndpointGroupSupport.labelJavaEndpointGroup(arguments[1])
+                        ?: return null
+                    val uri = ArmeriaClientEndpointGroupSupport.extractJavaEndpointGroupUri(arguments[1])
+                        ?: endpointGroup
+                    return WebClientTransportInfo(uri = uri, decorators = decorators, endpointGroup = endpointGroup)
                 }
                 val uri = extractString(arguments.firstOrNull()) ?: return null
-                return uri to ArmeriaClientDecoratorSupport.collectJavaClientDecorators(call)
+                return WebClientTransportInfo(uri = uri, decorators = decorators)
             }
         }
         val reference = expression as? PsiReferenceExpression

@@ -314,6 +314,35 @@ class ArmeriaClientCollectorTest : ArmeriaClientFixtureTestBase() {
         assertEquals(listOf("Brave"), endpoint.decorators)
     }
 
+    fun testCollectRetrofitBuilderWithWebClientEndpointGroupTransport() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+            import com.linecorp.armeria.client.endpoint.EndpointGroup;
+            import com.linecorp.armeria.client.retrofit2.ArmeriaRetrofit;
+            import com.linecorp.armeria.common.SessionProtocol;
+
+            public class Main {
+                public static void main(String[] args) {
+                    ArmeriaRetrofit.builder(
+                        WebClient.builder(SessionProtocol.HTTP, EndpointGroup.of("https://lb.example.com")).build()
+                    ).build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("Retrofit", endpoint.clientType)
+        assertEquals("https://lb.example.com", endpoint.uri)
+        assertEquals("WebClient transport", endpoint.transport)
+        assertTrue(endpoint.endpointGroup!!.startsWith("EndpointGroup"))
+    }
+
     fun testCollectRetrofitBuilderWithEndpointGroup() {
         myFixture.configureByText(
             "Main.java",

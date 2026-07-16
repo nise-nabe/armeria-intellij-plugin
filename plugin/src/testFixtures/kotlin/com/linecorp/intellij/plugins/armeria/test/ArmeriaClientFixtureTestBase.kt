@@ -84,6 +84,17 @@ abstract class ArmeriaClientFixtureTestBase : LightJavaCodeInsightFixtureTestCas
         )
         myFixture.addClass(
             """
+            package com.linecorp.armeria.client.endpoint.dns;
+
+            public final class DnsAddressEndpointGroup {
+                public static com.linecorp.armeria.client.endpoint.EndpointGroup of(String hostname, int port) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
             package com.linecorp.armeria.client.logging;
 
             public final class LoggingClient {
@@ -132,6 +143,10 @@ abstract class ArmeriaClientFixtureTestBase : LightJavaCodeInsightFixtureTestCas
 
             public final class ArmeriaRetrofit {
                 public static ArmeriaRetrofitBuilder builder(com.linecorp.armeria.client.WebClient webClient) {
+                    return null;
+                }
+
+                public static ArmeriaRetrofitBuilder builder(com.linecorp.armeria.client.WebClientBuilder webClientBuilder) {
                     return null;
                 }
 
