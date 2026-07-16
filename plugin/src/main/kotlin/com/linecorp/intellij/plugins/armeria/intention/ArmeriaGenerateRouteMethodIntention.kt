@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.intention
 
 import com.intellij.codeInsight.intention.PsiElementBaseIntentionAction
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaPsiFacade
@@ -39,12 +40,14 @@ class ArmeriaGenerateRouteMethodIntention : PsiElementBaseIntentionAction() {
             """.trimIndent(),
             serviceClass,
         )
-        val anchor = serviceClass.rBrace ?: return
-        val added = serviceClass.addBefore(method, anchor) as PsiMethod
-        JavaCodeStyleManager.getInstance(project).shortenClassReferences(added)
-        CodeStyleManager.getInstance(project).reformat(added)
-        added.nameIdentifier?.textRange?.let { range ->
-            editor.caretModel.moveToOffset(range.startOffset)
+        WriteCommandAction.runWriteCommandAction(project) {
+            val anchor = serviceClass.rBrace ?: return@runWriteCommandAction
+            val added = serviceClass.addBefore(method, anchor) as PsiMethod
+            JavaCodeStyleManager.getInstance(project).shortenClassReferences(added)
+            CodeStyleManager.getInstance(project).reformat(added)
+            added.nameIdentifier?.textRange?.let { range ->
+                editor.caretModel.moveToOffset(range.startOffset)
+            }
         }
     }
 }
