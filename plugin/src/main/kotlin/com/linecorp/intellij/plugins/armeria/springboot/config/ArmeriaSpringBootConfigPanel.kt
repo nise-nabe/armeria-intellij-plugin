@@ -24,6 +24,7 @@ import javax.swing.table.DefaultTableCellRenderer
 
 class ArmeriaSpringBootConfigPanel(private val project: Project) : SimpleToolWindowPanel(true, true), Disposable {
     private var initialRefreshScheduled = false
+    private var refreshGeneration = 0
     private val statusLabel = JBLabel()
     private val tableModel = ConfigTableModel()
     private val configTable = JBTable(tableModel).apply {
@@ -47,12 +48,21 @@ class ArmeriaSpringBootConfigPanel(private val project: Project) : SimpleToolWin
     }
     fun scheduleInitialRefreshIfNeeded() { if (!initialRefreshScheduled) { initialRefreshScheduled = true; refresh() } }
     fun refresh() {
+        val generation = ++refreshGeneration
         statusLabel.text = message("springboot.config.summary.refreshing")
-        ReadAction.nonBlocking<List<ArmeriaSpringBootConfigFile>> {
-            ArmeriaSpringBootConfigCollector.collect(project)
+        ReadAction.nonBlocking<Result<List<ArmeriaSpringBootConfigFile>>> {
+            runCatching { ArmeriaSpringBootConfigCollector.collect(project) }
         }
             .inSmartMode(project).expireWith(this).coalesceBy(this)
-            .finishOnUiThread(ModalityState.any()) { files ->
+            .finishOnUiThread(ModalityState.any()) { result ->
+                if (generation != refreshGeneration) {
+                    return@finishOnUiThread
+                }
+                result.onFailure { error ->
+                    statusLabel.text = message("springboot.config.summary.error", error.message ?: error.javaClass.simpleName)
+                    return@finishOnUiThread
+                }
+                val files = result.getOrElse { emptyList() }
                 val rows = files.flatMap { file ->
                     file.entries.map { entry -> ConfigRow(file.fileName, file.filePath, entry) }
                 }

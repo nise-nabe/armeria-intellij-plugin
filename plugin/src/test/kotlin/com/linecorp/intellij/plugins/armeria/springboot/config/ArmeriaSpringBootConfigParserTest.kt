@@ -23,5 +23,15 @@ class ArmeriaSpringBootConfigParserTest {
         assertTrue(ArmeriaSpringBootConfigSupport.isApplicationConfigFileName("application-dev.yaml"))
         assertFalse(ArmeriaSpringBootConfigSupport.isApplicationConfigFileName("bootstrap.yml"))
     }
+    @Test fun normalizeIndexedKeyPath_stripsListIndexes() {
+        assertEquals("armeria.ports.port", ArmeriaSpringBootConfigSupport.normalizeIndexedKeyPath("armeria.ports[0].port"))
+        assertEquals("armeria.ports.protocols", ArmeriaSpringBootConfigSupport.normalizeIndexedKeyPath("armeria.ports[0].protocols[0]"))
+    }
+    @Test fun documentationFor_resolvesIndexedKeys() {
+        assertEquals(
+            ArmeriaSpringBootConfigKeys.DOCUMENTATION["armeria.ports"],
+            ArmeriaSpringBootConfigKeys.documentationFor("armeria.ports[0].port"),
+        )
+    }
     private fun fixture(path: String) = javaClass.classLoader.getResource(path)!!.readText()
 }

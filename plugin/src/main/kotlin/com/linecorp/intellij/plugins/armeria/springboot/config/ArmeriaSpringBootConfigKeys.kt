@@ -22,5 +22,15 @@ object ArmeriaSpringBootConfigKeys {
         SERVER_PORT, MANAGEMENT_SERVER_PORT, SPRING_WEB_APPLICATION_TYPE,
     )
     fun isArmeriaRelatedKey(key: String) = key.startsWith(ARMERIA_PREFIX) || key in RELATED_ROOT_KEYS || key.substringBefore('[').split('.').firstOrNull() == "armeria"
-    fun documentationFor(key: String) = DOCUMENTATION[key] ?: DOCUMENTATION[key.replace(Regex("""\[\d+]"""), "")]
+    fun documentationFor(key: String): String? {
+        var normalized = ArmeriaSpringBootConfigSupport.normalizeIndexedKeyPath(key)
+        while (true) {
+            DOCUMENTATION[normalized]?.let { return it }
+            val parent = normalized.substringBeforeLast('.', "")
+            if (parent == normalized) {
+                return null
+            }
+            normalized = parent
+        }
+    }
 }

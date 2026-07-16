@@ -9,6 +9,7 @@ object ArmeriaSpringBootConfigSupport {
     fun isApplicationConfigFileName(fileName: String): Boolean =
         fileName in setOf("application.yml", "application.yaml", "application.properties") ||
             (fileName.startsWith("application-") && (fileName.endsWith(".yml") || fileName.endsWith(".yaml") || fileName.endsWith(".properties")))
+    fun normalizeIndexedKeyPath(keyPath: String): String = keyPath.replace(Regex("""\[\d+]"""), "")
     fun parseFile(fileName: String, text: String) = when {
         fileName.endsWith(".yml") || fileName.endsWith(".yaml") -> ArmeriaSpringBootConfigParser.parseYaml(text)
         fileName.endsWith(".properties") -> ArmeriaSpringBootConfigParser.parseProperties(text)

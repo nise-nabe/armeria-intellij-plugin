@@ -22,28 +22,33 @@ class ArmeriaSpringBootYamlCompletionContributor : CompletionContributor() {
                         return
                     }
                     val keyValue = p.position.parent as? YAMLKeyValue ?: return
+                    val key = keyValue.key ?: return
+                    if (!key.textRange.contains(p.offset)) {
+                        return
+                    }
                     val keyPath = yamlKeyPath(keyValue)
                     if (!isRelevantKeyPath(keyPath)) {
                         return
                     }
+                    val completionPath = ArmeriaSpringBootConfigSupport.normalizeIndexedKeyPath(keyPath)
                     for (suggestion in ArmeriaSpringBootConfigKeys.COMPLETION_SUGGESTIONS) {
                         val doc = ArmeriaSpringBootConfigKeys.documentationFor(suggestion).orEmpty()
                         when {
-                            keyPath == "armeria" && suggestion.startsWith("armeria.") -> {
+                            completionPath == "armeria" && suggestion.startsWith("armeria.") -> {
                                 result.addElement(
                                     LookupElementBuilder.create(suggestion.substringAfterLast('.'))
                                         .withTypeText(suggestion)
                                         .withTailText(" — $doc", true),
                                 )
                             }
-                            suggestion.startsWith("$keyPath.") && result.prefixMatcher.prefixMatches(suggestion) -> {
+                            suggestion.startsWith("$completionPath.") && result.prefixMatcher.prefixMatches(suggestion) -> {
                                 result.addElement(
                                     LookupElementBuilder.create(suggestion.substringAfterLast('.'))
                                         .withTypeText(suggestion)
                                         .withTailText(" — $doc", true),
                                 )
                             }
-                            keyPath.isEmpty() && result.prefixMatcher.prefixMatches(suggestion) -> {
+                            completionPath.isEmpty() && result.prefixMatcher.prefixMatches(suggestion) -> {
                                 result.addElement(LookupElementBuilder.create(suggestion).withTailText(" — $doc", true))
                             }
                         }
