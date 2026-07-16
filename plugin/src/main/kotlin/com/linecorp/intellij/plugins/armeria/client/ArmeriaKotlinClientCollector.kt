@@ -282,7 +282,7 @@ internal object ArmeriaKotlinClientCollector {
             }
         }
         val qualifierText = when (callee) {
-            is KtDotQualifiedExpression -> callee.receiverExpression?.text
+            is KtDotQualifiedExpression -> callee.receiverExpression.text
             else -> (call.parent as? KtDotQualifiedExpression)?.receiverExpression?.text
         }.orEmpty()
         return protocolForClassBySimpleName(qualifierText, call.containingFile as? KtFile)
