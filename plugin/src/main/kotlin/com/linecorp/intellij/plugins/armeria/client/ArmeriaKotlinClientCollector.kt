@@ -53,7 +53,8 @@ internal object ArmeriaKotlinClientCollector {
         val protocol = ArmeriaClientSupport.protocolForClass(resolvedClass) ?: return
         val uri = extractUri(call, methodName) ?: return
         val target = resolveTargetName(call) ?: resolvedClass.substringAfterLast('.')
-        ArmeriaClientCollector.addEndpoint(call, protocol, target, uri, endpoints, seenEndpoints)
+        val features = ArmeriaClientFeatureSupport.extractKotlinFeatures(call)
+        ArmeriaClientCollector.addEndpoint(call, protocol, target, uri, endpoints, seenEndpoints, features)
     }
 
     private fun resolveTargetName(call: KtCallExpression): String? {

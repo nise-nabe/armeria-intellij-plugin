@@ -34,6 +34,13 @@ abstract class ArmeriaClientFixtureTestBase : LightJavaCodeInsightFixtureTestCas
             package com.linecorp.armeria.client;
 
             public final class WebClientBuilder {
+                public WebClientBuilder decorator(Object decorator) {
+                    return this;
+                }
+
+                public WebClientBuilder endpointGroup(Object endpointGroup) {
+                    return this;
+                }
             }
             """.trimIndent(),
         )

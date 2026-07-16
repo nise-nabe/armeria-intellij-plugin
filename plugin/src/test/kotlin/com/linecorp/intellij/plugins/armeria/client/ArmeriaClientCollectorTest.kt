@@ -188,6 +188,75 @@ class ArmeriaClientCollectorTest : ArmeriaClientFixtureTestBase() {
         assertEquals("WebClient", endpoints.single().target)
     }
 
+    fun testCollectWebClientBuilderWithDecorator() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+            import com.linecorp.armeria.client.logging.LoggingClient;
+
+            public class Main {
+                public static void main(String[] args) {
+                    WebClient.builder("https://example.com")
+                        .decorator(LoggingClient.newDecorator());
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.logging;
+
+            public final class LoggingClient {
+                public static Object newDecorator() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("https://example.com", endpoint.uri)
+        assertTrue(endpoint.features.any { it.contains("Logging") })
+    }
+
+    fun testCollectWebClientBuilderWithEndpointGroup() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+            import com.linecorp.armeria.client.endpoint.EndpointGroup;
+
+            public class Main {
+                public static void main(String[] args) {
+                    WebClient.builder("https://example.com")
+                        .endpointGroup(EndpointGroup.of("https://a.example.com", "https://b.example.com"));
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.endpoint;
+
+            public final class EndpointGroup {
+                public static EndpointGroup of(String... uris) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertTrue(endpoint.features.any { it.startsWith("EndpointGroup:") })
+    }
+
     fun testDeduplicatesSameCallSite() {
         myFixture.configureByText(
             "Main.java",
@@ -210,5 +279,4 @@ class ArmeriaClientCollectorTest : ArmeriaClientFixtureTestBase() {
         assertEquals(1, first.size)
         assertEquals(first, second)
     }
-
 }
