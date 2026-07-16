@@ -210,6 +210,29 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
     }
 
     @Test
+    fun parseProperties_acceptsColonDelimiterAndPlaceholders() {
+        val config = ArmeriaSpringYamlRouteCollector.parseProperties(
+            """
+            armeria.ports[0].port: ${'$'}{SERVER_PORT:8080}
+            armeria.ports[0].protocols: http,https
+            armeria.internal-services.port: ${'$'}{INTERNAL_PORT:18080}
+            armeria.internal-services.include: docs,health
+            armeria.docs-path: ${'$'}{DOCS_PATH:/internal/docs}
+            armeria.health-check-path: /internal/healthcheck # comment
+            """.trimIndent(),
+        )
+
+        assertEquals(
+            listOf(SpringArmeriaPortBinding("\${SERVER_PORT:8080}", listOf("HTTP", "HTTPS"))),
+            config.ports,
+        )
+        assertEquals("\${INTERNAL_PORT:18080}", config.internalServicesPort)
+        assertEquals(setOf("docs", "health"), config.includes)
+        assertEquals("\${DOCS_PATH:/internal/docs}", config.docsPath)
+        assertEquals("/internal/healthcheck", config.healthPath)
+    }
+
+    @Test
     fun parseYaml_ignoresServerPortOutsideArmeria() {
         val config = ArmeriaSpringYamlRouteCollector.parseYaml(
             """

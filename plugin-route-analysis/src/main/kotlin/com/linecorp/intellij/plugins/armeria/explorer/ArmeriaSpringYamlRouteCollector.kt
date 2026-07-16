@@ -28,19 +28,21 @@ internal object ArmeriaSpringYamlRouteCollector {
     const val DEFAULT_METRICS_PATH = "/internal/metrics"
 
     private val APPLICATION_FILE_PATTERN = Regex("""^application(-[\w.-]+)?\.(yml|yaml|properties)$""")
-    private val PROPERTIES_PORT_PATTERN = Regex("""\barmeria\.ports\[(\d+)]\.port\s*=\s*(\d+)""")
+    private val PROPERTIES_DELIMITER = """[:=]"""
+    private val PROPERTIES_PORT_PATTERN =
+        Regex("""\barmeria\.ports\[(\d+)]\.port\s*$PROPERTIES_DELIMITER\s*(\S+)""")
     private val PROPERTIES_PROTOCOL_PATTERN =
-        Regex("""\barmeria\.ports\[(\d+)]\.protocols(?:\[(\d+)])?\s*=\s*(.+)""")
+        Regex("""\barmeria\.ports\[(\d+)]\.protocols(?:\[(\d+)])?\s*$PROPERTIES_DELIMITER\s*(.+)""")
     private val PROPERTIES_INCLUDE_PATTERN =
-        Regex("""\barmeria\.(?:internal-services|internalServices)\.include(?:\[\d+])?\s*=\s*(.+)""")
+        Regex("""\barmeria\.(?:internal-services|internalServices)\.include(?:\[\d+])?\s*$PROPERTIES_DELIMITER\s*(.+)""")
     private val PROPERTIES_INTERNAL_PORT_PATTERN =
-        Regex("""\barmeria\.(?:internal-services|internalServices)\.port\s*=\s*(\d+)""")
+        Regex("""\barmeria\.(?:internal-services|internalServices)\.port\s*$PROPERTIES_DELIMITER\s*(\S+)""")
     private val PROPERTIES_DOCS_PATH_PATTERN =
-        Regex("""\barmeria\.(?:docs-path|docsPath)\s*=\s*(\S+)""")
+        Regex("""\barmeria\.(?:docs-path|docsPath)\s*$PROPERTIES_DELIMITER\s*(\S+)""")
     private val PROPERTIES_HEALTH_PATH_PATTERN =
-        Regex("""\barmeria\.(?:health-check-path|healthCheckPath)\s*=\s*(\S+)""")
+        Regex("""\barmeria\.(?:health-check-path|healthCheckPath)\s*$PROPERTIES_DELIMITER\s*(\S+)""")
     private val PROPERTIES_METRICS_PATH_PATTERN =
-        Regex("""\barmeria\.(?:metrics-path|metricsPath)\s*=\s*(\S+)""")
+        Regex("""\barmeria\.(?:metrics-path|metricsPath)\s*$PROPERTIES_DELIMITER\s*(\S+)""")
 
     private val INTERNAL_SERVICE_IDS = setOf("docs", "health", "metrics", "actuator")
 
@@ -150,13 +152,13 @@ internal object ArmeriaSpringYamlRouteCollector {
         }
         val portsByIndex = mutableMapOf<Int, String>()
         PROPERTIES_PORT_PATTERN.findAll(text).forEach { match ->
-            portsByIndex[match.groupValues[1].toInt()] = match.groupValues[2]
+            portsByIndex[match.groupValues[1].toInt()] = stripPropertiesInlineComment(match.groupValues[2])
         }
         val protocolsByIndex = mutableMapOf<Int, MutableList<Pair<Int, String>>>()
         PROPERTIES_PROTOCOL_PATTERN.findAll(text).forEach { match ->
             val portIndex = match.groupValues[1].toInt()
             val protocolIndex = match.groupValues[2].toIntOrNull()
-            val protocols = splitScalarList(match.groupValues[3]).map { it.uppercase() }
+            val protocols = splitScalarList(stripPropertiesInlineComment(match.groupValues[3])).map { it.uppercase() }
             if (protocols.isEmpty()) {
                 return@forEach
             }
@@ -185,18 +187,22 @@ internal object ArmeriaSpringYamlRouteCollector {
 
         val includes = mutableSetOf<String>()
         PROPERTIES_INCLUDE_PATTERN.findAll(text).forEach { match ->
-            includes += parseIncludeTokens(match.groupValues[1])
+            includes += parseIncludeTokens(stripPropertiesInlineComment(match.groupValues[1]))
         }
         return SpringArmeriaConfig(
             ports = ports,
             includes = expandIncludes(includes),
-            docsPath = PROPERTIES_DOCS_PATH_PATTERN.find(text)?.groupValues?.get(1)?.trimQuotes()
+            docsPath = PROPERTIES_DOCS_PATH_PATTERN.find(text)?.groupValues?.get(1)
+                ?.let { stripPropertiesInlineComment(it).trimQuotes() }
                 ?: DEFAULT_DOCS_PATH,
-            healthPath = PROPERTIES_HEALTH_PATH_PATTERN.find(text)?.groupValues?.get(1)?.trimQuotes()
+            healthPath = PROPERTIES_HEALTH_PATH_PATTERN.find(text)?.groupValues?.get(1)
+                ?.let { stripPropertiesInlineComment(it).trimQuotes() }
                 ?: DEFAULT_HEALTH_PATH,
-            metricsPath = PROPERTIES_METRICS_PATH_PATTERN.find(text)?.groupValues?.get(1)?.trimQuotes()
+            metricsPath = PROPERTIES_METRICS_PATH_PATTERN.find(text)?.groupValues?.get(1)
+                ?.let { stripPropertiesInlineComment(it).trimQuotes() }
                 ?: DEFAULT_METRICS_PATH,
-            internalServicesPort = PROPERTIES_INTERNAL_PORT_PATTERN.find(text)?.groupValues?.get(1),
+            internalServicesPort = PROPERTIES_INTERNAL_PORT_PATTERN.find(text)?.groupValues?.get(1)
+                ?.let { stripPropertiesInlineComment(it) },
         )
     }
 
@@ -569,6 +575,10 @@ internal object ArmeriaSpringYamlRouteCollector {
         trim().removeSurrounding("\"").removeSurrounding("'")
 
     private val YAML_INLINE_COMMENT = Regex("""\s+#.*$""")
+    private val PROPERTIES_INLINE_COMMENT = Regex("""\s+[#!].*$""")
+
+    private fun stripPropertiesInlineComment(raw: String): String =
+        raw.trim().replace(PROPERTIES_INLINE_COMMENT, "").trimEnd()
 
     private fun stripYamlInlineComment(raw: String): String {
         val trimmed = raw.trim()
