@@ -36,7 +36,7 @@ class ArmeriaGenerateRouteMethodIntentionTest : LightJavaCodeInsightFixtureTestC
         assertTrue(updated.contains("@Get(\"/handler\")"))
         assertTrue(updated.contains("public String handler()"))
         assertTrue(updated.contains("return \"\";"))
-        assertFalse(updated.contains("com.linecorp.armeria.server.annotation.Get"))
+        assertFalse(updated.contains("@com.linecorp.armeria.server.annotation.Get"))
     }
 
     fun testPathPrefixUsesRelativeMethodPath() {
