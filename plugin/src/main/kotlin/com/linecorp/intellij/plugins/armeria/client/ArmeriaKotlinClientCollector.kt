@@ -158,13 +158,8 @@ internal object ArmeriaKotlinClientCollector {
             val methodName = resolveCallName(call)
             val resolvedClass = resolveContainingClass(call)
             if (methodName == "build") {
-                val isArmeriaBuild = resolvedClass?.startsWith(ArmeriaClientSupport.ARMERIA_CLIENT_PACKAGE_PREFIX) == true
-                val looksLikeBuilderBuild = resolvedClass == null &&
-                    ArmeriaClientSupport.looksLikeClientBuilderReceiverText(
-                        qualifierReceiver(call)?.text.orEmpty(),
-                    )
-                if (isArmeriaBuild || looksLikeBuilderBuild) {
-                    val factoryCall = findWebClientFactoryInQualifierChain(call) ?: return null
+                val factoryCall = findWebClientFactoryInQualifierChain(call)
+                if (factoryCall != null) {
                     return extractWebClientTransport(factoryCall)
                 }
             }
