@@ -231,21 +231,26 @@ internal object ArmeriaSpringYamlRouteCollector {
         if (includes.isEmpty()) {
             return
         }
-        // Config-sourced internal services use NON_HTTP so they do not participate in
-        // duplicate-registration analysis (e.g. against serviceUnder("/")).
+        // Config-sourced internal services are excluded from duplicate-registration analysis
+        // (RUNTIME and NON_HTTP are not in ArmeriaRouteDuplicateIndex.CHECKED_MATCHES).
         val portSuffix = config.internalServicesPort?.let { " · :$it" }.orEmpty()
         for (spec in INTERNAL_SERVICE_SPECS) {
             if (spec.id !in includes) {
                 continue
             }
             val path = spec.path(config)
+            val routeMatch = when {
+                spec.isDocService -> RouteMatch.NON_HTTP
+                spec.httpMethod.isNotBlank() -> RouteMatch.RUNTIME
+                else -> RouteMatch.NON_HTTP
+            }
             addConfigRoute(
                 element = element,
                 path = path,
                 target = profileAwareTarget(message(spec.messageKey) + portSuffix, profile),
                 protocol = spec.protocol,
                 httpMethod = spec.httpMethod,
-                routeMatch = RouteMatch.NON_HTTP,
+                routeMatch = routeMatch,
                 isDocService = spec.isDocService,
                 dedupeKey = profileAwareKey("${spec.dedupePrefix}:$path", profile),
                 routes = routes,
@@ -298,7 +303,7 @@ internal object ArmeriaSpringYamlRouteCollector {
             return emptySet()
         }
         val includeLine = lines[includeIndex]
-        val inline = includeLine.substringAfter("include:", missingDelimiterValue = "").trim()
+        val inline = stripYamlInlineComment(includeLine.substringAfter("include:", missingDelimiterValue = ""))
         val tokens = mutableListOf<String>()
         if (inline.isNotEmpty()) {
             tokens += parseIncludeTokens(inline)
@@ -315,7 +320,7 @@ internal object ArmeriaSpringYamlRouteCollector {
             }
             val trimmed = line.trim()
             if (trimmed.startsWith("- ")) {
-                tokens += parseIncludeTokens(trimmed.removePrefix("- ").trim())
+                tokens += parseIncludeTokens(stripYamlInlineComment(trimmed.removePrefix("- ")))
             }
         }
         return expandIncludes(tokens.toSet())
@@ -340,7 +345,7 @@ internal object ArmeriaSpringYamlRouteCollector {
             return emptyList()
         }
         return normalized.split(',', ' ', '\t')
-            .map { it.trim().trimQuotes() }
+            .map { stripYamlInlineComment(it).trimQuotes() }
             .filter { it.isNotEmpty() }
     }
 
@@ -472,11 +477,11 @@ internal object ArmeriaSpringYamlRouteCollector {
                 }
                 val nestedTrimmed = nestedLine.trim()
                 if (nestedTrimmed.startsWith("- ")) {
-                    nested += nestedTrimmed.removePrefix("- ").trim().trimQuotes()
+                    nested += stripYamlInlineComment(nestedTrimmed.removePrefix("- ")).trimQuotes()
                 } else if (nestedTrimmed.contains(':')) {
                     break
                 } else {
-                    nested += nestedTrimmed.trimQuotes()
+                    nested += stripYamlInlineComment(nestedTrimmed).trimQuotes()
                 }
                 nestedIndex++
             }
@@ -516,7 +521,7 @@ internal object ArmeriaSpringYamlRouteCollector {
             if (key !in keySet) {
                 continue
             }
-            val value = trimmed.substringAfter(':', missingDelimiterValue = "").trim()
+            val value = stripYamlInlineComment(trimmed.substringAfter(':', missingDelimiterValue = ""))
             if (value.isNotEmpty()) {
                 return value.trimQuotes()
             }
@@ -562,4 +567,19 @@ internal object ArmeriaSpringYamlRouteCollector {
 
     private fun String.trimQuotes(): String =
         trim().removeSurrounding("\"").removeSurrounding("'")
+
+    private val YAML_INLINE_COMMENT = Regex("""\s+#.*$""")
+
+    private fun stripYamlInlineComment(raw: String): String {
+        val trimmed = raw.trim()
+        if (trimmed.isEmpty()) {
+            return trimmed
+        }
+        if ((trimmed.startsWith("\"") && trimmed.endsWith("\"")) ||
+            (trimmed.startsWith("'") && trimmed.endsWith("'"))
+        ) {
+            return trimmed
+        }
+        return trimmed.replace(YAML_INLINE_COMMENT, "").trimEnd()
+    }
 }
