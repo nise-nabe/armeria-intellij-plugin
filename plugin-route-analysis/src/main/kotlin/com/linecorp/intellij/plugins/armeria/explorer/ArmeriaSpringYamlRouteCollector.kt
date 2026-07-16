@@ -29,20 +29,43 @@ internal object ArmeriaSpringYamlRouteCollector {
 
     private val APPLICATION_FILE_PATTERN = Regex("""^application(-[\w.-]+)?\.(yml|yaml|properties)$""")
     private val PROPERTIES_DELIMITER = """[:=]"""
+    private val PROPERTIES_LINE_START = """^\s*"""
+    private val PROPERTIES_MULTILINE = setOf(RegexOption.MULTILINE)
     private val PROPERTIES_PORT_PATTERN =
-        Regex("""\barmeria\.ports\[(\d+)]\.port\s*$PROPERTIES_DELIMITER\s*(\S+)""")
+        Regex(
+            """$PROPERTIES_LINE_STARTarmeria\.ports\[(\d+)]\.port\s*$PROPERTIES_DELIMITER\s*(\S+)""",
+            PROPERTIES_MULTILINE,
+        )
     private val PROPERTIES_PROTOCOL_PATTERN =
-        Regex("""\barmeria\.ports\[(\d+)]\.protocols(?:\[(\d+)])?\s*$PROPERTIES_DELIMITER\s*(.+)""")
+        Regex(
+            """$PROPERTIES_LINE_STARTarmeria\.ports\[(\d+)]\.protocols(?:\[(\d+)])?\s*$PROPERTIES_DELIMITER\s*(.+)""",
+            PROPERTIES_MULTILINE,
+        )
     private val PROPERTIES_INCLUDE_PATTERN =
-        Regex("""\barmeria\.(?:internal-services|internalServices)\.include(?:\[\d+])?\s*$PROPERTIES_DELIMITER\s*(.+)""")
+        Regex(
+            """$PROPERTIES_LINE_STARTarmeria\.(?:internal-services|internalServices)\.include(?:\[\d+])?\s*$PROPERTIES_DELIMITER\s*(.+)""",
+            PROPERTIES_MULTILINE,
+        )
     private val PROPERTIES_INTERNAL_PORT_PATTERN =
-        Regex("""\barmeria\.(?:internal-services|internalServices)\.port\s*$PROPERTIES_DELIMITER\s*(\S+)""")
+        Regex(
+            """$PROPERTIES_LINE_STARTarmeria\.(?:internal-services|internalServices)\.port\s*$PROPERTIES_DELIMITER\s*(\S+)""",
+            PROPERTIES_MULTILINE,
+        )
     private val PROPERTIES_DOCS_PATH_PATTERN =
-        Regex("""\barmeria\.(?:docs-path|docsPath)\s*$PROPERTIES_DELIMITER\s*(\S+)""")
+        Regex(
+            """$PROPERTIES_LINE_STARTarmeria\.(?:docs-path|docsPath)\s*$PROPERTIES_DELIMITER\s*(\S+)""",
+            PROPERTIES_MULTILINE,
+        )
     private val PROPERTIES_HEALTH_PATH_PATTERN =
-        Regex("""\barmeria\.(?:health-check-path|healthCheckPath)\s*$PROPERTIES_DELIMITER\s*(\S+)""")
+        Regex(
+            """$PROPERTIES_LINE_STARTarmeria\.(?:health-check-path|healthCheckPath)\s*$PROPERTIES_DELIMITER\s*(\S+)""",
+            PROPERTIES_MULTILINE,
+        )
     private val PROPERTIES_METRICS_PATH_PATTERN =
-        Regex("""\barmeria\.(?:metrics-path|metricsPath)\s*$PROPERTIES_DELIMITER\s*(\S+)""")
+        Regex(
+            """$PROPERTIES_LINE_STARTarmeria\.(?:metrics-path|metricsPath)\s*$PROPERTIES_DELIMITER\s*(\S+)""",
+            PROPERTIES_MULTILINE,
+        )
 
     private val INTERNAL_SERVICE_IDS = setOf("docs", "health", "metrics", "actuator")
 

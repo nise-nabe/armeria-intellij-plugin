@@ -272,6 +272,27 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
     }
 
     @Test
+    fun parseProperties_ignoresCommentedOutKeys() {
+        val config = ArmeriaSpringYamlRouteCollector.parseProperties(
+            """
+            # armeria.ports[0].port=9999
+            ! armeria.ports[0].port=8888
+            armeria.ports[0].port=8080
+            # armeria.ports[0].protocols=http
+            armeria.ports[0].protocols=https
+            # armeria.internal-services.include=docs
+            armeria.internal-services.include=health
+            # armeria.docs-path=/stale/docs
+            armeria.docs-path=/internal/docs
+            """.trimIndent(),
+        )
+
+        assertEquals(listOf(SpringArmeriaPortBinding("8080", listOf("HTTPS"))), config.ports)
+        assertEquals(setOf("health"), config.includes)
+        assertEquals("/internal/docs", config.docsPath)
+    }
+
+    @Test
     fun parseYaml_inlineScalarCommentsStrippedBeforeTokenization() {
         val config = ArmeriaSpringYamlRouteCollector.parseYaml(
             """
