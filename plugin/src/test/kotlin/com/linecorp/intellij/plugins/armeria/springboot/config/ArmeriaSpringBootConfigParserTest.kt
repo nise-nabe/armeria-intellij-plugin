@@ -40,6 +40,30 @@ class ArmeriaSpringBootConfigParserTest {
     }
 
     @Test
+    fun parseProperties_acceptsSpacesAroundEquals() {
+        val m = ArmeriaSpringBootConfigParser.parseProperties(
+            """
+            server.port = 8080
+            armeria.internal-services.port = 8090
+            """.trimIndent(),
+        ).associate { it.key to it.value }
+        assertEquals("8080", m["server.port"])
+        assertEquals("8090", m["armeria.internal-services.port"])
+    }
+
+    @Test
+    fun parseYaml_topLevelListDoesNotThrow() {
+        val m = ArmeriaSpringBootConfigParser.parseYaml(
+            """
+            - item
+            armeria:
+              enable-auto-injection: true
+            """.trimIndent(),
+        ).associate { it.key to it.value }
+        assertEquals("true", m["armeria.enable-auto-injection"])
+    }
+
+    @Test
     fun isApplicationConfigFileName_matchesProfiles() {
         assertTrue(ArmeriaSpringBootConfigSupport.isApplicationConfigFileName("application-dev.yaml"))
         assertFalse(ArmeriaSpringBootConfigSupport.isApplicationConfigFileName("bootstrap.yml"))
@@ -52,6 +76,20 @@ class ArmeriaSpringBootConfigParserTest {
             "armeria.ports.protocols",
             ArmeriaSpringBootConfigSupport.normalizeIndexedKeyPath("armeria.ports[0].protocols[0]"),
         )
+    }
+
+    @Test
+    fun completionContextPath_usesParentAfterStrippingLeaf() {
+        assertEquals(
+            "armeria.internal-services",
+            ArmeriaSpringBootConfigSupport.completionContextPath("armeria.internal-services.port"),
+        )
+        assertEquals(
+            "armeria.ports",
+            ArmeriaSpringBootConfigSupport.completionContextPath("armeria.ports[0].port"),
+        )
+        assertEquals("", ArmeriaSpringBootConfigSupport.completionContextPath("server"))
+        assertEquals("", ArmeriaSpringBootConfigSupport.completionContextPath(""))
     }
 
     @Test

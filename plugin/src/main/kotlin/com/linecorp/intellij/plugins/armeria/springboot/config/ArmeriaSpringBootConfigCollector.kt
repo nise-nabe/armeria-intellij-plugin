@@ -7,17 +7,27 @@ import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 
 object ArmeriaSpringBootConfigSupport {
+    private val APPLICATION_CONFIG_NAMES = setOf(
+        "application.yml",
+        "application.yaml",
+        "application.properties",
+    )
+    private val INDEXED_KEY_PATH = Regex("""\[\d+]""")
+
     fun isApplicationConfigFileName(fileName: String): Boolean =
-        fileName in setOf("application.yml", "application.yaml", "application.properties") ||
+        fileName in APPLICATION_CONFIG_NAMES ||
             (fileName.startsWith("application-") &&
                 (fileName.endsWith(".yml") || fileName.endsWith(".yaml") || fileName.endsWith(".properties")))
 
-    fun normalizeIndexedKeyPath(keyPath: String): String = keyPath.replace(Regex("""\[\d+]"""), "")
+    fun normalizeIndexedKeyPath(keyPath: String): String = keyPath.replace(INDEXED_KEY_PATH, "")
 
-    fun parseFile(fileName: String, text: String) = when {
-        fileName.endsWith(".yml") || fileName.endsWith(".yaml") -> ArmeriaSpringBootConfigParser.parseYaml(text)
-        fileName.endsWith(".properties") -> ArmeriaSpringBootConfigParser.parseProperties(text)
-        else -> emptyList()
+    /**
+     * Parent path used for YAML key completion: strip the leaf being edited, then drop list indexes.
+     * `armeria.ports[0].port` → `armeria.ports`; top-level `server` → `""`.
+     */
+    fun completionContextPath(editedKeyPath: String): String {
+        val parent = editedKeyPath.substringBeforeLast('.', missingDelimiterValue = "")
+        return normalizeIndexedKeyPath(parent)
     }
 }
 
@@ -39,8 +49,12 @@ object ArmeriaSpringBootConfigCollector {
             } catch (_: Exception) {
                 return@mapNotNull null
             }
-            val entries = ArmeriaSpringBootConfigSupport.parseFile(vf.name, text)
-            if (entries.isEmpty()) null else ArmeriaSpringBootConfigFile(vf.name, vf.path, entries)
+            val entries = ArmeriaSpringBootConfigParser.parseFile(vf.name, text)
+            if (entries.isEmpty()) {
+                null
+            } else {
+                ArmeriaSpringBootConfigFile(vf.name, vf.path, entries)
+            }
         }
     }
 }

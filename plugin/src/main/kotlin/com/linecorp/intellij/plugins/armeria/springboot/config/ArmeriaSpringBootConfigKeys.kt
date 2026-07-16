@@ -16,16 +16,14 @@ object ArmeriaSpringBootConfigKeys {
         MANAGEMENT_SERVER_PORT to "Spring Boot Actuator management port; may overlap with Armeria internal services.",
         SPRING_WEB_APPLICATION_TYPE to "Set to none to prevent Spring from starting an embedded web server.",
     )
-    val COMPLETION_SUGGESTIONS = listOf(
-        "armeria.ports", "armeria.internal-services.port", "armeria.internal-services.include",
-        "armeria.compression.enabled", "armeria.enable-auto-injection",
-        SERVER_PORT, MANAGEMENT_SERVER_PORT, SPRING_WEB_APPLICATION_TYPE,
-    )
+    val COMPLETION_SUGGESTIONS = DOCUMENTATION.keys.toList()
 
-    fun isArmeriaRelatedKey(key: String) =
-        key.startsWith(ARMERIA_PREFIX) ||
-            key in RELATED_ROOT_KEYS ||
-            key.substringBefore('[').split('.').firstOrNull() == "armeria"
+    fun isArmeriaRelatedKey(key: String): Boolean {
+        val normalized = ArmeriaSpringBootConfigSupport.normalizeIndexedKeyPath(key)
+        return normalized == "armeria" ||
+            normalized.startsWith(ARMERIA_PREFIX) ||
+            normalized in RELATED_ROOT_KEYS
+    }
 
     fun isRelevantCompletionPath(keyPath: String): Boolean {
         if (keyPath.isEmpty()) {

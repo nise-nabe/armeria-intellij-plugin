@@ -34,11 +34,11 @@ class ArmeriaSpringBootYamlCompletionContributor : CompletionContributor() {
                     if (!key.textRange.contains(parameters.offset)) {
                         return
                     }
-                    val keyPath = yamlKeyPath(keyValue)
-                    if (!ArmeriaSpringBootConfigKeys.isRelevantCompletionPath(keyPath)) {
+                    // Path of the mapping that contains the key under edit (not the leaf itself).
+                    val completionPath = ArmeriaSpringBootConfigSupport.completionContextPath(yamlKeyPath(keyValue))
+                    if (!ArmeriaSpringBootConfigKeys.isRelevantCompletionPath(completionPath)) {
                         return
                     }
-                    val completionPath = ArmeriaSpringBootConfigSupport.normalizeIndexedKeyPath(keyPath)
                     val seenInsertTexts = linkedSetOf<String>()
                     for (suggestion in ArmeriaSpringBootConfigKeys.COMPLETION_SUGGESTIONS) {
                         val insertText = ArmeriaSpringBootConfigKeys.completionInsertText(completionPath, suggestion)
@@ -49,13 +49,13 @@ class ArmeriaSpringBootYamlCompletionContributor : CompletionContributor() {
                         if (!result.prefixMatcher.prefixMatches(insertText)) {
                             continue
                         }
-                        val doc = ArmeriaSpringBootConfigKeys.documentationFor(suggestion).orEmpty()
-                        val element = if (completionPath.isEmpty()) {
-                            LookupElementBuilder.create(insertText).withTailText(" — $doc", true)
-                        } else {
-                            LookupElementBuilder.create(insertText)
-                                .withTypeText(suggestion)
-                                .withTailText(" — $doc", true)
+                        val doc = ArmeriaSpringBootConfigKeys.documentationFor(suggestion)
+                        var element = LookupElementBuilder.create(insertText)
+                        if (completionPath.isNotEmpty()) {
+                            element = element.withTypeText(suggestion)
+                        }
+                        if (!doc.isNullOrEmpty()) {
+                            element = element.withTailText(" — $doc", true)
                         }
                         result.addElement(element)
                     }
@@ -64,24 +64,41 @@ class ArmeriaSpringBootYamlCompletionContributor : CompletionContributor() {
         )
     }
 
+    /**
+     * Full dotted path of [keyValue], including list indexes (e.g. `armeria.ports[0].port`).
+     *
+     * Walks via the immediate PSI parent ([YAMLMapping] / sequence item), not `parent.parent`,
+     * so nested block mappings continue through their owning [YAMLKeyValue].
+     */
     private fun yamlKeyPath(keyValue: YAMLKeyValue): String {
         val segments = mutableListOf<String>()
         var current: YAMLKeyValue? = keyValue
         while (current != null) {
             current.keyText?.takeIf { it.isNotBlank() }?.let { segments.add(0, it) }
-            val parent = current.parent?.parent
-            current = when (parent) {
-                is YAMLMapping -> parent.parent as? YAMLKeyValue
-                is YAMLSequenceItem -> {
-                    val sequence = parent.parent as? YAMLSequence
-                    val index = sequence?.items?.indexOf(parent) ?: -1
-                    val container = sequence?.parent as? YAMLKeyValue
-                    if (index >= 0 && container?.keyText != null) {
-                        segments.add(0, "${container.keyText}[$index]")
+            when (val container = current.parent) {
+                is YAMLMapping -> {
+                    when (val owner = container.parent) {
+                        is YAMLKeyValue -> {
+                            current = owner
+                        }
+                        is YAMLSequenceItem -> {
+                            val sequence = owner.parent as? YAMLSequence
+                            val index = sequence?.items?.indexOf(owner) ?: -1
+                            val seqKey = sequence?.parent as? YAMLKeyValue
+                            if (index >= 0 && seqKey?.keyText != null) {
+                                segments.add(0, "${seqKey.keyText}[$index]")
+                                current = when (val seqParent = seqKey.parent) {
+                                    is YAMLMapping -> seqParent.parent as? YAMLKeyValue
+                                    else -> null
+                                }
+                            } else {
+                                current = null
+                            }
+                        }
+                        else -> current = null
                     }
-                    container?.parent?.parent as? YAMLKeyValue
                 }
-                else -> null
+                else -> current = null
             }
         }
         return segments.joinToString(".")
