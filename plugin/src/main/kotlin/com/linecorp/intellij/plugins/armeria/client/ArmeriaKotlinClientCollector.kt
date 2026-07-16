@@ -99,10 +99,10 @@ internal object ArmeriaKotlinClientCollector {
                 when {
                     arguments.isEmpty() -> null
                     arguments.size >= 2 && isEndpointGroupArgument(arguments[1]) -> {
-                        val endpointGroup = ArmeriaClientEndpointGroupSupport.labelKotlinEndpointGroup(arguments[1])
+                        val endpointGroup = ArmeriaKotlinClientEndpointGroupSupport.labelKotlinEndpointGroup(arguments[1])
                             ?: return null
                         ClientMetadata(
-                            uri = ArmeriaClientEndpointGroupSupport.extractKotlinEndpointGroupUri(arguments[1])
+                            uri = ArmeriaKotlinClientEndpointGroupSupport.extractKotlinEndpointGroupUri(arguments[1])
                                 ?: endpointGroup,
                             decorators = decorators,
                             endpointGroup = endpointGroup,
@@ -134,9 +134,11 @@ internal object ArmeriaKotlinClientCollector {
             )
         }
         if (arguments.size >= 2 && isEndpointGroupArgument(arguments[1])) {
-            val endpointGroup = ArmeriaClientEndpointGroupSupport.labelKotlinEndpointGroup(arguments[1]) ?: return null
+            val endpointGroup =
+                ArmeriaKotlinClientEndpointGroupSupport.labelKotlinEndpointGroup(arguments[1]) ?: return null
             return ClientMetadata(
-                uri = ArmeriaClientEndpointGroupSupport.extractKotlinEndpointGroupUri(arguments[1]) ?: endpointGroup,
+                uri = ArmeriaKotlinClientEndpointGroupSupport.extractKotlinEndpointGroupUri(arguments[1])
+                    ?: endpointGroup,
                 decorators = decorators,
                 endpointGroup = endpointGroup,
             )
@@ -157,26 +159,27 @@ internal object ArmeriaKotlinClientCollector {
         if (call != null) {
             val methodName = resolveCallName(call)
             val resolvedClass = resolveContainingClass(call)
-            if (methodName == "build") {
-                val factoryCall = findWebClientFactoryInQualifierChain(call)
-                if (factoryCall != null) {
-                    return extractWebClientTransport(factoryCall)
-                }
-            }
             if (methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES &&
                 (ArmeriaClientSupport.isWebClientClass(resolvedClass) || looksLikeWebClientFactoryReceiver(call))
             ) {
                 val arguments = call.valueArguments.mapNotNull { it.getArgumentExpression() }
                 val decorators = ArmeriaKotlinClientDecoratorSupport.collectKotlinClientDecorators(call)
                 if (arguments.size >= 2 && isEndpointGroupArgument(arguments[1])) {
-                    val endpointGroup = ArmeriaClientEndpointGroupSupport.labelKotlinEndpointGroup(arguments[1])
-                        ?: return null
-                    val uri = ArmeriaClientEndpointGroupSupport.extractKotlinEndpointGroupUri(arguments[1])
+                    val endpointGroup =
+                        ArmeriaKotlinClientEndpointGroupSupport.labelKotlinEndpointGroup(arguments[1])
+                            ?: return null
+                    val uri = ArmeriaKotlinClientEndpointGroupSupport.extractKotlinEndpointGroupUri(arguments[1])
                         ?: endpointGroup
                     return WebClientTransportInfo(uri = uri, decorators = decorators, endpointGroup = endpointGroup)
                 }
                 val uri = extractKotlinString(arguments.firstOrNull()) ?: return null
                 return WebClientTransportInfo(uri = uri, decorators = decorators)
+            }
+            // Unwrap fluent WebClientBuilder chains passed to Retrofit, e.g.
+            // WebClient.builder(uri).decorator(...).build() or without a trailing build().
+            if (isWebClientBuilderChainCall(call, resolvedClass)) {
+                val factoryCall = findWebClientFactoryInQualifierChain(call) ?: return null
+                return extractWebClientTransport(factoryCall)
             }
         }
         if (unwrapped is KtNameReferenceExpression) {
@@ -191,8 +194,20 @@ internal object ArmeriaKotlinClientCollector {
         return null
     }
 
+    private fun isWebClientBuilderChainCall(call: KtCallExpression, resolvedClass: String?): Boolean {
+        if (resolvedClass?.startsWith(ArmeriaClientSupport.ARMERIA_CLIENT_PACKAGE_PREFIX) == true) {
+            return true
+        }
+        val receiverText = when (val callee = call.calleeExpression) {
+            is KtDotQualifiedExpression -> callee.receiverExpression.text
+            else -> (call.parent as? KtDotQualifiedExpression)?.receiverExpression?.text
+        }.orEmpty()
+        return ArmeriaClientSupport.looksLikeClientBuilderReceiverText(receiverText) ||
+            receiverText.contains("WebClient")
+    }
+
     private fun isEndpointGroupArgument(expression: KtExpression): Boolean {
-        return ArmeriaClientEndpointGroupSupport.labelKotlinEndpointGroup(expression) != null
+        return ArmeriaKotlinClientEndpointGroupSupport.labelKotlinEndpointGroup(expression) != null
     }
 
     private fun findWebClientFactoryInQualifierChain(call: KtCallExpression): KtCallExpression? {

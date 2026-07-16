@@ -183,13 +183,9 @@ object ArmeriaClientCollector {
         if (call != null) {
             val methodName = call.methodExpression.referenceName
             val resolvedClass = call.resolveMethod()?.containingClass?.qualifiedName
-            if (methodName == "build" &&
-                resolvedClass?.startsWith(ArmeriaClientSupport.ARMERIA_CLIENT_PACKAGE_PREFIX) == true
+            if (ArmeriaClientSupport.isWebClientClass(resolvedClass) &&
+                methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES
             ) {
-                val factoryCall = findWebClientFactoryInQualifierChain(call) ?: return null
-                return extractWebClientTransport(factoryCall)
-            }
-            if (ArmeriaClientSupport.isWebClientClass(resolvedClass) && methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES) {
                 val arguments = call.argumentList.expressions
                 val decorators = ArmeriaClientDecoratorSupport.collectJavaClientDecorators(call)
                 if (arguments.size >= 2 && isEndpointGroupArgument(arguments[1])) {
@@ -202,6 +198,12 @@ object ArmeriaClientCollector {
                 val uri = extractString(arguments.firstOrNull()) ?: return null
                 return WebClientTransportInfo(uri = uri, decorators = decorators)
             }
+            // Unwrap fluent WebClientBuilder chains passed to Retrofit, e.g.
+            // WebClient.builder(uri).decorator(...).build() or without a trailing build().
+            if (isWebClientBuilderChainCall(call, resolvedClass)) {
+                val factoryCall = findWebClientFactoryInQualifierChain(call) ?: return null
+                return extractWebClientTransport(factoryCall)
+            }
         }
         val reference = expression as? PsiReferenceExpression
         if (reference != null) {
@@ -211,6 +213,18 @@ object ArmeriaClientCollector {
             }
         }
         return null
+    }
+
+    private fun isWebClientBuilderChainCall(
+        call: PsiMethodCallExpression,
+        resolvedClass: String?,
+    ): Boolean {
+        if (resolvedClass?.startsWith(ArmeriaClientSupport.ARMERIA_CLIENT_PACKAGE_PREFIX) == true) {
+            return true
+        }
+        val qualifierText = call.methodExpression.qualifierExpression?.text ?: return false
+        return ArmeriaClientSupport.looksLikeClientBuilderReceiverText(qualifierText) ||
+            qualifierText.contains("WebClient")
     }
 
     private fun findWebClientFactoryInQualifierChain(expression: PsiMethodCallExpression): PsiMethodCallExpression? {

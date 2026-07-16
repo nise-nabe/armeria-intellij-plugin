@@ -339,4 +339,33 @@ class ArmeriaKotlinClientCollectorTest : ArmeriaClientFixtureTestBase() {
         assertEquals("WebClient transport", endpoint.transport)
     }
 
+    fun testCollectRetrofitBuilderWithDecoratedWebClientBuilderTransportFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+            import com.linecorp.armeria.client.logging.LoggingClient
+            import com.linecorp.armeria.client.retrofit2.ArmeriaRetrofit
+
+            fun main() {
+                ArmeriaRetrofit.builder(
+                    WebClient.builder("https://api.example.com")
+                        .decorator(LoggingClient.newDecorator()),
+                ).build()
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+
+        assertEquals(1, endpoints.size)
+        val endpoint = endpoints.single()
+        assertEquals("Retrofit", endpoint.clientType)
+        assertEquals("https://api.example.com", endpoint.uri)
+        assertEquals("WebClient transport", endpoint.transport)
+        assertEquals(listOf("Logging"), endpoint.decorators)
+    }
+
 }
