@@ -76,7 +76,7 @@ internal object ArmeriaSpringYamlRouteCollector {
         val protocol: String,
         val httpMethod: String,
         val isDocService: Boolean,
-        val dedupePrefix: String,
+        val routeMatch: RouteMatch,
     )
 
     private val INTERNAL_SERVICE_SPECS = listOf(
@@ -87,7 +87,7 @@ internal object ArmeriaSpringYamlRouteCollector {
             protocol = RouteProtocol.DOC_SERVICE.presentableName(),
             httpMethod = "",
             isDocService = true,
-            dedupePrefix = "docs",
+            routeMatch = RouteMatch.NON_HTTP,
         ),
         InternalServiceSpec(
             id = "health",
@@ -96,7 +96,7 @@ internal object ArmeriaSpringYamlRouteCollector {
             protocol = RouteProtocol.HTTP.presentableName(),
             httpMethod = "GET",
             isDocService = false,
-            dedupePrefix = "health",
+            routeMatch = RouteMatch.CONFIG,
         ),
         InternalServiceSpec(
             id = "metrics",
@@ -105,7 +105,7 @@ internal object ArmeriaSpringYamlRouteCollector {
             protocol = RouteProtocol.HTTP.presentableName(),
             httpMethod = "GET",
             isDocService = false,
-            dedupePrefix = "metrics",
+            routeMatch = RouteMatch.CONFIG,
         ),
         InternalServiceSpec(
             id = "actuator",
@@ -114,7 +114,7 @@ internal object ArmeriaSpringYamlRouteCollector {
             protocol = RouteProtocol.HTTP.presentableName(),
             httpMethod = "GET",
             isDocService = false,
-            dedupePrefix = "actuator",
+            routeMatch = RouteMatch.CONFIG,
         ),
     )
 
@@ -176,24 +176,27 @@ internal object ArmeriaSpringYamlRouteCollector {
         }
         val portsByIndex = mutableMapOf<Int, String>()
         PROPERTIES_PORT_PATTERN.findAll(text).forEach { match ->
-            portsByIndex[match.groupValues[1].toInt()] = stripPropertiesInlineComment(match.groupValues[2])
+            val portIndex = match.groupValues[1].toIntOrNull() ?: return@forEach
+            portsByIndex[portIndex] = stripPropertiesInlineComment(match.groupValues[2])
         }
-        val protocolsByIndex = mutableMapOf<Int, MutableList<Pair<Int, String>>>()
+        // portIndex -> (protocolIndex -> protocol); later assignments overwrite (last-wins).
+        val protocolsByIndex = mutableMapOf<Int, MutableMap<Int, String>>()
         PROPERTIES_PROTOCOL_PATTERN.findAll(text).forEach { match ->
-            val portIndex = match.groupValues[1].toInt()
+            val portIndex = match.groupValues[1].toIntOrNull() ?: return@forEach
             val protocolIndex = match.groupValues[2].toIntOrNull()
             val protocols = splitScalarList(stripPropertiesInlineComment(match.groupValues[3])).map { it.uppercase() }
             if (protocols.isEmpty()) {
                 return@forEach
             }
-            val bucket = protocolsByIndex.getOrPut(portIndex) { mutableListOf() }
+            val bucket = protocolsByIndex.getOrPut(portIndex) { linkedMapOf() }
             if (protocolIndex != null) {
                 // Indexed form: armeria.ports[N].protocols[M]=http
-                bucket += protocolIndex to protocols.first()
+                bucket[protocolIndex] = protocols.first()
             } else {
-                // Comma / space list: armeria.ports[N].protocols=http,https
+                // Comma / space list replaces any prior protocols for this port index.
+                bucket.clear()
                 protocols.forEachIndexed { offset, protocol ->
-                    bucket += offset to protocol
+                    bucket[offset] = protocol
                 }
             }
         }
@@ -201,8 +204,9 @@ internal object ArmeriaSpringYamlRouteCollector {
             .sortedBy { it.key }
             .map { (index, port) ->
                 val protocols = protocolsByIndex[index]
-                    ?.sortedBy { it.first }
-                    ?.map { it.second }
+                    ?.entries
+                    ?.sortedBy { it.key }
+                    ?.map { it.value }
                     ?.distinct()
                     .orEmpty()
                     .ifEmpty { listOf("HTTP") }
@@ -262,27 +266,22 @@ internal object ArmeriaSpringYamlRouteCollector {
             return
         }
         // Config-sourced internal services are excluded from duplicate-registration analysis
-        // (RUNTIME and NON_HTTP are not in ArmeriaRouteDuplicateIndex.CHECKED_MATCHES).
+        // (CONFIG and NON_HTTP are not in ArmeriaRouteDuplicateIndex.CHECKED_MATCHES).
         val portSuffix = config.internalServicesPort?.let { " · :$it" }.orEmpty()
         for (spec in INTERNAL_SERVICE_SPECS) {
             if (spec.id !in includes) {
                 continue
             }
             val path = spec.path(config)
-            val routeMatch = when {
-                spec.isDocService -> RouteMatch.NON_HTTP
-                spec.httpMethod.isNotBlank() -> RouteMatch.RUNTIME
-                else -> RouteMatch.NON_HTTP
-            }
             addConfigRoute(
                 element = element,
                 path = path,
                 target = profileAwareTarget(message(spec.messageKey) + portSuffix, profile),
                 protocol = spec.protocol,
                 httpMethod = spec.httpMethod,
-                routeMatch = routeMatch,
+                routeMatch = spec.routeMatch,
                 isDocService = spec.isDocService,
-                dedupeKey = profileAwareKey("${spec.dedupePrefix}:$path", profile),
+                dedupeKey = profileAwareKey("${spec.id}:$path", profile),
                 routes = routes,
                 seenConfigRoutes = seenConfigRoutes,
             )
@@ -396,9 +395,20 @@ internal object ArmeriaSpringYamlRouteCollector {
 
     private fun extractChildBlock(parentBlock: String, vararg keys: String): String? {
         val lines = parentBlock.lineSequence().toList()
+        var topIndent: Int? = null
         val startIndex = lines.indexOfFirst { line ->
+            if (line.isBlank() || line.trimStart().startsWith("#")) {
+                return@indexOfFirst false
+            }
+            val indent = line.takeWhile { it.isWhitespace() }.length
+            if (topIndent == null) {
+                topIndent = indent
+            } else if (indent > topIndent) {
+                // Nested under another child of the parent — skip (e.g. armeria.foo.ports).
+                return@indexOfFirst false
+            }
             val trimmed = line.trim()
-            !trimmed.startsWith("#") && keys.any { matchesYamlKey(trimmed, it) }
+            keys.any { matchesYamlKey(trimmed, it) }
         }
         if (startIndex < 0) {
             return null
@@ -489,7 +499,7 @@ internal object ArmeriaSpringYamlRouteCollector {
             val inlineValue = stripYamlInlineComment(trimmed.substringAfter(':', missingDelimiterValue = ""))
             val keyIndent = line.takeWhile { it.isWhitespace() }.length
             if (inlineValue.isNotEmpty()) {
-                values.getOrPut(key) { mutableListOf() } += splitInlineYamlValues(inlineValue)
+                values.getOrPut(key) { mutableListOf() } += splitScalarList(inlineValue)
                 index++
                 continue
             }
@@ -524,8 +534,6 @@ internal object ArmeriaSpringYamlRouteCollector {
     }
 
     private val LIST_ITEM_PREFIX = Regex("""^(\s*)- """)
-
-    private fun splitInlineYamlValues(raw: String): List<String> = splitScalarList(raw)
 
     private fun readYamlScalar(block: String?, vararg keys: String): String? {
         if (block.isNullOrBlank()) {

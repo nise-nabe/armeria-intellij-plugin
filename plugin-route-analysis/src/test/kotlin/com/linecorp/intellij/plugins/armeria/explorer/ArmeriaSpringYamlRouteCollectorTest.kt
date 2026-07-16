@@ -27,14 +27,14 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
         assertTrue(
             routes.any {
                 it.path == "/internal/healthcheck" &&
-                    it.routeMatch == RouteMatch.RUNTIME &&
+                    it.routeMatch == RouteMatch.CONFIG &&
                     it.httpMethod == "GET"
             },
         )
         assertTrue(
             routes.any {
                 it.path == "/internal/metrics" &&
-                    it.routeMatch == RouteMatch.RUNTIME &&
+                    it.routeMatch == RouteMatch.CONFIG &&
                     it.httpMethod == "GET"
             },
         )
@@ -55,7 +55,7 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
 
         assertTrue(routes.any { it.target.contains("9090") })
         assertTrue(routes.any { it.isDocService })
-        assertTrue(routes.any { it.path == "/actuator" && it.routeMatch == RouteMatch.RUNTIME })
+        assertTrue(routes.any { it.path == "/actuator" && it.routeMatch == RouteMatch.CONFIG })
     }
 
     fun testCollectFromProfileYaml() {
@@ -136,7 +136,7 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
         ArmeriaSpringYamlRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
 
         assertTrue(routes.any { it.isDocService })
-        assertTrue(routes.any { it.path == "/internal/healthcheck" && it.routeMatch == RouteMatch.RUNTIME })
+        assertTrue(routes.any { it.path == "/internal/healthcheck" && it.routeMatch == RouteMatch.CONFIG })
         assertTrue(routes.any { it.path == "/internal/metrics" })
         assertTrue(routes.any { it.path == "/actuator" })
         assertTrue(routes.all { !it.isDocService || it.target.contains(":18080") })
@@ -197,7 +197,7 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
         assertTrue(configRoutes.filter { it.isDocService }.all { it.routeMatch == RouteMatch.NON_HTTP })
         assertTrue(
             configRoutes.filter { !it.isDocService && it.httpMethod.isNotBlank() }
-                .all { it.routeMatch == RouteMatch.RUNTIME },
+                .all { it.routeMatch == RouteMatch.CONFIG },
         )
 
         val serviceUnder = ArmeriaRoute.create(
@@ -237,5 +237,26 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
         assertEquals("HTTP", portRoute.protocol)
         assertTrue(routes.any { it.isDocService && it.path == "/internal/docs" })
         assertFalse(routes.any { it.path.contains("#") })
+    }
+
+    fun testConfigRoutesSupportGenerateHttpWithoutRuntimeSemantics() {
+        val psiFile = myFixture.configureByText(
+            "application.yml",
+            """
+            armeria:
+              internal-services:
+                include: health, metrics
+            """.trimIndent(),
+        )
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        ArmeriaSpringYamlRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+
+        val health = routes.single { it.path == "/internal/healthcheck" }
+        assertEquals(RouteMatch.CONFIG, health.routeMatch)
+        assertTrue(ArmeriaHttpRequestGenerator.supports(health))
+        assertEquals("GET", ArmeriaHttpRequestGenerator.httpMethod(health))
+        assertFalse(ArmeriaRouteDetailFormatter.statusLine(health).contains(message("route.explorer.badge.runtime")))
+        assertTrue(ArmeriaRouteDetailFormatter.statusLine(health).contains(message("route.explorer.badge.staticAnalysis")))
     }
 }

@@ -327,4 +327,62 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
         assertEquals(listOf(SpringArmeriaPortBinding("8080", listOf("HTTP"))), config.ports)
     }
+
+    @Test
+    fun parseYaml_ignoresNestedPortsUnderArmeriaChild() {
+        val config = ArmeriaSpringYamlRouteCollector.parseYaml(
+            """
+            armeria:
+              foo:
+                ports:
+                  - port: 9999
+                    protocols: HTTP
+              ports:
+                - port: 8080
+                  protocols: HTTPS
+              bar:
+                internal-services:
+                  include: docs
+              internal-services:
+                include: health
+            """.trimIndent(),
+        )
+
+        assertEquals(listOf(SpringArmeriaPortBinding("8080", listOf("HTTPS"))), config.ports)
+        assertEquals(setOf("health"), config.includes)
+    }
+
+    @Test
+    fun parseProperties_protocolIndexLastWins() {
+        val config = ArmeriaSpringYamlRouteCollector.parseProperties(
+            """
+            armeria.ports[0].port=8080
+            armeria.ports[0].protocols[0]=http
+            armeria.ports[0].protocols[0]=https
+            armeria.ports[0].protocols[1]=http
+            """.trimIndent(),
+        )
+
+        assertEquals(
+            listOf(SpringArmeriaPortBinding("8080", listOf("HTTPS", "HTTP"))),
+            config.ports,
+        )
+    }
+
+    @Test
+    fun parseProperties_commaListReplacesPriorIndexedProtocols() {
+        val config = ArmeriaSpringYamlRouteCollector.parseProperties(
+            """
+            armeria.ports[0].port=8080
+            armeria.ports[0].protocols[0]=http
+            armeria.ports[0].protocols[1]=https
+            armeria.ports[0].protocols=h2c
+            """.trimIndent(),
+        )
+
+        assertEquals(
+            listOf(SpringArmeriaPortBinding("8080", listOf("H2C"))),
+            config.ports,
+        )
+    }
 }
