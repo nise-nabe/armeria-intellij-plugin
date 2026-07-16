@@ -157,13 +157,20 @@ internal object ArmeriaKotlinClientCollector {
         if (call != null) {
             val methodName = resolveCallName(call)
             val resolvedClass = resolveContainingClass(call)
-            if (methodName == "build" &&
-                resolvedClass?.startsWith(ArmeriaClientSupport.ARMERIA_CLIENT_PACKAGE_PREFIX) == true
-            ) {
-                val factoryCall = findWebClientFactoryInQualifierChain(call) ?: return null
-                return extractWebClientTransport(factoryCall)
+            if (methodName == "build") {
+                val isArmeriaBuild = resolvedClass?.startsWith(ArmeriaClientSupport.ARMERIA_CLIENT_PACKAGE_PREFIX) == true
+                val looksLikeBuilderBuild = resolvedClass == null &&
+                    ArmeriaClientSupport.looksLikeClientBuilderReceiverText(
+                        qualifierReceiver(call)?.text.orEmpty(),
+                    )
+                if (isArmeriaBuild || looksLikeBuilderBuild) {
+                    val factoryCall = findWebClientFactoryInQualifierChain(call) ?: return null
+                    return extractWebClientTransport(factoryCall)
+                }
             }
-            if (ArmeriaClientSupport.isWebClientClass(resolvedClass) && methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES) {
+            if (methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES &&
+                (ArmeriaClientSupport.isWebClientClass(resolvedClass) || looksLikeWebClientFactoryReceiver(call))
+            ) {
                 val arguments = call.valueArguments.mapNotNull { it.getArgumentExpression() }
                 val decorators = ArmeriaKotlinClientDecoratorSupport.collectKotlinClientDecorators(call)
                 if (arguments.size >= 2 && isEndpointGroupArgument(arguments[1])) {
@@ -200,8 +207,9 @@ internal object ArmeriaKotlinClientCollector {
             if (factoryCall != null) {
                 val methodName = resolveCallName(factoryCall)
                 val resolvedClass = resolveContainingClass(factoryCall)
-                if (ArmeriaClientSupport.isWebClientClass(resolvedClass) &&
-                    methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES
+                if (methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES &&
+                    (ArmeriaClientSupport.isWebClientClass(resolvedClass) ||
+                        looksLikeWebClientFactoryReceiver(factoryCall))
                 ) {
                     return factoryCall
                 }
@@ -209,6 +217,15 @@ internal object ArmeriaKotlinClientCollector {
             current = qualifierReceiver(current)
         }
         return null
+    }
+
+    private fun looksLikeWebClientFactoryReceiver(call: KtCallExpression): Boolean {
+        val receiverText = when (val callee = call.calleeExpression) {
+            is KtDotQualifiedExpression -> callee.receiverExpression.text
+            else -> (call.parent as? KtDotQualifiedExpression)?.receiverExpression?.text
+        }.orEmpty()
+        val simpleName = receiverText.substringAfterLast('.')
+        return simpleName == "WebClient" || receiverText.endsWith(".WebClient")
     }
 
     private fun callExpressionInChain(expression: KtExpression): KtCallExpression? {

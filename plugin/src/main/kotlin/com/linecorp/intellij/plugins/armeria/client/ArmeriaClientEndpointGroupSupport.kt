@@ -37,7 +37,11 @@ internal object ArmeriaClientEndpointGroupSupport {
 
     fun labelKotlinEndpointGroup(expression: KtExpression?): String? {
         expression ?: return null
-        val call = expression as? KtCallExpression
+        val call = when (expression) {
+            is KtCallExpression -> expression
+            is KtDotQualifiedExpression -> expression.selectorExpression as? KtCallExpression
+            else -> null
+        }
         if (call != null) {
             val receiver = when (val callee = call.calleeExpression) {
                 is KtDotQualifiedExpression -> callee.receiverExpression.text
