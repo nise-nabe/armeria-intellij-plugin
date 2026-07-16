@@ -74,7 +74,7 @@ class ArmeriaSpringBootYamlCompletionContributor : CompletionContributor() {
         val segments = mutableListOf<String>()
         var current: YAMLKeyValue? = keyValue
         while (current != null) {
-            current.keyText?.takeIf { it.isNotBlank() }?.let { segments.add(0, it) }
+            current.keyText.takeIf { it.isNotBlank() }?.let { segments.add(0, it) }
             when (val container = current.parent) {
                 is YAMLMapping -> {
                     when (val owner = container.parent) {
