@@ -5,6 +5,7 @@ import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiVariable
+import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.PsiManager
@@ -46,6 +47,9 @@ internal object ArmeriaKotlinClientCollector {
         endpoints: MutableList<ArmeriaClientEndpoint>,
         seenEndpoints: MutableSet<String>,
     ) {
+        if (isNestedInsideClientFactoryArgument(call)) {
+            return
+        }
         val methodName = resolveCallName(call) ?: return
         if (methodName !in ArmeriaClientSupport.FACTORY_METHOD_NAMES) {
             return
@@ -146,6 +150,12 @@ internal object ArmeriaKotlinClientCollector {
         if (call != null) {
             val methodName = resolveCallName(call)
             val resolvedClass = resolveContainingClass(call)
+            if (methodName == "build" &&
+                resolvedClass?.startsWith(ArmeriaClientSupport.ARMERIA_CLIENT_PACKAGE_PREFIX) == true
+            ) {
+                val factoryCall = findWebClientFactoryInQualifierChain(call) ?: return null
+                return extractWebClientTransport(factoryCall)
+            }
             if (ArmeriaClientSupport.isWebClientClass(resolvedClass) && methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES) {
                 val arguments = call.valueArguments.mapNotNull { it.getArgumentExpression() }
                 if (arguments.size >= 2 && isEndpointGroupArgument(arguments[1])) {
@@ -170,6 +180,70 @@ internal object ArmeriaKotlinClientCollector {
 
     private fun isEndpointGroupArgument(expression: KtExpression): Boolean {
         return ArmeriaClientEndpointGroupSupport.labelKotlinEndpointGroup(expression) != null
+    }
+
+    private fun findWebClientFactoryInQualifierChain(call: KtCallExpression): KtCallExpression? {
+        var current: KtExpression? = qualifierReceiver(call)
+        while (current != null) {
+            val factoryCall = callExpressionInChain(current)
+            if (factoryCall != null) {
+                val methodName = resolveCallName(factoryCall)
+                val resolvedClass = resolveContainingClass(factoryCall)
+                if (ArmeriaClientSupport.isWebClientClass(resolvedClass) &&
+                    methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES
+                ) {
+                    return factoryCall
+                }
+            }
+            current = qualifierReceiver(current)
+        }
+        return null
+    }
+
+    private fun callExpressionInChain(expression: KtExpression): KtCallExpression? {
+        return when (expression) {
+            is KtCallExpression -> expression
+            is KtDotQualifiedExpression -> expression.selectorExpression as? KtCallExpression
+            else -> null
+        }
+    }
+
+    private fun qualifierReceiver(expression: KtExpression): KtExpression? {
+        return when (expression) {
+            is KtCallExpression -> {
+                when (val callee = expression.calleeExpression) {
+                    is KtDotQualifiedExpression -> callee.receiverExpression
+                    else -> (expression.parent as? KtDotQualifiedExpression)?.receiverExpression
+                }
+            }
+            is KtDotQualifiedExpression -> expression.receiverExpression
+            else -> null
+        }
+    }
+
+    private fun isNestedInsideClientFactoryArgument(call: KtCallExpression): Boolean {
+        var element: PsiElement? = call.parent
+        while (element != null) {
+            val outerCall = element as? KtCallExpression ?: run {
+                element = element.parent
+                continue
+            }
+            val methodName = resolveCallName(outerCall)
+            if (methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES &&
+                ArmeriaClientSupport.protocolForClass(resolveContainingClass(outerCall)) != null &&
+                isDescendantOfValueArgument(call, outerCall)
+            ) {
+                return true
+            }
+            element = element.parent
+        }
+        return false
+    }
+
+    private fun isDescendantOfValueArgument(call: KtCallExpression, outerCall: KtCallExpression): Boolean {
+        return outerCall.valueArguments.mapNotNull { it.getArgumentExpression() }.any { argument ->
+            PsiTreeUtil.isAncestor(argument, call, false)
+        }
     }
 
     private fun resolveTargetName(call: KtCallExpression): String? {

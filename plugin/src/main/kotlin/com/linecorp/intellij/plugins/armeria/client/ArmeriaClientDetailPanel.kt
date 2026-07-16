@@ -21,6 +21,7 @@ class ArmeriaClientDetailPanel : JPanel(BorderLayout()) {
 
     private val transportRow: JPanel
     private val endpointGroupRow: JPanel
+    private val metadataBlock: JPanel
     private val decoratorsBlock: JPanel
 
     init {
@@ -32,6 +33,10 @@ class ArmeriaClientDetailPanel : JPanel(BorderLayout()) {
         )
         transportRow = labeledField(message("client.explorer.detail.transport"), detailTransport)
         endpointGroupRow = labeledField(message("client.explorer.detail.endpointGroup"), detailEndpointGroup)
+        metadataBlock = detailSection(
+            message("client.explorer.detail.block.metadata"),
+            formBody(transportRow, endpointGroupRow),
+        )
         decoratorsBlock = detailSection(
             message("client.explorer.detail.block.decorators"),
             JPanel(BorderLayout()).apply {
@@ -42,12 +47,7 @@ class ArmeriaClientDetailPanel : JPanel(BorderLayout()) {
         add(
             JPanel(com.intellij.ui.components.panels.VerticalLayout(JBUI.scale(10))).apply {
                 add(detailSection(message("client.explorer.detail.block.overview"), overviewBody))
-                add(
-                    detailSection(
-                        message("client.explorer.detail.block.metadata"),
-                        formBody(transportRow, endpointGroupRow),
-                    ),
-                )
+                add(metadataBlock)
                 add(decoratorsBlock)
             },
             BorderLayout.CENTER,
@@ -72,6 +72,7 @@ class ArmeriaClientDetailPanel : JPanel(BorderLayout()) {
         val endpointGroup = endpoint.endpointGroup
         setWrappingText(detailEndpointGroup, endpointGroup.orEmpty())
         endpointGroupRow.isVisible = !endpointGroup.isNullOrEmpty()
+        metadataBlock.isVisible = transportRow.isVisible || endpointGroupRow.isVisible
 
         val decoratorsText = endpoint.decorators.joinToString()
         setWrappingText(detailDecorators, decoratorsText)
@@ -88,6 +89,7 @@ class ArmeriaClientDetailPanel : JPanel(BorderLayout()) {
         setWrappingText(detailDecorators, "")
         transportRow.isVisible = false
         endpointGroupRow.isVisible = false
+        metadataBlock.isVisible = false
         decoratorsBlock.isVisible = false
     }
 
