@@ -245,8 +245,7 @@ internal object ArmeriaSpringYamlRouteCollector {
         seenConfigRoutes: MutableSet<String>,
     ) {
         for (binding in config.ports) {
-            val protocolLabel = binding.protocols.joinToString(", ")
-            val primaryProtocol = binding.protocols.firstOrNull() ?: "HTTP"
+            val protocolLabel = binding.protocols.joinToString(", ").ifEmpty { "HTTP" }
             // Synthetic path so the tree row (pill + path) shows the port; "/" collides with
             // real root mounts and hides the binding in the explorer list.
             addConfigRoute(
@@ -256,7 +255,7 @@ internal object ArmeriaSpringYamlRouteCollector {
                     message("route.explorer.spring.port", binding.port, protocolLabel),
                     profile,
                 ),
-                protocol = primaryProtocol,
+                protocol = protocolLabel,
                 httpMethod = "",
                 routeMatch = RouteMatch.NON_HTTP,
                 isDocService = false,

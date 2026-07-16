@@ -217,6 +217,31 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
         assertEquals(message("route.explorer.spring.port", "8443", "HTTPS"), portRoute.target)
     }
 
+    fun testPortBindingProtocolLabelIncludesAllProtocols() {
+        val psiFile = myFixture.configureByText(
+            "application.yml",
+            """
+            armeria:
+              ports:
+                - port: 8080
+                  protocols:
+                    - HTTP
+                    - HTTPS
+            """.trimIndent(),
+        )
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        ArmeriaSpringYamlRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+
+        val portRoute = routes.single { it.target.contains("8080") }
+        assertEquals("HTTP, HTTPS", portRoute.protocol)
+        assertEquals("HTTP, HTTPS", portRoute.methodLabel)
+        assertEquals(
+            message("route.explorer.registration.nonHttp", "HTTP, HTTPS", ":8080"),
+            portRoute.resolveRegistrationSummary(),
+        )
+    }
+
     fun testConfigInternalServicesDoNotDuplicateWithServiceUnderRoot() {
         val configFile = myFixture.configureByText(
             "application.yml",
