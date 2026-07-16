@@ -353,6 +353,21 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
     }
 
     @Test
+    fun parseYaml_ignoresNestedIncludeUnderInternalServicesChild() {
+        val config = ArmeriaSpringYamlRouteCollector.parseYaml(
+            """
+            armeria:
+              internal-services:
+                foo:
+                  include: docs
+                include: health
+            """.trimIndent(),
+        )
+
+        assertEquals(setOf("health"), config.includes)
+    }
+
+    @Test
     fun parseProperties_protocolIndexLastWins() {
         val config = ArmeriaSpringYamlRouteCollector.parseProperties(
             """

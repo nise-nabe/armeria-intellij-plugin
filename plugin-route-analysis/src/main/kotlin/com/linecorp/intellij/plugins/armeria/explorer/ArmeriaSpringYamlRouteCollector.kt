@@ -67,8 +67,6 @@ internal object ArmeriaSpringYamlRouteCollector {
             PROPERTIES_MULTILINE,
         )
 
-    private val INTERNAL_SERVICE_IDS = setOf("docs", "health", "metrics", "actuator")
-
     private data class InternalServiceSpec(
         val id: String,
         val path: (SpringArmeriaConfig) -> String,
@@ -118,21 +116,26 @@ internal object ArmeriaSpringYamlRouteCollector {
         ),
     )
 
+    private val INTERNAL_SERVICE_IDS: Set<String> =
+        INTERNAL_SERVICE_SPECS.mapTo(linkedSetOf()) { it.id }
+
     fun collect(
         project: Project,
         scope: GlobalSearchScope,
         routes: MutableList<ArmeriaRoute>,
         seenConfigRoutes: MutableSet<String>,
     ) {
-        for (extension in listOf("yml", "yaml", "properties")) {
-            val configFiles = FilenameIndex.getAllFilesByExt(project, extension, scope)
-                .asSequence()
-                .filter { isApplicationConfigFile(it.name) }
-                .sortedWith(compareBy({ it.path }, { it.name }))
-            for (virtualFile in configFiles) {
-                val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: continue
-                collectFromPsiFile(psiFile, routes, seenConfigRoutes)
-            }
+        // Resolve only filenames that match application*.{yml,yaml,properties} instead of
+        // enumerating every yml/yaml/properties file in scope (common in large Spring repos).
+        val configFiles = FilenameIndex.getAllFilenames(project)
+            .asSequence()
+            .filter { isApplicationConfigFile(it) }
+            .flatMap { name -> FilenameIndex.getVirtualFilesByName(name, scope) }
+            .sortedWith(compareBy({ it.path }, { it.name }))
+        val psiManager = PsiManager.getInstance(project)
+        for (virtualFile in configFiles) {
+            val psiFile = psiManager.findFile(virtualFile) ?: continue
+            collectFromPsiFile(psiFile, routes, seenConfigRoutes)
         }
     }
 
@@ -244,9 +247,11 @@ internal object ArmeriaSpringYamlRouteCollector {
         for (binding in config.ports) {
             val protocolLabel = binding.protocols.joinToString(", ")
             val primaryProtocol = binding.protocols.firstOrNull() ?: "HTTP"
+            // Synthetic path so the tree row (pill + path) shows the port; "/" collides with
+            // real root mounts and hides the binding in the explorer list.
             addConfigRoute(
                 element = element,
-                path = "/",
+                path = ":${binding.port}",
                 target = profileAwareTarget(
                     message("route.explorer.spring.port", binding.port, protocolLabel),
                     profile,
@@ -324,7 +329,18 @@ internal object ArmeriaSpringYamlRouteCollector {
             return emptySet()
         }
         val lines = internalServicesBlock.lineSequence().toList()
+        var topIndent: Int? = null
         val includeIndex = lines.indexOfFirst { line ->
+            if (line.isBlank() || line.trimStart().startsWith("#")) {
+                return@indexOfFirst false
+            }
+            val indent = line.takeWhile { it.isWhitespace() }.length
+            if (topIndent == null) {
+                topIndent = indent
+            } else if (indent > topIndent) {
+                // Nested under another child of internal-services — skip.
+                return@indexOfFirst false
+            }
             val trimmed = line.trim()
             trimmed == "include:" || trimmed.startsWith("include:")
         }

@@ -22,7 +22,7 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
         val routes = mutableListOf<ArmeriaRoute>()
         ArmeriaSpringYamlRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
 
-        assertTrue(routes.any { it.target.contains("8080") })
+        assertTrue(routes.any { it.target.contains("8080") && it.path == ":8080" })
         assertTrue(routes.any { it.isDocService && it.path == "/internal/docs" })
         assertTrue(
             routes.any {
@@ -53,9 +53,42 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
         val routes = mutableListOf<ArmeriaRoute>()
         ArmeriaSpringYamlRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
 
-        assertTrue(routes.any { it.target.contains("9090") })
+        assertTrue(routes.any { it.target.contains("9090") && it.path == ":9090" })
         assertTrue(routes.any { it.isDocService })
         assertTrue(routes.any { it.path == "/actuator" && it.routeMatch == RouteMatch.CONFIG })
+    }
+
+    fun testCollectDiscoversApplicationConfigByFilename() {
+        myFixture.configureByText(
+            "application.yml",
+            """
+            armeria:
+              ports:
+                - port: 8080
+                  protocols: HTTP
+            """.trimIndent(),
+        )
+        // Unrelated YAML must not be scanned as a config candidate.
+        myFixture.addFileToProject(
+            "unrelated-config.yml",
+            """
+            armeria:
+              ports:
+                - port: 9999
+                  protocols: HTTP
+            """.trimIndent(),
+        )
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        ArmeriaSpringYamlRouteCollector.collect(
+            project,
+            GlobalSearchScope.projectScope(project),
+            routes,
+            mutableSetOf(),
+        )
+
+        assertTrue(routes.any { it.path == ":8080" })
+        assertFalse(routes.any { it.path == ":9999" || it.target.contains("9999") })
     }
 
     fun testCollectFromProfileYaml() {
@@ -178,6 +211,7 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
 
         val portRoute = routes.single { it.target.contains("8443") }
         assertEquals("HTTPS", portRoute.protocol)
+        assertEquals(":8443", portRoute.path)
         assertEquals(RouteMatch.NON_HTTP, portRoute.routeMatch)
         assertEquals(message("route.explorer.spring.port", "8443", "HTTPS"), portRoute.target)
     }
