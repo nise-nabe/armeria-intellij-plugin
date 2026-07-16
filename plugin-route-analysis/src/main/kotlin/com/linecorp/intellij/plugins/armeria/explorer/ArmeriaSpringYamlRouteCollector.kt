@@ -192,16 +192,16 @@ internal object ArmeriaSpringYamlRouteCollector {
         return SpringArmeriaConfig(
             ports = ports,
             includes = expandIncludes(includes),
-            docsPath = PROPERTIES_DOCS_PATH_PATTERN.find(text)?.groupValues?.get(1)
+            docsPath = lastPropertiesMatch(PROPERTIES_DOCS_PATH_PATTERN, text)
                 ?.let { stripPropertiesInlineComment(it).trimQuotes() }
                 ?: DEFAULT_DOCS_PATH,
-            healthPath = PROPERTIES_HEALTH_PATH_PATTERN.find(text)?.groupValues?.get(1)
+            healthPath = lastPropertiesMatch(PROPERTIES_HEALTH_PATH_PATTERN, text)
                 ?.let { stripPropertiesInlineComment(it).trimQuotes() }
                 ?: DEFAULT_HEALTH_PATH,
-            metricsPath = PROPERTIES_METRICS_PATH_PATTERN.find(text)?.groupValues?.get(1)
+            metricsPath = lastPropertiesMatch(PROPERTIES_METRICS_PATH_PATTERN, text)
                 ?.let { stripPropertiesInlineComment(it).trimQuotes() }
                 ?: DEFAULT_METRICS_PATH,
-            internalServicesPort = PROPERTIES_INTERNAL_PORT_PATTERN.find(text)?.groupValues?.get(1)
+            internalServicesPort = lastPropertiesMatch(PROPERTIES_INTERNAL_PORT_PATTERN, text)
                 ?.let { stripPropertiesInlineComment(it) },
         )
     }
@@ -462,7 +462,7 @@ internal object ArmeriaSpringYamlRouteCollector {
                 continue
             }
             val key = trimmed.substringBefore(':').trim()
-            val inlineValue = trimmed.substringAfter(':', missingDelimiterValue = "").trim()
+            val inlineValue = stripYamlInlineComment(trimmed.substringAfter(':', missingDelimiterValue = ""))
             val keyIndent = line.takeWhile { it.isWhitespace() }.length
             if (inlineValue.isNotEmpty()) {
                 values.getOrPut(key) { mutableListOf() } += splitInlineYamlValues(inlineValue)
@@ -576,6 +576,9 @@ internal object ArmeriaSpringYamlRouteCollector {
 
     private val YAML_INLINE_COMMENT = Regex("""\s+#.*$""")
     private val PROPERTIES_INLINE_COMMENT = Regex("""\s+[#!].*$""")
+
+    private fun lastPropertiesMatch(pattern: Regex, text: String): String? =
+        pattern.findAll(text).lastOrNull()?.groupValues?.get(1)
 
     private fun stripPropertiesInlineComment(raw: String): String =
         raw.trim().replace(PROPERTIES_INLINE_COMMENT, "").trimEnd()

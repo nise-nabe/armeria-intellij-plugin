@@ -251,6 +251,44 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
     }
 
     @Test
+    fun parseProperties_lastDuplicateKeyWins() {
+        val config = ArmeriaSpringYamlRouteCollector.parseProperties(
+            """
+            armeria.docs-path=/stale/docs
+            armeria.health-check-path=/stale/health
+            armeria.metrics-path=/stale/metrics
+            armeria.internal-services.port=17070
+            armeria.docs-path=/internal/docs
+            armeria.health-check-path=/internal/healthcheck
+            armeria.metrics-path=/internal/metrics
+            armeria.internal-services.port=18080
+            """.trimIndent(),
+        )
+
+        assertEquals("/internal/docs", config.docsPath)
+        assertEquals("/internal/healthcheck", config.healthPath)
+        assertEquals("/internal/metrics", config.metricsPath)
+        assertEquals("18080", config.internalServicesPort)
+    }
+
+    @Test
+    fun parseYaml_inlineScalarCommentsStrippedBeforeTokenization() {
+        val config = ArmeriaSpringYamlRouteCollector.parseYaml(
+            """
+            armeria:
+              ports:
+                - port: 8080
+                  protocols: http # primary
+            """.trimIndent(),
+        )
+
+        assertEquals(
+            listOf(SpringArmeriaPortBinding("8080", listOf("HTTP"))),
+            config.ports,
+        )
+    }
+
+    @Test
     fun parseYaml_ignoresNestedArmeriaKey() {
         val config = ArmeriaSpringYamlRouteCollector.parseYaml(
             """
