@@ -33,37 +33,37 @@ internal object ArmeriaSpringYamlRouteCollector {
     private val PROPERTIES_MULTILINE = setOf(RegexOption.MULTILINE)
     private val PROPERTIES_PORT_PATTERN =
         Regex(
-            """$PROPERTIES_LINE_STARTarmeria\.ports\[(\d+)]\.port\s*$PROPERTIES_DELIMITER\s*(\S+)""",
+            """${PROPERTIES_LINE_START}armeria\.ports\[(\d+)]\.port\s*$PROPERTIES_DELIMITER\s*(\S+)""",
             PROPERTIES_MULTILINE,
         )
     private val PROPERTIES_PROTOCOL_PATTERN =
         Regex(
-            """$PROPERTIES_LINE_STARTarmeria\.ports\[(\d+)]\.protocols(?:\[(\d+)])?\s*$PROPERTIES_DELIMITER\s*(.+)""",
+            """${PROPERTIES_LINE_START}armeria\.ports\[(\d+)]\.protocols(?:\[(\d+)])?\s*$PROPERTIES_DELIMITER\s*(.+)""",
             PROPERTIES_MULTILINE,
         )
     private val PROPERTIES_INCLUDE_PATTERN =
         Regex(
-            """$PROPERTIES_LINE_STARTarmeria\.(?:internal-services|internalServices)\.include(?:\[\d+])?\s*$PROPERTIES_DELIMITER\s*(.+)""",
+            """${PROPERTIES_LINE_START}armeria\.(?:internal-services|internalServices)\.include(?:\[\d+])?\s*$PROPERTIES_DELIMITER\s*(.+)""",
             PROPERTIES_MULTILINE,
         )
     private val PROPERTIES_INTERNAL_PORT_PATTERN =
         Regex(
-            """$PROPERTIES_LINE_STARTarmeria\.(?:internal-services|internalServices)\.port\s*$PROPERTIES_DELIMITER\s*(\S+)""",
+            """${PROPERTIES_LINE_START}armeria\.(?:internal-services|internalServices)\.port\s*$PROPERTIES_DELIMITER\s*(\S+)""",
             PROPERTIES_MULTILINE,
         )
     private val PROPERTIES_DOCS_PATH_PATTERN =
         Regex(
-            """$PROPERTIES_LINE_STARTarmeria\.(?:docs-path|docsPath)\s*$PROPERTIES_DELIMITER\s*(\S+)""",
+            """${PROPERTIES_LINE_START}armeria\.(?:docs-path|docsPath)\s*$PROPERTIES_DELIMITER\s*(\S+)""",
             PROPERTIES_MULTILINE,
         )
     private val PROPERTIES_HEALTH_PATH_PATTERN =
         Regex(
-            """$PROPERTIES_LINE_STARTarmeria\.(?:health-check-path|healthCheckPath)\s*$PROPERTIES_DELIMITER\s*(\S+)""",
+            """${PROPERTIES_LINE_START}armeria\.(?:health-check-path|healthCheckPath)\s*$PROPERTIES_DELIMITER\s*(\S+)""",
             PROPERTIES_MULTILINE,
         )
     private val PROPERTIES_METRICS_PATH_PATTERN =
         Regex(
-            """$PROPERTIES_LINE_STARTarmeria\.(?:metrics-path|metricsPath)\s*$PROPERTIES_DELIMITER\s*(\S+)""",
+            """${PROPERTIES_LINE_START}armeria\.(?:metrics-path|metricsPath)\s*$PROPERTIES_DELIMITER\s*(\S+)""",
             PROPERTIES_MULTILINE,
         )
 
