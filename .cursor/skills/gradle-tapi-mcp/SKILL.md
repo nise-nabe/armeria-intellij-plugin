@@ -8,7 +8,7 @@ description: >-
 
 # Gradle Tooling API MCP
 
-This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.5.0 in `.cursor/mcp.json` (Cursor) and `.github/mcp.json` (Copilot). The JAR is installed by `.cursor/install.sh` or `.github/scripts/install-gradle-tapi-mcp.sh` to `~/.local/share/gradle-tapi-mcp-server/gradle-tapi-mcp-server.jar`. At MCP server launch, `GRADLE_PROJECT_DIR` is set to the workspace/git root.
+This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.5.1 in `.cursor/mcp.json` (Cursor) and `.github/mcp.json` (Copilot). The JAR is installed by `.cursor/install.sh` or `.github/scripts/install-gradle-tapi-mcp.sh` to `~/.local/share/gradle-tapi-mcp-server/gradle-tapi-mcp-server.jar`. At MCP server launch, `GRADLE_PROJECT_DIR` is set to the workspace/git root.
 
 The MCP server may report `loading` for a few seconds on first use; call `gradle_connection_status` before other tools.
 
@@ -63,11 +63,12 @@ There is no `projectPath` filter on model tools — they return the project tree
 
 ## Test execution and concurrency
 
-**Only one MCP build may run per `projectDirectory` at a time.** A second `gradle_run_tasks` or `gradle_run_tests` (even with `background: true`) returns `BUILD_ALREADY_RUNNING`.
+**Only one MCP build may run per `projectDirectory` at a time.** A second `gradle_run_tasks` or `gradle_run_tests` (even with `background: true`) returns `BUILD_ALREADY_RUNNING`. The gate releases as soon as the build reaches a terminal status in memory (no grace window).
 
 | Goal | Approach |
 |------|----------|
 | Verify several changed tests | **Batch** them in **one** `gradle_run_tests` via `testMethods`, `testClasses`, or `includePatterns` |
+| Verify both `:test` and custom `JvmTestSuite` (`fastTest`) | **One** `gradle_run_tests` with `tasks: [":mod:test", ":mod:fastTest"]` + `includePatterns` |
 | Parallel MCP test calls on this repo | **Not supported** — wait for the current build or `gradle_cancel_build` first |
 | Isolate a single failing class/method | One call per class/method; wait for terminal status before the next |
 | Parallel tests across different repos | Each `projectDirectory` with `gradle_connect` + `background: true` (server pool limit) |
@@ -160,9 +161,9 @@ Or for test selection:
 }
 ```
 
-2. Poll `gradle_get_build_status` with the returned `buildId` until `status` is `succeeded`, `failed`, or `cancelled`. Optionally set `waitUntilComplete: true` (with `waitTimeoutMs` / `pollIntervalMs`) to block until terminal status in one call.
+2. Poll `gradle_get_build_status` with the returned `buildId` until `status` is `succeeded`, `failed`, or `cancelled`. Prefer repeated short polls over one long wait. Optional `waitUntilComplete: true` uses a **server-side** wait only (`waitTimeoutMs` default 30s, max 60s); on timeout the build keeps running and the response includes `waitTimedOut`, `waitedMs`, and a `hint` to poll again. Non-wait status polls read memory/disk only and do not block on the Tooling API.
 
-3. Read `outcome`, `buildSummary`, and `statusSource` (`memory` or `disk`) from the poll response. Use `includeProgress: true` for task/test events; set `includeOutput: true` only if you need truncated logs. For incremental log polling while running, pass `sinceStdoutOffset` / `sinceStderrOffset` to receive `stdoutDelta` / `stderrDelta` instead of re-reading prior prefixes.
+3. Read `outcome`, `buildSummary`, `failureCategory` (`TEST` / `GRADLE_TASK` / `TOOLING_CONNECTION` / `CANCELLED`), and `statusSource` (`memory` or `disk`) from the poll response. Use `includeProgress: true` for task/test events; set `includeOutput: true` only if you need truncated logs. For incremental log polling while running, pass `sinceStdoutOffset` / `sinceStderrOffset` to receive `stdoutDelta` / `stderrDelta` instead of re-reading prior prefixes.
 
 `gradle_get_build_status` reconciles memory and disk records. While `status` is `running`, disk `events.ndjson` task events are merged into progress.
 
@@ -207,6 +208,7 @@ If every MCP call times out but `./gradlew` still works:
 | Plugin fixture tests | `gradle_run_tasks` `{ "tasks": [":plugin:test"], "background": true }` | `./gradlew :plugin:test` |
 | Route-analysis fixture tests | `gradle_run_tasks` `{ "tasks": [":plugin-route-analysis:test"], "background": true }` | `./gradlew :plugin-route-analysis:test` |
 | Fast unit tests | `gradle_run_tasks` `{ "tasks": [":plugin-route-analysis:fastTest"], "background": true }` | `./gradlew :plugin-route-analysis:fastTest` |
+| Route-analysis fixture + fast in one MCP build | `gradle_run_tests` `{ "tasks": [":plugin-route-analysis:test", ":plugin-route-analysis:fastTest"], "includePatterns": ["FQCN"], "background": true }` | `./gradlew :plugin-route-analysis:test :plugin-route-analysis:fastTest --tests 'FQCN'` |
 | Route-analysis checks (fixture + fast) | `gradle_run_tasks` `{ "tasks": [":plugin-route-analysis:check"], "background": true }` | `./gradlew :plugin-route-analysis:check` |
 | Single test class | `gradle_run_tests` `{ "taskPath": ":plugin-route-analysis:test", "testClasses": ["FQCN"], "background": true }` | `./gradlew :plugin-route-analysis:test --tests 'FQCN'` |
 | Multiple test classes/methods | `gradle_run_tests` `{ "taskPath": ":plugin-route-analysis:test", "testMethods": { ... }, "background": true }` | `./gradlew :plugin-route-analysis:test --tests 'FQCN'` per class |
@@ -256,7 +258,7 @@ Then rerun `:plugin:test` or `build` via shell or MCP (background + polling).
 | `error.code: NOT_CONNECTED` | `gradle_connect` or restart the MCP server |
 | `error.code: BUILD_ALREADY_RUNNING` | Poll `gradle_get_build_status`, `gradle_cancel_build` if stale (`not_running` = already finished), or batch tests into one `gradle_run_tests` |
 | `error.code: INVALID_ARGUMENT` on `gradle_run_tests` | Add `taskPath` or `tasks` when using `testClasses`/`testMethods` in this multi-project repo |
-| MCP call timed out but Gradle may still be running | Foreground runs auto-detach; use `gradle_list_builds` and poll `gradle_get_build_status` |
+| MCP call timed out but Gradle may still be running | Foreground runs auto-detach; use `gradle_list_builds` and poll `gradle_get_build_status` (short polls; do not rely on one long `waitUntilComplete`) |
 | Huge MCP responses | Keep `includeTasks` / `includeTaskSelectors` false unless filtering |
 | Declared Java vs daemon Java differ | Report both toolchain declaration (files) and daemon Java (MCP) |
 
@@ -264,6 +266,6 @@ Then rerun `:plugin:test` or `build` via shell or MCP (background + polling).
 
 Full tool reference and advanced workflows live in the upstream repository:
 
-- [README (v0.5.0)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/v0.5.0/README.md)
+- [README (v0.5.1)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/v0.5.1/README.md)
 - [gradle-tapi-mcp skill](https://github.com/nise-nabe/gradle-tapi-mcp-server/tree/main/skills/gradle-tapi-mcp)
 - [Tool reference (reference.md)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/main/skills/gradle-tapi-mcp/reference.md)
