@@ -83,6 +83,13 @@ object ArmeriaRouteCollector {
                 )
             }
         }
+        ArmeriaScalaRouteCollector.collectServiceRegistrationsFallback(
+            project,
+            scope,
+            routes,
+            fallbackScannedFiles,
+            seenServiceRegistrations,
+        )
         if (springBootArmeriaAvailable) {
             ArmeriaSpringBootRouteCollector.collect(
                 project,
