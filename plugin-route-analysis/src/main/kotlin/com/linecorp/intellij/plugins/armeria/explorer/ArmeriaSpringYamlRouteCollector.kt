@@ -125,10 +125,11 @@ internal object ArmeriaSpringYamlRouteCollector {
         seenConfigRoutes: MutableSet<String>,
     ) {
         for (extension in listOf("yml", "yaml", "properties")) {
-            for (virtualFile in FilenameIndex.getAllFilesByExt(project, extension, scope)) {
-                if (!isApplicationConfigFile(virtualFile.name)) {
-                    continue
-                }
+            val configFiles = FilenameIndex.getAllFilesByExt(project, extension, scope)
+                .asSequence()
+                .filter { isApplicationConfigFile(it.name) }
+                .sortedWith(compareBy({ it.path }, { it.name }))
+            for (virtualFile in configFiles) {
                 val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: continue
                 collectFromPsiFile(psiFile, routes, seenConfigRoutes)
             }
