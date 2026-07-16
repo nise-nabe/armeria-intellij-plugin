@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Gradle tasks via MCP
 
-For **all Gradle task execution and build verification** in this repository, prefer the `gradle` MCP server (`nise-nabe/gradle-tapi-mcp-server` v0.5.0) over shell `./gradlew`.
+For **all Gradle task execution and build verification** in this repository, prefer the `gradle` MCP server (`nise-nabe/gradle-tapi-mcp-server` v0.5.1) over shell `./gradlew`.
 
 ## Before running tasks
 
