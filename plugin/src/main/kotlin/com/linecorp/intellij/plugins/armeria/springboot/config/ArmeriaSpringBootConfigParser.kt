@@ -8,7 +8,7 @@ object ArmeriaSpringBootConfigParser {
             try {
                 val line = raw.trim()
                 if (line.isEmpty() || line.startsWith('#') || line.startsWith('!')) continue
-                val sep = line.indexOfFirst { it == '=' || it == ':' }
+                val sep = line.indexOfFirst { it == '=' || it == ':' || it == ' ' || it == '\t' }
                 if (sep < 0) continue
                 put(line.substring(0, sep).trim(), unquote(line.substring(sep + 1).trim()))
             } catch (_: RuntimeException) {

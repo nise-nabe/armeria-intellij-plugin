@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.springboot.config
 
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.search.FilenameIndex
@@ -8,8 +9,11 @@ import com.intellij.psi.search.GlobalSearchScope
 object ArmeriaSpringBootConfigSupport {
     fun isApplicationConfigFileName(fileName: String): Boolean =
         fileName in setOf("application.yml", "application.yaml", "application.properties") ||
-            (fileName.startsWith("application-") && (fileName.endsWith(".yml") || fileName.endsWith(".yaml") || fileName.endsWith(".properties")))
+            (fileName.startsWith("application-") &&
+                (fileName.endsWith(".yml") || fileName.endsWith(".yaml") || fileName.endsWith(".properties")))
+
     fun normalizeIndexedKeyPath(keyPath: String): String = keyPath.replace(Regex("""\[\d+]"""), "")
+
     fun parseFile(fileName: String, text: String) = when {
         fileName.endsWith(".yml") || fileName.endsWith(".yaml") -> ArmeriaSpringBootConfigParser.parseYaml(text)
         fileName.endsWith(".properties") -> ArmeriaSpringBootConfigParser.parseProperties(text)
@@ -28,7 +32,13 @@ object ArmeriaSpringBootConfigCollector {
             true
         }, scope, null)
         return files.values.sortedBy { it.path }.mapNotNull { vf ->
-            val text = runCatching { String(vf.contentsToByteArray(), Charsets.UTF_8) }.getOrNull() ?: return@mapNotNull null
+            val text = try {
+                String(vf.contentsToByteArray(), Charsets.UTF_8)
+            } catch (exception: ProcessCanceledException) {
+                throw exception
+            } catch (_: Exception) {
+                return@mapNotNull null
+            }
             val entries = ArmeriaSpringBootConfigSupport.parseFile(vf.name, text)
             if (entries.isEmpty()) null else ArmeriaSpringBootConfigFile(vf.name, vf.path, entries)
         }

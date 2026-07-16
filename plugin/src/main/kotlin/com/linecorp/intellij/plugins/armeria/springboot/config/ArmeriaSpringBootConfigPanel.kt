@@ -1,9 +1,12 @@
 package com.linecorp.intellij.plugins.armeria.springboot.config
 
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.actionSystem.*
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
@@ -51,7 +54,13 @@ class ArmeriaSpringBootConfigPanel(private val project: Project) : SimpleToolWin
         val generation = ++refreshGeneration
         statusLabel.text = message("springboot.config.summary.refreshing")
         ReadAction.nonBlocking<Result<List<ArmeriaSpringBootConfigFile>>> {
-            runCatching { ArmeriaSpringBootConfigCollector.collect(project) }
+            try {
+                Result.success(ArmeriaSpringBootConfigCollector.collect(project))
+            } catch (exception: ProcessCanceledException) {
+                throw exception
+            } catch (exception: Exception) {
+                Result.failure(exception)
+            }
         }
             .inSmartMode(project).expireWith(this).coalesceBy(this)
             .finishOnUiThread(ModalityState.any()) { result ->
