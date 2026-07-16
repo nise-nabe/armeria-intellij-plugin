@@ -38,7 +38,6 @@ class ArmeriaRouteExplorerPanel(
     private var staticRoutes: List<ArmeriaRoute> = emptyList()
     private var runtimeRoutes: List<ArmeriaRoute> = emptyList()
     private var refreshGeneration = 0
-    private var runtimeApplyGeneration = 0
     private var selectedRoute: ArmeriaRoute? = null
     private var currentModuleOnly = false
     private var initialRefreshScheduled = false
@@ -165,9 +164,7 @@ class ArmeriaRouteExplorerPanel(
                     return@finishOnUiThread
                 }
                 staticRoutes = collectedRoutes
-                if (runtimeApplyGeneration < generation) {
-                    runtimeRoutes = emptyList()
-                }
+                // Keep DocService-synced runtime routes across static refreshes until the next sync.
                 rebuildTree()
                 updateStatusLabel()
                 updateDetailFootnote()
@@ -177,7 +174,6 @@ class ArmeriaRouteExplorerPanel(
     fun staticRoutes(): List<ArmeriaRoute> = staticRoutes
 
     fun applyRuntimeRoutes(routes: List<ArmeriaRoute>) {
-        runtimeApplyGeneration = refreshGeneration
         runtimeRoutes = routes
         rebuildTree()
         updateStatusLabel()
