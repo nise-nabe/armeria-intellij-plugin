@@ -64,6 +64,7 @@
         <intentionAction>
             <className>com.linecorp.intellij.plugins.armeria.intention.ArmeriaGenerateRouteMethodIntention</className>
             <category>Armeria</category>
+            <language>JAVA</language>
         </intentionAction>
     </extensions>
 

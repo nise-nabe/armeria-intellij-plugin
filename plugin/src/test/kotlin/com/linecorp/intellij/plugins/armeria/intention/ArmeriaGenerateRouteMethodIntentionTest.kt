@@ -1,11 +1,11 @@
 package com.linecorp.intellij.plugins.armeria.intention
 
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
-class ArmeriaGenerateRouteMethodIntentionTest : LightJavaCodeInsightFixtureTestCase() {
-    override fun setUp() {
-        super.setUp()
-        registerArmeriaStubs()
+class ArmeriaGenerateRouteMethodIntentionTest : ArmeriaFixtureTestBase() {
+    override fun registerArmeriaStubs() {
+        registerArmeriaAnnotationStubs()
+        registerContentAnnotationStubs()
     }
 
     fun testGenerateRouteMethodInAnnotatedServiceClass() {
@@ -26,11 +26,7 @@ class ArmeriaGenerateRouteMethodIntentionTest : LightJavaCodeInsightFixtureTestC
             """.trimIndent(),
         )
 
-        val intention = ArmeriaGenerateRouteMethodIntention()
-        val element = myFixture.file.findElementAt(myFixture.editor.caretModel.offset)!!
-        assertTrue(intention.isAvailable(myFixture.project, myFixture.editor, element))
-
-        intention.invoke(myFixture.project, myFixture.editor, element)
+        assertIntentionAvailableAndInvoke()
 
         val updated = myFixture.editor.document.text
         assertTrue(updated.contains("@Get(\"/handler\")"))
@@ -54,11 +50,7 @@ class ArmeriaGenerateRouteMethodIntentionTest : LightJavaCodeInsightFixtureTestC
             """.trimIndent(),
         )
 
-        val intention = ArmeriaGenerateRouteMethodIntention()
-        val element = myFixture.file.findElementAt(myFixture.editor.caretModel.offset)!!
-        assertTrue(intention.isAvailable(myFixture.project, myFixture.editor, element))
-
-        intention.invoke(myFixture.project, myFixture.editor, element)
+        assertIntentionAvailableAndInvoke()
 
         val updated = myFixture.editor.document.text
         assertTrue(updated.contains("@Get(\"/handler\")"))
@@ -83,11 +75,7 @@ class ArmeriaGenerateRouteMethodIntentionTest : LightJavaCodeInsightFixtureTestC
             """.trimIndent(),
         )
 
-        val intention = ArmeriaGenerateRouteMethodIntention()
-        val element = myFixture.file.findElementAt(myFixture.editor.caretModel.offset)!!
-        assertTrue(intention.isAvailable(myFixture.project, myFixture.editor, element))
-
-        intention.invoke(myFixture.project, myFixture.editor, element)
+        assertIntentionAvailableAndInvoke()
 
         val updated = myFixture.editor.document.text
         assertTrue(updated.contains("@Get(\"/handler2\")"))
@@ -106,9 +94,7 @@ class ArmeriaGenerateRouteMethodIntentionTest : LightJavaCodeInsightFixtureTestC
             """.trimIndent(),
         )
 
-        val intention = ArmeriaGenerateRouteMethodIntention()
-        val element = myFixture.file.findElementAt(myFixture.editor.caretModel.offset)!!
-        assertFalse(intention.isAvailable(myFixture.project, myFixture.editor, element))
+        assertFalse(isIntentionAvailable())
     }
 
     fun testNotAvailableForUnrelatedAnnotationImportOnly() {
@@ -127,39 +113,39 @@ class ArmeriaGenerateRouteMethodIntentionTest : LightJavaCodeInsightFixtureTestC
             """.trimIndent(),
         )
 
-        val intention = ArmeriaGenerateRouteMethodIntention()
-        val element = myFixture.file.findElementAt(myFixture.editor.caretModel.offset)!!
-        assertFalse(intention.isAvailable(myFixture.project, myFixture.editor, element))
+        assertFalse(isIntentionAvailable())
     }
 
-    private fun registerArmeriaStubs() {
-        myFixture.addClass(
+    fun testNotAvailableInsideMethodBody() {
+        myFixture.configureByText(
+            "BodyService.java",
             """
-            package com.linecorp.armeria.server.annotation;
+            package example;
 
-            public @interface Get {
-                String value() default "";
-                String path() default "";
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class BodyService {
+                @Get("/hello")
+                public String hello() {
+                    return <caret>"hello";
+                }
             }
             """.trimIndent(),
         )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.annotation;
 
-            public @interface PathPrefix {
-                String value();
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.annotation;
+        assertFalse(isIntentionAvailable())
+    }
 
-            public @interface Param {
-                String value();
-            }
-            """.trimIndent(),
-        )
+    private fun isIntentionAvailable(): Boolean {
+        val intention = ArmeriaGenerateRouteMethodIntention()
+        val element = myFixture.file.findElementAt(myFixture.editor.caretModel.offset)!!
+        return intention.isAvailable(myFixture.project, myFixture.editor, element)
+    }
+
+    private fun assertIntentionAvailableAndInvoke() {
+        val intention = ArmeriaGenerateRouteMethodIntention()
+        val element = myFixture.file.findElementAt(myFixture.editor.caretModel.offset)!!
+        assertTrue(intention.isAvailable(myFixture.project, myFixture.editor, element))
+        intention.invoke(myFixture.project, myFixture.editor, element)
     }
 }
