@@ -38,7 +38,7 @@ internal class ArmeriaRouteExplorerTreeRenderer : ColoredTreeCellRenderer() {
             append(route.shortTarget)
             if (route.delegationMountPath.isNotEmpty()) {
                 append(" (")
-                append(message("route.explorer.secondary.delegatedVia", route.delegationMountPath).trim())
+                append(message("route.explorer.tooltip.delegatedVia", route.delegationMountPath))
                 append(')')
             }
         }
@@ -53,15 +53,11 @@ internal class ArmeriaRouteExplorerTreeRenderer : ColoredTreeCellRenderer() {
         } else {
             route.delegationKind?.let { delegationKind ->
                 append(
-                    message("route.explorer.secondary.separator") + delegationBadge(delegationKind),
+                    message("route.explorer.secondary.separator") +
+                        ArmeriaRouteDetailFormatter.delegationBadge(delegationKind),
                     SimpleTextAttributes.GRAYED_ATTRIBUTES,
                 )
             }
         }
-    }
-
-    private fun delegationBadge(kind: DelegationKind): String = when (kind) {
-        DelegationKind.SPRING_MVC -> message("route.explorer.badge.springMvc")
-        DelegationKind.SERVLET -> message("route.explorer.badge.servlet")
     }
 }

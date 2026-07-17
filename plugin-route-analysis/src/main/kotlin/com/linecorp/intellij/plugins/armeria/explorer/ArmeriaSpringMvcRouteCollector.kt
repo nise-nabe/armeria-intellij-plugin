@@ -3,6 +3,8 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
+import com.intellij.psi.PsiAnnotationMemberValue
+import com.intellij.psi.PsiArrayInitializerMemberValue
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.search.GlobalSearchScope
@@ -65,7 +67,7 @@ internal object ArmeriaSpringMvcRouteCollector {
         val classPrefix = extractClassRequestMappingPrefix(containingClass)
         val mappingAnnotation = findMappingAnnotation(method) ?: return
         val httpMethod = resolveHttpMethod(mappingAnnotation, defaultMethod)
-        val paths = extractSpringPaths(mappingAnnotation).ifEmpty { listOf("") }
+        val paths = ArmeriaRouteSupport.extractPaths(mappingAnnotation).ifEmpty { listOf("") }
         val target = buildMethodTarget(containingClass, method)
         for (rawPath in paths) {
             routes += SpringMvcRoute(
@@ -99,16 +101,23 @@ internal object ArmeriaSpringMvcRouteCollector {
         if (defaultMethod.isNotEmpty()) {
             return defaultMethod
         }
-        val methodValues = ArmeriaRouteSupport.extractStrings(annotation.findDeclaredAttributeValue("method"))
-        return methodValues.firstOrNull().orEmpty()
+        val methods = extractRequestMethods(annotation.findDeclaredAttributeValue("method"))
+        return methods.joinToString(", ")
     }
 
-    private fun extractSpringPaths(annotation: PsiAnnotation): List<String> {
-        val values = ArmeriaRouteSupport.extractPaths(annotation)
-        if (values.isNotEmpty()) {
-            return values
+    /**
+     * Resolves Spring `RequestMethod` enum references (and arrays) to HTTP method names.
+     * Empty attribute means all methods — returns an empty list so callers keep `httpMethod` blank.
+     */
+    private fun extractRequestMethods(value: PsiAnnotationMemberValue?): List<String> {
+        return when (value) {
+            null -> emptyList()
+            is PsiArrayInitializerMemberValue -> value.initializers.flatMap(::extractRequestMethods)
+            else -> {
+                val name = value.text.trim().substringAfterLast('.').uppercase()
+                if (name.isNotEmpty()) listOf(name) else emptyList()
+            }
         }
-        return ArmeriaRouteSupport.extractStrings(annotation.findDeclaredAttributeValue("path"))
     }
 
     private fun buildMethodTarget(psiClass: PsiClass, method: PsiMethod): String {

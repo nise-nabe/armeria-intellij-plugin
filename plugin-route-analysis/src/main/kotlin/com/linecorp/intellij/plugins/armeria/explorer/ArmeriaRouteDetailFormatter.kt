@@ -105,7 +105,7 @@ object ArmeriaRouteDetailFormatter {
         )
     }
 
-    private fun delegationBadge(kind: DelegationKind): String = when (kind) {
+    fun delegationBadge(kind: DelegationKind): String = when (kind) {
         DelegationKind.SPRING_MVC -> message("route.explorer.badge.springMvc")
         DelegationKind.SERVLET -> message("route.explorer.badge.servlet")
     }
