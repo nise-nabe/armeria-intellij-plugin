@@ -108,6 +108,27 @@ class ArmeriaGenerateRouteMethodIntentionTest : ArmeriaFixtureTestBase() {
         assertFalse(updated.contains("public String handler()"))
     }
 
+    fun testNotAvailableForRecordClass() {
+        myFixture.configureByText(
+            "RecordService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public record RecordService(String id) {
+                @Get("/hello")
+                public String hello() {
+                    return id;
+                }
+                <caret>
+            }
+            """.trimIndent(),
+        )
+
+        assertFalse(isIntentionAvailable())
+    }
+
     fun testNotAvailableOutsideAnnotatedServiceClass() {
         myFixture.configureByText(
             "Plain.java",

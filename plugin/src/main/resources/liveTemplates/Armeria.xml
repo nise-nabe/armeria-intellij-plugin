@@ -1,7 +1,6 @@
 <templateSet group="Armeria">
-  <template name="armroute-java" key="live.template.annotated.route.method.description" resource-bundle="messages.ArmeriaBundle" value="@com.linecorp.armeria.server.annotation.Get(&quot;$PATH$&quot;)&#10;public $RETURN_TYPE$ $NAME$($PARAMS$) {&#10;    return $END$&quot;&quot;;&#10;}" description="Annotated Armeria route method" toReformat="true" toShortenFQNames="true">
+  <template name="armroute-java" key="live.template.annotated.route.method.description" resource-bundle="messages.ArmeriaBundle" value="@com.linecorp.armeria.server.annotation.Get(&quot;$PATH$&quot;)&#10;public String $NAME$($PARAMS$) {&#10;    return $END$&quot;&quot;;&#10;}" description="Annotated Armeria route method" toReformat="true" toShortenFQNames="true">
     <variable name="PATH" expression="" defaultValue="/" alwaysStopAt="true"/>
-    <variable name="RETURN_TYPE" expression="" defaultValue="String" alwaysStopAt="true"/>
     <variable name="NAME" expression="" defaultValue="handler" alwaysStopAt="true"/>
     <variable name="PARAMS" expression="" defaultValue="" alwaysStopAt="true"/>
     <context><option name="JAVA_DECLARATION" value="true"/></context>
