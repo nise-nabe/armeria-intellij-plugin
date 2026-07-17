@@ -140,9 +140,14 @@ Prefer a real parser when available. When keeping a lightweight text parser (as 
 | Treat comment-only values (`include: # comment`) as empty | Leading `#` is not matched by `\s+#.*$` alone |
 | Do **not** strip inside quoted strings | `"# not a comment"` must stay intact |
 | Match nested keys only at the **parent block’s indentation level** | First-anywhere `ports:` can pick up `armeria:\n  foo:\n    ports:` |
+| List scalars with `:` are **not** always inline mappings (PR #212) | `- http://example.com` must stay a scalar; require `:` + whitespace (or EOL) before treating as `key: value` |
+| Guard empty indent stack before `stack.last()` | Top-level YAML lists (or bad indentation) otherwise throw / skip the whole list silently |
 
 Apply stripping in **every** scalar path (inline mapping, nested list, `readYamlScalar`, include
 tokens) — fixing one call site while leaving siblings is a recurring miss.
+
+Add a regression test for colon-bearing list scalars (`- http://…`) whenever the flattener
+changes — this edge case has already slipped past review once.
 
 ### Spring / Java `.properties`
 

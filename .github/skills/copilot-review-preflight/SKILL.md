@@ -8,9 +8,10 @@ description: >-
 
 # Copilot review preflight
 
-This skill aggregates patterns from **337+** GitHub Copilot pull-request review comments
+This skill aggregates patterns from **350+** GitHub Copilot pull-request review comments
 on `nise-nabe/armeria-intellij-plugin` (through July 2026, including PR #211’s 19 Spring
-config-parser findings). Use it as a final pass before requesting review.
+config-parser findings and PR #212’s 17 Spring Boot Config explorer findings). Use it as a
+final pass before requesting review.
 
 ## When to use
 
@@ -33,14 +34,25 @@ config-parser findings). Use it as a final pass before requesting review.
 
 ### Plugin feature code (`plugin/`, `plugin-shared/`, `plugin-wizard/`)
 
-- [ ] User-visible strings use `message(...)` + `ArmeriaBundle.properties` (no hard-coded English)
+- [ ] User-visible strings use `message(...)` + `ArmeriaBundle.properties` (no hard-coded English, including completion docs / tooltip maps)
+- [ ] No unused bundle keys; status copy lists every file type / profile variant actually scanned
 - [ ] HTML tooltips escape dynamic PSI text
 - [ ] Tree selection / equality uses stable route fields, not localized labels
 - [ ] Background PSI uses `ReadAction.nonBlocking` + `expireWith` + `coalesceBy`
 - [ ] Index-heavy paths handle `IndexNotReadyException` or defer until smart mode
 - [ ] Kotlin-specific types are not imported in always-loaded classes without guards
+- [ ] Optional `*-integration.xml` holds only extensions that need that plugin; tool windows / explorers that work without it stay in main `plugin.xml`
+- [ ] Table/tree renderers reset tooltip/font every cell; use `convertRowIndexToModel`; clear model on refresh failure
+- [ ] Config/`VirtualFile` text uses charset-aware VFS APIs (`LoadTextUtil`), not hard-coded UTF-8
+- [ ] Hot-path filename/key checks use hoisted constants, not per-call `setOf(...)`
 - [ ] Run-config `main` detection uses `PsiMethodUtil`, not any `static main`
 - [ ] Code and tests live in the correct module (see `intellij-armeria-plugin`)
+
+### YAML / properties completion (when adding contributors)
+
+- [ ] Prefix-match the leaf lookup string, not the full dotted path
+- [ ] Key-path walk includes `YAMLKeyValue` parents (nested block / flow mappings)
+- [ ] No dangling `" — "` (or similar) when documentation is empty
 
 ### Route analysis (`plugin-route-analysis/`)
 
@@ -57,6 +69,8 @@ config-parser findings). Use it as a final pass before requesting review.
 
 - [ ] Unquoted YAML scalars/lists strip trailing `# …`; comment-only values are empty
 - [ ] Nested YAML keys matched only at parent indentation (not first-anywhere)
+- [ ] YAML list items with `:` (e.g. `- http://…`) stay scalars unless `:` is followed by whitespace/EOL
+- [ ] Flatten/stack walks guard empty indent stack (top-level lists must not throw / silently skip)
 - [ ] `.properties`: last-wins (including indexed keys); `=` and `:` delimiters; line-anchored regexes that skip `#`/`!` comments
 - [ ] HTTP config routes use an HTTP-capable `RouteMatch` (not `NON_HTTP`); use `NON_HTTP` only for true non-HTTP protocols (DocService, Thrift, port bindings); note “Generate HTTP Request” for `NON_HTTP` is enabled **only for gRPC**
 - [ ] Synthetic routes use distinct display paths (e.g. `":8080"`, not `"/"` for port bindings)
@@ -79,12 +93,15 @@ config-parser findings). Use it as a final pass before requesting review.
 | Multi-module placement / wrong test task | 21+ | `intellij-armeria-plugin` |
 | Run configuration / main entry detection | 19 | `intellij-armeria-plugin` |
 | Async UI lifecycle (`expireWith`, dispose) | 16 | `intellij-armeria-plugin` |
-| Hard-coded / non-localized UI strings | 16 | `intellij-armeria-plugin` |
+| Hard-coded / non-localized UI strings | 16+ (PR #212 docs maps) | `intellij-armeria-plugin` |
 | PSI literal fallback / misleading paths | 15+ | `armeria-route-psi-analysis` |
 | Annotated service / decorator parsing | 30+ | `armeria-route-psi-analysis` |
-| Hand-rolled YAML/properties parsing (comments, last-wins, delimiters) | 11+ (PR #211) | `armeria-route-psi-analysis` |
+| Hand-rolled YAML/properties parsing (comments, last-wins, delimiters, `:` in list scalars) | 14+ (PR #211/#212) | `armeria-route-psi-analysis` |
 | Synthetic route emission (`RouteMatch`, display path, dedupe keys) | 6+ (PR #211) | `armeria-route-psi-analysis` |
 | FilenameIndex scan vs name-driven lookup / non-deterministic order | 3+ (PR #211) | `armeria-route-psi-analysis` |
+| Optional dependency config owning core UI (`*-integration.xml`) | 2+ (PR #212) | `intellij-armeria-plugin` |
+| Swing renderer reuse / view→model index / stale model on error | 3+ (PR #212) | `intellij-armeria-plugin` |
+| YAML completion path / leaf prefix / empty doc tails | 3+ (PR #212) | `intellij-armeria-plugin` |
 | Optional Kotlin plugin classloading | 11+ | `intellij-armeria-plugin` |
 | Gradle MCP version/doc drift | 7+ | `gradle-tapi-mcp` |
 | Bash script executable-bit assumptions | 5+ | checklist above |
@@ -94,9 +111,11 @@ config-parser findings). Use it as a final pass before requesting review.
 
 1. Read the specialized skill for your change area.
 2. Run compile/tests via Gradle MCP with the correct module `taskPath` (see `gradle-tapi-mcp`).
-3. Scan the diff for `expression.text`, hard-coded `"` strings in UI code, Kotlin imports
-   in shared collectors, and (for config parsers) missing comment stripping / first-match
-   `.properties` reads / `getAllFilesByExt` scans.
+3. Scan the diff for `expression.text`, hard-coded `"` strings in UI code (including
+   documentation maps), Kotlin imports in shared collectors, tool windows registered only
+   under optional `*-integration.xml`, renderer state that is set but never cleared, and
+   (for config parsers) missing comment stripping / `:`-in-list-scalar handling / first-match
+   `.properties` reads / `getAllFilesByExt` scans / hard-coded UTF-8 `contentsToByteArray`.
 4. Write the PR body as Summary / Changes / Test plan — fold any review-driven edits into
    **Changes**, do not add "Copilot review fixes" sections.
 

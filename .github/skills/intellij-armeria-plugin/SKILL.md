@@ -47,11 +47,61 @@ statusLabel.text = "Refreshing Armeria routes..."
 Additional rules Copilot repeatedly flags:
 
 - **FormBuilder labels** — match existing plugin style; field labels use a trailing colon.
-- **Properties file hygiene** — no duplicate keys; keep `[Unreleased]` changelog templates intact.
+- **Properties file hygiene** — no duplicate keys; no unused keys added “for later”; keep
+  `[Unreleased]` changelog templates intact. Completion docs / tooltip descriptions are
+  user-visible — route them through the bundle too (not hard-coded English maps).
+- **Status copy matches capability** — if the collector also scans `application.yaml` and
+  profile variants (`application-dev.properties`), the empty/status string must say so.
 - **Stable identity** — when restoring tree selection or comparing routes, use stable fields
   (`routeMatch`, `httpMethod`, registration key), not localized labels like `methodLabel`.
 - **HTML in renderers** — escape dynamic values (`descriptionText`, decorator names, unresolved
   expressions) before embedding in HTML tooltips; unresolved PSI text may contain `<` or `&`.
+
+## Optional dependency config files (`*-integration.xml`)
+
+Optional config files loaded via `config-file` / `depends` (YAML, Kotlin, Spring, …) must
+contain **only** extensions that require that plugin. Copilot flags core UI registered only
+behind an optional dependency (PR #212):
+
+| Put in main `plugin.xml` | Put in optional `*-integration.xml` |
+|--------------------------|-------------------------------------|
+| Tool windows, actions, explorers that work without the optional plugin | Completion contributors, PSI annotators, language-specific handlers |
+
+Example: Spring Boot Config explorer works for `.properties` without the YAML plugin — register
+the tool window in `plugin.xml`, leave only `CompletionContributor` for YAML in
+`yaml-integration.xml`. Disabling YAML must not hide the explorer.
+
+## Swing table / tree renderers
+
+Cell renderers are reused. Always reset shared state for every cell, and map view → model
+indices when a sorter may be enabled (PR #212):
+
+```kotlin
+override fun getTableCellRendererComponent(...): Component {
+    val c = super.getTableCellRendererComponent(...)
+    val modelRow = table.convertRowIndexToModel(row)
+    toolTipText = null          // reset before optional set
+    font = table.font           // reset bold/italic before optional set
+    // then set tooltip / bold only for the cells that need them, using modelRow
+    return c
+}
+```
+
+On refresh **failure**, clear the table/tree model as well as updating the status label —
+leaving stale rows under an error message is misleading.
+
+## VirtualFile text loading
+
+Prefer charset-aware VFS APIs over hard-coded UTF-8 byte decoding:
+
+```kotlin
+// Bad — ignores project/file encoding
+String(vf.contentsToByteArray(), Charsets.UTF_8)
+
+// Good
+LoadTextUtil.loadText(vf).toString()
+// or: vf.charset / EncodingManager when building a Reader
+```
 
 ## Optional Kotlin plugin safety
 
@@ -125,6 +175,21 @@ When detecting JVM `main` classes:
 - Smart pointers: `SmartPointerManager.getInstance(project).createSmartPsiElementPointer(element)`.
 - Enum naming in this codebase: prefer ALL_CAPS entries (e.g. `RouteProtocol.HTTP`), not PascalCase.
 - `const val` names use `UPPER_SNAKE_CASE` when they are true constants.
+- Hot-path predicates (filename checks on every completion/collector call) must not allocate
+  `setOf(...)` / `listOf(...)` per invocation — hoist to a `private val` / companion constant.
+
+## YAML / properties completion contributors
+
+When completing nested config keys under a parent mapping:
+
+1. **Prefix-match the leaf lookup string**, not the full dotted suggestion path — typing `po`
+   under `internal-services:` must match `port`, even if the suggestion id is
+   `armeria.internal-services.port`.
+2. **Walk `YAMLKeyValue` parents** when computing the current key path — stopping at
+   `YAMLMapping` / `YAMLSequenceItem` alone truncates nested block mappings
+   (`server: { port: ... }` → path becomes just `port`).
+3. **Omit empty documentation tails** — do not append `" — "` (or similar) when there is no
+   description; dangling separators show up in the lookup list.
 
 ## Test task paths (multi-module)
 
