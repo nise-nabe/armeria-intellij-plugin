@@ -58,7 +58,7 @@ config-parser findings). Use it as a final pass before requesting review.
 - [ ] Unquoted YAML scalars/lists strip trailing `# …`; comment-only values are empty
 - [ ] Nested YAML keys matched only at parent indentation (not first-anywhere)
 - [ ] `.properties`: last-wins (including indexed keys); `=` and `:` delimiters; line-anchored regexes that skip `#`/`!` comments
-- [ ] HTTP config routes use an HTTP-capable `RouteMatch` (not `NON_HTTP`); DocService/gRPC stay `NON_HTTP`
+- [ ] HTTP config routes use an HTTP-capable `RouteMatch` (not `NON_HTTP`); use `NON_HTTP` only for true non-HTTP protocols (DocService, Thrift, port bindings); note “Generate HTTP Request” for `NON_HTTP` is enabled **only for gRPC**
 - [ ] Synthetic routes use distinct display paths (e.g. `":8080"`, not `"/"` for port bindings)
 - [ ] Multi-value config (protocols, includes) reflected in emitted labels, not truncated to first
 

@@ -178,9 +178,9 @@ When emitting routes that are not PSI call-site registrations:
 
 - gRPC/proto routes: use Proto Editor PSI when available; cache merged proto routes
   (`mergeProtoRoutesIfEnabled`) to avoid repeated merges.
-- Spring Boot config collectors (`ArmeriaSpringConfigRouteCollector`, Java `@Bean` collectors):
-  follow the hand-rolled parser and synthetic-route rules above; guard optional Spring/Kotlin PSI
-  behind availability checks.
+- Spring Boot config collectors: `ArmeriaSpringConfigRouteCollector` (YAML/properties) and
+  `ArmeriaSpringBootRouteCollector` (Java `@Bean` PSI walks) — follow the hand-rolled parser and
+  synthetic-route rules above; guard optional Spring/Kotlin PSI behind availability checks.
 - GraphQL / Thrift deduplication: align dedupe keys with HTTP route keys (path + method + host).
 
 ## Regression tests
