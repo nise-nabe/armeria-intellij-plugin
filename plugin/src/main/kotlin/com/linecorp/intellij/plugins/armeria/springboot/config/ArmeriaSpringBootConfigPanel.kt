@@ -68,6 +68,7 @@ class ArmeriaSpringBootConfigPanel(private val project: Project) : SimpleToolWin
                     return@finishOnUiThread
                 }
                 result.onFailure { error ->
+                    tableModel.setRows(emptyList())
                     statusLabel.text = message("springboot.config.summary.error", error.message ?: error.javaClass.simpleName)
                     return@finishOnUiThread
                 }

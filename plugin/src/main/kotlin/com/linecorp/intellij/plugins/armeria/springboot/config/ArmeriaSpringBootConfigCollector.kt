@@ -43,7 +43,7 @@ object ArmeriaSpringBootConfigCollector {
         }, scope, null)
         return files.values.sortedBy { it.path }.mapNotNull { vf ->
             val text = try {
-                String(vf.contentsToByteArray(), Charsets.UTF_8)
+                String(vf.contentsToByteArray(), vf.charset)
             } catch (exception: ProcessCanceledException) {
                 throw exception
             } catch (_: Exception) {
