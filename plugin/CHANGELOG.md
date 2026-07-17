@@ -3,6 +3,8 @@
 ## [Unreleased]
 ### Added
 
+- Extended Armeria Clients explorer with Retrofit/WebClient transport detection, client decorator collection, EndpointGroup usage, and a structured detail panel.
+
 ### Changed
 
 ### Deprecated

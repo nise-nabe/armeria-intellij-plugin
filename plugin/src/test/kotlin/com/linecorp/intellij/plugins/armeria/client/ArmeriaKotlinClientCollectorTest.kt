@@ -137,6 +137,12 @@ class ArmeriaKotlinClientCollectorTest : ArmeriaClientFixtureTestBase() {
                 public static WebClientBuilder builder(String uri) {
                     return null;
                 }
+
+                public static WebClientBuilder builder(
+                        com.linecorp.armeria.common.SessionProtocol protocol,
+                        com.linecorp.armeria.client.endpoint.EndpointGroup endpointGroup) {
+                    return null;
+                }
             }
             """.trimIndent(),
         )
@@ -145,6 +151,13 @@ class ArmeriaKotlinClientCollectorTest : ArmeriaClientFixtureTestBase() {
             package com.example;
 
             public final class WebClientBuilder {
+                public WebClientBuilder decorator(Object decorator) {
+                    return this;
+                }
+
+                public WebClient build() {
+                    return null;
+                }
             }
             """.trimIndent(),
         )
@@ -152,6 +165,207 @@ class ArmeriaKotlinClientCollectorTest : ArmeriaClientFixtureTestBase() {
         val endpoints = ArmeriaClientCollector.collect(project)
 
         assertTrue(endpoints.isEmpty())
+    }
+
+    fun testCollectWebClientWithDecoratorsFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+            import com.linecorp.armeria.client.logging.LoggingClient
+            import com.linecorp.armeria.client.retrying.RetryingClient
+
+            fun main() {
+                WebClient.builder("https://example.com")
+                    .decorator(LoggingClient.newDecorator())
+                    .decorator(RetryingClient.newDecorator())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals(listOf("Logging", "Retrying"), endpoint.decorators)
+    }
+
+    fun testCollectWebClientWithEndpointGroupFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+            import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup
+            import com.linecorp.armeria.common.SessionProtocol
+
+            fun main() {
+                WebClient.builder(SessionProtocol.HTTP, DnsAddressEndpointGroup.of("example.com", 8080))
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("example.com", endpoint.uri)
+        assertTrue(endpoint.endpointGroup!!.startsWith("DnsAddressEndpointGroup"))
+    }
+
+    fun testCollectRetrofitBuilderWithWebClientTransportFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+            import com.linecorp.armeria.client.retrofit2.ArmeriaRetrofit
+
+            fun main() {
+                ArmeriaRetrofit.builder(WebClient.of("https://api.example.com")).build()
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+
+        assertEquals(1, endpoints.size)
+        val endpoint = endpoints.single()
+        assertEquals("Retrofit", endpoint.clientType)
+        assertEquals("https://api.example.com", endpoint.uri)
+        assertEquals("WebClient transport", endpoint.transport)
+    }
+
+    fun testCollectRetrofitOfWithInlineWebClientDecoratorsFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+            import com.linecorp.armeria.client.brave.BraveClient
+            import com.linecorp.armeria.client.retrofit2.ArmeriaRetrofit
+
+            fun main() {
+                ArmeriaRetrofit.of(
+                    WebClient.builder("https://api.example.com")
+                        .decorator(BraveClient.newDecorator())
+                        .build(),
+                )
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("https://api.example.com", endpoint.uri)
+        assertEquals("WebClient transport", endpoint.transport)
+        assertEquals(listOf("Brave"), endpoint.decorators)
+    }
+
+    fun testCollectRetrofitBuilderWithWebClientEndpointGroupTransportFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+            import com.linecorp.armeria.client.endpoint.EndpointGroup
+            import com.linecorp.armeria.client.retrofit2.ArmeriaRetrofit
+            import com.linecorp.armeria.common.SessionProtocol
+
+            fun main() {
+                ArmeriaRetrofit.builder(
+                    WebClient.builder(SessionProtocol.HTTP, EndpointGroup.of("https://lb.example.com")).build(),
+                ).build()
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("Retrofit", endpoint.clientType)
+        assertEquals("https://lb.example.com", endpoint.uri)
+        assertEquals("WebClient transport", endpoint.transport)
+        assertTrue(endpoint.endpointGroup!!.startsWith("EndpointGroup"))
+    }
+
+    fun testCollectRetrofitBuilderWithEndpointGroupFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.endpoint.EndpointGroup
+            import com.linecorp.armeria.client.retrofit2.ArmeriaRetrofit
+            import com.linecorp.armeria.common.SessionProtocol
+
+            fun main() {
+                ArmeriaRetrofit.builder(SessionProtocol.HTTPS, EndpointGroup.of("https://lb.example.com"))
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("Retrofit", endpoint.clientType)
+        assertEquals("https://lb.example.com", endpoint.uri)
+        assertTrue(endpoint.endpointGroup!!.startsWith("EndpointGroup"))
+        assertNull(endpoint.transport)
+    }
+
+    fun testNestedWebClientFactoryInsideRetrofitBuilderIsNotDuplicatedFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+            import com.linecorp.armeria.client.retrofit2.ArmeriaRetrofit
+
+            fun main() {
+                ArmeriaRetrofit.builder(WebClient.builder("https://api.example.com")).build()
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+
+        assertEquals(1, endpoints.size)
+        val endpoint = endpoints.single()
+        assertEquals("Retrofit", endpoint.clientType)
+        assertEquals("https://api.example.com", endpoint.uri)
+        assertEquals("WebClient transport", endpoint.transport)
+    }
+
+    fun testCollectRetrofitBuilderWithDecoratedWebClientBuilderTransportFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+            import com.linecorp.armeria.client.logging.LoggingClient
+            import com.linecorp.armeria.client.retrofit2.ArmeriaRetrofit
+
+            fun main() {
+                ArmeriaRetrofit.builder(
+                    WebClient.builder("https://api.example.com")
+                        .decorator(LoggingClient.newDecorator()),
+                ).build()
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+
+        assertEquals(1, endpoints.size)
+        val endpoint = endpoints.single()
+        assertEquals("Retrofit", endpoint.clientType)
+        assertEquals("https://api.example.com", endpoint.uri)
+        assertEquals("WebClient transport", endpoint.transport)
+        assertEquals(listOf("Logging"), endpoint.decorators)
     }
 
 }
