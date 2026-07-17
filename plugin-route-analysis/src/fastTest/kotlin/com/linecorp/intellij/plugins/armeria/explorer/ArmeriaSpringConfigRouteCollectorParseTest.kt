@@ -4,10 +4,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class ArmeriaSpringYamlRouteCollectorParseTest {
+class ArmeriaSpringConfigRouteCollectorParseTest {
     @Test
     fun parseYaml_scalarProtocolsAndAddressFirst() {
-        val config = ArmeriaSpringYamlRouteCollector.parseYaml(
+        val config = ArmeriaSpringConfigRouteCollector.parseYaml(
             """
             armeria:
               ports:
@@ -33,7 +33,7 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
     @Test
     fun parseYaml_protocolsBeforePortAndMultiProtocol() {
-        val config = ArmeriaSpringYamlRouteCollector.parseYaml(
+        val config = ArmeriaSpringConfigRouteCollector.parseYaml(
             """
             armeria:
               ports:
@@ -52,7 +52,7 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
     @Test
     fun parseYaml_blockAndFlowIncludeLists() {
-        val block = ArmeriaSpringYamlRouteCollector.parseYaml(
+        val block = ArmeriaSpringConfigRouteCollector.parseYaml(
             """
             armeria:
               internal-services:
@@ -63,7 +63,7 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
         )
         assertEquals(setOf("docs", "health"), block.includes)
 
-        val flow = ArmeriaSpringYamlRouteCollector.parseYaml(
+        val flow = ArmeriaSpringConfigRouteCollector.parseYaml(
             """
             armeria:
               internal-services:
@@ -75,7 +75,7 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
     @Test
     fun parseYaml_includeAllExpandsActuator() {
-        val config = ArmeriaSpringYamlRouteCollector.parseYaml(
+        val config = ArmeriaSpringConfigRouteCollector.parseYaml(
             """
             armeria:
               internal-services:
@@ -92,7 +92,7 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
     @Test
     fun parseYaml_scopesPathKeysToArmeriaBlock() {
-        val config = ArmeriaSpringYamlRouteCollector.parseYaml(
+        val config = ArmeriaSpringConfigRouteCollector.parseYaml(
             """
             other:
               docs-path: /wrong
@@ -111,7 +111,7 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
     @Test
     fun parseYaml_acceptsCamelCaseInternalServices() {
-        val config = ArmeriaSpringYamlRouteCollector.parseYaml(
+        val config = ArmeriaSpringConfigRouteCollector.parseYaml(
             """
             armeria:
               internalServices:
@@ -130,7 +130,7 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
     @Test
     fun parseProperties_sparsePortIndexes() {
-        val config = ArmeriaSpringYamlRouteCollector.parseProperties(
+        val config = ArmeriaSpringConfigRouteCollector.parseProperties(
             """
             armeria.ports[0].port=8080
             armeria.ports[0].protocols[0]=http
@@ -151,7 +151,7 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
     @Test
     fun parseProperties_includeAndPathsScopedToArmeria() {
-        val config = ArmeriaSpringYamlRouteCollector.parseProperties(
+        val config = ArmeriaSpringConfigRouteCollector.parseProperties(
             """
             other.docs-path=/wrong
             armeria.docs-path=/internal/docs
@@ -167,7 +167,7 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
     @Test
     fun parseProperties_acceptsCamelCaseInternalServices() {
-        val config = ArmeriaSpringYamlRouteCollector.parseProperties(
+        val config = ArmeriaSpringConfigRouteCollector.parseProperties(
             """
             armeria.internalServices.include=docs,metrics
             armeria.internalServices.port=19090
@@ -180,7 +180,7 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
     @Test
     fun parseProperties_commaSeparatedProtocols() {
-        val config = ArmeriaSpringYamlRouteCollector.parseProperties(
+        val config = ArmeriaSpringConfigRouteCollector.parseProperties(
             """
             armeria.ports[0].port=8080
             armeria.ports[0].protocols=http,https
@@ -195,12 +195,12 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
     @Test
     fun parseProperties_includeAllAndIndexedIncludeEntries() {
-        val all = ArmeriaSpringYamlRouteCollector.parseProperties(
+        val all = ArmeriaSpringConfigRouteCollector.parseProperties(
             "armeria.internal-services.include=all",
         )
         assertEquals(setOf("docs", "health", "metrics", "actuator"), all.includes)
 
-        val indexed = ArmeriaSpringYamlRouteCollector.parseProperties(
+        val indexed = ArmeriaSpringConfigRouteCollector.parseProperties(
             """
             armeria.internal-services.include[0]=docs
             armeria.internal-services.include[1]=actuator
@@ -211,7 +211,7 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
     @Test
     fun parseProperties_acceptsColonDelimiterAndPlaceholders() {
-        val config = ArmeriaSpringYamlRouteCollector.parseProperties(
+        val config = ArmeriaSpringConfigRouteCollector.parseProperties(
             """
             armeria.ports[0].port: ${'$'}{SERVER_PORT:8080}
             armeria.ports[0].protocols: http,https
@@ -234,7 +234,7 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
     @Test
     fun parseYaml_ignoresServerPortOutsideArmeria() {
-        val config = ArmeriaSpringYamlRouteCollector.parseYaml(
+        val config = ArmeriaSpringConfigRouteCollector.parseYaml(
             """
             server:
               port: 9999
@@ -252,7 +252,7 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
     @Test
     fun parseProperties_lastDuplicateKeyWins() {
-        val config = ArmeriaSpringYamlRouteCollector.parseProperties(
+        val config = ArmeriaSpringConfigRouteCollector.parseProperties(
             """
             armeria.docs-path=/stale/docs
             armeria.health-check-path=/stale/health
@@ -273,7 +273,7 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
     @Test
     fun parseProperties_ignoresCommentedOutKeys() {
-        val config = ArmeriaSpringYamlRouteCollector.parseProperties(
+        val config = ArmeriaSpringConfigRouteCollector.parseProperties(
             """
             # armeria.ports[0].port=9999
             ! armeria.ports[0].port=8888
@@ -294,7 +294,7 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
     @Test
     fun parseYaml_inlineScalarCommentsStrippedBeforeTokenization() {
-        val config = ArmeriaSpringYamlRouteCollector.parseYaml(
+        val config = ArmeriaSpringConfigRouteCollector.parseYaml(
             """
             armeria:
               ports:
@@ -311,7 +311,7 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
     @Test
     fun parseYaml_ignoresNestedArmeriaKey() {
-        val config = ArmeriaSpringYamlRouteCollector.parseYaml(
+        val config = ArmeriaSpringConfigRouteCollector.parseYaml(
             """
             wrapper:
               armeria:
@@ -330,7 +330,7 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
     @Test
     fun parseYaml_ignoresNestedPortsUnderArmeriaChild() {
-        val config = ArmeriaSpringYamlRouteCollector.parseYaml(
+        val config = ArmeriaSpringConfigRouteCollector.parseYaml(
             """
             armeria:
               foo:
@@ -354,7 +354,7 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
     @Test
     fun parseYaml_ignoresNestedIncludeUnderInternalServicesChild() {
-        val config = ArmeriaSpringYamlRouteCollector.parseYaml(
+        val config = ArmeriaSpringConfigRouteCollector.parseYaml(
             """
             armeria:
               internal-services:
@@ -369,7 +369,7 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
     @Test
     fun parseProperties_protocolIndexLastWins() {
-        val config = ArmeriaSpringYamlRouteCollector.parseProperties(
+        val config = ArmeriaSpringConfigRouteCollector.parseProperties(
             """
             armeria.ports[0].port=8080
             armeria.ports[0].protocols[0]=http
@@ -386,7 +386,7 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
 
     @Test
     fun parseProperties_commaListReplacesPriorIndexedProtocols() {
-        val config = ArmeriaSpringYamlRouteCollector.parseProperties(
+        val config = ArmeriaSpringConfigRouteCollector.parseProperties(
             """
             armeria.ports[0].port=8080
             armeria.ports[0].protocols[0]=http
@@ -399,5 +399,32 @@ class ArmeriaSpringYamlRouteCollectorParseTest {
             listOf(SpringArmeriaPortBinding("8080", listOf("H2C"))),
             config.ports,
         )
+    }
+
+    @Test
+    fun parseYaml_commentOnlyScalarValueTreatedAsEmpty() {
+        val config = ArmeriaSpringConfigRouteCollector.parseYaml(
+            """
+            armeria:
+              internal-services:
+                include: # commented out
+                  - health
+            """.trimIndent(),
+        )
+
+        assertEquals(setOf("health"), config.includes)
+    }
+
+    @Test
+    fun parseYaml_commentOnlyInlineIncludeIgnored() {
+        val config = ArmeriaSpringConfigRouteCollector.parseYaml(
+            """
+            armeria:
+              internal-services:
+                include: # docs disabled
+            """.trimIndent(),
+        )
+
+        assertTrue(config.includes.isEmpty())
     }
 }

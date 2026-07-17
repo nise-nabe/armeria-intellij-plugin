@@ -16,13 +16,13 @@ internal data class SpringArmeriaPortBinding(
 internal data class SpringArmeriaConfig(
     val ports: List<SpringArmeriaPortBinding> = emptyList(),
     val includes: Set<String> = emptySet(),
-    val docsPath: String = ArmeriaSpringYamlRouteCollector.DEFAULT_DOCS_PATH,
-    val healthPath: String = ArmeriaSpringYamlRouteCollector.DEFAULT_HEALTH_PATH,
-    val metricsPath: String = ArmeriaSpringYamlRouteCollector.DEFAULT_METRICS_PATH,
+    val docsPath: String = ArmeriaSpringConfigRouteCollector.DEFAULT_DOCS_PATH,
+    val healthPath: String = ArmeriaSpringConfigRouteCollector.DEFAULT_HEALTH_PATH,
+    val metricsPath: String = ArmeriaSpringConfigRouteCollector.DEFAULT_METRICS_PATH,
     val internalServicesPort: String? = null,
 )
 
-internal object ArmeriaSpringYamlRouteCollector {
+internal object ArmeriaSpringConfigRouteCollector {
     const val DEFAULT_DOCS_PATH = "/internal/docs"
     const val DEFAULT_HEALTH_PATH = "/internal/healthcheck"
     const val DEFAULT_METRICS_PATH = "/internal/metrics"
@@ -639,6 +639,9 @@ internal object ArmeriaSpringYamlRouteCollector {
             (trimmed.startsWith("'") && trimmed.endsWith("'"))
         ) {
             return trimmed
+        }
+        if (trimmed.startsWith("#")) {
+            return ""
         }
         return trimmed.replace(YAML_INLINE_COMMENT, "").trimEnd()
     }

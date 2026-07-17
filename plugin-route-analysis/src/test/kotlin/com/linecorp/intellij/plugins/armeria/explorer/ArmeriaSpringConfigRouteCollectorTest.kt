@@ -4,7 +4,7 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 import com.linecorp.intellij.plugins.armeria.message
 
-class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
+class ArmeriaSpringConfigRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
     fun testCollectPortsAndInternalServicesFromYaml() {
         val psiFile = myFixture.configureByText(
             "application.yml",
@@ -21,7 +21,7 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
         )
 
         val routes = mutableListOf<ArmeriaRoute>()
-        ArmeriaSpringYamlRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
 
         assertTrue(routes.any { it.target.contains("8080") && it.path == ":8080" })
         assertTrue(routes.any { it.isDocService && it.path == "/internal/docs" })
@@ -52,7 +52,7 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
         )
 
         val routes = mutableListOf<ArmeriaRoute>()
-        ArmeriaSpringYamlRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
 
         assertTrue(routes.any { it.target.contains("9090") && it.path == ":9090" })
         assertTrue(routes.any { it.isDocService })
@@ -81,7 +81,7 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
         )
 
         val routes = mutableListOf<ArmeriaRoute>()
-        ArmeriaSpringYamlRouteCollector.collect(
+        ArmeriaSpringConfigRouteCollector.collect(
             project,
             GlobalSearchScope.projectScope(project),
             routes,
@@ -107,7 +107,7 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
         )
 
         val routes = mutableListOf<ArmeriaRoute>()
-        ArmeriaSpringYamlRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
 
         assertTrue(routes.any { it.target.contains("7070") && it.target.contains("[dev]") })
         assertTrue(routes.any { it.isDocService && it.target.contains("[dev]") })
@@ -128,7 +128,7 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
         )
 
         val routes = mutableListOf<ArmeriaRoute>()
-        ArmeriaSpringYamlRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
 
         assertTrue(routes.any { it.target.contains("8080") })
         assertFalse(routes.any { it.target.contains("9999") })
@@ -148,7 +148,7 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
         )
 
         val routes = mutableListOf<ArmeriaRoute>()
-        ArmeriaSpringYamlRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
 
         assertTrue(routes.any { it.isDocService })
         assertFalse(routes.any { it.path == "/actuator" })
@@ -167,7 +167,7 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
         )
 
         val routes = mutableListOf<ArmeriaRoute>()
-        ArmeriaSpringYamlRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
 
         assertTrue(routes.any { it.isDocService })
         assertTrue(routes.any { it.path == "/internal/healthcheck" && it.routeMatch == RouteMatch.CONFIG })
@@ -190,7 +190,7 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
         )
 
         val routes = mutableListOf<ArmeriaRoute>()
-        ArmeriaSpringYamlRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
 
         assertTrue(routes.any { it.isDocService && it.path == "/internal/docs" })
         assertFalse(routes.any { it.path == "/wrong" })
@@ -208,7 +208,7 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
         )
 
         val routes = mutableListOf<ArmeriaRoute>()
-        ArmeriaSpringYamlRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
 
         val portRoute = routes.single { it.target.contains("8443") }
         assertEquals("HTTPS", portRoute.protocol)
@@ -231,7 +231,7 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
         )
 
         val routes = mutableListOf<ArmeriaRoute>()
-        ArmeriaSpringYamlRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
 
         val portRoute = routes.single { it.target.contains("8080") }
         assertEquals("HTTP, HTTPS", portRoute.protocol)
@@ -252,7 +252,7 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
             """.trimIndent(),
         )
         val configRoutes = mutableListOf<ArmeriaRoute>()
-        ArmeriaSpringYamlRouteCollector.collectFromPsiFile(configFile, configRoutes, mutableSetOf())
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(configFile, configRoutes, mutableSetOf())
         assertTrue(configRoutes.isNotEmpty())
         assertTrue(configRoutes.filter { it.isDocService }.all { it.routeMatch == RouteMatch.NON_HTTP })
         assertTrue(
@@ -291,7 +291,7 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
         )
 
         val routes = mutableListOf<ArmeriaRoute>()
-        ArmeriaSpringYamlRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
 
         val portRoute = routes.single { it.target.contains("8080") }
         assertEquals("HTTP", portRoute.protocol)
@@ -310,7 +310,7 @@ class ArmeriaSpringYamlRouteCollectorTest : LightJavaCodeInsightFixtureTestCase(
         )
 
         val routes = mutableListOf<ArmeriaRoute>()
-        ArmeriaSpringYamlRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
 
         val health = routes.single { it.path == "/internal/healthcheck" }
         assertEquals(RouteMatch.CONFIG, health.routeMatch)

@@ -91,7 +91,7 @@ object ArmeriaRouteCollector {
                 routes,
                 seenServiceRegistrations,
             )
-            ArmeriaSpringYamlRouteCollector.collect(
+            ArmeriaSpringConfigRouteCollector.collect(
                 project,
                 scope,
                 routes,
