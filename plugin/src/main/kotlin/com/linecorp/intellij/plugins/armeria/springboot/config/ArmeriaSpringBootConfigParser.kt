@@ -59,7 +59,7 @@ object ArmeriaSpringBootConfigParser {
                         val listPath = "${parent.path}[${parent.nextListIndex()}]"
                         stack.addLast(YamlFrame(indent, listPath))
                         val content = trimmed.removePrefix("- ").trim()
-                        if (':' in content) {
+                        if (isInlineMappingListItem(content)) {
                             val ci = content.indexOf(':')
                             val key = content.substring(0, ci).trim()
                             val value = content.substring(ci + 1).trim()
@@ -93,6 +93,15 @@ object ArmeriaSpringBootConfigParser {
             }
         }
         return result
+    }
+
+    private fun isInlineMappingListItem(content: String): Boolean {
+        val ci = content.indexOf(':')
+        if (ci < 0) {
+            return false
+        }
+        val afterColon = content.substring(ci + 1)
+        return afterColon.isEmpty() || afterColon.first().isWhitespace()
     }
 
     private fun unquote(v: String): String {

@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.springboot.config
 
+import com.linecorp.intellij.plugins.armeria.message
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -52,6 +53,20 @@ class ArmeriaSpringBootConfigParserTest {
     }
 
     @Test
+    fun parseYaml_listItemWithColonInScalar_isNotTreatedAsInlineMapping() {
+        val m = ArmeriaSpringBootConfigParser.flattenYaml(
+            """
+            armeria:
+              allowed-origins:
+                - http://example.com
+                - https://foo.bar:8080/path
+            """.trimIndent(),
+        )
+        assertEquals("http://example.com", m["armeria.allowed-origins[0]"])
+        assertEquals("https://foo.bar:8080/path", m["armeria.allowed-origins[1]"])
+    }
+
+    @Test
     fun parseYaml_topLevelListDoesNotThrow() {
         val m = ArmeriaSpringBootConfigParser.parseYaml(
             """
@@ -95,7 +110,7 @@ class ArmeriaSpringBootConfigParserTest {
     @Test
     fun documentationFor_resolvesIndexedKeys() {
         assertEquals(
-            ArmeriaSpringBootConfigKeys.DOCUMENTATION["armeria.ports"],
+            message("springboot.config.doc.armeria.ports"),
             ArmeriaSpringBootConfigKeys.documentationFor("armeria.ports[0].port"),
         )
     }
