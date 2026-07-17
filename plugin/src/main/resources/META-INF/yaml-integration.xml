@@ -1,0 +1,6 @@
+<idea-plugin>
+    <extensions defaultExtensionNs="com.intellij">
+        <completion.contributor language="yaml"
+                                implementationClass="com.linecorp.intellij.plugins.armeria.springboot.config.ArmeriaSpringBootYamlCompletionContributor" />
+    </extensions>
+</idea-plugin>
