@@ -302,7 +302,10 @@ internal object ArmeriaSpringConfigRouteCollector {
                 httpMethod = spec.httpMethod,
                 routeMatch = spec.routeMatch,
                 isDocService = spec.isDocService,
-                dedupeKey = profileAwareKey("${spec.id}:$path", profile),
+                dedupeKey = profileAwareKey(
+                    "${spec.id}:$path:${config.internalServicesPort.orEmpty()}",
+                    profile,
+                ),
                 routes = routes,
                 seenConfigRoutes = seenConfigRoutes,
             )

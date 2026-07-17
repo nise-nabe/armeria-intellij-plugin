@@ -299,6 +299,38 @@ class ArmeriaSpringConfigRouteCollectorTest : LightJavaCodeInsightFixtureTestCas
         assertFalse(routes.any { it.path.contains("#") })
     }
 
+    fun testInternalServiceDedupeIncludesPortAcrossConfigFiles() {
+        myFixture.configureByText(
+            "application.yml",
+            """
+            armeria:
+              internal-services:
+                include: docs
+                port: 17070
+            """.trimIndent(),
+        )
+        myFixture.addFileToProject(
+            "application.properties",
+            """
+            armeria.internal-services.include=docs
+            armeria.internal-services.port=18080
+            """.trimIndent(),
+        )
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        ArmeriaSpringConfigRouteCollector.collect(
+            project,
+            GlobalSearchScope.projectScope(project),
+            routes,
+            mutableSetOf(),
+        )
+
+        val docRoutes = routes.filter { it.isDocService }
+        assertEquals(2, docRoutes.size)
+        assertTrue(docRoutes.any { it.target.contains(":17070") })
+        assertTrue(docRoutes.any { it.target.contains(":18080") })
+    }
+
     fun testConfigRoutesSupportGenerateHttpWithoutRuntimeSemantics() {
         val psiFile = myFixture.configureByText(
             "application.yml",
