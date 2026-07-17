@@ -69,6 +69,7 @@ config-parser findings). Use it as a final pass before requesting review.
 - [ ] Gradle MCP docs match the pinned server version in `install-gradle-tapi-mcp.sh`
 - [ ] Avoid environment-specific assertions (`DISPLAY=:1`) in durable docs — phrase as sandbox-relative
 - [ ] MCP config uses `stdio` transport; repo root derived from script path, not fragile `pwd`
+- [ ] When editing a skill that also lives under `.github/skills/`, update **both** copies (GitHub Copilot agents load `.github/skills/…`)
 - [ ] PR description is a feature summary (not a "review fixes" changelog) per `pr-description-format.mdc`
 
 ## Top recurring Copilot themes (frequency)

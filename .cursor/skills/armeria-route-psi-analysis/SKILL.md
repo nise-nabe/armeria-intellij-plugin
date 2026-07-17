@@ -158,10 +158,12 @@ tokens) — fixing one call site while leaving siblings is a recurring miss.
 
 When emitting routes that are not PSI call-site registrations:
 
-1. **`RouteMatch` must match HTTP capability** — `RouteMatch.NON_HTTP` disables “Generate HTTP
-   Request” (supported only for gRPC) and drops method labels. Use `NON_HTTP` only for true
-   non-HTTP protocols (gRPC, Thrift, DocService). HTTP config routes (health/metrics/actuator)
-   use `RouteMatch.CONFIG` (or another HTTP-capable match still excluded from duplicate index).
+1. **`RouteMatch` must match HTTP capability** — “Generate HTTP Request” supports many HTTP
+   `RouteMatch` values (`ANNOTATED_HTTP`, `SERVICE`, `CONFIG`, `RUNTIME`, …). For
+   `RouteMatch.NON_HTTP` it is enabled **only for gRPC**; other `NON_HTTP` routes (Thrift,
+   DocService, port bindings) are unsupported and method labels are dropped. Use `NON_HTTP`
+   only for true non-HTTP protocols. HTTP config routes (health/metrics/actuator) use
+   `RouteMatch.CONFIG` (or another HTTP-capable match still excluded from duplicate index).
 2. **Distinct display paths** — Route Explorer renders pill + `path`. Port bindings must not use
    `path = "/"` (collides with real `/` routes); use a synthetic form such as `":<port>"`.
 3. **Multi-value fields in labels** — if config has multiple protocols, store/join all of them

@@ -3,7 +3,8 @@ name: armeria-route-psi-analysis
 description: >-
   PSI and route-analysis implementation patterns for plugin-route-analysis. Use when
   editing ArmeriaRouteCollector, decorator/registration collectors, duplicate detection,
-  virtualHost scoping, annotated-service parsing, or related regression tests.
+  virtualHost scoping, annotated-service parsing, Spring YAML/properties config collectors,
+  or related regression tests.
 ---
 
 # Armeria route PSI analysis
@@ -15,6 +16,7 @@ collectors. Apply it when changing code under `plugin-route-analysis/`.
 
 - `ArmeriaRouteCollector`, `ArmeriaKotlinRouteCollector`, extended-registration collectors
 - `ArmeriaRouteSupport`, decorator/annotated metadata helpers
+- Spring Boot config collectors (`ArmeriaSpringConfigRouteCollector` and related)
 - Duplicate route/registration inspections and indexes
 - Java or Kotlin fixture tests for route discovery
 
@@ -105,12 +107,80 @@ Preferred approach (already used in `ArmeriaRouteCollector`):
 
 Do not rescan fallback-processed files twice in one collection pass.
 
+### FilenameIndex: name-driven lookup, not extension scans
+
+When collecting a small, known filename set (e.g. `application*.{yml,yaml,properties}`):
+
+```kotlin
+// Bad — walks every YAML/properties file in large Spring repos on each recompute
+FilenameIndex.getAllFilesByExt(project, "yml", scope)
+    .filter { isApplicationConfigFile(it.name) }
+
+// Good — filter filenames first, then resolve only matching VirtualFiles
+FilenameIndex.getAllFilenames(project)
+    .asSequence()
+    .filter { isApplicationConfigFile(it) }
+    .flatMap { name -> FilenameIndex.getVirtualFilesByName(name, scope) }
+    .sortedWith(compareBy({ it.path }, { it.name }))
+```
+
+Sort candidates before any “first wins” dedupe — `FilenameIndex` iteration order is not stable,
+so unsorted first-wins produces non-deterministic Route Explorer output across refreshes.
+
+## Hand-rolled YAML / `.properties` parsers
+
+Prefer a real parser when available. When keeping a lightweight text parser (as in
+`ArmeriaSpringConfigRouteCollector`), Copilot repeatedly flags the same gaps (PR #211):
+
+### YAML
+
+| Rule | Why |
+|------|-----|
+| Strip trailing `# …` on **unquoted** scalars, list items, and inline mapping values | Otherwise `protocols: http # primary` becomes tokens `http`, `#`, `primary` |
+| Treat comment-only values (`include: # comment`) as empty | Leading `#` is not matched by `\s+#.*$` alone |
+| Do **not** strip inside quoted strings | `"# not a comment"` must stay intact |
+| Match nested keys only at the **parent block’s indentation level** | First-anywhere `ports:` can pick up `armeria:\n  foo:\n    ports:` |
+
+Apply stripping in **every** scalar path (inline mapping, nested list, `readYamlScalar`, include
+tokens) — fixing one call site while leaving siblings is a recurring miss.
+
+### Spring / Java `.properties`
+
+| Rule | Why |
+|------|-----|
+| Last occurrence of a key wins | Spring/Java Properties semantics; `Regex.find` returns the first match |
+| Indexed keys (`ports[0].protocols[0]`, `include[0]`) overwrite that index, not union | Appending then `distinct()` keeps stale values |
+| Unindexed repeats (`include=docs` then `include=health`) are last-wins, not a set union | |
+| Accept both `=` and `:` delimiters | Spring allows either |
+| Anchor patterns to line start (`(?m)^…`) and skip `#` / `!` comment lines | Unanchored regex matches `# armeria.ports[0].port=8080` |
+
+## Synthetic / config-sourced route emission
+
+When emitting routes that are not PSI call-site registrations:
+
+1. **`RouteMatch` must match HTTP capability** — “Generate HTTP Request” supports many HTTP
+   `RouteMatch` values (`ANNOTATED_HTTP`, `SERVICE`, `CONFIG`, `RUNTIME`, …). For
+   `RouteMatch.NON_HTTP` it is enabled **only for gRPC**; other `NON_HTTP` routes (Thrift,
+   DocService, port bindings) are unsupported and method labels are dropped. Use `NON_HTTP`
+   only for true non-HTTP protocols. HTTP config routes (health/metrics/actuator) use
+   `RouteMatch.CONFIG` (or another HTTP-capable match still excluded from duplicate index).
+2. **Distinct display paths** — Route Explorer renders pill + `path`. Port bindings must not use
+   `path = "/"` (collides with real `/` routes); use a synthetic form such as `":<port>"`.
+3. **Multi-value fields in labels** — if config has multiple protocols, store/join all of them
+   in `protocol` / summary text, not only `protocols.first()`.
+4. **Dedupe keys include distinguishing fields** — e.g. internal-service path alone is insufficient
+   when `internal-services.port` differs across `application.yml` vs `.properties`; include port
+   (and profile) in the key, or encode explicit precedence.
+5. **Class names match scope** — if a collector parses YAML **and** properties, do not keep a
+   `*Yaml*` type name; prefer a format-neutral name (`ArmeriaSpringConfigRouteCollector`).
+
 ## Proto / gRPC / Spring routes
 
 - gRPC/proto routes: use Proto Editor PSI when available; cache merged proto routes
   (`mergeProtoRoutesIfEnabled`) to avoid repeated merges.
-- Spring Boot YAML/Java config collectors: guard optional Kotlin/Spring PSI behind availability
-  checks; keep Spring-specific code in `ArmeriaSpringBootRouteCollector`.
+- Spring Boot config collectors (`ArmeriaSpringConfigRouteCollector`, Java `@Bean` collectors):
+  follow the hand-rolled parser and synthetic-route rules above; guard optional Spring/Kotlin PSI
+  behind availability checks.
 - GraphQL / Thrift deduplication: align dedupe keys with HTTP route keys (path + method + host).
 
 ## Regression tests
