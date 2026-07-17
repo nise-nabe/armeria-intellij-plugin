@@ -216,9 +216,11 @@ object ArmeriaRouteDuplicateIndex {
     private fun matchesAllHttpMethods(route: ArmeriaRoute): Boolean =
         when (route.routeMatch) {
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.ANNOTATED_SERVICE -> true
-            RouteMatch.ROUTE_FLUENT -> route.httpMethod.isBlank()
+            RouteMatch.ROUTE_FLUENT,
+            RouteMatch.DELEGATED_SPRING_MVC,
+            RouteMatch.DELEGATED_SERVLET,
+            -> route.httpMethod.isBlank()
             RouteMatch.ANNOTATED_HTTP, RouteMatch.NON_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG,
-            RouteMatch.DELEGATED_SPRING_MVC, RouteMatch.DELEGATED_SERVLET,
             RouteMatch.FILE_SERVICE, RouteMatch.HEALTH_CHECK,
             RouteMatch.VIRTUAL_HOST, RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
             -> false

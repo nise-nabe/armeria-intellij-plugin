@@ -1,12 +1,12 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 internal object ArmeriaServletMountSupport {
-    private val SPRING_MVC_SERVICE_MARKERS = setOf(
+    private val SPRING_MVC_SERVICE_NAMES = setOf(
         "TomcatService",
         "SpringBootService",
     )
 
-    private val SERVLET_SERVICE_MARKERS = setOf(
+    private val SERVLET_SERVICE_NAMES = setOf(
         "JettyService",
     )
 
@@ -19,15 +19,14 @@ internal object ArmeriaServletMountSupport {
         if (routeMatch !in MOUNT_ROUTE_MATCHES) {
             return null
         }
-        return when {
-            SPRING_MVC_SERVICE_MARKERS.any { marker -> target.contains(marker) } -> DelegationKind.SPRING_MVC
-            SERVLET_SERVICE_MARKERS.any { marker -> target.contains(marker) } -> DelegationKind.SERVLET
+        val simpleName = targetSimpleName(target)
+        return when (simpleName) {
+            in SPRING_MVC_SERVICE_NAMES -> DelegationKind.SPRING_MVC
+            in SERVLET_SERVICE_NAMES -> DelegationKind.SERVLET
             else -> null
         }
     }
 
-    fun delegatedRouteMatch(kind: DelegationKind): RouteMatch = when (kind) {
-        DelegationKind.SPRING_MVC -> RouteMatch.DELEGATED_SPRING_MVC
-        DelegationKind.SERVLET -> RouteMatch.DELEGATED_SERVLET
-    }
+    private fun targetSimpleName(target: String): String =
+        target.substringBefore('(').substringAfterLast('.').trim()
 }

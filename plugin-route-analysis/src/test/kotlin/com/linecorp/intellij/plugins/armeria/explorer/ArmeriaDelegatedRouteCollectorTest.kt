@@ -61,7 +61,7 @@ class ArmeriaDelegatedRouteCollectorTest : LightJavaCodeInsightFixtureTestCase()
         assertEquals("example.UserController#getUser()", delegatedRoute.target)
     }
 
-    fun testJettyServiceMountExposesDelegatedRoutesAsServlet() {
+    fun testJettyServiceMountIsBadgedWithoutSpringMvcChildren() {
         myFixture.configureByText(
             "Main.java",
             """
@@ -101,10 +101,87 @@ class ArmeriaDelegatedRouteCollectorTest : LightJavaCodeInsightFixtureTestCase()
 
         val mountRoute = routes.single { it.path == "/legacy" && it.routeMatch == RouteMatch.SERVICE_UNDER }
         assertEquals(DelegationKind.SERVLET, mountRoute.delegationKind)
+        // Jetty is a servlet container mount; do not invent Spring MVC children under it.
+        assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
+        assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SERVLET })
+    }
 
-        val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SERVLET }
-        assertEquals("POST", delegatedRoute.httpMethod)
-        assertEquals("/legacy/submit", delegatedRoute.path)
+    fun testTomcatMountIsBadgedWithoutSpringControllers() {
+        myFixture.configureByText(
+            "ArmeriaConfig.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.tomcat.TomcatService;
+
+            public class ArmeriaConfig {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .serviceUnder("/spring/", TomcatService.of(null))
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val mountRoute = routes.single { it.path == "/spring/" && it.routeMatch == RouteMatch.SERVICE_UNDER }
+        assertEquals(DelegationKind.SPRING_MVC, mountRoute.delegationKind)
+        assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
+    }
+
+    fun testRequestMappingMethodEnumIsResolved() {
+        myFixture.configureByText(
+            "ArmeriaConfig.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.tomcat.TomcatService;
+
+            public class ArmeriaConfig {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .serviceUnder("/spring/", TomcatService.of(null))
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "OrderController.java",
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.RequestMapping;
+            import org.springframework.web.bind.annotation.RequestMethod;
+            import org.springframework.web.bind.annotation.RestController;
+
+            @RestController
+            public class OrderController {
+                @RequestMapping(path = "/orders", method = RequestMethod.POST)
+                public String create() {
+                    return "ok";
+                }
+
+                @RequestMapping(path = "/orders/{id}", method = {RequestMethod.GET, RequestMethod.HEAD})
+                public String read() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+
+        val create = delegated.single { it.path == "/spring/orders" }
+        assertEquals("POST", create.httpMethod)
+
+        val read = delegated.single { it.path == "/spring/orders/{id}" }
+        assertEquals("GET, HEAD", read.httpMethod)
     }
 
     fun testSpringBootServiceBeanMountIsDetected() {
@@ -262,6 +339,16 @@ class ArmeriaDelegatedRouteCollectorTest : LightJavaCodeInsightFixtureTestCase()
             ArmeriaServletMountSupport.detectDelegation("JettyService", RouteMatch.SERVICE_UNDER),
         )
         assertNull(ArmeriaServletMountSupport.detectDelegation("HelloService", RouteMatch.SERVICE))
+        assertNull(
+            ArmeriaServletMountSupport.detectDelegation("FooTomcatService", RouteMatch.SERVICE_UNDER),
+        )
+        assertEquals(
+            DelegationKind.SPRING_MVC,
+            ArmeriaServletMountSupport.detectDelegation(
+                "com.linecorp.armeria.server.tomcat.TomcatService",
+                RouteMatch.SERVICE_UNDER,
+            ),
+        )
     }
 
     private fun registerArmeriaStubs() {
@@ -370,9 +457,19 @@ class ArmeriaDelegatedRouteCollectorTest : LightJavaCodeInsightFixtureTestCase()
             """
             package org.springframework.web.bind.annotation;
 
+            public enum RequestMethod {
+                GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS, TRACE
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package org.springframework.web.bind.annotation;
+
             public @interface RequestMapping {
                 String[] value() default {};
                 String[] path() default {};
+                RequestMethod[] method() default {};
             }
             """.trimIndent(),
         )
