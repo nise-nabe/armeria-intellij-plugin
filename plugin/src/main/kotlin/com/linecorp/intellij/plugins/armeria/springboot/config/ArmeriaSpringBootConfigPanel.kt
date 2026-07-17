@@ -101,7 +101,8 @@ class ArmeriaSpringBootConfigPanel(private val project: Project) : SimpleToolWin
     private inner class ConfigTableCellRenderer : DefaultTableCellRenderer() {
         override fun getTableCellRendererComponent(t: JTable, v: Any?, sel: Boolean, focus: Boolean, r: Int, c: Int): Component {
             val comp = super.getTableCellRendererComponent(t, v, sel, focus, r, c)
-            toolTipText = tableModel.rowAt(r)?.let { row ->
+            val modelRow = t.convertRowIndexToModel(r)
+            toolTipText = tableModel.rowAt(modelRow)?.let { row ->
                 when (c) {
                     0 -> ArmeriaSpringBootConfigKeys.documentationFor(row.entry.key)
                     2 -> row.filePath
