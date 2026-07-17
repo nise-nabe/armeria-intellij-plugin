@@ -43,7 +43,7 @@ internal object ArmeriaSpringConfigRouteCollector {
         )
     private val PROPERTIES_INCLUDE_PATTERN =
         Regex(
-            """${PROPERTIES_LINE_START}armeria\.(?:internal-services|internalServices)\.include(?:\[\d+])?\s*$PROPERTIES_DELIMITER\s*(.+)""",
+            """${PROPERTIES_LINE_START}armeria\.(?:internal-services|internalServices)\.include(?:\[(\d+)])?\s*$PROPERTIES_DELIMITER\s*(.+)""",
             PROPERTIES_MULTILINE,
         )
     private val PROPERTIES_INTERNAL_PORT_PATTERN =
@@ -216,9 +216,26 @@ internal object ArmeriaSpringConfigRouteCollector {
                 SpringArmeriaPortBinding(port = port, protocols = protocols)
             }
 
-        val includes = mutableSetOf<String>()
+        // Unindexed keys are last-wins; indexed keys (include[N]) are last-wins per index.
+        val includesByIndex = linkedMapOf<Int, Set<String>>()
+        var unindexedIncludes: Set<String>? = null
         PROPERTIES_INCLUDE_PATTERN.findAll(text).forEach { match ->
-            includes += parseIncludeTokens(stripPropertiesInlineComment(match.groupValues[1]))
+            val rawValue = stripPropertiesInlineComment(match.groupValues[2])
+            val tokens = parseIncludeTokens(rawValue)
+            val indexGroup = match.groupValues[1]
+            if (indexGroup.isEmpty()) {
+                unindexedIncludes = tokens
+                includesByIndex.clear()
+            } else {
+                val index = indexGroup.toIntOrNull() ?: return@forEach
+                unindexedIncludes = null
+                includesByIndex[index] = tokens
+            }
+        }
+        val includes = when {
+            includesByIndex.isNotEmpty() -> includesByIndex.values.flatten().toSet()
+            unindexedIncludes != null -> unindexedIncludes
+            else -> emptySet()
         }
         return SpringArmeriaConfig(
             ports = ports,

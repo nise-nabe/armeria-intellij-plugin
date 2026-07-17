@@ -272,6 +272,26 @@ class ArmeriaSpringConfigRouteCollectorParseTest {
     }
 
     @Test
+    fun parseProperties_includeLastDuplicateKeyWins() {
+        val unindexed = ArmeriaSpringConfigRouteCollector.parseProperties(
+            """
+            armeria.internal-services.include=docs
+            armeria.internal-services.include=health
+            """.trimIndent(),
+        )
+        assertEquals(setOf("health"), unindexed.includes)
+
+        val indexed = ArmeriaSpringConfigRouteCollector.parseProperties(
+            """
+            armeria.internal-services.include[0]=docs
+            armeria.internal-services.include[0]=health
+            armeria.internal-services.include[1]=metrics
+            """.trimIndent(),
+        )
+        assertEquals(setOf("health", "metrics"), indexed.includes)
+    }
+
+    @Test
     fun parseProperties_ignoresCommentedOutKeys() {
         val config = ArmeriaSpringConfigRouteCollector.parseProperties(
             """
