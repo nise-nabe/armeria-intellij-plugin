@@ -45,6 +45,7 @@ object ArmeriaRouteCollector {
         val routes = mutableListOf<ArmeriaRoute>()
         val fallbackScannedFiles = linkedSetOf<VirtualFile>()
         val seenServiceRegistrations = mutableSetOf<String>()
+        val seenConfigRoutes = mutableSetOf<String>()
         val psiFacade = JavaPsiFacade.getInstance(project)
         val serverBuilderOnClasspath = psiFacade.findClass(ArmeriaRouteSupport.SERVER_BUILDER_CLASS, scope) != null
         val springBootArmeriaAvailable = ArmeriaRouteSupport.isSpringBootArmeriaAvailable(psiFacade, scope)
@@ -89,6 +90,12 @@ object ArmeriaRouteCollector {
                 scope,
                 routes,
                 seenServiceRegistrations,
+            )
+            ArmeriaSpringConfigRouteCollector.collect(
+                project,
+                scope,
+                routes,
+                seenConfigRoutes,
             )
         }
         ArmeriaGraphqlRouteCollector.collect(project, scope, routes)

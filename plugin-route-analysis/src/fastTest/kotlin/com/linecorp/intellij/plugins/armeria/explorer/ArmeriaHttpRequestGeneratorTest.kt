@@ -47,6 +47,19 @@ class ArmeriaHttpRequestGeneratorTest {
     }
 
     @Test
+    fun supports_configRouteWithMethod() {
+        val route = route(httpMethod = "GET", path = "/internal/healthcheck", routeMatch = RouteMatch.CONFIG)
+
+        assertTrue(ArmeriaHttpRequestGenerator.supports(route))
+        assertEquals("GET", ArmeriaHttpRequestGenerator.httpMethod(route))
+    }
+
+    @Test
+    fun supports_rejectsConfigRouteWithoutMethod() {
+        assertFalse(ArmeriaHttpRequestGenerator.supports(route(httpMethod = "", routeMatch = RouteMatch.CONFIG)))
+    }
+
+    @Test
     fun supports_rejectsExtendedNonRequestRoutes() {
         assertFalse(ArmeriaHttpRequestGenerator.supports(route(routeMatch = RouteMatch.FILE_SERVICE)))
         assertFalse(ArmeriaHttpRequestGenerator.supports(route(routeMatch = RouteMatch.VIRTUAL_HOST)))

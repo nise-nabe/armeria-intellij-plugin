@@ -22,7 +22,7 @@ object ArmeriaHttpMethodPill {
         RouteMatch.ROUTE_FLUENT -> route.httpMethod.ifBlank { "ALL" }
         RouteMatch.DECORATOR_UNDER -> "UND"
         RouteMatch.NON_HTTP -> route.protocol.uppercase()
-        RouteMatch.RUNTIME -> route.httpMethod
+        RouteMatch.RUNTIME, RouteMatch.CONFIG -> route.httpMethod
     }
 
     fun pillText(label: String): String = " $label "

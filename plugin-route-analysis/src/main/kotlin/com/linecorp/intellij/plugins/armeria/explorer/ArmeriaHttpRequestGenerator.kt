@@ -13,7 +13,7 @@ object ArmeriaHttpRequestGenerator {
         return when (route.routeMatch) {
             RouteMatch.ANNOTATED_HTTP -> route.httpMethod.isNotBlank()
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.HEALTH_CHECK, RouteMatch.ROUTE_FLUENT -> true
-            RouteMatch.RUNTIME -> route.httpMethod.isNotBlank()
+            RouteMatch.RUNTIME, RouteMatch.CONFIG -> route.httpMethod.isNotBlank()
             RouteMatch.NON_HTTP -> isGrpcRoute(route)
             RouteMatch.ANNOTATED_SERVICE, RouteMatch.FILE_SERVICE, RouteMatch.VIRTUAL_HOST,
             RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
@@ -23,7 +23,7 @@ object ArmeriaHttpRequestGenerator {
 
     fun httpMethod(route: ArmeriaRoute): String {
         return when (route.routeMatch) {
-            RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME -> route.httpMethod
+            RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG -> route.httpMethod
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.HEALTH_CHECK, RouteMatch.ROUTE_FLUENT ->
                 route.httpMethod.ifBlank { "GET" }
             RouteMatch.NON_HTTP -> {

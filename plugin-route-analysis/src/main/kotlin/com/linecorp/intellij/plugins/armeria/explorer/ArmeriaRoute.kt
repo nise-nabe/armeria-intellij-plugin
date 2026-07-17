@@ -50,7 +50,7 @@ data class ArmeriaRoute(
             RouteMatch.ROUTE_FLUENT -> httpMethod.ifBlank { message("route.explorer.method.allHttp") }
             RouteMatch.DECORATOR_UNDER -> message("route.explorer.method.decoratorUnder")
             RouteMatch.NON_HTTP -> protocol
-            RouteMatch.RUNTIME -> httpMethod
+            RouteMatch.RUNTIME, RouteMatch.CONFIG -> httpMethod
         }
 
     val shortTarget: String
