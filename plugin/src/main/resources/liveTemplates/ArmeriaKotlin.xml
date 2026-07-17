@@ -3,7 +3,7 @@
     <variable name="PATH" expression="" defaultValue="&quot;/&quot;" alwaysStopAt="true"/>
     <variable name="NAME" expression="" defaultValue="handler" alwaysStopAt="true"/>
     <variable name="PARAMS" expression="" defaultValue="" alwaysStopAt="true"/>
-    <variable name="RETURN_TYPE" expression="completeSmart()" defaultValue="String" alwaysStopAt="true"/>
+    <variable name="RETURN_TYPE" expression="" defaultValue="String" alwaysStopAt="true"/>
     <context><option name="KOTLIN_CLASS" value="true"/></context>
   </template>
   <template name="armsrv-kotlin" key="live.template.server.builder.kotlin.description" resource-bundle="messages.ArmeriaBundle" value="com.linecorp.armeria.server.Server.builder()&#10;    .http($PORT$)&#10;    .annotatedService($SERVICE$())&#10;    .build()&#10;    .start()&#10;    .join()" description="Armeria Server.builder skeleton (Kotlin)" toReformat="true" toShortenFQNames="true">

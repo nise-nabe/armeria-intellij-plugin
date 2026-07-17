@@ -82,6 +82,32 @@ class ArmeriaGenerateRouteMethodIntentionTest : ArmeriaFixtureTestBase() {
         assertTrue(updated.contains("public String handler2()"))
     }
 
+    fun testSuggestsUniquePathWhenGetPathCollidesWithDifferentMethodName() {
+        myFixture.configureByText(
+            "PathCollisionService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class PathCollisionService {
+                @Get("/handler")
+                public String hello() {
+                    return "exists";
+                }
+                <caret>
+            }
+            """.trimIndent(),
+        )
+
+        assertIntentionAvailableAndInvoke()
+
+        val updated = myFixture.editor.document.text
+        assertTrue(updated.contains("@Get(\"/handler2\")"))
+        assertTrue(updated.contains("public String handler2()"))
+        assertFalse(updated.contains("public String handler()"))
+    }
+
     fun testNotAvailableOutsideAnnotatedServiceClass() {
         myFixture.configureByText(
             "Plain.java",
@@ -128,6 +154,48 @@ class ArmeriaGenerateRouteMethodIntentionTest : ArmeriaFixtureTestBase() {
                 @Get("/hello")
                 public String hello() {
                     return <caret>"hello";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertFalse(isIntentionAvailable())
+    }
+
+    fun testNotAvailableInsideFieldInitializer() {
+        myFixture.configureByText(
+            "FieldService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class FieldService {
+                private String value = "<caret>x";
+
+                @Get("/hello")
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertFalse(isIntentionAvailable())
+    }
+
+    fun testNotAvailableInsideRouteAnnotationValue() {
+        myFixture.configureByText(
+            "AnnotationService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class AnnotationService {
+                @Get("/hel<caret>lo")
+                public String hello() {
+                    return "hello";
                 }
             }
             """.trimIndent(),

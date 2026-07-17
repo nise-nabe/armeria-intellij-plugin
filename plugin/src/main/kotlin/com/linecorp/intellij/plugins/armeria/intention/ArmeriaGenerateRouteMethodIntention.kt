@@ -6,8 +6,11 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiClassInitializer
 import com.intellij.psi.PsiCodeBlock
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiExpression
+import com.intellij.psi.PsiField
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.codeStyle.CodeStyleManager
@@ -62,21 +65,35 @@ class ArmeriaGenerateRouteMethodIntention : PsiElementBaseIntentionAction() {
     }
 
     private fun isMemberDeclarationContext(element: PsiElement, serviceClass: PsiClass): Boolean {
-        val bodyStart = serviceClass.lBrace?.textRange?.startOffset ?: return false
-        val bodyEnd = serviceClass.rBrace?.textRange?.endOffset ?: return false
-        val offset = element.textRange.startOffset
-        if (offset !in bodyStart..bodyEnd) {
+        val lBrace = serviceClass.lBrace ?: return false
+        val rBrace = serviceClass.rBrace ?: return false
+        if (element.textOffset !in lBrace.textOffset..rBrace.textOffset) {
             return false
         }
-        val codeBlock = PsiTreeUtil.getParentOfType(element, PsiCodeBlock::class.java, false)
-        return codeBlock == null || !PsiTreeUtil.isAncestor(serviceClass, codeBlock, true)
+        // Class body itself is not a PsiCodeBlock; reject method/field/initializer bodies and expressions.
+        return PsiTreeUtil.getParentOfType(
+            element,
+            PsiMethod::class.java,
+            PsiField::class.java,
+            PsiClassInitializer::class.java,
+            PsiCodeBlock::class.java,
+            PsiExpression::class.java,
+        ) == null
     }
 
     private fun suggestMethodName(serviceClass: PsiClass, baseName: String): String {
-        val usedNames = serviceClass.methods.mapTo(linkedSetOf()) { it.name }
+        val declaredMethods = serviceClass.methods.filter { it.containingClass == serviceClass }
+        val usedNames = declaredMethods.mapTo(linkedSetOf()) { it.name }
+        val usedGetPaths = declaredMethods.mapNotNullTo(linkedSetOf()) { method ->
+            val (annotation, httpMethod) = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return@mapNotNullTo null
+            if (httpMethod != "GET") {
+                return@mapNotNullTo null
+            }
+            ArmeriaRouteSupport.extractPrimaryPath(annotation).takeIf { it.isNotEmpty() }
+        }
         var candidate = baseName
         var suffix = 2
-        while (candidate in usedNames) {
+        while (candidate in usedNames || "/$candidate" in usedGetPaths) {
             candidate = "$baseName$suffix"
             suffix++
         }
@@ -84,7 +101,7 @@ class ArmeriaGenerateRouteMethodIntention : PsiElementBaseIntentionAction() {
     }
 
     private fun isAnnotatedServiceCandidate(serviceClass: PsiClass): Boolean {
-        if (serviceClass.isInterface || serviceClass.isEnum || serviceClass.isAnnotationType) {
+        if (serviceClass.isInterface || serviceClass.isEnum || serviceClass.isAnnotationType || serviceClass.isRecord) {
             return false
         }
         if (serviceClass.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION) != null) {
