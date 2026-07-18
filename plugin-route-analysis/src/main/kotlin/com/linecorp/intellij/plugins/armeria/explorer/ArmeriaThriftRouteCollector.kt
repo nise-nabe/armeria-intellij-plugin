@@ -20,8 +20,12 @@ internal object ArmeriaThriftRouteCollector {
             return
         }
         val seenThriftRoutes = mutableSetOf<String>()
-        for (virtualFile in FilenameIndex.getAllFilesByExt(project, "thrift", scope)) {
-            val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: continue
+        // FilenameIndex iteration order is unstable; sort so first-wins dedupe is deterministic.
+        val virtualFiles = FilenameIndex.getAllFilesByExt(project, "thrift", scope)
+            .sortedWith(compareBy({ it.path }, { it.name }))
+        val psiManager = PsiManager.getInstance(project)
+        for (virtualFile in virtualFiles) {
+            val psiFile = psiManager.findFile(virtualFile) ?: continue
             for (operation in parseOperations(psiFile.text)) {
                 val path = "/${operation.serviceName}"
                 val target = "${operation.serviceName}.${operation.methodName}"
