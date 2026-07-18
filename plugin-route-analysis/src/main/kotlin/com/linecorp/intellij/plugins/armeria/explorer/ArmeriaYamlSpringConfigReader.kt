@@ -16,35 +16,25 @@ import org.jetbrains.yaml.psi.YAMLValue
  */
 internal object ArmeriaYamlSpringConfigReader {
     fun read(psiFile: PsiFile): SpringArmeriaConfig {
-        val resolved = resolveYamlFile(psiFile)
-        return readYamlFile(resolved.file, attachElements = resolved.attachElements)
+        val yamlFile = resolveYamlFile(psiFile)
+        return readYamlFile(yamlFile)
     }
-
-    private data class ResolvedYamlFile(
-        val file: YAMLFile,
-        val attachElements: Boolean,
-    )
 
     /**
      * Prefer the real YAML PSI for the file (key-level navigation). If the file is not a
-     * [YAMLFile] — e.g. marked as Plain Text — parse a throwaway tree from text and leave
-     * navigation on the original [PsiFile] via null element fields.
+     * [YAMLFile] — e.g. marked as Plain Text — parse a throwaway tree from text. Emit-time
+     * navigation keeps only elements whose containing file matches the original config file.
      */
-    private fun resolveYamlFile(psiFile: PsiFile): ResolvedYamlFile {
-        (psiFile as? YAMLFile)?.let {
-            return ResolvedYamlFile(it, attachElements = true)
-        }
-        (psiFile.viewProvider.getPsi(YAMLLanguage.INSTANCE) as? YAMLFile)?.let {
-            return ResolvedYamlFile(it, attachElements = true)
-        }
-        val dummy = YAMLElementGenerator.getInstance(psiFile.project)
+    private fun resolveYamlFile(psiFile: PsiFile): YAMLFile {
+        (psiFile as? YAMLFile)?.let { return it }
+        (psiFile.viewProvider.getPsi(YAMLLanguage.INSTANCE) as? YAMLFile)?.let { return it }
+        return YAMLElementGenerator.getInstance(psiFile.project)
             .createDummyYamlWithText(psiFile.text)
-        return ResolvedYamlFile(dummy, attachElements = false)
     }
 
-    private fun readYamlFile(yamlFile: YAMLFile, attachElements: Boolean): SpringArmeriaConfig {
+    private fun readYamlFile(yamlFile: YAMLFile): SpringArmeriaConfig {
         val armeria = findTopLevelArmeriaMapping(yamlFile) ?: return SpringArmeriaConfig()
-        val ports = readPorts(armeria, attachElements)
+        val ports = readPorts(armeria)
         val internalServices = childMapping(armeria, "internal-services", "internalServices")
         val includeKv = internalServices?.let { childKeyValue(it, "include") }
         val includes = readIncludes(includeKv)
@@ -62,10 +52,10 @@ internal object ArmeriaYamlSpringConfigReader {
             metricsPath = scalarText(metricsPathKv?.value)
                 ?: SpringArmeriaConfigSemantics.DEFAULT_METRICS_PATH,
             internalServicesPort = internalServicesPort,
-            includeElement = includeKv.takeIf { attachElements },
-            docsPathElement = docsPathKv.takeIf { attachElements },
-            healthPathElement = healthPathKv.takeIf { attachElements },
-            metricsPathElement = metricsPathKv.takeIf { attachElements },
+            includeElement = includeKv,
+            docsPathElement = docsPathKv,
+            healthPathElement = healthPathKv,
+            metricsPathElement = metricsPathKv,
         )
     }
 
@@ -79,7 +69,7 @@ internal object ArmeriaYamlSpringConfigReader {
         return null
     }
 
-    private fun readPorts(armeria: YAMLMapping, attachElements: Boolean): List<SpringArmeriaPortBinding> {
+    private fun readPorts(armeria: YAMLMapping): List<SpringArmeriaPortBinding> {
         val portsKv = childKeyValue(armeria, "ports") ?: return emptyList()
         val sequence = portsKv.value as? YAMLSequence ?: return emptyList()
         val bindings = mutableListOf<SpringArmeriaPortBinding>()
@@ -96,7 +86,7 @@ internal object ArmeriaYamlSpringConfigReader {
                 port = port,
                 protocols = protocols,
                 // portKv is non-null here: scalarText(portKv?.value) already continued otherwise.
-                element = if (attachElements) portKv else null,
+                element = portKv,
             )
         }
         return bindings
@@ -109,11 +99,7 @@ internal object ArmeriaYamlSpringConfigReader {
             is YAMLScalar -> SpringArmeriaConfigSemantics.splitScalarList(value.textValue)
             else -> emptyList()
         }
-        return tokens
-            .map { it.uppercase() }
-            .filter { it.isNotEmpty() }
-            .distinct()
-            .ifEmpty { listOf("HTTP") }
+        return SpringArmeriaConfigSemantics.normalizeProtocols(tokens)
     }
 
     private fun readIncludes(includeKv: YAMLKeyValue?): Set<String> {
@@ -121,6 +107,7 @@ internal object ArmeriaYamlSpringConfigReader {
             return emptySet()
         }
         val value = includeKv.value
+        // Sequence items are already discrete tokens; scalars need comma/space tokenization.
         val tokens = when (value) {
             is YAMLSequence -> value.items.mapNotNull { scalarText(it.value) }.toSet()
             is YAMLScalar -> SpringArmeriaConfigSemantics.parseIncludeTokens(value.textValue)

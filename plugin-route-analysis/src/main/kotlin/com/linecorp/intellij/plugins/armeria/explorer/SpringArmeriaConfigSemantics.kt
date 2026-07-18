@@ -1,7 +1,5 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
-import java.util.Collections
-
 /**
  * Shared Spring Boot `armeria.*` config semantics used by both the properties parser and the
  * optional YAML PSI reader. Keep this free of format-specific PSI so either path can depend on it.
@@ -17,9 +15,7 @@ internal object SpringArmeriaConfigSemantics {
     const val ID_METRICS = "metrics"
     const val ID_ACTUATOR = "actuator"
 
-    val INTERNAL_SERVICE_IDS: Set<String> = Collections.unmodifiableSet(
-        linkedSetOf(ID_DOCS, ID_HEALTH, ID_METRICS, ID_ACTUATOR),
-    )
+    val INTERNAL_SERVICE_IDS: Set<String> = setOf(ID_DOCS, ID_HEALTH, ID_METRICS, ID_ACTUATOR)
 
     fun expandIncludes(raw: Set<String>): Set<String> {
         if (raw.any { it.equals("all", ignoreCase = true) }) {
@@ -31,6 +27,12 @@ internal object SpringArmeriaConfigSemantics {
     fun parseIncludeTokens(raw: String): Set<String> =
         splitScalarList(raw).map { it.lowercase() }.toSet()
 
+    fun normalizeProtocols(tokens: Iterable<String>): List<String> =
+        tokens.map { it.uppercase() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .ifEmpty { listOf("HTTP") }
+
     fun splitScalarList(raw: String): List<String> {
         val normalized = raw.trim()
             .removePrefix("[")
@@ -40,9 +42,12 @@ internal object SpringArmeriaConfigSemantics {
             return emptyList()
         }
         return normalized.split(',', ' ', '\t')
-            .map { stripInlineComment(it).trimQuotes() }
+            .map { stripInlineComment(it).let(::trimQuotes) }
             .filter { it.isNotEmpty() }
     }
+
+    fun trimQuotes(raw: String): String =
+        raw.trim().removeSurrounding("\"").removeSurrounding("'")
 
     private val INLINE_COMMENT = Regex("""\s+#.*$""")
 
@@ -61,7 +66,4 @@ internal object SpringArmeriaConfigSemantics {
         }
         return trimmed.replace(INLINE_COMMENT, "").trimEnd()
     }
-
-    private fun String.trimQuotes(): String =
-        trim().removeSurrounding("\"").removeSurrounding("'")
 }

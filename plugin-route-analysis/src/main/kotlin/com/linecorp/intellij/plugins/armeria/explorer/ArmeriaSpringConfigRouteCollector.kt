@@ -184,6 +184,7 @@ internal object ArmeriaSpringConfigRouteCollector {
             val protocols = SpringArmeriaConfigSemantics
                 .splitScalarList(stripPropertiesInlineComment(match.groupValues[3]))
                 .map { it.uppercase() }
+                .filter { it.isNotEmpty() }
             if (protocols.isEmpty()) {
                 return@forEach
             }
@@ -202,13 +203,13 @@ internal object ArmeriaSpringConfigRouteCollector {
         val ports = portsByIndex.entries
             .sortedBy { it.key }
             .map { (index, port) ->
-                val protocols = protocolsByIndex[index]
-                    ?.entries
-                    ?.sortedBy { it.key }
-                    ?.map { it.value }
-                    ?.distinct()
-                    .orEmpty()
-                    .ifEmpty { listOf("HTTP") }
+                val protocols = SpringArmeriaConfigSemantics.normalizeProtocols(
+                    protocolsByIndex[index]
+                        ?.entries
+                        ?.sortedBy { it.key }
+                        ?.map { it.value }
+                        .orEmpty(),
+                )
                 SpringArmeriaPortBinding(port = port, protocols = protocols)
             }
 
@@ -237,13 +238,13 @@ internal object ArmeriaSpringConfigRouteCollector {
             ports = ports,
             includes = SpringArmeriaConfigSemantics.expandIncludes(includes),
             docsPath = lastPropertiesMatch(PROPERTIES_DOCS_PATH_PATTERN, text)
-                ?.let { stripPropertiesInlineComment(it).trimQuotes() }
+                ?.let { SpringArmeriaConfigSemantics.trimQuotes(stripPropertiesInlineComment(it)) }
                 ?: SpringArmeriaConfigSemantics.DEFAULT_DOCS_PATH,
             healthPath = lastPropertiesMatch(PROPERTIES_HEALTH_PATH_PATTERN, text)
-                ?.let { stripPropertiesInlineComment(it).trimQuotes() }
+                ?.let { SpringArmeriaConfigSemantics.trimQuotes(stripPropertiesInlineComment(it)) }
                 ?: SpringArmeriaConfigSemantics.DEFAULT_HEALTH_PATH,
             metricsPath = lastPropertiesMatch(PROPERTIES_METRICS_PATH_PATTERN, text)
-                ?.let { stripPropertiesInlineComment(it).trimQuotes() }
+                ?.let { SpringArmeriaConfigSemantics.trimQuotes(stripPropertiesInlineComment(it)) }
                 ?: SpringArmeriaConfigSemantics.DEFAULT_METRICS_PATH,
             internalServicesPort = lastPropertiesMatch(PROPERTIES_INTERNAL_PORT_PATTERN, text)
                 ?.let { stripPropertiesInlineComment(it) },
@@ -262,7 +263,7 @@ internal object ArmeriaSpringConfigRouteCollector {
             // Synthetic path so the tree row (pill + path) shows the port; "/" collides with
             // real root mounts and hides the binding in the explorer list.
             addConfigRoute(
-                element = binding.element ?: fallbackElement,
+                element = navigationElement(binding.element, fallbackElement),
                 path = ":${binding.port}",
                 target = profileAwareTarget(
                     message("route.explorer.spring.port", binding.port, protocolLabel),
@@ -291,9 +292,10 @@ internal object ArmeriaSpringConfigRouteCollector {
             }
             val path = spec.path(config)
             addConfigRoute(
-                element = spec.pathElement(config)
-                    ?: config.includeElement
-                    ?: fallbackElement,
+                element = navigationElement(
+                    spec.pathElement(config) ?: config.includeElement,
+                    fallbackElement,
+                ),
                 path = path,
                 target = profileAwareTarget(message(spec.messageKey) + portSuffix, profile),
                 protocol = spec.protocol,
@@ -308,6 +310,27 @@ internal object ArmeriaSpringConfigRouteCollector {
                 seenConfigRoutes = seenConfigRoutes,
             )
         }
+    }
+
+    /**
+     * Keep key-level YAML PSI only when it lives in the same file the user opened. Dummy trees
+     * from Plain Text-typed YAML share no virtual file with [fallback], so navigation falls back.
+     */
+    private fun navigationElement(candidate: PsiElement?, fallback: PsiElement): PsiElement {
+        if (candidate == null) {
+            return fallback
+        }
+        val candidateFile = candidate.containingFile
+        val fallbackFile = fallback.containingFile
+        if (candidateFile === fallbackFile) {
+            return candidate
+        }
+        val candidateVf = candidateFile?.virtualFile
+        val fallbackVf = fallbackFile?.virtualFile
+        if (candidateVf != null && candidateVf == fallbackVf) {
+            return candidate
+        }
+        return fallback
     }
 
     private fun isYamlPluginAvailable(): Boolean =
@@ -353,9 +376,6 @@ internal object ArmeriaSpringConfigRouteCollector {
 
     private fun profileAwareKey(base: String, profile: String?): String =
         if (profile.isNullOrEmpty()) base else "$base@$profile"
-
-    private fun String.trimQuotes(): String =
-        trim().removeSurrounding("\"").removeSurrounding("'")
 
     private val PROPERTIES_INLINE_COMMENT = Regex("""\s+[#!].*$""")
 
