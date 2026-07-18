@@ -50,9 +50,14 @@ internal object ArmeriaSpringMvcRouteCollector {
                 if (!seenMethods.add(method)) {
                     return@forEach
                 }
-                val mappingAnnotation = method.annotations.firstOrNull { it.qualifiedName == annotationFqn }
-                    ?: return@forEach
-                addRoutesFromMethod(method, mappingAnnotation, defaultMethod, routes)
+                // @RequestMapping is @Repeatable — collect every matching annotation, not only the first.
+                val mappingAnnotations = method.annotations.filter { it.qualifiedName == annotationFqn }
+                if (mappingAnnotations.isEmpty()) {
+                    return@forEach
+                }
+                for (mappingAnnotation in mappingAnnotations) {
+                    addRoutesFromMethod(method, mappingAnnotation, defaultMethod, routes)
+                }
             }
         }
         return routes

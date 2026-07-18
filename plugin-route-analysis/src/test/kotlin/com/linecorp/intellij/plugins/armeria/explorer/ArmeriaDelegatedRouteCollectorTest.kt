@@ -430,6 +430,133 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         )
     }
 
+    fun testRepeatableRequestMappingEmitsAllMappings() {
+        configureTomcatMount("/spring/")
+        myFixture.configureByText(
+            "DualController.java",
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.RequestMapping;
+            import org.springframework.web.bind.annotation.RequestMethod;
+            import org.springframework.web.bind.annotation.RestController;
+
+            @RestController
+            public class DualController {
+                @RequestMapping(path = "/a", method = RequestMethod.GET)
+                @RequestMapping(path = "/b", method = RequestMethod.POST)
+                public String dual() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+
+        assertEquals(
+            setOf("GET /spring/a", "POST /spring/b"),
+            delegated.map { "${it.httpMethod} ${it.path}" }.toSet(),
+        )
+    }
+
+    fun testDistinctMountsKeepSeparateChildrenForSameCombinedPath() {
+        myFixture.configureByText(
+            "ArmeriaConfig.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.tomcat.TomcatService;
+
+            public class ArmeriaConfig {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .serviceUnder("/", TomcatService.of(null))
+                        .serviceUnder("/api", TomcatService.of(null))
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "ApiController.java",
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.GetMapping;
+            import org.springframework.web.bind.annotation.RequestMapping;
+            import org.springframework.web.bind.annotation.RestController;
+
+            @RestController
+            public class ApiController {
+                @GetMapping("/api")
+                public String fromRootMount() {
+                    return "ok";
+                }
+
+                @RequestMapping(path = "", method = org.springframework.web.bind.annotation.RequestMethod.GET)
+                public String fromApiMount() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val delegatedAtApi = routes.filter {
+            it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC && it.path == "/api"
+        }
+        assertEquals(
+            setOf("/", "/api"),
+            delegatedAtApi.map { it.delegationMountPath }.toSet(),
+        )
+    }
+
+    fun testKotlinCyclicPropertyAliasesDoNotCrashCollection() {
+        myFixture.configureByText(
+            "ArmeriaConfig.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.tomcat.TomcatService
+
+            object ArmeriaConfig {
+                val a = b
+                val b = a
+
+                @JvmStatic
+                fun main(args: Array<String>) {
+                    Server.builder()
+                        .serviceUnder("/spring/", a)
+                        .build()
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "HelloController.kt",
+            """
+            package example
+
+            import org.springframework.web.bind.annotation.GetMapping
+            import org.springframework.web.bind.annotation.RestController
+
+            @RestController
+            class HelloController {
+                @GetMapping("/hello")
+                fun hello(): String = "hello"
+            }
+            """.trimIndent(),
+        )
+
+        // Cycle must not StackOverflowError during Kotlin target resolution.
+        val routes = ArmeriaRouteCollector.collect(project)
+        assertNotNull(routes)
+    }
+
     fun testNoDelegatedRoutesWithoutServletMount() {
         myFixture.configureByText(
             "Main.java",
@@ -628,6 +755,16 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             """
             package org.springframework.web.bind.annotation;
 
+            public @interface RequestMappings {
+                RequestMapping[] value();
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package org.springframework.web.bind.annotation;
+
+            @java.lang.annotation.Repeatable(RequestMappings.class)
             public @interface RequestMapping {
                 String[] value() default {};
                 String[] path() default {};

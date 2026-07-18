@@ -242,7 +242,10 @@ object ArmeriaKotlinRouteCollector {
         return expression
     }
 
-    private fun renderKotlinTarget(expression: KtExpression): String {
+    private fun renderKotlinTarget(
+        expression: KtExpression,
+        visitedProperties: MutableSet<KtProperty> = mutableSetOf(),
+    ): String {
         if (expression is KtCallExpression) {
             val callee = expression.calleeExpression
             val reference = callee as? KtNameReferenceExpression ?: callee?.let {
@@ -263,7 +266,11 @@ object ArmeriaKotlinRouteCollector {
                 is KtProperty -> {
                     ArmeriaKotlinDecoratorChainSupport.resolveKotlinTypeReferenceText(resolved.typeReference)
                         ?.let { return it }
-                    resolved.initializer?.let { return renderKotlinTarget(it) }
+                    val initializer = resolved.initializer
+                    // Guard alias chains / mutual refs so collection cannot StackOverflowError.
+                    if (initializer != null && visitedProperties.add(resolved)) {
+                        return renderKotlinTarget(initializer, visitedProperties)
+                    }
                 }
                 is PsiVariable -> return resolved.type.presentableText
             }

@@ -29,8 +29,9 @@ internal object ArmeriaDelegatedRouteCollector {
             val scopedSpringMvcRoutes = springMvcRoutesForMount(mountRoute, springMvcRoutes, unassignedModule)
             for (springMvcRoute in scopedSpringMvcRoutes) {
                 val combinedPath = ArmeriaRouteSupport.combinePaths(mountRoute.path, springMvcRoute.path)
+                // Include mount path so distinct mounts that combine to the same path keep separate children.
                 val dedupeKey =
-                    "${mountRoute.moduleName}:${mountRoute.virtualHostName}:$combinedPath:" +
+                    "${mountRoute.moduleName}:${mountRoute.virtualHostName}:${mountRoute.path}:$combinedPath:" +
                         "${springMvcRoute.httpMethod}:${springMvcRoute.target}"
                 if (!seenDelegatedKeys.add(dedupeKey)) {
                     continue
