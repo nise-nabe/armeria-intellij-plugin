@@ -92,7 +92,7 @@ internal object ArmeriaRegistrationChainReducer {
             return null
         }
         val resolvedPath = if (mountPrefix != null && methodPath != null) {
-            ArmeriaRouteSupport.combinePaths(mountPrefix!!, methodPath!!)
+            ArmeriaRouteSupport.combinePaths(mountPrefix, methodPath)
         } else {
             path
         }
