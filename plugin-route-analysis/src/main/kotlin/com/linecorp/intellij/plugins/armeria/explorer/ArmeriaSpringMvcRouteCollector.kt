@@ -68,20 +68,21 @@ internal object ArmeriaSpringMvcRouteCollector {
         if (!isSpringController(containingClass)) {
             return
         }
-        val classPrefix = extractClassRequestMappingPrefix(containingClass)
+        val classPrefixes = extractClassRequestMappingPrefixes(containingClass)
         val httpMethods = resolveHttpMethods(mappingAnnotation, defaultMethod)
         val paths = ArmeriaRouteSupport.extractPaths(mappingAnnotation).ifEmpty { listOf("") }
         val target = buildMethodTarget(containingClass, method)
-        for (rawPath in paths) {
-            val combinedPath =
-                ArmeriaRouteSupport.combinePaths(classPrefix, ArmeriaRouteSupport.normalizePath(rawPath))
-            for (httpMethod in httpMethods) {
-                routes += SpringMvcRoute(
-                    httpMethod = httpMethod,
-                    path = combinedPath,
-                    target = target,
-                    element = method,
-                )
+        for (classPrefix in classPrefixes) {
+            for (rawPath in paths) {
+                val combinedPath = ArmeriaRouteSupport.combinePaths(classPrefix, rawPath)
+                for (httpMethod in httpMethods) {
+                    routes += SpringMvcRoute(
+                        httpMethod = httpMethod,
+                        path = combinedPath,
+                        target = target,
+                        element = method,
+                    )
+                }
             }
         }
     }
@@ -93,9 +94,10 @@ internal object ArmeriaSpringMvcRouteCollector {
         }
     }
 
-    private fun extractClassRequestMappingPrefix(psiClass: PsiClass): String {
-        val requestMapping = psiClass.annotations.firstOrNull { it.qualifiedName == REQUEST_MAPPING } ?: return ""
-        return ArmeriaRouteSupport.extractPaths(requestMapping).firstOrNull().orEmpty()
+    private fun extractClassRequestMappingPrefixes(psiClass: PsiClass): List<String> {
+        val requestMapping = psiClass.annotations.firstOrNull { it.qualifiedName == REQUEST_MAPPING }
+            ?: return listOf("")
+        return ArmeriaRouteSupport.extractPaths(requestMapping).ifEmpty { listOf("") }
     }
 
     /**

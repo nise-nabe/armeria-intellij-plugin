@@ -352,6 +352,85 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
     }
 
+    fun testKotlinTomcatServiceBeanMountIsDetected() {
+        myFixture.configureByText(
+            "ArmeriaConfig.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.spring.ArmeriaServerConfigurator
+            import com.linecorp.armeria.server.tomcat.TomcatService
+            import org.springframework.context.annotation.Bean
+            import org.springframework.context.annotation.Configuration
+
+            @Configuration
+            class ArmeriaConfig {
+                @Bean
+                fun armeriaServerConfigurator(tomcatService: TomcatService): ArmeriaServerConfigurator =
+                    ArmeriaServerConfigurator { serverBuilder ->
+                        serverBuilder.serviceUnder("/spring/", tomcatService)
+                    }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "HelloController.kt",
+            """
+            package example
+
+            import org.springframework.web.bind.annotation.GetMapping
+            import org.springframework.web.bind.annotation.RestController
+
+            @RestController
+            class HelloController {
+                @GetMapping("/hello")
+                fun hello(): String = "hello"
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertNotNull(
+            routes.singleOrNull {
+                it.path == "/spring/" &&
+                    ArmeriaRouteDetailFormatter.delegationKindOf(it) == DelegationKind.SPRING_MVC
+            },
+        )
+        assertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
+    }
+
+    fun testClassLevelMultiPathRequestMappingEmitsAllPrefixes() {
+        configureTomcatMount("/spring/")
+        myFixture.configureByText(
+            "UserController.java",
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.GetMapping;
+            import org.springframework.web.bind.annotation.RequestMapping;
+            import org.springframework.web.bind.annotation.RestController;
+
+            @RestController
+            @RequestMapping({"/api", "/v1"})
+            public class UserController {
+                @GetMapping("/users")
+                public String list() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+
+        assertEquals(
+            setOf("/spring/api/users", "/spring/v1/users"),
+            delegated.map { it.path }.toSet(),
+        )
+    }
+
     fun testNoDelegatedRoutesWithoutServletMount() {
         myFixture.configureByText(
             "Main.java",

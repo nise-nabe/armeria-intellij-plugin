@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtParenthesizedExpression
+import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtValueArgument
 import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
 
@@ -252,6 +253,15 @@ object ArmeriaKotlinRouteCollector {
         }
         if (expression is KtNameReferenceExpression) {
             val resolved = expression.references.firstOrNull()?.resolve()
+            // Resolve bean/parameter/property types so servlet mounts match Java (e.g. TomcatService).
+            when (resolved) {
+                is KtProperty -> {
+                    ArmeriaKotlinDecoratorChainSupport.resolveKotlinTypeReferenceText(resolved.typeReference)
+                        ?.let { return it }
+                    resolved.initializer?.let { return renderKotlinTarget(it) }
+                }
+                is PsiVariable -> return resolved.type.presentableText
+            }
             resolveQualifiedClassName(resolved)?.let { return it }
             return expression.text
         }

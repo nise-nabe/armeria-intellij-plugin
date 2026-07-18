@@ -216,20 +216,18 @@ object ArmeriaRouteDuplicateIndex {
     private fun matchesAllHttpMethods(route: ArmeriaRoute): Boolean =
         when (route.routeMatch) {
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.ANNOTATED_SERVICE -> true
-            RouteMatch.ROUTE_FLUENT,
-            RouteMatch.DELEGATED_SPRING_MVC,
-            -> route.httpMethod.isBlank()
+            RouteMatch.ROUTE_FLUENT -> route.httpMethod.isBlank()
+            // DELEGATED_SPRING_MVC is intentionally outside CHECKED_MATCHES; keep arms unset until then.
             RouteMatch.ANNOTATED_HTTP, RouteMatch.NON_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG,
-            RouteMatch.FILE_SERVICE, RouteMatch.HEALTH_CHECK,
+            RouteMatch.FILE_SERVICE, RouteMatch.HEALTH_CHECK, RouteMatch.DELEGATED_SPRING_MVC,
             RouteMatch.VIRTUAL_HOST, RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
             -> false
         }
 
     internal fun registrationLabel(route: ArmeriaRoute): String =
         when (route.routeMatch) {
-            RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG, RouteMatch.HEALTH_CHECK,
-            RouteMatch.DELEGATED_SPRING_MVC,
-            -> "${route.httpMethod} ${route.path}"
+            RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG, RouteMatch.HEALTH_CHECK ->
+                "${route.httpMethod} ${route.path}"
             else -> route.path
         }
 
