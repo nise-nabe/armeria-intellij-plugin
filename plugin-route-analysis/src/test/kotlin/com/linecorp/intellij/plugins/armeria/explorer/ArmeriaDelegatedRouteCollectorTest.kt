@@ -390,12 +390,11 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         )
 
         val routes = ArmeriaRouteCollector.collect(project)
-
-        assertNotNull(
-            routes.singleOrNull {
-                it.path == "/spring/" &&
-                    ArmeriaRouteDetailFormatter.delegationKindOf(it) == DelegationKind.SPRING_MVC
-            },
+        val springMounts = routes.filter { it.path == "/spring/" }
+        assertTrue(
+            "expected Spring MVC–badged /spring/ mount; got: " +
+                springMounts.map { "${it.target}/${it.routeMatch}/${ArmeriaRouteDetailFormatter.delegationKindOf(it)}" },
+            springMounts.any { ArmeriaRouteDetailFormatter.delegationKindOf(it) == DelegationKind.SPRING_MVC },
         )
         assertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
     }

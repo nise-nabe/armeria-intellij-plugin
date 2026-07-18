@@ -18,6 +18,7 @@ import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
+import org.jetbrains.kotlin.psi.KtParameter
 import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtValueArgument
@@ -255,6 +256,10 @@ object ArmeriaKotlinRouteCollector {
             val resolved = expression.references.firstOrNull()?.resolve()
             // Resolve bean/parameter/property types so servlet mounts match Java (e.g. TomcatService).
             when (resolved) {
+                is KtParameter -> {
+                    ArmeriaKotlinDecoratorChainSupport.resolveKotlinTypeReferenceText(resolved.typeReference)
+                        ?.let { return it }
+                }
                 is KtProperty -> {
                     ArmeriaKotlinDecoratorChainSupport.resolveKotlinTypeReferenceText(resolved.typeReference)
                         ?.let { return it }
