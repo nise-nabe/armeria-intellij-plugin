@@ -1,14 +1,16 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 import com.linecorp.intellij.plugins.armeria.message
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
-class ArmeriaDelegatedRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
+class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
     override fun setUp() {
         super.setUp()
-        registerArmeriaStubs()
-        registerSpringWebStubs()
+        registerSpringAnnotationStubs()
+        registerArmeriaSpringStubs()
+        registerServletServiceStubs()
+        registerSpringWebMvcStubs()
     }
 
     fun testTomcatServiceUnderMountExposesDelegatedSpringMvcRoutes() {
@@ -351,37 +353,7 @@ class ArmeriaDelegatedRouteCollectorTest : LightJavaCodeInsightFixtureTestCase()
         )
     }
 
-    private fun registerArmeriaStubs() {
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server;
-
-            public final class Server {
-                public static ServerBuilder builder() {
-                    return null;
-                }
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server;
-
-            public final class ServerBuilder {
-                public ServerBuilder service(String path, Object service) {
-                    return this;
-                }
-
-                public ServerBuilder serviceUnder(String prefix, Object service) {
-                    return this;
-                }
-
-                public Server build() {
-                    return null;
-                }
-            }
-            """.trimIndent(),
-        )
+    private fun registerServletServiceStubs() {
         myFixture.addClass(
             """
             package com.linecorp.armeria.server.tomcat;
@@ -406,37 +378,7 @@ class ArmeriaDelegatedRouteCollectorTest : LightJavaCodeInsightFixtureTestCase()
         )
     }
 
-    private fun registerArmeriaSpringStubs() {
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.spring;
-
-            @FunctionalInterface
-            public interface ArmeriaServerConfigurator {
-                void configure(com.linecorp.armeria.server.ServerBuilder serverBuilder);
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package org.springframework.context.annotation;
-
-            public @interface Bean {
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package org.springframework.context.annotation;
-
-            public @interface Configuration {
-            }
-            """.trimIndent(),
-        )
-    }
-
-    private fun registerSpringWebStubs() {
-        registerArmeriaSpringStubs()
+    private fun registerSpringWebMvcStubs() {
         myFixture.addClass(
             """
             package org.springframework.stereotype;
