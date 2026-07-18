@@ -8,8 +8,10 @@ import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
+import org.jetbrains.kotlin.psi.KtNullableType
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtTypeAlias
+import org.jetbrains.kotlin.psi.KtTypeElement
 import org.jetbrains.kotlin.psi.KtTypeReference
 import org.jetbrains.kotlin.psi.KtUserType
 
@@ -126,14 +128,21 @@ internal object ArmeriaKotlinDecoratorChainSupport {
         if (typeReference == null) {
             return null
         }
-        val userType = typeReference.typeElement as? KtUserType
+        val userType = unwrapUserType(typeReference.typeElement)
         val resolved = userType?.referenceExpression?.references?.firstOrNull()?.resolve()
         return when (resolved) {
             is KtTypeAlias -> resolved.getTypeReference()?.text ?: typeReference.text
             is KtClass -> resolved.fqName?.asString() ?: typeReference.text
-            else -> typeReference.text
+            else -> userType?.text ?: typeReference.text
         }
     }
+
+    private fun unwrapUserType(typeElement: KtTypeElement?): KtUserType? =
+        when (typeElement) {
+            is KtUserType -> typeElement
+            is KtNullableType -> unwrapUserType(typeElement.innerType)
+            else -> null
+        }
 
     fun receiverChainContainsServerBuilder(receiver: KtExpression): Boolean {
         var current: KtExpression? = receiver

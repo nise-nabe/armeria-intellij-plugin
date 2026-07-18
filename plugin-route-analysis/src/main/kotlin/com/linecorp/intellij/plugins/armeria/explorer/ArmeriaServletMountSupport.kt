@@ -36,5 +36,5 @@ internal object ArmeriaServletMountSupport {
         }
 
     private fun targetSimpleName(target: String): String =
-        target.substringBefore('(').substringAfterLast('.').trim()
+        target.substringBefore('(').substringAfterLast('.').trim().trimEnd('?')
 }

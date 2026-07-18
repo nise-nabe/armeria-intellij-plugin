@@ -23,6 +23,8 @@ internal object ArmeriaSpringMvcRouteCollector {
     private const val CONTROLLER = "org.springframework.stereotype.Controller"
     private const val REQUEST_MAPPING = "org.springframework.web.bind.annotation.RequestMapping"
 
+    private val CONTROLLER_STEREOTYPES = listOf(REST_CONTROLLER, CONTROLLER)
+
     private val MAPPING_ANNOTATIONS = mapOf(
         "org.springframework.web.bind.annotation.GetMapping" to "GET",
         "org.springframework.web.bind.annotation.PostMapping" to "POST",
@@ -42,38 +44,41 @@ internal object ArmeriaSpringMvcRouteCollector {
         if (!isSpringWebAvailable(psiFacade, scope)) {
             return emptyList()
         }
+        val controllers = linkedSetOf<PsiClass>()
+        for (stereotypeFqn in CONTROLLER_STEREOTYPES) {
+            val annotationClass = psiFacade.findClass(stereotypeFqn, scope) ?: continue
+            AnnotatedElementsSearch.searchPsiClasses(annotationClass, scope).forEach { controllers.add(it) }
+        }
         val routes = mutableListOf<SpringMvcRoute>()
-        val seenMethods = mutableSetOf<PsiMethod>()
-        for ((annotationFqn, defaultMethod) in MAPPING_ANNOTATIONS) {
-            val annotationClass = psiFacade.findClass(annotationFqn, scope) ?: continue
-            AnnotatedElementsSearch.searchPsiMethods(annotationClass, scope).forEach { method ->
-                if (!seenMethods.add(method)) {
-                    return@forEach
-                }
-                // @RequestMapping is @Repeatable — collect every matching annotation, not only the first.
-                val mappingAnnotations = method.annotations.filter { it.qualifiedName == annotationFqn }
-                if (mappingAnnotations.isEmpty()) {
-                    return@forEach
-                }
-                for (mappingAnnotation in mappingAnnotations) {
-                    addRoutesFromMethod(method, mappingAnnotation, defaultMethod, routes)
-                }
-            }
+        for (controller in controllers) {
+            collectFromController(controller, routes)
         }
         return routes
+    }
+
+    private fun collectFromController(controller: PsiClass, routes: MutableList<SpringMvcRoute>) {
+        val classPrefixes = extractClassRequestMappingPrefixes(controller)
+        for (method in controller.methods) {
+            // Inherited / interface-declared mappings are deferred (see #261).
+            if (method.containingClass != controller) {
+                continue
+            }
+            for (annotation in method.annotations) {
+                val fqn = annotation.qualifiedName ?: continue
+                val defaultMethod = MAPPING_ANNOTATIONS[fqn] ?: continue
+                addRoutesFromMethod(method, annotation, defaultMethod, classPrefixes, routes)
+            }
+        }
     }
 
     private fun addRoutesFromMethod(
         method: PsiMethod,
         mappingAnnotation: PsiAnnotation,
         defaultMethod: String,
+        classPrefixes: List<String>,
         routes: MutableList<SpringMvcRoute>,
     ) {
         val containingClass = method.containingClass ?: return
-        if (!isSpringController(containingClass)) {
-            return
-        }
-        val classPrefixes = extractClassRequestMappingPrefixes(containingClass)
         val httpMethods = resolveHttpMethods(mappingAnnotation, defaultMethod)
         val paths = ArmeriaRouteSupport.extractPaths(mappingAnnotation).ifEmpty { listOf("") }
         val target = buildMethodTarget(containingClass, method)
@@ -92,17 +97,16 @@ internal object ArmeriaSpringMvcRouteCollector {
         }
     }
 
-    private fun isSpringController(psiClass: PsiClass): Boolean {
-        return psiClass.annotations.any { annotation ->
-            val qualifiedName = annotation.qualifiedName
-            qualifiedName == REST_CONTROLLER || qualifiedName == CONTROLLER
-        }
-    }
-
     private fun extractClassRequestMappingPrefixes(psiClass: PsiClass): List<String> {
-        val requestMapping = psiClass.annotations.firstOrNull { it.qualifiedName == REQUEST_MAPPING }
-            ?: return listOf("")
-        return ArmeriaRouteSupport.extractPaths(requestMapping).ifEmpty { listOf("") }
+        // @RequestMapping is @Repeatable — collect every class-level mapping, not only the first.
+        val requestMappings = psiClass.annotations.filter { it.qualifiedName == REQUEST_MAPPING }
+        if (requestMappings.isEmpty()) {
+            return listOf("")
+        }
+        val prefixes = requestMappings.flatMap { mapping ->
+            ArmeriaRouteSupport.extractPaths(mapping).ifEmpty { listOf("") }
+        }
+        return prefixes.ifEmpty { listOf("") }
     }
 
     /**
