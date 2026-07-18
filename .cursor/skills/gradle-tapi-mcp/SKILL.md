@@ -126,7 +126,9 @@ rm -rf .intellijPlatform/sandbox/plugin/IU-*/system-test
    - MCP: a **single** `gradle_run_tests` (batch multiple classes/methods when needed), `background: true`, then poll `gradle_get_build_status`
    - Shell: `./gradlew :plugin:test --tests 'fully.qualified.ClassName'`
 
-After the sandbox is warm, single-class MCP runs often finish in a few seconds. The first cold run can take several minutes.
+After the sandbox is warm, single-class MCP runs often finish in a few seconds. The first cold run can take several minutes when the IDE distribution is not yet cached.
+
+`.cursor/install.sh` prefetches Ultimate via `compileTestKotlin` so Cursor Cloud environment checkpoints can retain the IPGP/Gradle IDE cache across agents. Prefer relying on that snapshot for download cost; remaining cold time is mostly daemon + test sandbox warm-up.
 
 ## Running builds and tests
 

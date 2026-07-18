@@ -41,4 +41,21 @@ setup_gh_cli() {
   fi
 }
 
+# Prefetch IntelliJ Ultimate via IPGP so Cursor can checkpoint ~/.gradle (and related
+# caches) after install. Subsequent cloud agents then skip the multi-hundred-MB download.
+# Soft-fail: feature branches mid-change must not block agent setup.
+warm_intellij_platform() {
+  echo "Warming IntelliJ Platform (Ultimate) for Cursor Cloud snapshot..."
+  if ! (
+    cd "${repo_root}"
+    ./gradlew \
+      :plugin:compileTestKotlin \
+      :plugin-route-analysis:compileTestKotlin \
+      :plugin-wizard:compileTestKotlin
+  ); then
+    echo "Warning: IntelliJ Platform warm failed; the first test run in this session may download the IDE." >&2
+  fi
+}
+
 setup_gh_cli
+warm_intellij_platform
