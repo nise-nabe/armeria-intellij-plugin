@@ -5,11 +5,7 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.message
 
 internal object ArmeriaDelegatedRouteCollector {
-    fun collect(
-        project: Project,
-        scope: GlobalSearchScope,
-        routes: MutableList<ArmeriaRoute>,
-    ) {
+    fun collect(project: Project, scope: GlobalSearchScope, routes: MutableList<ArmeriaRoute>) {
         // Prefix mounts only: .service() is exact-match and must not invent child paths.
         val springCapableMounts = routes.filter(ArmeriaServletMountSupport::isExpandableSpringMvcMount)
         if (springCapableMounts.isEmpty()) {
@@ -36,17 +32,18 @@ internal object ArmeriaDelegatedRouteCollector {
                 if (!seenDelegatedKeys.add(dedupeKey)) {
                     continue
                 }
-                delegatedRoutes +=
-                    ArmeriaRoute.create(
-                        element = springMvcRoute.element,
-                        protocol = RouteProtocol.HTTP.presentableName(),
-                        httpMethod = springMvcRoute.httpMethod,
-                        path = combinedPath,
-                        target = springMvcRoute.target,
-                        routeMatch = RouteMatch.DELEGATED_SPRING_MVC,
-                        virtualHostName = mountRoute.virtualHostName,
-                        delegationMountPath = mountRoute.path,
-                    )
+                // Navigate to the mapping-owning method; attribute the tree module to the concrete
+                // controller so inherited mappings from other modules still expand under the mount.
+                delegatedRoutes += ArmeriaRoute.create(
+                    element = springMvcRoute.element,
+                    protocol = RouteProtocol.HTTP.presentableName(),
+                    httpMethod = springMvcRoute.httpMethod,
+                    path = combinedPath,
+                    target = springMvcRoute.target,
+                    routeMatch = RouteMatch.DELEGATED_SPRING_MVC,
+                    virtualHostName = mountRoute.virtualHostName,
+                    delegationMountPath = mountRoute.path,
+                ).copy(moduleName = ArmeriaRouteMetadata.moduleName(springMvcRoute.controller))
             }
         }
 
@@ -63,7 +60,7 @@ internal object ArmeriaDelegatedRouteCollector {
             return springMvcRoutes
         }
         return springMvcRoutes.filter { route ->
-            ArmeriaRouteMetadata.moduleName(route.element) == mountModule
+            ArmeriaRouteMetadata.moduleName(route.controller) == mountModule
         }
     }
 }

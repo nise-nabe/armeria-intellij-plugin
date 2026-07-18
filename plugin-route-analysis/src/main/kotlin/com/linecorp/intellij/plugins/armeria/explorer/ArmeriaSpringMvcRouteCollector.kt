@@ -8,6 +8,7 @@ import com.intellij.psi.PsiArrayInitializerMemberValue
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiEnumConstant
 import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiModifier
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.searches.AnnotatedElementsSearch
 import java.util.ArrayDeque
@@ -16,7 +17,10 @@ internal data class SpringMvcRoute(
     val httpMethod: String,
     val path: String,
     val target: String,
+    /** Method that owns the mapping annotation (may be on a base type or interface). */
     val element: PsiMethod,
+    /** Stereotype-annotated concrete controller used for module attribution and target. */
+    val controller: PsiClass,
 )
 
 internal object ArmeriaSpringMvcRouteCollector {
@@ -60,39 +64,42 @@ internal object ArmeriaSpringMvcRouteCollector {
         }
         val routes = mutableListOf<SpringMvcRoute>()
         for (controller in controllers) {
+            if (!isConcreteControllerBean(controller, controllers)) {
+                continue
+            }
             collectFromController(controller, routes)
         }
         return routes
     }
 
+    /**
+     * Spring does not instantiate abstract / interface stereotype types, and a superclass that is
+     * itself stereotype-annotated would otherwise emit the same inherited mappings twice.
+     */
+    private fun isConcreteControllerBean(controller: PsiClass, allControllers: Set<PsiClass>): Boolean {
+        if (controller.isInterface || controller.hasModifierProperty(PsiModifier.ABSTRACT)) {
+            return false
+        }
+        return allControllers.none { other ->
+            other != controller && other.isInheritor(controller, true)
+        }
+    }
+
     private fun collectFromController(controller: PsiClass, routes: MutableList<SpringMvcRoute>) {
         val classPrefixes = extractMergedClassRequestMappingPrefixes(controller)
-        // Most-specific mapping wins: BFS from the controller, then fill gaps from visible
-        // methods / findSuperMethods (covers unannotated overrides of interface mappings).
-        val mappedBySignature = linkedMapOf<String, PsiMethod>()
-        for (type in typesInHierarchy(controller)) {
-            for (method in declaredMethods(type)) {
-                if (!hasMappingAnnotation(method)) {
-                    continue
-                }
-                mappedBySignature.putIfAbsent(methodSignatureKey(method), method)
-            }
-        }
-        for (method in controller.methods) {
-            val containing = method.containingClass
-            if (containing != null && containing.qualifiedName == JAVA_LANG_OBJECT) {
+        // One most-specific method per visible signature; unannotated overrides resolve via supers.
+        for (signature in controller.visibleSignatures) {
+            val method = signature.method
+            if (method.containingClass?.qualifiedName == JAVA_LANG_OBJECT) {
                 continue
             }
             val mappedMethod = resolveMappedMethod(method) ?: continue
-            mappedBySignature.putIfAbsent(methodSignatureKey(method), mappedMethod)
-        }
-        for (method in mappedBySignature.values) {
-            for (annotation in method.annotations) {
+            for (annotation in mappedMethod.annotations) {
                 val fqn = annotation.qualifiedName ?: continue
                 val defaultMethod = MAPPING_ANNOTATIONS[fqn] ?: continue
                 addRoutesFromMethod(
                     controller = controller,
-                    method = method,
+                    method = mappedMethod,
                     mappingAnnotation = annotation,
                     defaultMethod = defaultMethod,
                     classPrefixes = classPrefixes,
@@ -140,6 +147,7 @@ internal object ArmeriaSpringMvcRouteCollector {
                         path = combinedPath,
                         target = target,
                         element = method,
+                        controller = controller,
                     )
                 }
             }
@@ -152,8 +160,7 @@ internal object ArmeriaSpringMvcRouteCollector {
      */
     private fun extractMergedClassRequestMappingPrefixes(controller: PsiClass): List<String> {
         for (type in typesInHierarchy(controller)) {
-            val requestMappings = type.annotations.filter { it.qualifiedName == REQUEST_MAPPING }
-            if (requestMappings.isEmpty()) {
+            if (type.annotations.none { it.qualifiedName == REQUEST_MAPPING }) {
                 continue
             }
             return extractClassRequestMappingPrefixes(type)
@@ -191,23 +198,10 @@ internal object ArmeriaSpringMvcRouteCollector {
         }
     }
 
-    private fun declaredMethods(type: PsiClass): List<PsiMethod> {
-        return type.methods.filter { method ->
-            method.containingClass?.isEquivalentTo(type) == true
-        }
-    }
-
     private fun hasMappingAnnotation(method: PsiMethod): Boolean {
         return method.annotations.any { annotation ->
             annotation.qualifiedName in MAPPING_ANNOTATIONS
         }
-    }
-
-    private fun methodSignatureKey(method: PsiMethod): String {
-        val paramTypes = method.parameterList.parameters.joinToString(",") { parameter ->
-            parameter.type.canonicalText
-        }
-        return "${method.name}($paramTypes)"
     }
 
     /**
