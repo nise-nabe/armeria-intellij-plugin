@@ -14,7 +14,7 @@ object ArmeriaRouteDetailFormatter {
             if (route.routeMatch == RouteMatch.RUNTIME) {
                 add(message("route.explorer.badge.runtime"))
             }
-            ArmeriaServletMountSupport.delegationKindOf(route)?.let { kind ->
+            ArmeriaRouteDetailFormatter.delegationKindOf(route)?.let { kind ->
                 add(delegationBadge(kind))
             }
             if (route.routeMatch != RouteMatch.RUNTIME) {
@@ -110,4 +110,7 @@ object ArmeriaRouteDetailFormatter {
         DelegationKind.SPRING_MVC -> message("route.explorer.badge.springMvc")
         DelegationKind.SERVLET -> message("route.explorer.badge.servlet")
     }
+
+    fun delegationKindOf(route: ArmeriaRoute): DelegationKind? =
+        ArmeriaServletMountSupport.delegationKindOf(route)
 }

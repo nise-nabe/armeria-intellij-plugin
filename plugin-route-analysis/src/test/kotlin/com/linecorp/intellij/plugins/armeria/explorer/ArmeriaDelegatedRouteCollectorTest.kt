@@ -40,7 +40,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         val mountRoute = routes.single { it.path == "/spring/" && it.routeMatch == RouteMatch.SERVICE_UNDER }
         assertEquals(
             DelegationKind.SPRING_MVC,
-            ArmeriaServletMountSupport.delegationKindOf(mountRoute),
+            ArmeriaRouteDetailFormatter.delegationKindOf(mountRoute),
         )
 
         val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
@@ -91,7 +91,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         val mountRoute = routes.single { it.path == "/spring" && it.routeMatch == RouteMatch.SERVICE }
         assertEquals(
             DelegationKind.SPRING_MVC,
-            ArmeriaServletMountSupport.delegationKindOf(mountRoute),
+            ArmeriaRouteDetailFormatter.delegationKindOf(mountRoute),
         )
         assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
     }
@@ -137,7 +137,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         val mountRoute = routes.single { it.path == "/legacy" && it.routeMatch == RouteMatch.SERVICE_UNDER }
         assertEquals(
             DelegationKind.SERVLET,
-            ArmeriaServletMountSupport.delegationKindOf(mountRoute),
+            ArmeriaRouteDetailFormatter.delegationKindOf(mountRoute),
         )
         // Jetty is a servlet container mount; do not invent Spring MVC children under it.
         assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
@@ -151,7 +151,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         val mountRoute = routes.single { it.path == "/spring/" && it.routeMatch == RouteMatch.SERVICE_UNDER }
         assertEquals(
             DelegationKind.SPRING_MVC,
-            ArmeriaServletMountSupport.delegationKindOf(mountRoute),
+            ArmeriaRouteDetailFormatter.delegationKindOf(mountRoute),
         )
         assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
     }
@@ -280,7 +280,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertNotNull(
             routes.singleOrNull {
                 it.path == "/spring/" &&
-                    ArmeriaServletMountSupport.delegationKindOf(it) == DelegationKind.SPRING_MVC
+                    ArmeriaRouteDetailFormatter.delegationKindOf(it) == DelegationKind.SPRING_MVC
             },
         )
         assertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
