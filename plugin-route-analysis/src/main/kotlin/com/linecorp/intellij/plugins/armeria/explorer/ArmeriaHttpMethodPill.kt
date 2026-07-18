@@ -22,7 +22,6 @@ object ArmeriaHttpMethodPill {
         RouteMatch.ROUTE_FLUENT -> route.httpMethod.ifBlank { "ALL" }
         RouteMatch.DECORATOR_UNDER -> "UND"
         RouteMatch.DELEGATED_SPRING_MVC -> route.httpMethod.ifBlank { "MVC" }
-        RouteMatch.DELEGATED_SERVLET -> route.httpMethod.ifBlank { "SRV" }
         RouteMatch.NON_HTTP -> route.protocol.uppercase()
         RouteMatch.RUNTIME, RouteMatch.CONFIG -> route.httpMethod
     }

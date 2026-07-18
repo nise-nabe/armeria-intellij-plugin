@@ -218,12 +218,19 @@ object ArmeriaRouteDuplicateIndex {
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.ANNOTATED_SERVICE -> true
             RouteMatch.ROUTE_FLUENT,
             RouteMatch.DELEGATED_SPRING_MVC,
-            RouteMatch.DELEGATED_SERVLET,
             -> route.httpMethod.isBlank()
             RouteMatch.ANNOTATED_HTTP, RouteMatch.NON_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG,
             RouteMatch.FILE_SERVICE, RouteMatch.HEALTH_CHECK,
             RouteMatch.VIRTUAL_HOST, RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
             -> false
+        }
+
+    internal fun registrationLabel(route: ArmeriaRoute): String =
+        when (route.routeMatch) {
+            RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG, RouteMatch.HEALTH_CHECK,
+            RouteMatch.DELEGATED_SPRING_MVC,
+            -> "${route.httpMethod} ${route.path}"
+            else -> route.path
         }
 
     private fun buildHitsByVirtualFile(groups: List<DuplicateRegistrationGroup>): Map<VirtualFile, List<DuplicateRegistrationHit>> {
@@ -249,14 +256,6 @@ object ArmeriaRouteDuplicateIndex {
         }
         return hitsByVirtualFile
     }
-
-    internal fun registrationLabel(route: ArmeriaRoute): String =
-        when (route.routeMatch) {
-            RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG, RouteMatch.HEALTH_CHECK,
-            RouteMatch.DELEGATED_SPRING_MVC, RouteMatch.DELEGATED_SERVLET,
-            -> "${route.httpMethod} ${route.path}"
-            else -> route.path
-        }
 
     private fun buildConflictingRoutes(current: ArmeriaRoute, groupRoutes: List<ArmeriaRoute>): List<ConflictingRouteRegistration> {
         val currentElement = current.pointer.element

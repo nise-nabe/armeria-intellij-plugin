@@ -6,25 +6,12 @@ import com.linecorp.intellij.plugins.armeria.message
 
 internal object ArmeriaDelegatedRouteCollector {
     fun collect(project: Project, scope: GlobalSearchScope, routes: MutableList<ArmeriaRoute>) {
-        val mountRoutes = routes.mapNotNull { route ->
-            val delegationKind = ArmeriaServletMountSupport.detectDelegation(route.target, route.routeMatch)
-                ?: return@mapNotNull null
-            route to delegationKind
+        // Prefix mounts only: .service() is exact-match and must not invent child paths.
+        val springCapableMounts = routes.filter { route ->
+            route.routeMatch == RouteMatch.SERVICE_UNDER &&
+                ArmeriaServletMountSupport.detectDelegation(route.target, route.routeMatch) ==
+                DelegationKind.SPRING_MVC
         }
-        if (mountRoutes.isEmpty()) {
-            return
-        }
-
-        // Stamp mount badges independently of whether Spring MVC children are discoverable.
-        for (i in routes.indices) {
-            val route = routes[i]
-            val kind = ArmeriaServletMountSupport.detectDelegation(route.target, route.routeMatch) ?: continue
-            if (route.delegationKind != kind) {
-                routes[i] = route.copy(delegationKind = kind)
-            }
-        }
-
-        val springCapableMounts = mountRoutes.filter { (_, kind) -> kind == DelegationKind.SPRING_MVC }
         if (springCapableMounts.isEmpty()) {
             return
         }
@@ -38,7 +25,7 @@ internal object ArmeriaDelegatedRouteCollector {
         val seenDelegatedKeys = mutableSetOf<String>()
         val delegatedRoutes = mutableListOf<ArmeriaRoute>()
 
-        for ((mountRoute, _) in springCapableMounts) {
+        for (mountRoute in springCapableMounts) {
             val scopedSpringMvcRoutes = springMvcRoutesForMount(mountRoute, springMvcRoutes, unassignedModule)
             for (springMvcRoute in scopedSpringMvcRoutes) {
                 val combinedPath = ArmeriaRouteSupport.combinePaths(mountRoute.path, springMvcRoute.path)
@@ -54,7 +41,7 @@ internal object ArmeriaDelegatedRouteCollector {
                     path = combinedPath,
                     target = springMvcRoute.target,
                     routeMatch = RouteMatch.DELEGATED_SPRING_MVC,
-                    delegationKind = DelegationKind.SPRING_MVC,
+                    virtualHostName = mountRoute.virtualHostName,
                     delegationMountPath = mountRoute.path,
                 )
             }

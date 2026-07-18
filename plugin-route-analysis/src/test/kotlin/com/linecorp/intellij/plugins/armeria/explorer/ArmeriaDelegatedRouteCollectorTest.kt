@@ -14,23 +14,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
     }
 
     fun testTomcatServiceUnderMountExposesDelegatedSpringMvcRoutes() {
-        myFixture.configureByText(
-            "ArmeriaConfig.java",
-            """
-            package example;
-
-            import com.linecorp.armeria.server.Server;
-            import com.linecorp.armeria.server.tomcat.TomcatService;
-
-            public class ArmeriaConfig {
-                public static void main(String[] args) {
-                    Server.builder()
-                        .serviceUnder("/spring/", TomcatService.of(null))
-                        .build();
-                }
-            }
-            """.trimIndent(),
-        )
+        configureTomcatMount("/spring/")
         myFixture.configureByText(
             "UserController.java",
             """
@@ -54,13 +38,62 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         val routes = ArmeriaRouteCollector.collect(project)
 
         val mountRoute = routes.single { it.path == "/spring/" && it.routeMatch == RouteMatch.SERVICE_UNDER }
-        assertEquals(DelegationKind.SPRING_MVC, mountRoute.delegationKind)
+        assertEquals(
+            DelegationKind.SPRING_MVC,
+            ArmeriaServletMountSupport.delegationKindOf(mountRoute),
+        )
 
         val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
         assertEquals("GET", delegatedRoute.httpMethod)
         assertEquals("/spring/users/{id}", delegatedRoute.path)
         assertEquals("/spring/", delegatedRoute.delegationMountPath)
         assertEquals("example.UserController#getUser()", delegatedRoute.target)
+    }
+
+    fun testExactServiceMountIsBadgedWithoutSpringMvcChildren() {
+        myFixture.configureByText(
+            "ArmeriaConfig.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.tomcat.TomcatService;
+
+            public class ArmeriaConfig {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/spring", TomcatService.of(null))
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "UserController.java",
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.GetMapping;
+            import org.springframework.web.bind.annotation.RestController;
+
+            @RestController
+            public class UserController {
+                @GetMapping("/users")
+                public String list() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val mountRoute = routes.single { it.path == "/spring" && it.routeMatch == RouteMatch.SERVICE }
+        assertEquals(
+            DelegationKind.SPRING_MVC,
+            ArmeriaServletMountSupport.delegationKindOf(mountRoute),
+        )
+        assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
     }
 
     fun testJettyServiceMountIsBadgedWithoutSpringMvcChildren() {
@@ -102,56 +135,29 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         val routes = ArmeriaRouteCollector.collect(project)
 
         val mountRoute = routes.single { it.path == "/legacy" && it.routeMatch == RouteMatch.SERVICE_UNDER }
-        assertEquals(DelegationKind.SERVLET, mountRoute.delegationKind)
+        assertEquals(
+            DelegationKind.SERVLET,
+            ArmeriaServletMountSupport.delegationKindOf(mountRoute),
+        )
         // Jetty is a servlet container mount; do not invent Spring MVC children under it.
         assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
-        assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SERVLET })
     }
 
     fun testTomcatMountIsBadgedWithoutSpringControllers() {
-        myFixture.configureByText(
-            "ArmeriaConfig.java",
-            """
-            package example;
-
-            import com.linecorp.armeria.server.Server;
-            import com.linecorp.armeria.server.tomcat.TomcatService;
-
-            public class ArmeriaConfig {
-                public static void main(String[] args) {
-                    Server.builder()
-                        .serviceUnder("/spring/", TomcatService.of(null))
-                        .build();
-                }
-            }
-            """.trimIndent(),
-        )
+        configureTomcatMount("/spring/")
 
         val routes = ArmeriaRouteCollector.collect(project)
 
         val mountRoute = routes.single { it.path == "/spring/" && it.routeMatch == RouteMatch.SERVICE_UNDER }
-        assertEquals(DelegationKind.SPRING_MVC, mountRoute.delegationKind)
+        assertEquals(
+            DelegationKind.SPRING_MVC,
+            ArmeriaServletMountSupport.delegationKindOf(mountRoute),
+        )
         assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
     }
 
     fun testRequestMappingMethodEnumIsResolved() {
-        myFixture.configureByText(
-            "ArmeriaConfig.java",
-            """
-            package example;
-
-            import com.linecorp.armeria.server.Server;
-            import com.linecorp.armeria.server.tomcat.TomcatService;
-
-            public class ArmeriaConfig {
-                public static void main(String[] args) {
-                    Server.builder()
-                        .serviceUnder("/spring/", TomcatService.of(null))
-                        .build();
-                }
-            }
-            """.trimIndent(),
-        )
+        configureTomcatMount("/spring/")
         myFixture.configureByText(
             "OrderController.java",
             """
@@ -182,11 +188,56 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         val create = delegated.single { it.path == "/spring/orders" }
         assertEquals("POST", create.httpMethod)
 
-        val read = delegated.single { it.path == "/spring/orders/{id}" }
-        assertEquals("GET, HEAD", read.httpMethod)
+        val readMethods = delegated.filter { it.path == "/spring/orders/{id}" }.map { it.httpMethod }.toSet()
+        assertEquals(setOf("GET", "HEAD"), readMethods)
     }
 
-    fun testSpringBootServiceBeanMountIsDetected() {
+    fun testDelegatedRoutesInheritVirtualHostFromMount() {
+        myFixture.configureByText(
+            "ArmeriaConfig.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.tomcat.TomcatService;
+
+            public class ArmeriaConfig {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .virtualHost("api.example.com")
+                        .serviceUnder("/spring/", TomcatService.of(null))
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "HelloController.java",
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.GetMapping;
+            import org.springframework.web.bind.annotation.RestController;
+
+            @RestController
+            public class HelloController {
+                @GetMapping("/hello")
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val mountRoute = routes.single { it.path == "/spring/" && it.routeMatch == RouteMatch.SERVICE_UNDER }
+        val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+
+        assertEquals("api.example.com", mountRoute.virtualHostName)
+        assertEquals("api.example.com", delegatedRoute.virtualHostName)
+    }
+
+    fun testTomcatServiceBeanMountIsDetected() {
         myFixture.configureByText(
             "ArmeriaConfig.java",
             """
@@ -226,7 +277,12 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
 
         val routes = ArmeriaRouteCollector.collect(project)
 
-        assertNotNull(routes.singleOrNull { it.path == "/spring/" && it.delegationKind == DelegationKind.SPRING_MVC })
+        assertNotNull(
+            routes.singleOrNull {
+                it.path == "/spring/" &&
+                    ArmeriaServletMountSupport.delegationKindOf(it) == DelegationKind.SPRING_MVC
+            },
+        )
         assertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
     }
 
@@ -276,7 +332,6 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         val routes = ArmeriaRouteCollector.collect(project)
 
         assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
-        assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SERVLET })
     }
 
     fun testSpringMvcRoutesForMountFiltersControllersByModule() {
@@ -334,13 +389,14 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         )
         assertEquals(
             DelegationKind.SPRING_MVC,
-            ArmeriaServletMountSupport.detectDelegation("SpringBootService", RouteMatch.SERVICE),
+            ArmeriaServletMountSupport.detectDelegation("TomcatService", RouteMatch.SERVICE),
         )
         assertEquals(
             DelegationKind.SERVLET,
             ArmeriaServletMountSupport.detectDelegation("JettyService", RouteMatch.SERVICE_UNDER),
         )
         assertNull(ArmeriaServletMountSupport.detectDelegation("HelloService", RouteMatch.SERVICE))
+        assertNull(ArmeriaServletMountSupport.detectDelegation("SpringBootService", RouteMatch.SERVICE))
         assertNull(
             ArmeriaServletMountSupport.detectDelegation("FooTomcatService", RouteMatch.SERVICE_UNDER),
         )
@@ -350,6 +406,26 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
                 "com.linecorp.armeria.server.tomcat.TomcatService",
                 RouteMatch.SERVICE_UNDER,
             ),
+        )
+    }
+
+    private fun configureTomcatMount(path: String) {
+        myFixture.configureByText(
+            "ArmeriaConfig.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.tomcat.TomcatService;
+
+            public class ArmeriaConfig {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .serviceUnder("$path", TomcatService.of(null))
+                        .build();
+                }
+            }
+            """.trimIndent(),
         )
     }
 

@@ -23,7 +23,6 @@ data class ArmeriaRoute(
     val executionHints: List<String> = emptyList(),
     val timeoutHints: List<String> = emptyList(),
     val contentHints: List<String> = emptyList(),
-    val delegationKind: DelegationKind? = null,
     val delegationMountPath: String = "",
     val pointer: SmartPsiElementPointer<PsiElement>,
 ) {
@@ -51,7 +50,7 @@ data class ArmeriaRoute(
             RouteMatch.ROUTE_DECORATOR -> message("route.explorer.method.routeDecorator")
             RouteMatch.ROUTE_FLUENT -> httpMethod.ifBlank { message("route.explorer.method.allHttp") }
             RouteMatch.DECORATOR_UNDER -> message("route.explorer.method.decoratorUnder")
-            RouteMatch.DELEGATED_SPRING_MVC, RouteMatch.DELEGATED_SERVLET ->
+            RouteMatch.DELEGATED_SPRING_MVC ->
                 httpMethod.ifBlank { message("route.explorer.method.allHttp") }
             RouteMatch.NON_HTTP -> protocol
             RouteMatch.RUNTIME, RouteMatch.CONFIG -> httpMethod
@@ -98,7 +97,6 @@ data class ArmeriaRoute(
             executionHints: List<String> = emptyList(),
             timeoutHints: List<String> = emptyList(),
             contentHints: List<String> = emptyList(),
-            delegationKind: DelegationKind? = null,
             delegationMountPath: String = "",
         ): ArmeriaRoute {
             return ArmeriaRoute(
@@ -118,7 +116,6 @@ data class ArmeriaRoute(
                 executionHints = executionHints,
                 timeoutHints = timeoutHints,
                 contentHints = contentHints,
-                delegationKind = delegationKind,
                 delegationMountPath = delegationMountPath,
                 pointer = SmartPointerManager.createPointer(element),
             )

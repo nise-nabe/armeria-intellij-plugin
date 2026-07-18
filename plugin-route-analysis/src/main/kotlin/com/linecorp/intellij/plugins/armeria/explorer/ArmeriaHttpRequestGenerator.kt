@@ -12,7 +12,7 @@ object ArmeriaHttpRequestGenerator {
     fun supports(route: ArmeriaRoute): Boolean {
         return when (route.routeMatch) {
             RouteMatch.ANNOTATED_HTTP -> route.httpMethod.isNotBlank()
-            RouteMatch.DELEGATED_SPRING_MVC, RouteMatch.DELEGATED_SERVLET -> true
+            RouteMatch.DELEGATED_SPRING_MVC -> true
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.HEALTH_CHECK, RouteMatch.ROUTE_FLUENT -> true
             RouteMatch.RUNTIME, RouteMatch.CONFIG -> route.httpMethod.isNotBlank()
             RouteMatch.NON_HTTP -> isGrpcRoute(route)
@@ -25,7 +25,7 @@ object ArmeriaHttpRequestGenerator {
     fun httpMethod(route: ArmeriaRoute): String {
         return when (route.routeMatch) {
             RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG -> route.httpMethod
-            RouteMatch.DELEGATED_SPRING_MVC, RouteMatch.DELEGATED_SERVLET,
+            RouteMatch.DELEGATED_SPRING_MVC,
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.HEALTH_CHECK, RouteMatch.ROUTE_FLUENT,
             -> route.httpMethod.ifBlank { "GET" }
             RouteMatch.NON_HTTP -> {

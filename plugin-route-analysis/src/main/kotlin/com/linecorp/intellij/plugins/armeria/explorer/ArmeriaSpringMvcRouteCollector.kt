@@ -6,6 +6,7 @@ import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiAnnotationMemberValue
 import com.intellij.psi.PsiArrayInitializerMemberValue
 import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiEnumConstant
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.searches.AnnotatedElementsSearch
@@ -49,7 +50,9 @@ internal object ArmeriaSpringMvcRouteCollector {
                 if (!seenMethods.add(method)) {
                     return@forEach
                 }
-                addRoutesFromMethod(method, defaultMethod, routes)
+                val mappingAnnotation = method.annotations.firstOrNull { it.qualifiedName == annotationFqn }
+                    ?: return@forEach
+                addRoutesFromMethod(method, mappingAnnotation, defaultMethod, routes)
             }
         }
         return routes
@@ -57,6 +60,7 @@ internal object ArmeriaSpringMvcRouteCollector {
 
     private fun addRoutesFromMethod(
         method: PsiMethod,
+        mappingAnnotation: PsiAnnotation,
         defaultMethod: String,
         routes: MutableList<SpringMvcRoute>,
     ) {
@@ -65,17 +69,20 @@ internal object ArmeriaSpringMvcRouteCollector {
             return
         }
         val classPrefix = extractClassRequestMappingPrefix(containingClass)
-        val mappingAnnotation = findMappingAnnotation(method) ?: return
-        val httpMethod = resolveHttpMethod(mappingAnnotation, defaultMethod)
+        val httpMethods = resolveHttpMethods(mappingAnnotation, defaultMethod)
         val paths = ArmeriaRouteSupport.extractPaths(mappingAnnotation).ifEmpty { listOf("") }
         val target = buildMethodTarget(containingClass, method)
         for (rawPath in paths) {
-            routes += SpringMvcRoute(
-                httpMethod = httpMethod,
-                path = ArmeriaRouteSupport.combinePaths(classPrefix, ArmeriaRouteSupport.normalizePath(rawPath)),
-                target = target,
-                element = method,
-            )
+            val combinedPath =
+                ArmeriaRouteSupport.combinePaths(classPrefix, ArmeriaRouteSupport.normalizePath(rawPath))
+            for (httpMethod in httpMethods) {
+                routes += SpringMvcRoute(
+                    httpMethod = httpMethod,
+                    path = combinedPath,
+                    target = target,
+                    element = method,
+                )
+            }
         }
     }
 
@@ -91,18 +98,16 @@ internal object ArmeriaSpringMvcRouteCollector {
         return ArmeriaRouteSupport.extractPaths(requestMapping).firstOrNull().orEmpty()
     }
 
-    private fun findMappingAnnotation(method: PsiMethod): PsiAnnotation? {
-        return method.annotations.firstOrNull { annotation ->
-            annotation.qualifiedName in MAPPING_ANNOTATIONS.keys
-        }
-    }
-
-    private fun resolveHttpMethod(annotation: PsiAnnotation, defaultMethod: String): String {
+    /**
+     * Returns one entry per HTTP method. Empty attribute (all methods) yields a single blank method
+     * so callers keep catch-all semantics.
+     */
+    private fun resolveHttpMethods(annotation: PsiAnnotation, defaultMethod: String): List<String> {
         if (defaultMethod.isNotEmpty()) {
-            return defaultMethod
+            return listOf(defaultMethod)
         }
         val methods = extractRequestMethods(annotation.findDeclaredAttributeValue("method"))
-        return methods.joinToString(", ")
+        return methods.ifEmpty { listOf("") }
     }
 
     /**
@@ -114,8 +119,9 @@ internal object ArmeriaSpringMvcRouteCollector {
             null -> emptyList()
             is PsiArrayInitializerMemberValue -> value.initializers.flatMap(::extractRequestMethods)
             else -> {
-                val name = value.text.trim().substringAfterLast('.').uppercase()
-                if (name.isNotEmpty()) listOf(name) else emptyList()
+                val resolved = value.reference?.resolve()
+                val name = (resolved as? PsiEnumConstant)?.name?.uppercase()
+                if (!name.isNullOrEmpty()) listOf(name) else emptyList()
             }
         }
     }

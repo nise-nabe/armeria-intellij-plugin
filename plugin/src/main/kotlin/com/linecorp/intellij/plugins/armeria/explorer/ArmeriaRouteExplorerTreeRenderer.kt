@@ -51,7 +51,7 @@ internal class ArmeriaRouteExplorerTreeRenderer : ColoredTreeCellRenderer() {
                 SimpleTextAttributes.GRAYED_ATTRIBUTES,
             )
         } else {
-            route.delegationKind?.let { delegationKind ->
+            ArmeriaServletMountSupport.delegationKindOf(route)?.let { delegationKind ->
                 append(
                     message("route.explorer.secondary.separator") +
                         ArmeriaRouteDetailFormatter.delegationBadge(delegationKind),
