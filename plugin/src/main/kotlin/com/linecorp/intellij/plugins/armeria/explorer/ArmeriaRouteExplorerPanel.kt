@@ -35,8 +35,7 @@ import javax.swing.tree.DefaultTreeModel
 class ArmeriaRouteExplorerPanel(
     private val project: Project,
 ) : SimpleToolWindowPanel(true, true), Disposable, UiDataProvider {
-    private var staticRoutes: List<ArmeriaRoute> = emptyList()
-    private var runtimeRoutes: List<ArmeriaRoute> = emptyList()
+    private val routeState = ArmeriaRouteExplorerRouteState()
     private var refreshGeneration = 0
     private var selectedRoute: ArmeriaRoute? = null
     private var currentModuleOnly = false
@@ -163,24 +162,23 @@ class ArmeriaRouteExplorerPanel(
                 if (generation != refreshGeneration) {
                     return@finishOnUiThread
                 }
-                staticRoutes = collectedRoutes
-                // Keep DocService-synced runtime routes across static refreshes until the next sync.
+                routeState.applyStatic(collectedRoutes)
                 rebuildTree()
                 updateStatusLabel()
                 updateDetailFootnote()
             }.submit(AppExecutorUtil.getAppExecutorService())
     }
 
-    fun staticRoutes(): List<ArmeriaRoute> = staticRoutes
+    fun staticRoutes(): List<ArmeriaRoute> = routeState.staticRoutes
 
     fun applyRuntimeRoutes(routes: List<ArmeriaRoute>) {
-        runtimeRoutes = routes
+        routeState.applyRuntime(routes)
         rebuildTree()
         updateStatusLabel()
         updateDetailFootnote()
     }
 
-    private fun allRoutes(): List<ArmeriaRoute> = staticRoutes + runtimeRoutes
+    private fun allRoutes(): List<ArmeriaRoute> = routeState.allRoutes()
 
     private fun rebuildTree() {
         val previousSelection = ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent)
@@ -219,10 +217,11 @@ class ArmeriaRouteExplorerPanel(
     }
 
     private fun updateDetailFootnote() {
-        detailFootnote.text = if (runtimeRoutes.isEmpty()) {
+        val runtimeCount = routeState.runtimeRoutes.size
+        detailFootnote.text = if (runtimeCount == 0) {
             message("route.explorer.footnote.static")
         } else {
-            message("route.explorer.footnote.runtime", runtimeRoutes.size)
+            message("route.explorer.footnote.runtime", runtimeCount)
         }
     }
 
