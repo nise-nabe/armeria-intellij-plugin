@@ -194,6 +194,42 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertTrue(route.httpMethod.isBlank())
     }
 
+    fun testCollectGraphqlRoutesDedupesDuplicateOperationsAcrossFiles() {
+        registerArmeriaIdlStubs()
+        val schema =
+            """
+            type Query {
+                user: User
+            }
+            """.trimIndent()
+        myFixture.configureByText("schema.graphql", schema)
+        myFixture.configureByText("copy.graphqls", schema)
+
+        val routes = ArmeriaRouteCollector.collect(project)
+            .filter { it.protocol == RouteProtocol.GRAPHQL.presentableName() }
+
+        assertEquals(1, routes.size)
+        assertEquals("Query.user", routes.single().target)
+    }
+
+    fun testCollectThriftRoutesDedupesDuplicateOperationsAcrossFiles() {
+        registerArmeriaIdlStubs()
+        val thrift =
+            """
+            service HelloService {
+                string sayHello(1: string name),
+            }
+            """.trimIndent()
+        myFixture.configureByText("hello.thrift", thrift)
+        myFixture.configureByText("copy.thrift", thrift)
+
+        val routes = ArmeriaRouteCollector.collect(project)
+            .filter { it.protocol == RouteProtocol.THRIFT.presentableName() }
+
+        assertEquals(1, routes.size)
+        assertEquals("HelloService.sayHello", routes.single().target)
+    }
+
     fun testSkipIdlRoutesWhenProtocolNotOnClasspath() {
         myFixture.configureByText(
             "schema.graphql",

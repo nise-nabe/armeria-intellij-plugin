@@ -12,6 +12,8 @@
 
 ### Fixed
 
+- Route Explorer deduplicates GraphQL and Thrift IDL routes per module when the same operation appears in multiple schema or `.thrift` files.
+
 ### Security
 
 ## [0.2.0] - 2026-07-18
