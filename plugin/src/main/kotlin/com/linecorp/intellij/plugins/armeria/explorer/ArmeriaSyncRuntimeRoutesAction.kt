@@ -61,24 +61,29 @@ class ArmeriaSyncRuntimeRoutesAction : DumbAwareAction(
                         }
                         when (result) {
                             is ArmeriaDocServiceFetchResult.Success -> {
-                                val explorerPanel = ArmeriaRouteExplorerAccess.findPanel(project)
-                                if (explorerPanel != null) {
-                                    explorerPanel.applyRuntimeRoutes(result.routes)
-                                    Messages.showInfoMessage(
-                                        project,
-                                        message(
-                                            "route.explorer.sync.success",
-                                            result.routes.size,
-                                            result.specificationUrl,
-                                        ),
-                                        message("route.explorer.action.syncRuntime"),
-                                    )
-                                } else {
-                                    Messages.showWarningDialog(
-                                        project,
-                                        message("route.explorer.sync.panelUnavailable"),
-                                        message("route.explorer.action.syncRuntime"),
-                                    )
+                                ArmeriaRouteExplorerAccess.ensurePanel(project) { explorerPanel ->
+                                    if (project.isDisposed) {
+                                        return@ensurePanel
+                                    }
+                                    if (explorerPanel != null) {
+                                        explorerPanel.scheduleInitialRefreshIfNeeded()
+                                        explorerPanel.applyRuntimeRoutes(result.routes)
+                                        Messages.showInfoMessage(
+                                            project,
+                                            message(
+                                                "route.explorer.sync.success",
+                                                result.routes.size,
+                                                result.specificationUrl,
+                                            ),
+                                            message("route.explorer.action.syncRuntime"),
+                                        )
+                                    } else {
+                                        Messages.showWarningDialog(
+                                            project,
+                                            message("route.explorer.sync.panelUnavailable"),
+                                            message("route.explorer.action.syncRuntime"),
+                                        )
+                                    }
                                 }
                             }
                             is ArmeriaDocServiceFetchResult.Failure -> {
