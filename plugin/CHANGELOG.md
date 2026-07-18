@@ -6,6 +6,8 @@
 
 ### Changed
 
+- Route Explorer reads Spring Boot `application.yml` / `.yaml` via IntelliJ YAML PSI (key-level navigation); `.properties` parsing is unchanged. YAML config is skipped when the YAML plugin is unavailable.
+
 ### Deprecated
 
 ### Removed

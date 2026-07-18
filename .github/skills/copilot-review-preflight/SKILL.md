@@ -65,12 +65,10 @@ final pass before requesting review.
 - [ ] “First wins” collectors sort inputs; dedupe keys include all distinguishing fields
 - [ ] Test plan uses `:plugin-route-analysis:test` or `fastTest`, not `:plugin:test`
 
-### Hand-rolled Spring YAML / `.properties` parsers
+### Spring Boot config YAML / `.properties`
 
-- [ ] Unquoted YAML scalars/lists strip trailing `# …`; comment-only values are empty
-- [ ] Nested YAML keys matched only at parent indentation (not first-anywhere)
-- [ ] YAML list items with `:` (e.g. `- http://…`) stay scalars unless `:` is followed by whitespace/EOL
-- [ ] Flatten/stack walks guard empty indent stack (top-level lists must not throw / silently skip)
+- [ ] YAML via optional IntelliJ YAML PSI (`ArmeriaYamlSpringConfigReader`); gate with `PluginManagerCore.isLoaded`; keep YAML imports out of always-loaded collector entry
+- [ ] Top-level `armeria` only (all YAML documents); Plain Text-typed YAML uses dummy PSI with file-level navigation fallback
 - [ ] `.properties`: last-wins (including indexed keys); `=` and `:` delimiters; line-anchored regexes that skip `#`/`!` comments
 - [ ] HTTP config routes use an HTTP-capable `RouteMatch` (not `NON_HTTP`); use `NON_HTTP` only for true non-HTTP protocols (DocService, Thrift, port bindings); note “Generate HTTP Request” for `NON_HTTP` is enabled **only for gRPC**
 - [ ] Synthetic routes use distinct display paths (e.g. `":8080"`, not `"/"` for port bindings)
@@ -96,7 +94,7 @@ final pass before requesting review.
 | Hard-coded / non-localized UI strings | 16+ (PR #212 docs maps) | `intellij-armeria-plugin` |
 | PSI literal fallback / misleading paths | 15+ | `armeria-route-psi-analysis` |
 | Annotated service / decorator parsing | 30+ | `armeria-route-psi-analysis` |
-| Hand-rolled YAML/properties parsing (comments, last-wins, delimiters, `:` in list scalars) | 14+ (PR #211/#212) | `armeria-route-psi-analysis` |
+| Hand-rolled `.properties` / YAML PSI Spring config (last-wins, optional plugin gate) | 14+ (PR #211/#212/#285) | `armeria-route-psi-analysis` |
 | Synthetic route emission (`RouteMatch`, display path, dedupe keys) | 6+ (PR #211) | `armeria-route-psi-analysis` |
 | FilenameIndex scan vs name-driven lookup / non-deterministic order | 3+ (PR #211) | `armeria-route-psi-analysis` |
 | Optional dependency config owning core UI (`*-integration.xml`) | 2+ (PR #212) | `intellij-armeria-plugin` |
