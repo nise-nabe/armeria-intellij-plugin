@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaKotlinDecoratorRouteCollectorBasicTest : ArmeriaFixtureTestBase() {
-
     override fun registerArmeriaStubs() {
         registerKotlinRouteCollectorStubs()
     }
@@ -42,6 +41,7 @@ class ArmeriaKotlinDecoratorRouteCollectorBasicTest : ArmeriaFixtureTestBase() {
         assertNotNull(serviceRoute)
         assertEquals(listOf("CORS", "Logging"), serviceRoute!!.decorators)
     }
+
     fun testCollectProgrammaticDecoratorWithNewDecoratorFactory() {
         myFixture.configureByText(
             "Main.kt",
@@ -74,6 +74,7 @@ class ArmeriaKotlinDecoratorRouteCollectorBasicTest : ArmeriaFixtureTestBase() {
         assertNotNull(serviceRoute)
         assertEquals(listOf("Logging"), serviceRoute!!.decorators)
     }
+
     fun testCollectProgrammaticDecoratorWithBuilderNewDecoratorFactory() {
         myFixture.configureByText(
             "Main.kt",
@@ -106,6 +107,7 @@ class ArmeriaKotlinDecoratorRouteCollectorBasicTest : ArmeriaFixtureTestBase() {
         assertNotNull(serviceRoute)
         assertEquals(listOf("Logging"), serviceRoute!!.decorators)
     }
+
     fun testCollectProgrammaticDecoratorOnKotlinBuilderVariable() {
         myFixture.configureByText(
             "Main.kt",
@@ -138,6 +140,7 @@ class ArmeriaKotlinDecoratorRouteCollectorBasicTest : ArmeriaFixtureTestBase() {
         assertNotNull(serviceRoute)
         assertEquals(listOf("Logging"), serviceRoute!!.decorators)
     }
+
     fun testCollectProgrammaticDecoratorFromLocalVariable() {
         myFixture.configureByText(
             "Main.kt",

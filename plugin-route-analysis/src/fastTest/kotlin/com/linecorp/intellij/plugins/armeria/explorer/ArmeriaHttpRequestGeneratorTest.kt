@@ -162,12 +162,13 @@ class ArmeriaHttpRequestGeneratorTest {
 
     @Test
     fun supports_grpcRouteWithoutPackage() {
-        val route = route(
-            protocol = "gRPC",
-            path = "/Greeter/Ping",
-            target = "Greeter.Ping",
-            routeMatch = RouteMatch.NON_HTTP,
-        )
+        val route =
+            route(
+                protocol = "gRPC",
+                path = "/Greeter/Ping",
+                target = "Greeter.Ping",
+                routeMatch = RouteMatch.NON_HTTP,
+            )
 
         assertTrue(ArmeriaHttpRequestGenerator.supports(route))
         assertEquals("armeria-grpc-Greeter-Ping.http", ArmeriaHttpRequestGenerator.fileName(route))
@@ -175,12 +176,13 @@ class ArmeriaHttpRequestGeneratorTest {
 
     @Test
     fun requestText_grpcProtoRoute() {
-        val route = route(
-            protocol = "gRPC",
-            path = "/example.EchoService/Echo",
-            target = "example.EchoService.Echo",
-            routeMatch = RouteMatch.NON_HTTP,
-        )
+        val route =
+            route(
+                protocol = "gRPC",
+                path = "/example.EchoService/Echo",
+                target = "example.EchoService.Echo",
+                routeMatch = RouteMatch.NON_HTTP,
+            )
 
         assertEquals(
             """
@@ -225,12 +227,13 @@ class ArmeriaHttpRequestGeneratorTest {
 
     @Test
     fun requestText_grpcProtoRouteWithoutPackage() {
-        val route = route(
-            protocol = "gRPC",
-            path = "/Greeter/Ping",
-            target = "Greeter.Ping",
-            routeMatch = RouteMatch.NON_HTTP,
-        )
+        val route =
+            route(
+                protocol = "gRPC",
+                path = "/Greeter/Ping",
+                target = "Greeter.Ping",
+                routeMatch = RouteMatch.NON_HTTP,
+            )
 
         assertEquals(
             """
@@ -256,12 +259,13 @@ class ArmeriaHttpRequestGeneratorTest {
 
     @Test
     fun requestText_grpcProtoRouteNormalizesTrailingSlashBaseUrl() {
-        val route = route(
-            protocol = "gRPC",
-            path = "/example.EchoService/Echo",
-            target = "example.EchoService.Echo",
-            routeMatch = RouteMatch.NON_HTTP,
-        )
+        val route =
+            route(
+                protocol = "gRPC",
+                path = "/example.EchoService/Echo",
+                target = "example.EchoService.Echo",
+                routeMatch = RouteMatch.NON_HTTP,
+            )
 
         assertEquals(
             """
@@ -282,8 +286,8 @@ class ArmeriaHttpRequestGeneratorTest {
         routeMatch: RouteMatch = RouteMatch.ANNOTATED_HTTP,
         pathType: PathType = PathType.EXACT,
         target: String = "Handler",
-    ): ArmeriaRoute {
-        return ArmeriaRoute(
+    ): ArmeriaRoute =
+        ArmeriaRoute(
             protocol = protocol,
             httpMethod = httpMethod,
             path = path,
@@ -297,7 +301,6 @@ class ArmeriaHttpRequestGeneratorTest {
             exceptionHandlers = emptyList(),
             pointer = TestPsiPointer,
         )
-    }
 
     private object TestPsiPointer : SmartPsiElementPointer<PsiElement> {
         override fun getElement(): PsiElement? = null

@@ -14,7 +14,9 @@ import com.linecorp.intellij.plugins.armeria.message
 import javax.swing.JComboBox
 import javax.swing.JComponent
 
-class ArmeriaRunConfigurationEditor(private val project: Project) : SettingsEditor<ArmeriaRunConfiguration>() {
+class ArmeriaRunConfigurationEditor(
+    private val project: Project,
+) : SettingsEditor<ArmeriaRunConfiguration>() {
     private val mainPanel = JBPanel<JBPanel<*>>()
     private val moduleComboBox = JComboBox<Module>()
     private val mainClassField = TextFieldWithBrowseButton()
@@ -23,16 +25,18 @@ class ArmeriaRunConfigurationEditor(private val project: Project) : SettingsEdit
         ModuleManager.getInstance(project).sortedModules.forEach(moduleComboBox::addItem)
         mainClassField.addActionListener {
             val selectedModule = moduleComboBox.selectedItem as? Module
-            val searchScope = selectedModule?.let { GlobalSearchScope.moduleScope(it) }
-                ?: GlobalSearchScope.projectScope(project)
-            val chooser = TreeClassChooserFactory.getInstance(project).createWithInnerClassesScopeChooser(
-                message("armeria.run.configuration.main.class.chooser.title"),
-                searchScope,
-                { psiClass ->
-                    PsiMethodUtil.hasMainInClass(psiClass) || PsiMethodUtil.hasMainMethod(psiClass)
-                },
-                null,
-            )
+            val searchScope =
+                selectedModule?.let { GlobalSearchScope.moduleScope(it) }
+                    ?: GlobalSearchScope.projectScope(project)
+            val chooser =
+                TreeClassChooserFactory.getInstance(project).createWithInnerClassesScopeChooser(
+                    message("armeria.run.configuration.main.class.chooser.title"),
+                    searchScope,
+                    { psiClass ->
+                        PsiMethodUtil.hasMainInClass(psiClass) || PsiMethodUtil.hasMainMethod(psiClass)
+                    },
+                    null,
+                )
             chooser.showDialog()
             val selectedClass = chooser.selected
             if (selectedClass != null) {
@@ -46,8 +50,9 @@ class ArmeriaRunConfigurationEditor(private val project: Project) : SettingsEdit
     }
 
     override fun resetEditorFrom(configuration: ArmeriaRunConfiguration) {
-        val configuredModule = configuration.getConfigurationModule().module
-            ?: ModuleManager.getInstance(project).sortedModules.firstOrNull()
+        val configuredModule =
+            configuration.getConfigurationModule().module
+                ?: ModuleManager.getInstance(project).sortedModules.firstOrNull()
         moduleComboBox.selectedItem = configuredModule
         mainClassField.text = configuration.getMainClass().orEmpty()
     }

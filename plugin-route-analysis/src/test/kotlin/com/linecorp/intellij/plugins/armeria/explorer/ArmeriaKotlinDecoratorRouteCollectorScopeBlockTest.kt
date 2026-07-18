@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaKotlinDecoratorRouteCollectorScopeBlockTest : ArmeriaFixtureTestBase() {
-
     override fun registerArmeriaStubs() {
         registerKotlinRouteCollectorStubs()
     }
@@ -40,6 +39,7 @@ class ArmeriaKotlinDecoratorRouteCollectorScopeBlockTest : ArmeriaFixtureTestBas
         assertNotNull(serviceRoute)
         assertEquals(listOf("Logging"), serviceRoute!!.decorators)
     }
+
     fun testCollectProgrammaticDecoratorInAlsoBlock() {
         myFixture.configureByText(
             "Main.kt",
@@ -72,6 +72,7 @@ class ArmeriaKotlinDecoratorRouteCollectorScopeBlockTest : ArmeriaFixtureTestBas
         assertNotNull(serviceRoute)
         assertEquals(listOf("Logging"), serviceRoute!!.decorators)
     }
+
     fun testCollectProgrammaticDecoratorInAlsoBlockChainedAfterAlso() {
         myFixture.configureByText(
             "Main.kt",
@@ -104,6 +105,7 @@ class ArmeriaKotlinDecoratorRouteCollectorScopeBlockTest : ArmeriaFixtureTestBas
         assertNotNull(serviceRoute)
         assertEquals(listOf("Logging"), serviceRoute!!.decorators)
     }
+
     fun testCollectProgrammaticDecoratorInApplyBlockChainedAfterApply() {
         myFixture.configureByText(
             "Main.kt",
@@ -136,6 +138,7 @@ class ArmeriaKotlinDecoratorRouteCollectorScopeBlockTest : ArmeriaFixtureTestBas
         assertNotNull(serviceRoute)
         assertEquals(listOf("Logging"), serviceRoute!!.decorators)
     }
+
     fun testCollectProgrammaticDecoratorInChainedApplyBlocks() {
         myFixture.configureByText(
             "Main.kt",
@@ -168,6 +171,7 @@ class ArmeriaKotlinDecoratorRouteCollectorScopeBlockTest : ArmeriaFixtureTestBas
         assertNotNull(serviceRoute)
         assertEquals(listOf("Logging"), serviceRoute!!.decorators)
     }
+
     fun testCollectProgrammaticDecoratorInApplyBlockStopsAfterRegistrationStatement() {
         myFixture.configureByText(
             "Main.kt",
@@ -202,6 +206,7 @@ class ArmeriaKotlinDecoratorRouteCollectorScopeBlockTest : ArmeriaFixtureTestBas
         assertNotNull(serviceRoute)
         assertEquals(listOf("Logging"), serviceRoute!!.decorators)
     }
+
     fun testCollectProgrammaticDecoratorInApplyBlockStopsWithinRegistrationStatement() {
         myFixture.configureByText(
             "Main.kt",

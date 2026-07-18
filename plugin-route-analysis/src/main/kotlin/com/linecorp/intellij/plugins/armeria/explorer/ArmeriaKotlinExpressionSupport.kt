@@ -13,7 +13,6 @@ import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 
 object ArmeriaKotlinExpressionSupport {
-
     fun containingKotlinExpressionScope(call: KtCallExpression): PsiElement {
         var current: PsiElement = call
         while (true) {
@@ -63,8 +62,9 @@ object ArmeriaKotlinExpressionSupport {
         if (expression is KtDotQualifiedExpression) {
             val selector = expression.selectorExpression as? KtNameReferenceExpression ?: return null
             val receiver = expression.receiverExpression as? KtNameReferenceExpression ?: return null
-            val containingClass = receiver.references.firstOrNull()?.resolve() as? com.intellij.psi.PsiClass
-                ?: return null
+            val containingClass =
+                receiver.references.firstOrNull()?.resolve() as? com.intellij.psi.PsiClass
+                    ?: return null
             val field = containingClass.findFieldByName(selector.getReferencedName(), true)
             if (field != null) {
                 ArmeriaRouteSupport.evaluateJavaStringConstant(field)?.let { return it }
@@ -76,10 +76,11 @@ object ArmeriaKotlinExpressionSupport {
     private fun unwrapKotlinExpression(expression: KtExpression?): KtExpression? {
         var current = expression ?: return null
         while (true) {
-            current = when (current) {
-                is KtParenthesizedExpression -> current.expression ?: return null
-                else -> return current
-            }
+            current =
+                when (current) {
+                    is KtParenthesizedExpression -> current.expression ?: return null
+                    else -> return current
+                }
         }
     }
 }

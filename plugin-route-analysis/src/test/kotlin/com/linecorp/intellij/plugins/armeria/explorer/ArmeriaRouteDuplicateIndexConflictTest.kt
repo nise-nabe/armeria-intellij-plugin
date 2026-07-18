@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaRouteDuplicateIndexConflictTest : ArmeriaFixtureTestBase() {
-
     override fun registerArmeriaStubs() {
         registerRouteDuplicateIndexStubs()
     }
@@ -47,10 +46,13 @@ class ArmeriaRouteDuplicateIndexConflictTest : ArmeriaFixtureTestBase() {
         assertEquals(2, groups.single().routes.size)
         assertEquals(
             setOf(RouteMatch.SERVICE, RouteMatch.ANNOTATED_HTTP),
-            groups.single().routes.map { it.routeMatch }.toSet(),
+            groups
+                .single()
+                .routes
+                .map { it.routeMatch }
+                .toSet(),
         )
     }
-
 
     fun testDuplicateAnnotatedServiceRegistrationsAreReported() {
         myFixture.configureByText(
@@ -94,7 +96,6 @@ class ArmeriaRouteDuplicateIndexConflictTest : ArmeriaFixtureTestBase() {
         assertTrue(groups.single().routes.all { it.routeMatch == RouteMatch.ANNOTATED_SERVICE })
     }
 
-
     fun testDuplicateKotlinServiceRegistrationsAreReported() {
         myFixture.configureByText(
             "Main.kt",
@@ -124,7 +125,6 @@ class ArmeriaRouteDuplicateIndexConflictTest : ArmeriaFixtureTestBase() {
         assertEquals(1, groups.size)
         assertEquals(2, groups.single().routes.size)
     }
-
 
     fun testAnnotatedServiceWithoutPrefixDoesNotConflictWithUnrelatedRoutes() {
         myFixture.configureByText(
@@ -164,7 +164,6 @@ class ArmeriaRouteDuplicateIndexConflictTest : ArmeriaFixtureTestBase() {
         assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
     }
 
-
     fun testServiceUnderWithTrailingSlashConflictsWithAnnotatedRoute() {
         myFixture.configureByText(
             "Main.java",
@@ -200,7 +199,6 @@ class ArmeriaRouteDuplicateIndexConflictTest : ArmeriaFixtureTestBase() {
 
         assertEquals(1, ArmeriaRouteDuplicateIndex.duplicateGroups(project).size)
     }
-
 
     fun testServiceUnderConflictsWithAnnotatedRouteUnderPrefix() {
         myFixture.configureByText(
@@ -241,10 +239,13 @@ class ArmeriaRouteDuplicateIndexConflictTest : ArmeriaFixtureTestBase() {
         assertEquals(2, groups.single().routes.size)
         assertEquals(
             setOf(RouteMatch.SERVICE_UNDER, RouteMatch.ANNOTATED_HTTP),
-            groups.single().routes.map { it.routeMatch }.toSet(),
+            groups
+                .single()
+                .routes
+                .map { it.routeMatch }
+                .toSet(),
         )
     }
-
 
     fun testSamePathOnDifferentVirtualHostsAreNotDuplicates() {
         myFixture.configureByText(
@@ -293,7 +294,6 @@ class ArmeriaRouteDuplicateIndexConflictTest : ArmeriaFixtureTestBase() {
         assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
     }
 
-
     fun testUnrelatedServiceUnderPrefixesAreNotDuplicates() {
         myFixture.configureByText(
             "Main.java",
@@ -317,6 +317,4 @@ class ArmeriaRouteDuplicateIndexConflictTest : ArmeriaFixtureTestBase() {
 
         assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
     }
-
-
 }

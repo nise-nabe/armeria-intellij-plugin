@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaExtendedRegistrationCollectorWithRouteTest : ArmeriaFixtureTestBase() {
-
     override fun registerArmeriaStubs() {
         registerExtendedRegistrationCollectorStubs()
     }
@@ -36,7 +35,6 @@ class ArmeriaExtendedRegistrationCollectorWithRouteTest : ArmeriaFixtureTestBase
         assertEquals("/wrapped", fluentRoutes.single().path)
     }
 
-
     fun testCollectWithRouteDoesNotDuplicateRouteAnchorFluentRoute() {
         myFixture.configureByText(
             "Main.java",
@@ -61,6 +59,4 @@ class ArmeriaExtendedRegistrationCollectorWithRouteTest : ArmeriaFixtureTestBase
         assertEquals(1, fluentRoutes.size)
         assertEquals("/wrapped", fluentRoutes.single().path)
     }
-
-
 }

@@ -1,36 +1,44 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
-import com.linecorp.intellij.plugins.armeria.message
+import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiClassObjectAccessExpression
 import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiVariable
-import com.intellij.psi.JavaPsiFacade
+import com.linecorp.intellij.plugins.armeria.message
 
 internal object ArmeriaDecoratorSupport {
-    internal data class DecoratorCandidate(val label: String, val pathPattern: String?)
-
-    private data class DecoratorInfo(val labelKey: String, val observabilityKey: String? = null)
-
-    private val KNOWN_DECORATORS = mapOf(
-        "LoggingService" to DecoratorInfo("route.explorer.decorator.logging", "route.explorer.observability.logging"),
-        "CorsService" to DecoratorInfo("route.explorer.decorator.cors"),
-        "AuthService" to DecoratorInfo("route.explorer.decorator.auth", "route.explorer.observability.auth"),
-        "MetricCollectingService" to DecoratorInfo("route.explorer.decorator.metrics", "route.explorer.observability.metrics"),
-        "EncodingService" to DecoratorInfo("route.explorer.decorator.encoding"),
-        "DecodingService" to DecoratorInfo("route.explorer.decorator.decoding"),
-        "CacheControlDecorator" to DecoratorInfo("route.explorer.decorator.cacheControl"),
-        "WebSocketService" to DecoratorInfo("route.explorer.decorator.webSocket"),
-        "BraveService" to DecoratorInfo("route.explorer.decorator.brave", "route.explorer.observability.tracing"),
-        "ThrottlingService" to DecoratorInfo("route.explorer.decorator.throttling", "route.explorer.observability.throttling"),
-        "PrometheusMetricCollectingService" to DecoratorInfo(
-            "route.explorer.decorator.prometheus",
-            "route.explorer.observability.prometheus",
-        ),
-        "Bucket4jService" to DecoratorInfo("route.explorer.decorator.bucket4j", "route.explorer.observability.rateLimit"),
+    internal data class DecoratorCandidate(
+        val label: String,
+        val pathPattern: String?,
     )
+
+    private data class DecoratorInfo(
+        val labelKey: String,
+        val observabilityKey: String? = null,
+    )
+
+    private val KNOWN_DECORATORS =
+        mapOf(
+            "LoggingService" to DecoratorInfo("route.explorer.decorator.logging", "route.explorer.observability.logging"),
+            "CorsService" to DecoratorInfo("route.explorer.decorator.cors"),
+            "AuthService" to DecoratorInfo("route.explorer.decorator.auth", "route.explorer.observability.auth"),
+            "MetricCollectingService" to DecoratorInfo("route.explorer.decorator.metrics", "route.explorer.observability.metrics"),
+            "EncodingService" to DecoratorInfo("route.explorer.decorator.encoding"),
+            "DecodingService" to DecoratorInfo("route.explorer.decorator.decoding"),
+            "CacheControlDecorator" to DecoratorInfo("route.explorer.decorator.cacheControl"),
+            "WebSocketService" to DecoratorInfo("route.explorer.decorator.webSocket"),
+            "BraveService" to DecoratorInfo("route.explorer.decorator.brave", "route.explorer.observability.tracing"),
+            "ThrottlingService" to DecoratorInfo("route.explorer.decorator.throttling", "route.explorer.observability.throttling"),
+            "PrometheusMetricCollectingService" to
+                DecoratorInfo(
+                    "route.explorer.decorator.prometheus",
+                    "route.explorer.observability.prometheus",
+                ),
+            "Bucket4jService" to DecoratorInfo("route.explorer.decorator.bucket4j", "route.explorer.observability.rateLimit"),
+        )
 
     private val KNOWN_DECORATOR_BUNDLE_KEYS = KNOWN_DECORATORS.mapValues { it.value.labelKey }
 
@@ -56,7 +64,10 @@ internal object ArmeriaDecoratorSupport {
         return null
     }
 
-    fun collectProgrammaticDecorators(element: PsiMethodCallExpression, registrationPath: String): List<String> {
+    fun collectProgrammaticDecorators(
+        element: PsiMethodCallExpression,
+        registrationPath: String,
+    ): List<String> {
         val candidates = linkedSetOf<DecoratorCandidate>()
         collectJavaDecoratorsOnBuilderChain(element, candidates)
         return filterDecoratorCandidates(candidates, registrationPath)
@@ -72,18 +83,18 @@ internal object ArmeriaDecoratorSupport {
     internal fun filterDecoratorCandidates(
         candidates: Collection<DecoratorCandidate>,
         registrationPath: String,
-    ): List<String> {
-        return candidates.mapNotNull { candidate ->
-            val pathPattern = candidate.pathPattern
-            if (pathPattern == null ||
-                ArmeriaRouteSupport.decoratorPathPatternAppliesToRoute(pathPattern, registrationPath)
-            ) {
-                candidate.label
-            } else {
-                null
-            }
-        }.distinct()
-    }
+    ): List<String> =
+        candidates
+            .mapNotNull { candidate ->
+                val pathPattern = candidate.pathPattern
+                if (pathPattern == null ||
+                    ArmeriaRouteSupport.decoratorPathPatternAppliesToRoute(pathPattern, registrationPath)
+                ) {
+                    candidate.label
+                } else {
+                    null
+                }
+            }.distinct()
 
     private fun collectJavaDecoratorsOnBuilderChain(
         registrationCall: PsiMethodCallExpression,
@@ -107,11 +118,12 @@ internal object ArmeriaDecoratorSupport {
                 }
                 is PsiReferenceExpression -> {
                     val resolved = current.resolve()
-                    current = if (resolved is PsiVariable) {
-                        resolved.initializer
-                    } else {
-                        null
-                    }
+                    current =
+                        if (resolved is PsiVariable) {
+                            resolved.initializer
+                        } else {
+                            null
+                        }
                 }
                 else -> break
             }
@@ -137,25 +149,28 @@ internal object ArmeriaDecoratorSupport {
 
     private fun extractJavaDecoratorCandidate(expression: PsiMethodCallExpression): DecoratorCandidate? {
         val arguments = expression.argumentList.expressions
-        val pathPattern = if (arguments.size >= 2) {
-            extractJavaPathPattern(arguments[0])
-        } else {
-            null
-        }
-        val decoratorArgument = when {
-            arguments.size >= 2 -> arguments[1]
-            arguments.isNotEmpty() -> arguments[0]
-            else -> return null
-        }
-        val target = when (decoratorArgument) {
-            is PsiClassObjectAccessExpression -> decoratorArgument.text
-            else -> ArmeriaRouteTargetExtractor.extractTarget(decoratorArgument)
-        }
+        val pathPattern =
+            if (arguments.size >= 2) {
+                extractJavaPathPattern(arguments[0])
+            } else {
+                null
+            }
+        val decoratorArgument =
+            when {
+                arguments.size >= 2 -> arguments[1]
+                arguments.isNotEmpty() -> arguments[0]
+                else -> return null
+            }
+        val target =
+            when (decoratorArgument) {
+                is PsiClassObjectAccessExpression -> decoratorArgument.text
+                else -> ArmeriaRouteTargetExtractor.extractTarget(decoratorArgument)
+            }
         return DecoratorCandidate(labelDecorator(target), pathPattern)
     }
 
-    private fun extractJavaPathPattern(expression: PsiExpression): String? {
-        return when (expression) {
+    private fun extractJavaPathPattern(expression: PsiExpression): String? =
+        when (expression) {
             is PsiLiteralExpression -> expression.value as? String
             is PsiReferenceExpression -> {
                 when (val resolved = expression.resolve()) {
@@ -165,12 +180,16 @@ internal object ArmeriaDecoratorSupport {
             }
             else -> computeJavaPathPatternConstant(expression)
         }
-    }
 
     private fun computeJavaPathPatternConstant(expression: PsiExpression): String? {
-        val constantValue = JavaPsiFacade.getInstance(expression.project)
-            .constantEvaluationHelper
-            .computeConstantExpression(expression) as? String
-        return constantValue ?: expression.text.trim().trim('"').takeIf { it.isNotEmpty() }
+        val constantValue =
+            JavaPsiFacade
+                .getInstance(expression.project)
+                .constantEvaluationHelper
+                .computeConstantExpression(expression) as? String
+        return constantValue ?: expression.text
+            .trim()
+            .trim('"')
+            .takeIf { it.isNotEmpty() }
     }
 }

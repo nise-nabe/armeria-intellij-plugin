@@ -1,6 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
-internal enum class CoreServiceRegistrationMethod(val methodName: String) {
+internal enum class CoreServiceRegistrationMethod(
+    val methodName: String,
+) {
     SERVICE("service"),
     SERVICE_UNDER("serviceUnder"),
     ANNOTATED_SERVICE("annotatedService"),
@@ -9,7 +11,6 @@ internal enum class CoreServiceRegistrationMethod(val methodName: String) {
     companion object {
         val METHOD_NAMES: Set<String> = entries.mapTo(linkedSetOf()) { it.methodName }
 
-        fun fromMethodName(name: String): CoreServiceRegistrationMethod? =
-            entries.firstOrNull { it.methodName == name }
+        fun fromMethodName(name: String): CoreServiceRegistrationMethod? = entries.firstOrNull { it.methodName == name }
     }
 }

@@ -18,16 +18,20 @@ object ArmeriaRouteTreeBuilder {
         return root
     }
 
-    fun selectedRoute(node: Any?): ArmeriaRoute? {
-        return when (val userObject = (node as? DefaultMutableTreeNode)?.userObject) {
+    fun selectedRoute(node: Any?): ArmeriaRoute? =
+        when (val userObject = (node as? DefaultMutableTreeNode)?.userObject) {
             is RouteNode -> userObject.route
             else -> null
         }
-    }
 
     data object RootNode
 
-    data class ModuleNode(val name: String, val routeCount: Int)
+    data class ModuleNode(
+        val name: String,
+        val routeCount: Int,
+    )
 
-    data class RouteNode(val route: ArmeriaRoute)
+    data class RouteNode(
+        val route: ArmeriaRoute,
+    )
 }

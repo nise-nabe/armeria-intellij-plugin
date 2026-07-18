@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaKotlinServiceRegistrationCollectorServiceUnderTest : ArmeriaFixtureTestBase() {
-
     override fun registerArmeriaStubs() {
         registerKotlinRouteCollectorStubs()
     }
@@ -39,6 +38,7 @@ class ArmeriaKotlinServiceRegistrationCollectorServiceUnderTest : ArmeriaFixture
         assertEquals("/v1", serviceRoute!!.path)
         assertEquals("example.HelloService", serviceRoute.target)
     }
+
     fun testCollectServiceUnderRegistrationWithPathPrefixNamedArgument() {
         myFixture.configureByText(
             "Main.kt",

@@ -16,15 +16,17 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
 
         myFixture.enableInspections(ArmeriaDuplicateRegistrationInspection())
         val expectedDescription = message("inspection.duplicate.registration.problem", "/dup", 2)
-        val duplicateHighlights = myFixture.doHighlighting().filter {
-            it.description == expectedDescription
-        }
+        val duplicateHighlights =
+            myFixture.doHighlighting().filter {
+                it.description == expectedDescription
+            }
 
         assertEquals(1, duplicateHighlights.size)
         val expectedQuickFixName = message("inspection.duplicate.registration.quickfix.navigate", "/dup")
-        val quickFixes = myFixture.getAvailableQuickFixes().filter {
-            it.text == expectedQuickFixName
-        }
+        val quickFixes =
+            myFixture.getAvailableQuickFixes().filter {
+                it.text == expectedQuickFixName
+            }
         assertEquals(1, quickFixes.size)
     }
 
@@ -41,7 +43,12 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
         }
         waitForConflictingFileToOpen("Extra.java")
 
-        val openFileNames = FileEditorManager.getInstance(project).openFiles.map { it.name }.toSet()
+        val openFileNames =
+            FileEditorManager
+                .getInstance(project)
+                .openFiles
+                .map { it.name }
+                .toSet()
         assertTrue("Expected Extra.java among open files but found $openFileNames", "Extra.java" in openFileNames)
     }
 
@@ -75,15 +82,17 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
 
         myFixture.enableInspections(ArmeriaDuplicateRegistrationKotlinInspection())
         val expectedDescription = message("inspection.duplicate.registration.problem", "GET /shared", 2)
-        val duplicateHighlights = myFixture.doHighlighting().filter {
-            it.description == expectedDescription
-        }
+        val duplicateHighlights =
+            myFixture.doHighlighting().filter {
+                it.description == expectedDescription
+            }
 
         assertEquals(1, duplicateHighlights.size)
         val expectedQuickFixName = message("inspection.duplicate.registration.quickfix.navigate", "GET /shared")
-        val quickFixes = myFixture.getAvailableQuickFixes().filter {
-            it.text == expectedQuickFixName
-        }
+        val quickFixes =
+            myFixture.getAvailableQuickFixes().filter {
+                it.text == expectedQuickFixName
+            }
         assertEquals(1, quickFixes.size)
     }
 

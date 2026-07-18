@@ -7,28 +7,31 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.message
 
 internal object ArmeriaExtendedRegistrationCollectorVirtualHost {
-
     fun addVirtualHost(
         expression: PsiMethodCallExpression,
         routes: MutableList<ArmeriaRoute>,
         seenRegistrations: MutableSet<String>,
     ) {
         val key = ArmeriaJavaRegistrationChainSupport.registrationKey(expression) ?: return
-        val hostname = ArmeriaJavaRegistrationChainSupport.extractString(expression.argumentList.expressions.firstOrNull())
-            ?: expression.argumentList.expressions.firstOrNull()?.text
-            ?: message("route.explorer.target.virtualHost")
+        val hostname =
+            ArmeriaJavaRegistrationChainSupport.extractString(expression.argumentList.expressions.firstOrNull())
+                ?: expression.argumentList.expressions
+                    .firstOrNull()
+                    ?.text
+                ?: message("route.explorer.target.virtualHost")
         if (seenRegistrations.add(key)) {
-            routes += ArmeriaRoute.create(
-                element = expression,
-                protocol = RouteProtocol.HTTP.presentableName(),
-                httpMethod = "",
-                path = "/",
-                target = hostname,
-                routeMatch = RouteMatch.VIRTUAL_HOST,
-                virtualHostName = hostname,
-                decorators = ArmeriaDecoratorSupport.collectProgrammaticDecorators(expression, "/"),
-                timeoutHints = ArmeriaTimeoutSupport.collectBuilderTimeoutHints(expression),
-            )
+            routes +=
+                ArmeriaRoute.create(
+                    element = expression,
+                    protocol = RouteProtocol.HTTP.presentableName(),
+                    httpMethod = "",
+                    path = "/",
+                    target = hostname,
+                    routeMatch = RouteMatch.VIRTUAL_HOST,
+                    virtualHostName = hostname,
+                    decorators = ArmeriaDecoratorSupport.collectProgrammaticDecorators(expression, "/"),
+                    timeoutHints = ArmeriaTimeoutSupport.collectBuilderTimeoutHints(expression),
+                )
         }
         collectVirtualHostScopedRegistrations(expression, routes, seenRegistrations, hostname)
     }
@@ -101,12 +104,13 @@ internal object ArmeriaExtendedRegistrationCollectorVirtualHost {
         hostname: String,
         scopedKeys: MutableSet<String>,
     ) {
-        val methodCalls = buildList {
-            if (root is PsiMethodCallExpression) {
-                add(root)
+        val methodCalls =
+            buildList {
+                if (root is PsiMethodCallExpression) {
+                    add(root)
+                }
+                addAll(PsiTreeUtil.findChildrenOfType(root, PsiMethodCallExpression::class.java))
             }
-            addAll(PsiTreeUtil.findChildrenOfType(root, PsiMethodCallExpression::class.java))
-        }
         methodCalls.forEach { nested ->
             if (nested == outerVirtualHostCall || isInsideInnerVirtualHost(nested, outerVirtualHostCall)) {
                 return@forEach

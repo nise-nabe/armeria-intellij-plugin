@@ -6,7 +6,6 @@ import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiReferenceExpression
 
 internal object ArmeriaJavaRegistrationChainSupport {
-
     fun registrationKey(expression: PsiMethodCallExpression): String? {
         val virtualFile = expression.containingFile?.virtualFile ?: return null
         val methodName = expression.methodExpression.referenceName ?: return null
@@ -17,16 +16,14 @@ internal object ArmeriaJavaRegistrationChainSupport {
         )
     }
 
-    fun extractString(expression: PsiExpression?): String? =
-        ArmeriaRouteSupport.extractJavaStringConstant(expression)
+    fun extractString(expression: PsiExpression?): String? = ArmeriaRouteSupport.extractJavaStringConstant(expression)
 
-    fun toChainStep(call: PsiMethodCallExpression): RegistrationChainStep {
-        return RegistrationChainStep(
+    fun toChainStep(call: PsiMethodCallExpression): RegistrationChainStep =
+        RegistrationChainStep(
             methodName = call.methodExpression.referenceName.orEmpty(),
             firstStringArg = extractString(call.argumentList.expressions.firstOrNull()),
             rawMethodArgs = call.argumentList.expressions.map { it.text },
         )
-    }
 
     fun methodCallsBetweenInStatement(
         start: PsiMethodCallExpression,
@@ -111,8 +108,10 @@ internal object ArmeriaJavaRegistrationChainSupport {
                 is PsiReferenceExpression -> {
                     val grandParent = parent.parent
                     if (grandParent is PsiMethodCallExpression &&
-                        (grandParent.methodExpression.qualifierExpression == parent ||
-                            (grandParent.methodExpression.qualifierExpression as? PsiReferenceExpression)?.qualifier == parent)
+                        (
+                            grandParent.methodExpression.qualifierExpression == parent ||
+                                (grandParent.methodExpression.qualifierExpression as? PsiReferenceExpression)?.qualifier == parent
+                        )
                     ) {
                         return grandParent
                     }

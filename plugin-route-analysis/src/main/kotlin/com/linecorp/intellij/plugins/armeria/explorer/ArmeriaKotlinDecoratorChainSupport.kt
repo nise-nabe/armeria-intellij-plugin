@@ -31,16 +31,15 @@ internal object ArmeriaKotlinDecoratorChainSupport {
         }
     }
 
-    fun asKotlinCallExpression(expression: KtExpression): KtCallExpression? {
-        return when (expression) {
+    fun asKotlinCallExpression(expression: KtExpression): KtCallExpression? =
+        when (expression) {
             is KtCallExpression -> expression
             is KtDotQualifiedExpression -> expression.selectorExpression as? KtCallExpression
             else -> null
         }
-    }
 
-    fun kotlinChainReceiver(expression: KtExpression): KtExpression? {
-        return when (expression) {
+    fun kotlinChainReceiver(expression: KtExpression): KtExpression? =
+        when (expression) {
             is KtDotQualifiedExpression -> expression.receiverExpression
             is KtCallExpression -> {
                 val parent = expression.parent
@@ -55,7 +54,6 @@ internal object ArmeriaKotlinDecoratorChainSupport {
             }
             else -> null
         }
-    }
 
     fun resolveKotlinCallName(call: KtCallExpression): String? {
         val callee = call.calleeExpression ?: return null
@@ -78,22 +76,25 @@ internal object ArmeriaKotlinDecoratorChainSupport {
         }
         ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
         val callee = call.calleeExpression
-        val references = when (callee) {
-            is KtNameReferenceExpression -> callee.references.toList()
-            is KtDotQualifiedExpression -> callee.references.toList()
-            else -> emptyList()
-        }
+        val references =
+            when (callee) {
+                is KtNameReferenceExpression -> callee.references.toList()
+                is KtDotQualifiedExpression -> callee.references.toList()
+                else -> emptyList()
+            }
         if (references.any { reference ->
                 val resolved = reference.resolve()
                 resolved is PsiMethod &&
                     resolved.containingClass?.qualifiedName?.startsWith(ArmeriaRouteSupport.ARMERIA_SERVER_PACKAGE_PREFIX) == true
-            }) {
+            }
+        ) {
             return true
         }
-        val receiver = when (callee) {
-            is KtDotQualifiedExpression -> callee.receiverExpression
-            else -> dotQualifiedParent?.receiverExpression
-        }
+        val receiver =
+            when (callee) {
+                is KtDotQualifiedExpression -> callee.receiverExpression
+                else -> dotQualifiedParent?.receiverExpression
+            }
         return receiver != null && isKotlinServerBuilderReceiver(receiver)
     }
 
@@ -130,7 +131,12 @@ internal object ArmeriaKotlinDecoratorChainSupport {
             return null
         }
         val userType = unwrapUserType(typeReference.typeElement)
-        val resolved = userType?.referenceExpression?.references?.firstOrNull()?.resolve()
+        val resolved =
+            userType
+                ?.referenceExpression
+                ?.references
+                ?.firstOrNull()
+                ?.resolve()
         return when (resolved) {
             is KtTypeAlias -> resolved.getTypeReference()?.text ?: typeReference.text
             is KtClass -> resolved.fqName?.asString() ?: typeReference.text
@@ -183,12 +189,11 @@ internal object ArmeriaKotlinDecoratorChainSupport {
         return false
     }
 
-    fun resolveQualifiedClassName(resolved: PsiElement?): String? {
-        return when (resolved) {
+    fun resolveQualifiedClassName(resolved: PsiElement?): String? =
+        when (resolved) {
             is com.intellij.psi.PsiClass -> resolved.qualifiedName
             is PsiMethod -> resolved.containingClass?.qualifiedName
             is KtClass -> resolved.fqName?.asString()
             else -> null
         }
-    }
 }

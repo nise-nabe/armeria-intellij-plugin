@@ -1,7 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.test
 
 abstract class ArmeriaClientFixtureTestBase : ArmeriaLightJavaCodeInsightFixtureTestCase() {
-
     override fun setUp() {
         super.setUp()
         registerArmeriaClientStubs()

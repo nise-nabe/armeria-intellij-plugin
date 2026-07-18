@@ -9,8 +9,8 @@ import com.linecorp.intellij.plugins.armeria.message
 internal class ArmeriaOpenDocServiceAction(
     private val routesProvider: () -> List<ArmeriaRoute>,
 ) : DumbAwareAction(
-    message("route.explorer.action.openDocService"),
-) {
+        message("route.explorer.action.openDocService"),
+    ) {
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
 
     override fun update(e: AnActionEvent) {
@@ -23,11 +23,12 @@ internal class ArmeriaOpenDocServiceAction(
         val routes = routesProvider()
         val url = ArmeriaDocServiceSupport.primaryUrl(routes)
         e.presentation.isEnabled = url != null
-        e.presentation.description = if (url != null) {
-            message("route.explorer.action.openDocService.descriptionWithUrl", url)
-        } else {
-            message("route.explorer.action.openDocService.description")
-        }
+        e.presentation.description =
+            if (url != null) {
+                message("route.explorer.action.openDocService.descriptionWithUrl", url)
+            } else {
+                message("route.explorer.action.openDocService.description")
+            }
     }
 
     override fun actionPerformed(e: AnActionEvent) {

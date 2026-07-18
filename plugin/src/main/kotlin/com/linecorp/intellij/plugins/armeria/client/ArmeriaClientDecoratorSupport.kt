@@ -10,12 +10,13 @@ import com.intellij.psi.PsiVariable
 import com.linecorp.intellij.plugins.armeria.message
 
 internal object ArmeriaClientDecoratorSupport {
-    private val KNOWN_CLIENT_DECORATOR_BUNDLE_KEYS = mapOf(
-        "LoggingClient" to "client.explorer.decorator.logging",
-        "BraveClient" to "client.explorer.decorator.brave",
-        "RetryingClient" to "client.explorer.decorator.retrying",
-        "CircuitBreakerClient" to "client.explorer.decorator.circuitBreaker",
-    )
+    private val KNOWN_CLIENT_DECORATOR_BUNDLE_KEYS =
+        mapOf(
+            "LoggingClient" to "client.explorer.decorator.logging",
+            "BraveClient" to "client.explorer.decorator.brave",
+            "RetryingClient" to "client.explorer.decorator.retrying",
+            "CircuitBreakerClient" to "client.explorer.decorator.circuitBreaker",
+        )
 
     fun collectJavaClientDecorators(factoryCall: PsiMethodCallExpression): List<String> {
         val decorators = linkedSetOf<String>()
@@ -73,11 +74,12 @@ internal object ArmeriaClientDecoratorSupport {
                 }
                 is PsiReferenceExpression -> {
                     val resolved = current.resolve()
-                    current = if (resolved is PsiVariable) {
-                        resolved.initializer
-                    } else {
-                        null
-                    }
+                    current =
+                        if (resolved is PsiVariable) {
+                            resolved.initializer
+                        } else {
+                            null
+                        }
                 }
                 else -> break
             }
@@ -98,15 +100,16 @@ internal object ArmeriaClientDecoratorSupport {
 
     private fun extractJavaDecoratorLabel(expression: PsiMethodCallExpression): String? {
         val decoratorArgument = expression.argumentList.expressions.firstOrNull() ?: return null
-        val target = when (decoratorArgument) {
-            is PsiClassObjectAccessExpression -> decoratorArgument.text
-            is PsiLiteralExpression -> decoratorArgument.value?.toString().orEmpty()
-            is PsiMethodCallExpression -> {
-                decoratorArgument.methodExpression.qualifierExpression?.text
-                    ?: decoratorArgument.methodExpression.referenceName.orEmpty()
+        val target =
+            when (decoratorArgument) {
+                is PsiClassObjectAccessExpression -> decoratorArgument.text
+                is PsiLiteralExpression -> decoratorArgument.value?.toString().orEmpty()
+                is PsiMethodCallExpression -> {
+                    decoratorArgument.methodExpression.qualifierExpression?.text
+                        ?: decoratorArgument.methodExpression.referenceName.orEmpty()
+                }
+                else -> decoratorArgument.text.trim()
             }
-            else -> decoratorArgument.text.trim()
-        }
         return labelClientDecorator(target)
     }
 }

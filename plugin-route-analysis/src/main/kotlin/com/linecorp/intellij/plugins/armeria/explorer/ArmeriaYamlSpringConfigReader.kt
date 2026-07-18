@@ -28,7 +28,8 @@ internal object ArmeriaYamlSpringConfigReader {
     private fun resolveYamlFile(psiFile: PsiFile): YAMLFile {
         (psiFile as? YAMLFile)?.let { return it }
         (psiFile.viewProvider.getPsi(YAMLLanguage.INSTANCE) as? YAMLFile)?.let { return it }
-        return YAMLElementGenerator.getInstance(psiFile.project)
+        return YAMLElementGenerator
+            .getInstance(psiFile.project)
             .createDummyYamlWithText(psiFile.text)
     }
 
@@ -79,23 +80,25 @@ internal object ArmeriaYamlSpringConfigReader {
                 continue
             }
             val protocols = readProtocols(childKeyValue(itemMapping, "protocols"))
-            bindings += SpringArmeriaPortBinding(
-                port = port,
-                protocols = protocols,
-                // portKv is non-null here: scalarText(portKv?.value) already continued otherwise.
-                element = portKv,
-            )
+            bindings +=
+                SpringArmeriaPortBinding(
+                    port = port,
+                    protocols = protocols,
+                    // portKv is non-null here: scalarText(portKv?.value) already continued otherwise.
+                    element = portKv,
+                )
         }
         return bindings
     }
 
     private fun readProtocols(protocolsKv: YAMLKeyValue?): List<String> {
         val value = protocolsKv?.value
-        val tokens = when (value) {
-            is YAMLSequence -> value.items.mapNotNull { scalarText(it.value) }
-            is YAMLScalar -> SpringArmeriaConfigSemantics.splitScalarList(value.textValue)
-            else -> emptyList()
-        }
+        val tokens =
+            when (value) {
+                is YAMLSequence -> value.items.mapNotNull { scalarText(it.value) }
+                is YAMLScalar -> SpringArmeriaConfigSemantics.splitScalarList(value.textValue)
+                else -> emptyList()
+            }
         return SpringArmeriaConfigSemantics.normalizeProtocols(tokens)
     }
 
@@ -105,20 +108,27 @@ internal object ArmeriaYamlSpringConfigReader {
         }
         val value = includeKv.value
         // Sequence items are already discrete tokens; scalars need comma/space tokenization.
-        val tokens = when (value) {
-            is YAMLSequence -> value.items.mapNotNull { scalarText(it.value) }.toSet()
-            is YAMLScalar -> SpringArmeriaConfigSemantics.parseIncludeTokens(value.textValue)
-            else -> emptySet()
-        }
+        val tokens =
+            when (value) {
+                is YAMLSequence -> value.items.mapNotNull { scalarText(it.value) }.toSet()
+                is YAMLScalar -> SpringArmeriaConfigSemantics.parseIncludeTokens(value.textValue)
+                else -> emptySet()
+            }
         return SpringArmeriaConfigSemantics.expandIncludes(tokens)
     }
 
-    private fun childMapping(parent: YAMLMapping, vararg keys: String): YAMLMapping? {
+    private fun childMapping(
+        parent: YAMLMapping,
+        vararg keys: String,
+    ): YAMLMapping? {
         val kv = childKeyValue(parent, *keys) ?: return null
         return kv.value as? YAMLMapping
     }
 
-    private fun childKeyValue(parent: YAMLMapping?, vararg keys: String): YAMLKeyValue? {
+    private fun childKeyValue(
+        parent: YAMLMapping?,
+        vararg keys: String,
+    ): YAMLKeyValue? {
         if (parent == null) {
             return null
         }

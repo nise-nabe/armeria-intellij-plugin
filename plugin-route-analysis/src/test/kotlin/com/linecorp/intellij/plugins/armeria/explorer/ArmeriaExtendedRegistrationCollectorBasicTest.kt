@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
-
     override fun registerArmeriaStubs() {
         registerExtendedRegistrationCollectorStubs()
     }
@@ -33,7 +32,6 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
         assertEquals("/files/", fileRoute!!.path)
     }
 
-
     fun testCollectFileServiceWithJavaConstantPath() {
         myFixture.configureByText(
             "Main.java",
@@ -61,7 +59,6 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
         assertEquals("/files/", fileRoute!!.path)
     }
 
-
     fun testCollectHealthCheckRegistration() {
         myFixture.configureByText(
             "Main.java",
@@ -85,7 +82,6 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
         assertNotNull(healthRoute)
         assertEquals("/internal/healthcheck", healthRoute!!.path)
     }
-
 
     fun testCollectFluentRouteRegistration() {
         myFixture.configureByText(
@@ -114,7 +110,6 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
         assertEquals("/api/items", fluentRoute.path)
     }
 
-
     fun testCollectDecoratorUnderRegistration() {
         myFixture.configureByText(
             "Main.java",
@@ -139,7 +134,6 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
         assertNotNull(decoratorRoute)
         assertEquals("/public", decoratorRoute!!.path)
     }
-
 
     fun testCollectPathAnnotationAndPathType() {
         myFixture.configureByText(
@@ -166,7 +160,6 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
         assertEquals("/hello", route.path)
     }
 
-
     fun testCollectRegexPathAnnotationTrimsWhitespace() {
         myFixture.configureByText(
             "HelloService.java",
@@ -192,7 +185,6 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
         assertEquals("/foo", route.path)
     }
 
-
     fun testCollectGlobPathAnnotationNormalizesLeadingSlash() {
         myFixture.configureByText(
             "HelloService.java",
@@ -217,7 +209,6 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
         assertEquals(PathType.GLOB, route.pathType)
         assertEquals("/foo/**", route.path)
     }
-
 
     fun testCollectFluentRoutePathPrefix() {
         myFixture.configureByText(
@@ -247,6 +238,4 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
         assertEquals("/api/items", fluentRoute.path)
         assertEquals("GET", fluentRoute.httpMethod)
     }
-
-
 }

@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
-
     override fun registerArmeriaStubs() {
         registerKotlinExtendedRegistrationCollectorStubs()
     }
@@ -31,7 +30,6 @@ class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBa
         assertEquals("/files/", fileRoute!!.path)
     }
 
-
     fun testCollectKotlinFluentRouteRegistration() {
         myFixture.configureByText(
             "Main.kt",
@@ -57,7 +55,6 @@ class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBa
         assertEquals("/api/items", fluentRoute.path)
     }
 
-
     fun testCollectKotlinDecoratorUnderRegistration() {
         myFixture.configureByText(
             "Main.kt",
@@ -80,7 +77,6 @@ class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBa
         assertNotNull(decoratorRoute)
         assertEquals("/public", decoratorRoute!!.path)
     }
-
 
     fun testCollectKotlinWithRouteRegistration() {
         myFixture.configureByText(
@@ -108,7 +104,6 @@ class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBa
         assertEquals("/wrapped", fluentRoutes.single().path)
     }
 
-
     fun testCollectKotlinWithRouteDoesNotBurnDedupKeyOnInvalidLambda() {
         myFixture.configureByText(
             "Main.kt",
@@ -135,7 +130,6 @@ class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBa
         assertEquals("/wrapped", fluentRoutes.single().path)
     }
 
-
     fun testCollectKotlinHealthCheckRegistration() {
         myFixture.configureByText(
             "Main.kt",
@@ -157,7 +151,6 @@ class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBa
         assertNotNull(healthRoute)
         assertEquals("/internal/healthcheck", healthRoute!!.path)
     }
-
 
     fun testCollectKotlinFluentRoutePathPrefix() {
         myFixture.configureByText(
@@ -186,7 +179,6 @@ class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBa
         assertEquals("GET", fluentRoute.httpMethod)
     }
 
-
     fun testCollectKotlinFileServiceFromConstValPath() {
         myFixture.configureByText(
             "Main.kt",
@@ -211,6 +203,4 @@ class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBa
         assertNotNull(fileRoute)
         assertEquals("/files/", fileRoute!!.path)
     }
-
-
 }

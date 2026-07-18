@@ -10,8 +10,11 @@ import com.linecorp.intellij.plugins.armeria.message
 internal object ArmeriaRouteLineMarkerSupport {
     val SERVICE_REGISTRATION_METHODS = ServiceRegistrationMethod.CORE_METHOD_NAMES
 
-    fun createMarker(element: PsiElement, tooltip: String): LineMarkerInfo<PsiElement> {
-        return LineMarkerInfo(
+    fun createMarker(
+        element: PsiElement,
+        tooltip: String,
+    ): LineMarkerInfo<PsiElement> =
+        LineMarkerInfo(
             element,
             element.textRange,
             ArmeriaIcons.Armeria,
@@ -20,5 +23,4 @@ internal object ArmeriaRouteLineMarkerSupport {
             GutterIconRenderer.Alignment.CENTER,
             { message("marker.route.title") },
         )
-    }
 }

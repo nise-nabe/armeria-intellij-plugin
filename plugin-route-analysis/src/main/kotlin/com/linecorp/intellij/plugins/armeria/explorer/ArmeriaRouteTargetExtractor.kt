@@ -10,16 +10,18 @@ import com.intellij.psi.PsiTypeCastExpression
 import com.intellij.psi.PsiVariable
 
 internal object ArmeriaRouteTargetExtractor {
-    fun detectProtocol(expressionText: String): RouteProtocol {
-        return when {
+    fun detectProtocol(expressionText: String): RouteProtocol =
+        when {
             expressionText.contains("GrpcService") -> RouteProtocol.GRPC
             expressionText.contains("DocService") -> RouteProtocol.DOC_SERVICE
             expressionText.contains("Thrift", ignoreCase = true) -> RouteProtocol.THRIFT
             else -> RouteProtocol.HTTP
         }
-    }
 
-    fun isUnresolvedTarget(expression: PsiExpression, extractedTarget: String): Boolean {
+    fun isUnresolvedTarget(
+        expression: PsiExpression,
+        extractedTarget: String,
+    ): Boolean {
         val rawTarget = expression.text.trim()
         val unwrapped = unwrapCast(expression) ?: return true
         return when (unwrapped) {
@@ -36,7 +38,10 @@ internal object ArmeriaRouteTargetExtractor {
         }
     }
 
-    private fun isUnresolvedMethodCallTarget(call: PsiMethodCallExpression, extractedTarget: String): Boolean {
+    private fun isUnresolvedMethodCallTarget(
+        call: PsiMethodCallExpression,
+        extractedTarget: String,
+    ): Boolean {
         ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
         val resolvedMethod = call.resolveMethod() ?: return true
         val methodName = call.methodExpression.referenceName
@@ -72,15 +77,19 @@ internal object ArmeriaRouteTargetExtractor {
     private fun unwrapCast(expression: PsiExpression): PsiExpression? {
         var current: PsiExpression = expression
         while (true) {
-            current = when (current) {
-                is PsiTypeCastExpression -> current.operand ?: return null
-                is PsiParenthesizedExpression -> current.expression ?: return null
-                else -> return current
-            }
+            current =
+                when (current) {
+                    is PsiTypeCastExpression -> current.operand ?: return null
+                    is PsiParenthesizedExpression -> current.expression ?: return null
+                    else -> return current
+                }
         }
     }
 
-    private fun extractMethodCallTarget(call: PsiMethodCallExpression, fallbackExpression: PsiExpression): String {
+    private fun extractMethodCallTarget(
+        call: PsiMethodCallExpression,
+        fallbackExpression: PsiExpression,
+    ): String {
         val methodName = call.methodExpression.referenceName
         if (methodName == "build") {
             val qualifier = call.methodExpression.qualifierExpression
@@ -100,8 +109,9 @@ internal object ArmeriaRouteTargetExtractor {
         }
         ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
         val resolvedClass = call.resolveMethod()?.containingClass
-        val serviceClassName = resolvedClass?.qualifiedName?.let(::builderTypeToServiceName)
-            ?: resolvedClass?.name?.let(::builderTypeToServiceName)
+        val serviceClassName =
+            resolvedClass?.qualifiedName?.let(::builderTypeToServiceName)
+                ?: resolvedClass?.name?.let(::builderTypeToServiceName)
         if (serviceClassName != null) {
             return serviceClassName
         }
@@ -115,8 +125,9 @@ internal object ArmeriaRouteTargetExtractor {
             return argumentTarget
         }
         val builderClass = builderCall.resolveMethod()?.containingClass ?: return null
-        val serviceName = builderClass.qualifiedName?.let(::builderTypeToServiceName)
-            ?: builderClass.name?.let(::builderTypeToServiceName)
+        val serviceName =
+            builderClass.qualifiedName?.let(::builderTypeToServiceName)
+                ?: builderClass.name?.let(::builderTypeToServiceName)
         return if (argumentTarget.isNotBlank()) {
             "$serviceName($argumentTarget)"
         } else {
@@ -139,5 +150,4 @@ internal object ArmeriaRouteTargetExtractor {
     }
 }
 
-fun extractArmeriaRouteTarget(expression: PsiExpression): String =
-    ArmeriaRouteTargetExtractor.extractTarget(expression)
+fun extractArmeriaRouteTarget(expression: PsiExpression): String = ArmeriaRouteTargetExtractor.extractTarget(expression)

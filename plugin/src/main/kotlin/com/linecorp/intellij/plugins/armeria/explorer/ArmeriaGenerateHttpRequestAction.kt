@@ -8,8 +8,8 @@ import com.linecorp.intellij.plugins.armeria.message
 internal class ArmeriaGenerateHttpRequestAction(
     private val selectedRouteProvider: () -> ArmeriaRoute?,
 ) : DumbAwareAction(
-    message("route.explorer.action.generateHttpRequest"),
-) {
+        message("route.explorer.action.generateHttpRequest"),
+    ) {
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
 
     override fun update(e: AnActionEvent) {

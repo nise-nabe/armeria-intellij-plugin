@@ -12,16 +12,18 @@ import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 internal object ArmeriaKotlinClientEndpointGroupSupport {
     fun labelKotlinEndpointGroup(expression: KtExpression?): String? {
         expression ?: return null
-        val call = when (expression) {
-            is KtCallExpression -> expression
-            is KtDotQualifiedExpression -> expression.selectorExpression as? KtCallExpression
-            else -> null
-        }
-        if (call != null) {
-            val receiver = when (val callee = call.calleeExpression) {
-                is KtDotQualifiedExpression -> callee.receiverExpression.text
-                else -> (call.parent as? KtDotQualifiedExpression)?.receiverExpression?.text
+        val call =
+            when (expression) {
+                is KtCallExpression -> expression
+                is KtDotQualifiedExpression -> expression.selectorExpression as? KtCallExpression
+                else -> null
             }
+        if (call != null) {
+            val receiver =
+                when (val callee = call.calleeExpression) {
+                    is KtDotQualifiedExpression -> callee.receiverExpression.text
+                    else -> (call.parent as? KtDotQualifiedExpression)?.receiverExpression?.text
+                }
             val arguments = call.valueArguments.mapNotNull { it.getArgumentExpression() }
             return labelKotlinEndpointGroupCall(receiver, arguments)
         }
@@ -39,10 +41,15 @@ internal object ArmeriaKotlinClientEndpointGroupSupport {
         return ArmeriaClientEndpointGroupSupport.extractUriFromLabel(label)
     }
 
-    private fun labelKotlinEndpointGroupCall(receiver: String?, arguments: List<KtExpression>): String? {
-        val simpleName = receiver?.substringAfterLast('.')
-            ?.takeIf { ArmeriaClientEndpointGroupSupport.looksLikeEndpointGroupText(it) }
-            ?: return null
+    private fun labelKotlinEndpointGroupCall(
+        receiver: String?,
+        arguments: List<KtExpression>,
+    ): String? {
+        val simpleName =
+            receiver
+                ?.substringAfterLast('.')
+                ?.takeIf { ArmeriaClientEndpointGroupSupport.looksLikeEndpointGroupText(it) }
+                ?: return null
         val detail = arguments.firstNotNullOfOrNull { extractKotlinDetail(it) }
         return if (detail != null) "$simpleName ($detail)" else simpleName
     }

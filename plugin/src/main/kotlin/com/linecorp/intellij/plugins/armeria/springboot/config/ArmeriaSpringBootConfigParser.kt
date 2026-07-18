@@ -16,29 +16,31 @@ object ArmeriaSpringBootConfigParser {
             .map { (k, v) -> ArmeriaSpringBootConfigEntry(k, v) }
             .sortedBy { it.key }
 
-    fun parseFile(fileName: String, text: String): List<ArmeriaSpringBootConfigEntry> = when {
-        fileName.endsWith(".yml") || fileName.endsWith(".yaml") -> parseYaml(text)
-        fileName.endsWith(".properties") -> parseProperties(text)
-        else -> emptyList()
-    }
+    fun parseFile(
+        fileName: String,
+        text: String,
+    ): List<ArmeriaSpringBootConfigEntry> =
+        when {
+            fileName.endsWith(".yml") || fileName.endsWith(".yaml") -> parseYaml(text)
+            fileName.endsWith(".properties") -> parseProperties(text)
+            else -> emptyList()
+        }
 
-    internal fun flattenProperties(text: String): Map<String, String> {
-        return try {
+    internal fun flattenProperties(text: String): Map<String, String> =
+        try {
             val properties = Properties()
             properties.load(StringReader(text))
             properties.stringPropertyNames().associateWith { key -> properties.getProperty(key).orEmpty() }
         } catch (_: Exception) {
             emptyMap()
         }
-    }
 
-    internal fun flattenYaml(text: String): Map<String, String> {
-        return try {
+    internal fun flattenYaml(text: String): Map<String, String> =
+        try {
             flattenYamlUnchecked(text)
         } catch (_: RuntimeException) {
             emptyMap()
         }
-    }
 
     private fun flattenYamlUnchecked(text: String): Map<String, String> {
         val result = linkedMapOf<String, String>()
@@ -113,7 +115,11 @@ object ArmeriaSpringBootConfigParser {
         }
     }
 
-    private data class YamlFrame(val indent: Int, val path: String, var listItemCount: Int = 0) {
+    private data class YamlFrame(
+        val indent: Int,
+        val path: String,
+        var listItemCount: Int = 0,
+    ) {
         fun nextListIndex() = listItemCount++
     }
 }

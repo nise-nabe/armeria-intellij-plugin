@@ -13,7 +13,10 @@ import com.intellij.psi.PsiVariable
 import com.intellij.psi.search.GlobalSearchScope
 
 internal object ArmeriaServerBuilderSupport {
-    fun isSpringBootArmeriaAvailable(psiFacade: JavaPsiFacade, scope: GlobalSearchScope): Boolean {
+    fun isSpringBootArmeriaAvailable(
+        psiFacade: JavaPsiFacade,
+        scope: GlobalSearchScope,
+    ): Boolean {
         if (psiFacade.findClass(ArmeriaRouteSupport.SPRING_BEAN_ANNOTATION, scope) == null) {
             return false
         }
@@ -22,7 +25,10 @@ internal object ArmeriaServerBuilderSupport {
             psiFacade.findClass(ArmeriaRouteSupport.ARMERIA_SERVER_CLASS, scope) != null
     }
 
-    fun isArmeriaServerBeanReturnType(method: PsiMethod, scope: GlobalSearchScope): Boolean {
+    fun isArmeriaServerBeanReturnType(
+        method: PsiMethod,
+        scope: GlobalSearchScope,
+    ): Boolean {
         val returnType = method.returnType ?: return false
         val psiClass = (returnType as? PsiClassType)?.resolve()
         if (psiClass != null) {
@@ -54,21 +60,22 @@ internal object ArmeriaServerBuilderSupport {
         return variable.computeConstantValue() as? String
     }
 
-    fun extractJavaStringConstant(expression: PsiExpression?): String? {
-        return when (expression) {
+    fun extractJavaStringConstant(expression: PsiExpression?): String? =
+        when (expression) {
             null -> null
             is PsiLiteralExpression -> expression.value as? String
             is PsiReferenceExpression -> {
                 (expression.resolve() as? PsiVariable)?.let(::evaluateJavaStringConstant)
             }
             else -> {
-                val constantValue = JavaPsiFacade.getInstance(expression.project)
-                    .constantEvaluationHelper
-                    .computeConstantExpression(expression) as? String
+                val constantValue =
+                    JavaPsiFacade
+                        .getInstance(expression.project)
+                        .constantEvaluationHelper
+                        .computeConstantExpression(expression) as? String
                 constantValue ?: expression.text.takeIf { StringUtil.isNotEmpty(it) }?.trim('"')
             }
         }
-    }
 
     private fun isArmeriaServerBeanReturnType(
         psiClass: PsiClass,
@@ -122,9 +129,10 @@ internal object ArmeriaServerBuilderSupport {
                             break
                         }
                     }
-                    ' ', '\t', '\n' -> if (depth == 0) {
-                        break
-                    }
+                    ' ', '\t', '\n' ->
+                        if (depth == 0) {
+                            break
+                        }
                 }
                 index++
             }

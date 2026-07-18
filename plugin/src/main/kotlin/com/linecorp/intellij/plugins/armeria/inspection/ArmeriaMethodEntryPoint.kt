@@ -11,19 +11,22 @@ import com.linecorp.intellij.plugins.armeria.message
 import org.jdom.Element
 
 class ArmeriaMethodEntryPoint(
-    @JvmField var wasSelected: Boolean = true
-): EntryPoint() {
+    @JvmField var wasSelected: Boolean = true,
+) : EntryPoint() {
     override fun getDisplayName() = message("inspection.entrypoint.armeria")
 
-    override fun isEntryPoint(refElement: RefElement, psiElement: PsiElement) = isEntryPoint(psiElement)
+    override fun isEntryPoint(
+        refElement: RefElement,
+        psiElement: PsiElement,
+    ) = isEntryPoint(psiElement)
 
-    override fun isEntryPoint(psiElement: PsiElement): Boolean {
-        return psiElement is PsiMethod && AnnotationUtil.isAnnotated(
-            psiElement,
-            ArmeriaRouteSupport.routeAnnotations.keys,
-            AnnotationUtil.CHECK_TYPE,
-        )
-    }
+    override fun isEntryPoint(psiElement: PsiElement): Boolean =
+        psiElement is PsiMethod &&
+            AnnotationUtil.isAnnotated(
+                psiElement,
+                ArmeriaRouteSupport.routeAnnotations.keys,
+                AnnotationUtil.CHECK_TYPE,
+            )
 
     override fun isSelected(): Boolean = wasSelected
 
@@ -40,5 +43,4 @@ class ArmeriaMethodEntryPoint(
             XmlSerializer.serializeInto(this, element)
         }
     }
-
 }

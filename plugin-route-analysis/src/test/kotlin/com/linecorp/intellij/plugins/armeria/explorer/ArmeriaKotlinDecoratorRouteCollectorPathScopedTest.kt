@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaKotlinDecoratorRouteCollectorPathScopedTest : ArmeriaFixtureTestBase() {
-
     override fun registerArmeriaStubs() {
         registerKotlinRouteCollectorStubs()
     }
@@ -40,6 +39,7 @@ class ArmeriaKotlinDecoratorRouteCollectorPathScopedTest : ArmeriaFixtureTestBas
         assertNotNull(serviceRoute)
         assertEquals(listOf("Logging"), serviceRoute!!.decorators)
     }
+
     fun testCollectPathScopedDecoratorFiltersByRoute() {
         myFixture.configureByText(
             "Main.kt",
@@ -76,6 +76,7 @@ class ArmeriaKotlinDecoratorRouteCollectorPathScopedTest : ArmeriaFixtureTestBas
         assertEquals(listOf("Logging"), apiRoute!!.decorators)
         assertEquals(emptyList<String>(), otherRoute!!.decorators)
     }
+
     fun testCollectPathScopedDecoratorWithConstValPathPattern() {
         myFixture.configureByText(
             "Main.kt",

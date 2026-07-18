@@ -22,59 +22,68 @@ class ArmeriaSpringBootConfigParserTest {
 
     @Test
     fun parseProperties_extractsIndexedKeys() {
-        val m = ArmeriaSpringBootConfigParser.parseProperties(fixture("springboot/application.properties"))
-            .associate { it.key to it.value }
+        val m =
+            ArmeriaSpringBootConfigParser
+                .parseProperties(fixture("springboot/application.properties"))
+                .associate { it.key to it.value }
         assertEquals("9090", m["armeria.ports[0].port"])
         assertFalse(m.containsKey("unrelated.setting"))
     }
 
     @Test
     fun parseProperties_acceptsWhitespaceSeparator() {
-        val m = ArmeriaSpringBootConfigParser.parseProperties(
-            """
-            server.port 8080
-            armeria.enable-auto-injection true
-            """.trimIndent(),
-        ).associate { it.key to it.value }
+        val m =
+            ArmeriaSpringBootConfigParser
+                .parseProperties(
+                    """
+                    server.port 8080
+                    armeria.enable-auto-injection true
+                    """.trimIndent(),
+                ).associate { it.key to it.value }
         assertEquals("8080", m["server.port"])
         assertEquals("true", m["armeria.enable-auto-injection"])
     }
 
     @Test
     fun parseProperties_acceptsSpacesAroundEquals() {
-        val m = ArmeriaSpringBootConfigParser.parseProperties(
-            """
-            server.port = 8080
-            armeria.internal-services.port = 8090
-            """.trimIndent(),
-        ).associate { it.key to it.value }
+        val m =
+            ArmeriaSpringBootConfigParser
+                .parseProperties(
+                    """
+                    server.port = 8080
+                    armeria.internal-services.port = 8090
+                    """.trimIndent(),
+                ).associate { it.key to it.value }
         assertEquals("8080", m["server.port"])
         assertEquals("8090", m["armeria.internal-services.port"])
     }
 
     @Test
     fun parseYaml_listItemWithColonInScalar_isNotTreatedAsInlineMapping() {
-        val m = ArmeriaSpringBootConfigParser.flattenYaml(
-            """
-            armeria:
-              allowed-origins:
-                - http://example.com
-                - https://foo.bar:8080/path
-            """.trimIndent(),
-        )
+        val m =
+            ArmeriaSpringBootConfigParser.flattenYaml(
+                """
+                armeria:
+                  allowed-origins:
+                    - http://example.com
+                    - https://foo.bar:8080/path
+                """.trimIndent(),
+            )
         assertEquals("http://example.com", m["armeria.allowed-origins[0]"])
         assertEquals("https://foo.bar:8080/path", m["armeria.allowed-origins[1]"])
     }
 
     @Test
     fun parseYaml_topLevelListDoesNotThrow() {
-        val m = ArmeriaSpringBootConfigParser.parseYaml(
-            """
-            - item
-            armeria:
-              enable-auto-injection: true
-            """.trimIndent(),
-        ).associate { it.key to it.value }
+        val m =
+            ArmeriaSpringBootConfigParser
+                .parseYaml(
+                    """
+                    - item
+                    armeria:
+                      enable-auto-injection: true
+                    """.trimIndent(),
+                ).associate { it.key to it.value }
         assertEquals("true", m["armeria.enable-auto-injection"])
     }
 

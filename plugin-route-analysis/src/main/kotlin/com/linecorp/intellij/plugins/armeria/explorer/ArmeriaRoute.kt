@@ -39,43 +39,46 @@ data class ArmeriaRoute(
     fun resolveRegistrationSummary(): String = ArmeriaRouteDetailFormatter.registrationSummary(this)
 
     val methodLabel: String
-        get() = when (routeMatch) {
-            RouteMatch.ANNOTATED_HTTP -> httpMethod
-            RouteMatch.ANNOTATED_SERVICE -> message("route.explorer.method.annotatedService")
-            RouteMatch.SERVICE -> message("route.explorer.method.allHttp")
-            RouteMatch.SERVICE_UNDER -> message("route.explorer.method.prefix")
-            RouteMatch.FILE_SERVICE -> message("route.explorer.method.fileService")
-            RouteMatch.HEALTH_CHECK -> message("route.explorer.method.healthCheck")
-            RouteMatch.VIRTUAL_HOST -> message("route.explorer.method.virtualHost")
-            RouteMatch.ROUTE_DECORATOR -> message("route.explorer.method.routeDecorator")
-            RouteMatch.ROUTE_FLUENT -> httpMethod.ifBlank { message("route.explorer.method.allHttp") }
-            RouteMatch.DECORATOR_UNDER -> message("route.explorer.method.decoratorUnder")
-            RouteMatch.DELEGATED_SPRING_MVC ->
-                httpMethod.ifBlank { message("route.explorer.method.allHttp") }
-            RouteMatch.NON_HTTP -> protocol
-            RouteMatch.RUNTIME, RouteMatch.CONFIG -> httpMethod
-        }
+        get() =
+            when (routeMatch) {
+                RouteMatch.ANNOTATED_HTTP -> httpMethod
+                RouteMatch.ANNOTATED_SERVICE -> message("route.explorer.method.annotatedService")
+                RouteMatch.SERVICE -> message("route.explorer.method.allHttp")
+                RouteMatch.SERVICE_UNDER -> message("route.explorer.method.prefix")
+                RouteMatch.FILE_SERVICE -> message("route.explorer.method.fileService")
+                RouteMatch.HEALTH_CHECK -> message("route.explorer.method.healthCheck")
+                RouteMatch.VIRTUAL_HOST -> message("route.explorer.method.virtualHost")
+                RouteMatch.ROUTE_DECORATOR -> message("route.explorer.method.routeDecorator")
+                RouteMatch.ROUTE_FLUENT -> httpMethod.ifBlank { message("route.explorer.method.allHttp") }
+                RouteMatch.DECORATOR_UNDER -> message("route.explorer.method.decoratorUnder")
+                RouteMatch.DELEGATED_SPRING_MVC ->
+                    httpMethod.ifBlank { message("route.explorer.method.allHttp") }
+                RouteMatch.NON_HTTP -> protocol
+                RouteMatch.RUNTIME, RouteMatch.CONFIG -> httpMethod
+            }
 
     val shortTarget: String
         get() = truncateTarget(target)
 
     val speedSearchText: String
-        get() = buildString {
-            append(methodLabel)
-            append(' ')
-            append(path)
-            append(' ')
-            append(target)
-            append(' ')
-            append(moduleName)
-        }
+        get() =
+            buildString {
+                append(methodLabel)
+                append(' ')
+                append(path)
+                append(' ')
+                append(target)
+                append(' ')
+                append(moduleName)
+            }
 
     val detailHandlerLabel: String
-        get() = when {
-            routeMatch == RouteMatch.RUNTIME -> message("route.explorer.detail.service")
-            targetUnresolved -> message("route.explorer.label.unresolvedExpression")
-            else -> message("route.explorer.detail.handler")
-        }
+        get() =
+            when {
+                routeMatch == RouteMatch.RUNTIME -> message("route.explorer.detail.service")
+                targetUnresolved -> message("route.explorer.label.unresolvedExpression")
+                else -> message("route.explorer.detail.handler")
+            }
 
     companion object {
         private const val TARGET_DISPLAY_LIMIT = 60
@@ -98,8 +101,8 @@ data class ArmeriaRoute(
             timeoutHints: List<String> = emptyList(),
             contentHints: List<String> = emptyList(),
             delegationMountPath: String = "",
-        ): ArmeriaRoute {
-            return ArmeriaRoute(
+        ): ArmeriaRoute =
+            ArmeriaRoute(
                 protocol = protocol,
                 httpMethod = httpMethod,
                 path = path,
@@ -119,7 +122,6 @@ data class ArmeriaRoute(
                 delegationMountPath = delegationMountPath,
                 pointer = SmartPointerManager.createPointer(element),
             )
-        }
 
         fun createRuntime(
             httpMethod: String,
@@ -128,8 +130,8 @@ data class ArmeriaRoute(
             moduleName: String,
             protocol: String,
             project: Project? = null,
-        ): ArmeriaRoute {
-            return ArmeriaRoute(
+        ): ArmeriaRoute =
+            ArmeriaRoute(
                 protocol = protocol,
                 httpMethod = httpMethod,
                 path = path,
@@ -142,9 +144,11 @@ data class ArmeriaRoute(
                 exceptionHandlers = emptyList(),
                 pointer = project?.let(::ArmeriaRuntimeRoutePointer) ?: ArmeriaRuntimeRoutePointer.withoutProject(),
             )
-        }
 
-        fun truncateTarget(value: String, limit: Int = TARGET_DISPLAY_LIMIT): String {
+        fun truncateTarget(
+            value: String,
+            limit: Int = TARGET_DISPLAY_LIMIT,
+        ): String {
             if (value.length <= limit) {
                 return value
             }

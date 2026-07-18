@@ -13,13 +13,14 @@ internal class ArmeriaRouteCollectionMetrics {
     val resolveCount = AtomicInteger()
     var elapsedMs: Long = 0
 
-    fun snapshot(): Snapshot = Snapshot(
-        filesScanned = filesScanned.get(),
-        armeriaFiles = armeriaFiles.get(),
-        methodCallsVisited = methodCallsVisited.get(),
-        resolveCount = resolveCount.get(),
-        elapsedMs = elapsedMs,
-    )
+    fun snapshot(): Snapshot =
+        Snapshot(
+            filesScanned = filesScanned.get(),
+            armeriaFiles = armeriaFiles.get(),
+            methodCallsVisited = methodCallsVisited.get(),
+            resolveCount = resolveCount.get(),
+            elapsedMs = elapsedMs,
+        )
 
     data class Snapshot(
         val filesScanned: Int,
@@ -41,7 +42,10 @@ internal class ArmeriaRouteCollectionMetrics {
         var lastSnapshot: Snapshot? = null
             private set
 
-        internal fun <T> runWith(metrics: ArmeriaRouteCollectionMetrics, block: () -> T): T {
+        internal fun <T> runWith(
+            metrics: ArmeriaRouteCollectionMetrics,
+            block: () -> T,
+        ): T {
             active.set(metrics)
             try {
                 return block()
@@ -57,11 +61,12 @@ internal class ArmeriaRouteCollectionMetrics {
             if (ApplicationManager.getApplication().isUnitTestMode) {
                 return
             }
-            val metricsAtInfo = try {
-                Registry.`is`("armeria.route.explorer.metrics")
-            } catch (_: MissingResourceException) {
-                false
-            }
+            val metricsAtInfo =
+                try {
+                    Registry.`is`("armeria.route.explorer.metrics")
+                } catch (_: MissingResourceException) {
+                    false
+                }
             if (metricsAtInfo) {
                 LOG.info("ArmeriaRouteCollector metrics: $snapshot")
             } else {

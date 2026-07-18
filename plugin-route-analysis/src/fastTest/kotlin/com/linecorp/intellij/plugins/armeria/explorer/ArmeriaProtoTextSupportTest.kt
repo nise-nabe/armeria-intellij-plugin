@@ -6,13 +6,14 @@ import org.junit.Test
 class ArmeriaProtoTextSupportTest {
     @Test
     fun stripCommentsPreservesHttpsUrlInStringLiteral() {
-        val proto = """
+        val proto =
+            """
             rpc SayHello(HelloRequest) returns (HelloResponse) {
               option (google.api.http) = {
                 post: "https://api.example.com/v1/hello"
               };
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val stripped = ArmeriaProtoTextSupport.stripComments(proto)
 

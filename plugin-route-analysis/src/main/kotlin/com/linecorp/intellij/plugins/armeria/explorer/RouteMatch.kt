@@ -14,6 +14,7 @@ enum class RouteMatch {
     DELEGATED_SPRING_MVC,
     NON_HTTP,
     RUNTIME,
+
     /** Static application config (e.g. Spring Boot armeria.*) — HTTP-capable, not live DocService fetch. */
     CONFIG,
 }

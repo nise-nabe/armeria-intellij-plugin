@@ -29,6 +29,7 @@ internal object ArmeriaSpringBootRouteCollector {
     private val getKotlinOriginMethod: java.lang.reflect.Method? by lazy {
         ktLightMethodClass?.getMethod("getKotlinOrigin")
     }
+
     fun collect(
         project: Project,
         scope: GlobalSearchScope,
@@ -65,16 +66,18 @@ internal object ArmeriaSpringBootRouteCollector {
                 return
             }
         }
-        method.body?.accept(object : JavaRecursiveElementWalkingVisitor() {
-            override fun visitMethodCallExpression(expression: PsiMethodCallExpression) {
-                ArmeriaRouteCollectorServiceRegistration.collectServiceRegistrationFromMethodCall(
-                    expression,
-                    routes,
-                    seenServiceRegistrations,
-                )
-                super.visitMethodCallExpression(expression)
-            }
-        })
+        method.body?.accept(
+            object : JavaRecursiveElementWalkingVisitor() {
+                override fun visitMethodCallExpression(expression: PsiMethodCallExpression) {
+                    ArmeriaRouteCollectorServiceRegistration.collectServiceRegistrationFromMethodCall(
+                        expression,
+                        routes,
+                        seenServiceRegistrations,
+                    )
+                    super.visitMethodCallExpression(expression)
+                }
+            },
+        )
     }
 
     private fun resolveKotlinOrigin(method: PsiMethod): PsiElement? {
@@ -90,6 +93,5 @@ internal object ArmeriaSpringBootRouteCollector {
         }
     }
 
-    private fun isKotlinPluginAvailable(): Boolean =
-        PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
+    private fun isKotlinPluginAvailable(): Boolean = PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
 }

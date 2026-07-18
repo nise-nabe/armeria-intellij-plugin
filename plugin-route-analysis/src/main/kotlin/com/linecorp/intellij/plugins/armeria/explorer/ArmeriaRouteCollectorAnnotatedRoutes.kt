@@ -1,8 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.search.searches.AnnotatedElementsSearch
 
 internal object ArmeriaRouteCollectorAnnotatedRoutes {
@@ -24,7 +24,10 @@ internal object ArmeriaRouteCollectorAnnotatedRoutes {
         }
     }
 
-    fun addAnnotatedRouteFromMethod(method: PsiMethod, routes: MutableList<ArmeriaRoute>) {
+    fun addAnnotatedRouteFromMethod(
+        method: PsiMethod,
+        routes: MutableList<ArmeriaRoute>,
+    ) {
         val annotation = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return
         val containingClass = method.containingClass ?: return
         val classPrefix =
@@ -33,37 +36,44 @@ internal object ArmeriaRouteCollectorAnnotatedRoutes {
             ArmeriaRouteSupport.extractNames(containingClass.getAnnotation(ArmeriaRouteSupport.DECORATOR_ANNOTATION))
         val classExceptionHandlers =
             ArmeriaRouteSupport.extractNames(containingClass.getAnnotation(ArmeriaRouteSupport.EXCEPTION_HANDLER_ANNOTATION))
-        val paths = buildList {
-            addAll(ArmeriaRouteSupport.extractPaths(annotation.first))
-            addAll(ArmeriaRouteSupport.extractPathAnnotations(method))
-        }.ifEmpty { listOf("/") }.distinct()
+        val paths =
+            buildList {
+                addAll(ArmeriaRouteSupport.extractPaths(annotation.first))
+                addAll(ArmeriaRouteSupport.extractPathAnnotations(method))
+            }.ifEmpty { listOf("/") }.distinct()
         val methodDecorators =
             classDecorators + ArmeriaRouteSupport.extractNames(method.getAnnotation(ArmeriaRouteSupport.DECORATOR_ANNOTATION))
-        val methodExceptionHandlers = classExceptionHandlers + ArmeriaRouteSupport.extractNames(
-            method.getAnnotation(ArmeriaRouteSupport.EXCEPTION_HANDLER_ANNOTATION),
-        )
+        val methodExceptionHandlers =
+            classExceptionHandlers +
+                ArmeriaRouteSupport.extractNames(
+                    method.getAnnotation(ArmeriaRouteSupport.EXCEPTION_HANDLER_ANNOTATION),
+                )
         val target = buildMethodTarget(containingClass, method)
         val executionHints = ArmeriaTimeoutSupport.collectExecutionHints(method)
         for (rawPath in paths) {
             val (pathType, normalizedPath) = ArmeriaRouteSupport.parsePathType(rawPath)
             val combinedPath = ArmeriaRouteSupport.combinePaths(classPrefix, normalizedPath)
-            routes += ArmeriaRoute.create(
-                element = method,
-                protocol = RouteProtocol.HTTP.presentableName(),
-                httpMethod = annotation.second,
-                path = combinedPath,
-                target = target,
-                routeMatch = RouteMatch.ANNOTATED_HTTP,
-                pathType = pathType,
-                decorators = methodDecorators.distinct(),
-                exceptionHandlers = methodExceptionHandlers.distinct(),
-                executionHints = executionHints,
-                contentHints = ArmeriaAnnotatedMetadataSupport.collectContentHints(method, combinedPath, pathType),
-            )
+            routes +=
+                ArmeriaRoute.create(
+                    element = method,
+                    protocol = RouteProtocol.HTTP.presentableName(),
+                    httpMethod = annotation.second,
+                    path = combinedPath,
+                    target = target,
+                    routeMatch = RouteMatch.ANNOTATED_HTTP,
+                    pathType = pathType,
+                    decorators = methodDecorators.distinct(),
+                    exceptionHandlers = methodExceptionHandlers.distinct(),
+                    executionHints = executionHints,
+                    contentHints = ArmeriaAnnotatedMetadataSupport.collectContentHints(method, combinedPath, pathType),
+                )
         }
     }
 
-    private fun buildMethodTarget(psiClass: com.intellij.psi.PsiClass, method: PsiMethod): String {
+    private fun buildMethodTarget(
+        psiClass: com.intellij.psi.PsiClass,
+        method: PsiMethod,
+    ): String {
         val className = psiClass.qualifiedName ?: psiClass.name ?: "<anonymous>"
         return "$className#${method.name}()"
     }

@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaRouteDuplicateIndexCoreTest : ArmeriaFixtureTestBase() {
-
     override fun registerArmeriaStubs() {
         registerRouteDuplicateIndexStubs()
     }
@@ -45,9 +44,15 @@ class ArmeriaRouteDuplicateIndexCoreTest : ArmeriaFixtureTestBase() {
 
         assertEquals(1, groups.size)
         assertEquals(2, groups.single().routes.size)
-        assertEquals(setOf("/dup"), groups.single().routes.map { it.path }.toSet())
+        assertEquals(
+            setOf("/dup"),
+            groups
+                .single()
+                .routes
+                .map { it.path }
+                .toSet(),
+        )
     }
-
 
     fun testDifferentHttpMethodsOnSamePathAreNotDuplicates() {
         myFixture.configureByText(
@@ -74,7 +79,6 @@ class ArmeriaRouteDuplicateIndexCoreTest : ArmeriaFixtureTestBase() {
 
         assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
     }
-
 
     fun testCrossClassAnnotatedRoutesAreReported() {
         myFixture.configureByText(
@@ -113,7 +117,6 @@ class ArmeriaRouteDuplicateIndexCoreTest : ArmeriaFixtureTestBase() {
         assertEquals(2, groups.single().routes.size)
     }
 
-
     fun testConflictingRoutesExcludesCurrentRegistration() {
         myFixture.configureByText(
             "First.java",
@@ -151,7 +154,6 @@ class ArmeriaRouteDuplicateIndexCoreTest : ArmeriaFixtureTestBase() {
         assertEquals(1, hit.conflictingRoutes.size)
         assertEquals("GET /shared", hit.conflictingRoutes.single().navigationLabel)
     }
-
 
     fun testConflictingRouteNavigationLabelsDisambiguateSamePath() {
         myFixture.configureByText(
@@ -210,7 +212,6 @@ class ArmeriaRouteDuplicateIndexCoreTest : ArmeriaFixtureTestBase() {
         assertTrue(labels.all { it.startsWith("/dup (") })
     }
 
-
     fun testConflictingRoutesDeduplicateSharedPsiElements() {
         myFixture.configureByText(
             "Main.java",
@@ -254,7 +255,6 @@ class ArmeriaRouteDuplicateIndexCoreTest : ArmeriaFixtureTestBase() {
         assertEquals("/dup", hit.conflictingRoutes.single().navigationLabel)
     }
 
-
     fun testInClassJavaAnnotatedDuplicatesAreExcluded() {
         myFixture.configureByText(
             "BadService.java",
@@ -280,7 +280,6 @@ class ArmeriaRouteDuplicateIndexCoreTest : ArmeriaFixtureTestBase() {
         assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
     }
 
-
     fun testInClassKotlinAnnotatedDuplicatesAreExcluded() {
         myFixture.configureByText(
             "BadService.kt",
@@ -301,7 +300,6 @@ class ArmeriaRouteDuplicateIndexCoreTest : ArmeriaFixtureTestBase() {
 
         assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
     }
-
 
     fun testCatchAllServiceCountsOverlapsPerRoute() {
         myFixture.configureByText(
@@ -352,24 +350,26 @@ class ArmeriaRouteDuplicateIndexCoreTest : ArmeriaFixtureTestBase() {
 
         assertEquals(
             2,
-            ArmeriaRouteDuplicateIndex.duplicateHitsInFile(project, getRoute.pointer.element!!.containingFile)
+            ArmeriaRouteDuplicateIndex
+                .duplicateHitsInFile(project, getRoute.pointer.element!!.containingFile)
                 .single { it.registrationLabel == "GET /shared" }
                 .registrationCount,
         )
         assertEquals(
             2,
-            ArmeriaRouteDuplicateIndex.duplicateHitsInFile(project, postRoute.pointer.element!!.containingFile)
+            ArmeriaRouteDuplicateIndex
+                .duplicateHitsInFile(project, postRoute.pointer.element!!.containingFile)
                 .single { it.registrationLabel == "POST /shared" }
                 .registrationCount,
         )
         assertEquals(
             3,
-            ArmeriaRouteDuplicateIndex.duplicateHitsInFile(project, serviceRoute.pointer.element!!.containingFile)
+            ArmeriaRouteDuplicateIndex
+                .duplicateHitsInFile(project, serviceRoute.pointer.element!!.containingFile)
                 .single()
                 .registrationCount,
         )
     }
-
 
     fun testDuplicateHitsAreIndexedByFile() {
         myFixture.configureByText(
@@ -387,20 +387,21 @@ class ArmeriaRouteDuplicateIndexCoreTest : ArmeriaFixtureTestBase() {
             }
             """.trimIndent(),
         )
-        val secondClass = myFixture.addClass(
-            """
-            package example;
+        val secondClass =
+            myFixture.addClass(
+                """
+                package example;
 
-            import com.linecorp.armeria.server.annotation.Get;
+                import com.linecorp.armeria.server.annotation.Get;
 
-            public class Second {
-                @Get("/shared")
-                public String second() {
-                    return "second";
+                public class Second {
+                    @Get("/shared")
+                    public String second() {
+                        return "second";
+                    }
                 }
-            }
-            """.trimIndent(),
-        )
+                """.trimIndent(),
+            )
 
         val firstFile = myFixture.file
         val secondFile = secondClass.containingFile
@@ -412,6 +413,4 @@ class ArmeriaRouteDuplicateIndexCoreTest : ArmeriaFixtureTestBase() {
         assertEquals("GET /shared", firstHits.single().registrationLabel)
         assertEquals(2, firstHits.single().registrationCount)
     }
-
-
 }

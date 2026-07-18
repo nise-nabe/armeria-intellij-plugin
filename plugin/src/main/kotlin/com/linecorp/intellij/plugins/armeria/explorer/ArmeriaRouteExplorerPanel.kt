@@ -34,49 +34,65 @@ import javax.swing.tree.DefaultTreeModel
 
 class ArmeriaRouteExplorerPanel(
     private val project: Project,
-) : SimpleToolWindowPanel(true, true), Disposable, UiDataProvider {
+) : SimpleToolWindowPanel(true, true),
+    Disposable,
+    UiDataProvider {
     private val routeState = ArmeriaRouteExplorerRouteState()
     private var refreshGeneration = 0
     private var selectedRoute: ArmeriaRoute? = null
     private var currentModuleOnly = false
     private var initialRefreshScheduled = false
 
-    private val routeTree = Tree().apply {
-        isRootVisible = false
-        showsRootHandles = true
-        emptyText.text = message("route.explorer.empty")
-    }
+    private val routeTree =
+        Tree().apply {
+            isRootVisible = false
+            showsRootHandles = true
+            emptyText.text = message("route.explorer.empty")
+        }
     private val statusLabel = JBLabel()
     private val routeDetailPanel = ArmeriaRouteDetailPanel()
-    private val detailFootnote = JBLabel(message("route.explorer.footnote.static")).apply {
-        foreground = JBUI.CurrentTheme.Label.disabledForeground()
-    }
+    private val detailFootnote =
+        JBLabel(message("route.explorer.footnote.static")).apply {
+            foreground = JBUI.CurrentTheme.Label.disabledForeground()
+        }
 
     init {
-        val actionGroup = DefaultActionGroup().apply {
-            add(object : DumbAwareAction(message("route.explorer.action.refresh")) {
-                override fun actionPerformed(e: AnActionEvent) {
-                    refresh()
-                }
-            })
-            add(object : ToggleAction(message("route.explorer.filter.currentModule")) {
-                override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+        val actionGroup =
+            DefaultActionGroup().apply {
+                add(
+                    object : DumbAwareAction(message("route.explorer.action.refresh")) {
+                        override fun actionPerformed(e: AnActionEvent) {
+                            refresh()
+                        }
+                    },
+                )
+                add(
+                    object : ToggleAction(message("route.explorer.filter.currentModule")) {
+                        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
 
-                override fun isSelected(e: AnActionEvent): Boolean = currentModuleOnly
+                        override fun isSelected(e: AnActionEvent): Boolean = currentModuleOnly
 
-                override fun setSelected(e: AnActionEvent, state: Boolean) {
-                    currentModuleOnly = state
-                    rebuildTree()
-                    updateStatusLabel()
-                }
-            })
-            add(ArmeriaGenerateHttpRequestAction { selectedRouteFromTree() })
-            add(ArmeriaSyncRuntimeRoutesAction())
-            add(ArmeriaOpenDocServiceAction { filterRoutes(allRoutes()) })
-        }
-        toolbar = ActionManager.getInstance().createActionToolbar("ArmeriaRouteExplorer", actionGroup, true).also {
-            it.targetComponent = this
-        }.component
+                        override fun setSelected(
+                            e: AnActionEvent,
+                            state: Boolean,
+                        ) {
+                            currentModuleOnly = state
+                            rebuildTree()
+                            updateStatusLabel()
+                        }
+                    },
+                )
+                add(ArmeriaGenerateHttpRequestAction { selectedRouteFromTree() })
+                add(ArmeriaSyncRuntimeRoutesAction())
+                add(ArmeriaOpenDocServiceAction { filterRoutes(allRoutes()) })
+            }
+        toolbar =
+            ActionManager
+                .getInstance()
+                .createActionToolbar("ArmeriaRouteExplorer", actionGroup, true)
+                .also {
+                    it.targetComponent = this
+                }.component
 
         routeTree.cellRenderer = ArmeriaRouteExplorerTreeRenderer()
         TreeUIHelper.getInstance().installTreeSpeedSearch(
@@ -95,46 +111,52 @@ class ArmeriaRouteExplorerPanel(
             selectedRoute = ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent)
             routeDetailPanel.setRoute(selectedRoute)
         }
-        routeTree.addMouseListener(object : MouseAdapter() {
-            override fun mouseClicked(event: MouseEvent) {
-                if (event.clickCount == 2) {
-                    navigateToSelection()
+        routeTree.addMouseListener(
+            object : MouseAdapter() {
+                override fun mouseClicked(event: MouseEvent) {
+                    if (event.clickCount == 2) {
+                        navigateToSelection()
+                    }
                 }
-            }
-        })
+            },
+        )
         routeTree.registerKeyboardAction(
             { navigateToSelection() },
             KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0),
             JTree.WHEN_FOCUSED,
         )
 
-        val detailPanel = JPanel(BorderLayout()).apply {
-            border = JBUI.Borders.empty(8)
-            add(
-                JBScrollPane(
-                    routeDetailPanel,
-                    JBScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
-                    JBScrollPane.HORIZONTAL_SCROLLBAR_NEVER,
-                ),
-                BorderLayout.CENTER,
-            )
-            add(detailFootnote, BorderLayout.SOUTH)
-        }
+        val detailPanel =
+            JPanel(BorderLayout()).apply {
+                border = JBUI.Borders.empty(8)
+                add(
+                    JBScrollPane(
+                        routeDetailPanel,
+                        JBScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                        JBScrollPane.HORIZONTAL_SCROLLBAR_NEVER,
+                    ),
+                    BorderLayout.CENTER,
+                )
+                add(detailFootnote, BorderLayout.SOUTH)
+            }
 
-        val treeScrollPane = JBScrollPane(routeTree).apply {
-            minimumSize = Dimension(JBUI.scale(300), 0)
-        }
-        val splitter = OnePixelSplitter(false, 0.7f).apply {
-            firstComponent = treeScrollPane
-            secondComponent = detailPanel
-            setHonorComponentsMinimumSize(false)
-        }
+        val treeScrollPane =
+            JBScrollPane(routeTree).apply {
+                minimumSize = Dimension(JBUI.scale(300), 0)
+            }
+        val splitter =
+            OnePixelSplitter(false, 0.7f).apply {
+                firstComponent = treeScrollPane
+                secondComponent = detailPanel
+                setHonorComponentsMinimumSize(false)
+            }
 
-        val contentPanel = JPanel(BorderLayout()).apply {
-            border = JBUI.Borders.empty(8, 8, 0, 8)
-            add(statusLabel, BorderLayout.NORTH)
-            add(splitter, BorderLayout.CENTER)
-        }
+        val contentPanel =
+            JPanel(BorderLayout()).apply {
+                border = JBUI.Borders.empty(8, 8, 0, 8)
+                add(statusLabel, BorderLayout.NORTH)
+                add(splitter, BorderLayout.CENTER)
+            }
         setContent(contentPanel)
 
         routeDetailPanel.clear()
@@ -152,10 +174,10 @@ class ArmeriaRouteExplorerPanel(
     fun refresh() {
         val generation = ++refreshGeneration
         statusLabel.text = message("route.explorer.summary.refreshing")
-        ReadAction.nonBlocking<List<ArmeriaRoute>> {
-            ArmeriaRouteCollector.collect(project, includeProtoRoutes = true)
-        }
-            .inSmartMode(project)
+        ReadAction
+            .nonBlocking<List<ArmeriaRoute>> {
+                ArmeriaRouteCollector.collect(project, includeProtoRoutes = true)
+            }.inSmartMode(project)
             .expireWith(this)
             .coalesceBy(this)
             .finishOnUiThread(ModalityState.any()) { collectedRoutes ->
@@ -185,8 +207,9 @@ class ArmeriaRouteExplorerPanel(
         val visibleRoutes = filterRoutes(allRoutes())
         val root = ArmeriaRouteTreeBuilder.buildRoot(visibleRoutes)
         routeTree.model = DefaultTreeModel(root)
-        val selectionRestored = previousSelection != null &&
-            ArmeriaRouteExplorerFiltering.restoreTreeSelection(routeTree, root, previousSelection)
+        val selectionRestored =
+            previousSelection != null &&
+                ArmeriaRouteExplorerFiltering.restoreTreeSelection(routeTree, root, previousSelection)
         when {
             visibleRoutes.isEmpty() -> {
                 selectedRoute = null
@@ -205,24 +228,26 @@ class ArmeriaRouteExplorerPanel(
 
     private fun updateStatusLabel() {
         val collectedRoutes = allRoutes()
-        statusLabel.text = if (
-            currentModuleOnly &&
-            ArmeriaRouteExplorerFiltering.selectedEditorModule(project) == null &&
-            collectedRoutes.isNotEmpty()
-        ) {
-            message("route.explorer.summary.moduleFilterNoEditor")
-        } else {
-            ArmeriaRouteExplorerFiltering.summary(filterRoutes(collectedRoutes))
-        }
+        statusLabel.text =
+            if (
+                currentModuleOnly &&
+                ArmeriaRouteExplorerFiltering.selectedEditorModule(project) == null &&
+                collectedRoutes.isNotEmpty()
+            ) {
+                message("route.explorer.summary.moduleFilterNoEditor")
+            } else {
+                ArmeriaRouteExplorerFiltering.summary(filterRoutes(collectedRoutes))
+            }
     }
 
     private fun updateDetailFootnote() {
         val runtimeCount = routeState.runtimeRoutes.size
-        detailFootnote.text = if (runtimeCount == 0) {
-            message("route.explorer.footnote.static")
-        } else {
-            message("route.explorer.footnote.runtime", runtimeCount)
-        }
+        detailFootnote.text =
+            if (runtimeCount == 0) {
+                message("route.explorer.footnote.static")
+            } else {
+                message("route.explorer.footnote.runtime", runtimeCount)
+            }
     }
 
     private fun filterRoutes(routes: List<ArmeriaRoute>): List<ArmeriaRoute> =
@@ -233,9 +258,7 @@ class ArmeriaRouteExplorerPanel(
         ArmeriaRouteNavigation.navigateToPointer(project, route.pointer, parentDisposable = this)
     }
 
-    private fun selectedRouteFromTree(): ArmeriaRoute? {
-        return ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent)
-    }
+    private fun selectedRouteFromTree(): ArmeriaRoute? = ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent)
 
     override fun uiDataSnapshot(sink: DataSink) {
         selectedRoute?.let { sink[ArmeriaRouteDataKeys.SELECTED_ROUTE] = it }

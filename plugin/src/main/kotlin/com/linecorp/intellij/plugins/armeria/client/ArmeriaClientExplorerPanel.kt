@@ -32,7 +32,8 @@ import javax.swing.event.ListSelectionListener
 
 class ArmeriaClientExplorerPanel(
     private val project: Project,
-) : SimpleToolWindowPanel(true, true), Disposable {
+) : SimpleToolWindowPanel(true, true),
+    Disposable {
     private var initialRefreshScheduled = false
 
     private val listModel = DefaultListModel<ArmeriaClientEndpoint>()
@@ -41,77 +42,93 @@ class ArmeriaClientExplorerPanel(
     private val clientDetailPanel = ArmeriaClientDetailPanel()
 
     init {
-        val actionGroup = DefaultActionGroup().apply {
-            add(object : DumbAwareAction(message("client.explorer.action.refresh")) {
-                override fun actionPerformed(e: AnActionEvent) {
-                    refresh()
-                }
-            })
-        }
-        toolbar = ActionManager.getInstance().createActionToolbar("ArmeriaClientExplorer", actionGroup, true).also {
-            it.targetComponent = this
-        }.component
+        val actionGroup =
+            DefaultActionGroup().apply {
+                add(
+                    object : DumbAwareAction(message("client.explorer.action.refresh")) {
+                        override fun actionPerformed(e: AnActionEvent) {
+                            refresh()
+                        }
+                    },
+                )
+            }
+        toolbar =
+            ActionManager
+                .getInstance()
+                .createActionToolbar("ArmeriaClientExplorer", actionGroup, true)
+                .also {
+                    it.targetComponent = this
+                }.component
 
         endpointList.emptyText.text = message("client.explorer.empty")
-        endpointList.cellRenderer = object : DefaultListCellRenderer() {
-            override fun getListCellRendererComponent(
-                list: javax.swing.JList<*>,
-                value: Any?,
-                index: Int,
-                isSelected: Boolean,
-                cellHasFocus: Boolean,
-            ): Component {
-                val label = if (value is ArmeriaClientEndpoint) formatListLabel(value) else value?.toString()
-                val component = super.getListCellRendererComponent(list, label, index, isSelected, cellHasFocus)
-                toolTipText = null
-                if (value is ArmeriaClientEndpoint) {
-                    toolTipText = buildClientTooltip(value)
-                }
-                return component
-            }
-        }
-        endpointList.addListSelectionListener(ListSelectionListener { _: ListSelectionEvent ->
-            clientDetailPanel.setEndpoint(endpointList.selectedValue)
-        })
-        endpointList.addMouseListener(object : MouseAdapter() {
-            override fun mouseClicked(event: MouseEvent) {
-                if (event.clickCount == 2) {
-                    navigateToSelection()
+        endpointList.cellRenderer =
+            object : DefaultListCellRenderer() {
+                override fun getListCellRendererComponent(
+                    list: javax.swing.JList<*>,
+                    value: Any?,
+                    index: Int,
+                    isSelected: Boolean,
+                    cellHasFocus: Boolean,
+                ): Component {
+                    val label = if (value is ArmeriaClientEndpoint) formatListLabel(value) else value?.toString()
+                    val component = super.getListCellRendererComponent(list, label, index, isSelected, cellHasFocus)
+                    toolTipText = null
+                    if (value is ArmeriaClientEndpoint) {
+                        toolTipText = buildClientTooltip(value)
+                    }
+                    return component
                 }
             }
-        })
+        endpointList.addListSelectionListener(
+            ListSelectionListener { _: ListSelectionEvent ->
+                clientDetailPanel.setEndpoint(endpointList.selectedValue)
+            },
+        )
+        endpointList.addMouseListener(
+            object : MouseAdapter() {
+                override fun mouseClicked(event: MouseEvent) {
+                    if (event.clickCount == 2) {
+                        navigateToSelection()
+                    }
+                }
+            },
+        )
         endpointList.registerKeyboardAction(
             { navigateToSelection() },
             KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0),
             JBList.WHEN_FOCUSED,
         )
 
-        val detailPanel = JPanel(BorderLayout()).apply {
-            border = JBUI.Borders.empty(8)
-            add(
-                JBScrollPane(
-                    clientDetailPanel,
-                    JBScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
-                    JBScrollPane.HORIZONTAL_SCROLLBAR_NEVER,
-                ),
-                BorderLayout.CENTER,
-            )
-        }
+        val detailPanel =
+            JPanel(BorderLayout()).apply {
+                border = JBUI.Borders.empty(8)
+                add(
+                    JBScrollPane(
+                        clientDetailPanel,
+                        JBScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                        JBScrollPane.HORIZONTAL_SCROLLBAR_NEVER,
+                    ),
+                    BorderLayout.CENTER,
+                )
+            }
 
-        val listScrollPane = JBScrollPane(endpointList).apply {
-            minimumSize = Dimension(JBUI.scale(300), 0)
-        }
-        val splitter = OnePixelSplitter(false, 0.65f).apply {
-            firstComponent = listScrollPane
-            secondComponent = detailPanel
-            setHonorComponentsMinimumSize(false)
-        }
+        val listScrollPane =
+            JBScrollPane(endpointList).apply {
+                minimumSize = Dimension(JBUI.scale(300), 0)
+            }
+        val splitter =
+            OnePixelSplitter(false, 0.65f).apply {
+                firstComponent = listScrollPane
+                secondComponent = detailPanel
+                setHonorComponentsMinimumSize(false)
+            }
 
-        val contentPanel = JPanel(BorderLayout()).apply {
-            border = JBUI.Borders.empty(8, 8, 0, 8)
-            add(statusLabel, BorderLayout.NORTH)
-            add(splitter, BorderLayout.CENTER)
-        }
+        val contentPanel =
+            JPanel(BorderLayout()).apply {
+                border = JBUI.Borders.empty(8, 8, 0, 8)
+                add(statusLabel, BorderLayout.NORTH)
+                add(splitter, BorderLayout.CENTER)
+            }
         setContent(contentPanel)
 
         clientDetailPanel.clear()
@@ -128,10 +145,10 @@ class ArmeriaClientExplorerPanel(
 
     fun refresh() {
         statusLabel.text = message("client.explorer.summary.refreshing")
-        ReadAction.nonBlocking<List<ArmeriaClientEndpoint>> {
-            ArmeriaClientCollector.collect(project)
-        }
-            .inSmartMode(project)
+        ReadAction
+            .nonBlocking<List<ArmeriaClientEndpoint>> {
+                ArmeriaClientCollector.collect(project)
+            }.inSmartMode(project)
             .expireWith(this)
             .coalesceBy(this)
             .finishOnUiThread(ModalityState.any()) { collectedEndpoints ->
@@ -139,56 +156,56 @@ class ArmeriaClientExplorerPanel(
                 collectedEndpoints.forEach(listModel::addElement)
                 updateStatusLabel(collectedEndpoints)
                 clientDetailPanel.setEndpoint(endpointList.selectedValue)
-            }
-            .submit(AppExecutorUtil.getAppExecutorService())
+            }.submit(AppExecutorUtil.getAppExecutorService())
     }
 
     private fun updateStatusLabel(collectedEndpoints: List<ArmeriaClientEndpoint>) {
-        statusLabel.text = if (collectedEndpoints.isEmpty()) {
-            message("client.explorer.summary.empty")
-        } else {
-            buildString {
-                append(message("client.explorer.summary.endpoints", collectedEndpoints.size))
-                append(" · ")
-                append(
-                    collectedEndpoints.groupBy { it.clientType }.entries.joinToString {
-                        message("client.explorer.summary.typeBreakdown", it.key, it.value.size)
-                    },
-                )
+        statusLabel.text =
+            if (collectedEndpoints.isEmpty()) {
+                message("client.explorer.summary.empty")
+            } else {
+                buildString {
+                    append(message("client.explorer.summary.endpoints", collectedEndpoints.size))
+                    append(" · ")
+                    append(
+                        collectedEndpoints.groupBy { it.clientType }.entries.joinToString {
+                            message("client.explorer.summary.typeBreakdown", it.key, it.value.size)
+                        },
+                    )
+                }
             }
-        }
     }
 
     private fun navigateToSelection() {
         val endpoint = endpointList.selectedValue ?: return
-        ReadAction.nonBlocking<Navigatable?> {
-            val element = endpoint.pointer.element as? Navigatable
-            element?.takeIf { it.canNavigate() }
-        }
-            .inSmartMode(project)
+        ReadAction
+            .nonBlocking<Navigatable?> {
+                val element = endpoint.pointer.element as? Navigatable
+                element?.takeIf { it.canNavigate() }
+            }.inSmartMode(project)
             .expireWith(this)
             .finishOnUiThread(ModalityState.any()) { navigatable ->
                 navigatable?.navigate(true)
-            }
-            .submit(AppExecutorUtil.getAppExecutorService())
+            }.submit(AppExecutorUtil.getAppExecutorService())
     }
 
     private fun formatListLabel(endpoint: ArmeriaClientEndpoint): String {
-        val suffix = buildString {
-            if (!endpoint.transport.isNullOrEmpty()) {
-                append(" · ")
-                append(endpoint.transport)
+        val suffix =
+            buildString {
+                if (!endpoint.transport.isNullOrEmpty()) {
+                    append(" · ")
+                    append(endpoint.transport)
+                }
+                if (endpoint.decorators.isNotEmpty()) {
+                    append(" · ")
+                    append(message("client.explorer.secondary.decorators", endpoint.decorators.joinToString()))
+                }
             }
-            if (endpoint.decorators.isNotEmpty()) {
-                append(" · ")
-                append(message("client.explorer.secondary.decorators", endpoint.decorators.joinToString()))
-            }
-        }
         return "${endpoint.clientType} ${endpoint.uri}$suffix"
     }
 
-    private fun buildClientTooltip(endpoint: ArmeriaClientEndpoint): String {
-        return buildString {
+    private fun buildClientTooltip(endpoint: ArmeriaClientEndpoint): String =
+        buildString {
             append(endpoint.clientType)
             append(' ')
             append(endpoint.uri)
@@ -210,7 +227,6 @@ class ArmeriaClientExplorerPanel(
             append(endpoint.moduleName)
             append(')')
         }
-    }
 
     override fun dispose() = Unit
 }

@@ -46,19 +46,15 @@ class ArmeriaDocServiceSupportTest {
         assertNull(ArmeriaDocServiceSupport.primaryUrl(listOf(httpRoute())))
     }
 
-    private fun docServiceRoute(path: String = "/docs"): ArmeriaRoute {
-        return route(path = path, isDocService = true)
-    }
+    private fun docServiceRoute(path: String = "/docs"): ArmeriaRoute = route(path = path, isDocService = true)
 
-    private fun httpRoute(): ArmeriaRoute {
-        return route()
-    }
+    private fun httpRoute(): ArmeriaRoute = route()
 
     private fun route(
         path: String = "/api",
         isDocService: Boolean = false,
-    ): ArmeriaRoute {
-        return ArmeriaRoute(
+    ): ArmeriaRoute =
+        ArmeriaRoute(
             protocol = if (isDocService) "DocService" else "HTTP",
             httpMethod = "GET",
             path = path,
@@ -71,7 +67,6 @@ class ArmeriaDocServiceSupportTest {
             exceptionHandlers = emptyList(),
             pointer = TestPsiPointer,
         )
-    }
 
     private object TestPsiPointer : SmartPsiElementPointer<PsiElement> {
         override fun getElement(): PsiElement? = null

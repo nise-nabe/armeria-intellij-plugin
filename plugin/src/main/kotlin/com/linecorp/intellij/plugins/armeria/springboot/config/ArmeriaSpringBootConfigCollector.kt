@@ -7,17 +7,20 @@ import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 
 object ArmeriaSpringBootConfigSupport {
-    private val APPLICATION_CONFIG_NAMES = setOf(
-        "application.yml",
-        "application.yaml",
-        "application.properties",
-    )
+    private val APPLICATION_CONFIG_NAMES =
+        setOf(
+            "application.yml",
+            "application.yaml",
+            "application.properties",
+        )
     private val INDEXED_KEY_PATH = Regex("""\[\d+]""")
 
     fun isApplicationConfigFileName(fileName: String): Boolean =
         fileName in APPLICATION_CONFIG_NAMES ||
-            (fileName.startsWith("application-") &&
-                (fileName.endsWith(".yml") || fileName.endsWith(".yaml") || fileName.endsWith(".properties")))
+            (
+                fileName.startsWith("application-") &&
+                    (fileName.endsWith(".yml") || fileName.endsWith(".yaml") || fileName.endsWith(".properties"))
+            )
 
     fun normalizeIndexedKeyPath(keyPath: String): String = keyPath.replace(INDEXED_KEY_PATH, "")
 
@@ -42,13 +45,14 @@ object ArmeriaSpringBootConfigCollector {
             true
         }, scope, null)
         return files.values.sortedBy { it.path }.mapNotNull { vf ->
-            val text = try {
-                String(vf.contentsToByteArray(), vf.charset)
-            } catch (exception: ProcessCanceledException) {
-                throw exception
-            } catch (_: Exception) {
-                return@mapNotNull null
-            }
+            val text =
+                try {
+                    String(vf.contentsToByteArray(), vf.charset)
+                } catch (exception: ProcessCanceledException) {
+                    throw exception
+                } catch (_: Exception) {
+                    return@mapNotNull null
+                }
             val entries = ArmeriaSpringBootConfigParser.parseFile(vf.name, text)
             if (entries.isEmpty()) {
                 null

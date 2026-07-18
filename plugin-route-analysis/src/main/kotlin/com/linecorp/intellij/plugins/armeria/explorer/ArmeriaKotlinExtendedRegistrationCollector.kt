@@ -6,7 +6,6 @@ import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtFile
 
 internal object ArmeriaKotlinExtendedRegistrationCollector {
-
     fun collectFromFile(
         file: KtFile,
         routes: MutableList<ArmeriaRoute>,
@@ -54,33 +53,40 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
             ServiceRegistrationMethod.FILE_SERVICE -> {
                 val rawPath = ArmeriaKotlinExpressionSupport.extractKotlinString(pathArg) ?: "/"
                 val (pathType, normalizedPath) = ArmeriaRouteSupport.parsePathType(rawPath)
-                val target = call.valueArguments.getOrNull(1)?.getArgumentExpression()?.text
-                    ?: message("route.explorer.target.fileService")
-                routes += ArmeriaRoute.create(
-                    element = call,
-                    protocol = RouteProtocol.HTTP.presentableName(),
-                    httpMethod = "",
-                    path = normalizedPath,
-                    target = target,
-                    routeMatch = RouteMatch.FILE_SERVICE,
-                    pathType = pathType,
-                    decorators = ArmeriaKotlinDecoratorSupport.collectProgrammaticDecorators(call, normalizedPath),
-                    timeoutHints = ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(call),
-                )
+                val target =
+                    call.valueArguments
+                        .getOrNull(1)
+                        ?.getArgumentExpression()
+                        ?.text
+                        ?: message("route.explorer.target.fileService")
+                routes +=
+                    ArmeriaRoute.create(
+                        element = call,
+                        protocol = RouteProtocol.HTTP.presentableName(),
+                        httpMethod = "",
+                        path = normalizedPath,
+                        target = target,
+                        routeMatch = RouteMatch.FILE_SERVICE,
+                        pathType = pathType,
+                        decorators = ArmeriaKotlinDecoratorSupport.collectProgrammaticDecorators(call, normalizedPath),
+                        timeoutHints = ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(call),
+                    )
             }
             ServiceRegistrationMethod.HEALTH_CHECK_SERVICE -> {
-                val path = pathArg?.let(ArmeriaKotlinExpressionSupport::extractKotlinString)?.let(ArmeriaRouteSupport::normalizePath)
-                    ?: "/internal/healthcheck"
-                routes += ArmeriaRoute.create(
-                    element = call,
-                    protocol = RouteProtocol.HTTP.presentableName(),
-                    httpMethod = "GET",
-                    path = path,
-                    target = message("route.explorer.target.healthCheck"),
-                    routeMatch = RouteMatch.HEALTH_CHECK,
-                    decorators = ArmeriaKotlinDecoratorSupport.collectProgrammaticDecorators(call, path),
-                    timeoutHints = ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(call),
-                )
+                val path =
+                    pathArg?.let(ArmeriaKotlinExpressionSupport::extractKotlinString)?.let(ArmeriaRouteSupport::normalizePath)
+                        ?: "/internal/healthcheck"
+                routes +=
+                    ArmeriaRoute.create(
+                        element = call,
+                        protocol = RouteProtocol.HTTP.presentableName(),
+                        httpMethod = "GET",
+                        path = path,
+                        target = message("route.explorer.target.healthCheck"),
+                        routeMatch = RouteMatch.HEALTH_CHECK,
+                        decorators = ArmeriaKotlinDecoratorSupport.collectProgrammaticDecorators(call, path),
+                        timeoutHints = ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(call),
+                    )
             }
             ServiceRegistrationMethod.ROUTE_DECORATOR -> {
                 val chainInfo = ArmeriaKotlinExtendedRegistrationCollectorRouteDecorator.extractRouteDecoratorChain(call)
@@ -90,19 +96,21 @@ internal object ArmeriaKotlinExtendedRegistrationCollector {
                 val rawPath = ArmeriaKotlinExpressionSupport.extractKotlinString(pathArg) ?: return
                 val (pathType, normalizedPath) = ArmeriaRouteSupport.parsePathType(rawPath)
                 val decoratorArg = call.valueArguments.getOrNull(1)?.getArgumentExpression()
-                val decoratorLabel = decoratorArg?.text?.let(ArmeriaDecoratorSupport::labelDecorator)
-                    ?: message("route.explorer.target.decoratorUnder")
-                routes += ArmeriaRoute.create(
-                    element = call,
-                    protocol = RouteProtocol.HTTP.presentableName(),
-                    httpMethod = "",
-                    path = normalizedPath,
-                    target = decoratorLabel,
-                    routeMatch = RouteMatch.DECORATOR_UNDER,
-                    pathType = pathType,
-                    decorators = listOf(decoratorLabel),
-                    timeoutHints = ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(call),
-                )
+                val decoratorLabel =
+                    decoratorArg?.text?.let(ArmeriaDecoratorSupport::labelDecorator)
+                        ?: message("route.explorer.target.decoratorUnder")
+                routes +=
+                    ArmeriaRoute.create(
+                        element = call,
+                        protocol = RouteProtocol.HTTP.presentableName(),
+                        httpMethod = "",
+                        path = normalizedPath,
+                        target = decoratorLabel,
+                        routeMatch = RouteMatch.DECORATOR_UNDER,
+                        pathType = pathType,
+                        decorators = listOf(decoratorLabel),
+                        timeoutHints = ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(call),
+                    )
             }
             else -> Unit
         }

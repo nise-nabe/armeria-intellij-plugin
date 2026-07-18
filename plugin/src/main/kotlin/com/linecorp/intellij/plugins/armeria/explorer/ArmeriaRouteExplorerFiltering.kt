@@ -80,13 +80,15 @@ internal object ArmeriaRouteExplorerFiltering {
         return false
     }
 
-    private fun routesMatch(left: ArmeriaRoute, right: ArmeriaRoute): Boolean {
-        return left.moduleName == right.moduleName &&
+    private fun routesMatch(
+        left: ArmeriaRoute,
+        right: ArmeriaRoute,
+    ): Boolean =
+        left.moduleName == right.moduleName &&
             left.path == right.path &&
             left.target == right.target &&
             left.routeMatch == right.routeMatch &&
             left.httpMethod == right.httpMethod &&
             left.virtualHostName == right.virtualHostName &&
             left.delegationMountPath == right.delegationMountPath
-    }
 }

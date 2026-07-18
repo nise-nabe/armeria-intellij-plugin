@@ -25,8 +25,10 @@ internal object ArmeriaKotlinDecoratorScopeSupport {
             if (scopeCall != null && ArmeriaKotlinDecoratorChainSupport.resolveKotlinCallName(scopeCall) in BUILDER_SCOPE_METHODS) {
                 val scopeReceiver = extractScopeReceiver(scopeCall)
                 if (scopeReceiver != null &&
-                    (ArmeriaKotlinDecoratorChainSupport.isKotlinServerBuilderReceiver(scopeReceiver) ||
-                        ArmeriaKotlinDecoratorChainSupport.receiverChainContainsServerBuilder(scopeReceiver))
+                    (
+                        ArmeriaKotlinDecoratorChainSupport.isKotlinServerBuilderReceiver(scopeReceiver) ||
+                            ArmeriaKotlinDecoratorChainSupport.receiverChainContainsServerBuilder(scopeReceiver)
+                    )
                 ) {
                     collectAllDecoratorsInScopeLambda(scopeCall, candidates)
                 }
@@ -39,17 +41,21 @@ internal object ArmeriaKotlinDecoratorScopeSupport {
         scopeCall: KtCallExpression,
         candidates: LinkedHashSet<ArmeriaDecoratorSupport.DecoratorCandidate>,
     ) {
-        val lambda = scopeCall.valueArguments.firstOrNull()
-            ?.getArgumentExpression() as? KtLambdaExpression ?: return
+        val lambda =
+            scopeCall.valueArguments
+                .firstOrNull()
+                ?.getArgumentExpression() as? KtLambdaExpression ?: return
         lambda.bodyExpression?.statements?.forEach { statement ->
-            statement.accept(object : KtTreeVisitorVoid() {
-                override fun visitCallExpression(expression: KtCallExpression) {
-                    if (ArmeriaKotlinDecoratorChainSupport.isKotlinArmeriaDecoratorCall(expression)) {
-                        ArmeriaKotlinDecoratorTargetSupport.extractKotlinDecoratorCandidate(expression)?.let { candidates += it }
+            statement.accept(
+                object : KtTreeVisitorVoid() {
+                    override fun visitCallExpression(expression: KtCallExpression) {
+                        if (ArmeriaKotlinDecoratorChainSupport.isKotlinArmeriaDecoratorCall(expression)) {
+                            ArmeriaKotlinDecoratorTargetSupport.extractKotlinDecoratorCandidate(expression)?.let { candidates += it }
+                        }
+                        super.visitCallExpression(expression)
                     }
-                    super.visitCallExpression(expression)
-                }
-            })
+                },
+            )
         }
     }
 
@@ -97,17 +103,19 @@ internal object ArmeriaKotlinDecoratorScopeSupport {
             if (statement.textRange.startOffset >= registrationOffset) {
                 return
             }
-            statement.accept(object : KtTreeVisitorVoid() {
-                override fun visitCallExpression(expression: KtCallExpression) {
-                    if (expression.textRange.startOffset >= registrationOffset) {
-                        return
+            statement.accept(
+                object : KtTreeVisitorVoid() {
+                    override fun visitCallExpression(expression: KtCallExpression) {
+                        if (expression.textRange.startOffset >= registrationOffset) {
+                            return
+                        }
+                        if (ArmeriaKotlinDecoratorChainSupport.isKotlinArmeriaDecoratorCall(expression)) {
+                            ArmeriaKotlinDecoratorTargetSupport.extractKotlinDecoratorCandidate(expression)?.let { candidates += it }
+                        }
+                        super.visitCallExpression(expression)
                     }
-                    if (ArmeriaKotlinDecoratorChainSupport.isKotlinArmeriaDecoratorCall(expression)) {
-                        ArmeriaKotlinDecoratorTargetSupport.extractKotlinDecoratorCandidate(expression)?.let { candidates += it }
-                    }
-                    super.visitCallExpression(expression)
-                }
-            })
+                },
+            )
             if (PsiTreeUtil.isAncestor(statement, registrationCall, false)) {
                 return
             }
@@ -118,10 +126,11 @@ internal object ArmeriaKotlinDecoratorScopeSupport {
         call: KtCallExpression,
         scopeLambda: KtLambdaExpression,
     ): Boolean {
-        val dotQualified = when (val callee = call.calleeExpression) {
-            is KtDotQualifiedExpression -> callee
-            else -> call.parent as? KtDotQualifiedExpression
-        } ?: return false
+        val dotQualified =
+            when (val callee = call.calleeExpression) {
+                is KtDotQualifiedExpression -> callee
+                else -> call.parent as? KtDotQualifiedExpression
+            } ?: return false
 
         val receiver = dotQualified.receiverExpression
         if (ArmeriaKotlinDecoratorChainSupport.isKotlinServerBuilderReceiver(receiver)) {
@@ -134,10 +143,9 @@ internal object ArmeriaKotlinDecoratorScopeSupport {
         return scopeLambda.valueParameters.isEmpty() && receiverName == "it"
     }
 
-    private fun extractScopeReceiver(scopeCall: KtCallExpression): KtExpression? {
-        return when (val callee = scopeCall.calleeExpression) {
+    private fun extractScopeReceiver(scopeCall: KtCallExpression): KtExpression? =
+        when (val callee = scopeCall.calleeExpression) {
             is KtDotQualifiedExpression -> callee.receiverExpression
             else -> (scopeCall.parent as? KtDotQualifiedExpression)?.receiverExpression
         }
-    }
 }

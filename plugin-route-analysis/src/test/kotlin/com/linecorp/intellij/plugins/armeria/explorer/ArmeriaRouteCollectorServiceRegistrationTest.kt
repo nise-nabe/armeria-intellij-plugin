@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
-
     override fun registerArmeriaStubs() {
         registerRouteCollectorStubs()
     }
@@ -41,6 +40,7 @@ class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
         assertNotNull(serviceRoute)
         assertEquals("example.HelloService", serviceRoute!!.target)
     }
+
     fun testCollectServiceRegistration() {
         myFixture.configureByText(
             "Main.java",
@@ -80,6 +80,7 @@ class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
         assertEquals("/api", serviceRoute!!.path)
         assertEquals("example.HelloService", serviceRoute.target)
     }
+
     fun testCollectGrpcServiceRegistrationWithBuild() {
         myFixture.configureByText(
             "Main.java",
@@ -114,6 +115,7 @@ class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
         assertEquals("example.HelloGrpcService", grpcRoute!!.target)
         assertFalse(grpcRoute.target.equals("build", ignoreCase = true))
     }
+
     fun testCollectDocServiceRegistrationWithBuild() {
         myFixture.configureByText(
             "Main.java",
@@ -139,6 +141,7 @@ class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
         assertNotNull(docRoute)
         assertEquals("com.linecorp.armeria.server.docs.DocService", docRoute!!.target)
     }
+
     fun testCollectUnresolvedNewExpressionTarget() {
         myFixture.configureByText(
             "Main.java",
@@ -163,6 +166,7 @@ class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
         assertNotNull(serviceRoute)
         assertTrue(serviceRoute!!.targetUnresolved)
     }
+
     fun testCollectUnresolvedParenthesizedNewExpressionTarget() {
         myFixture.configureByText(
             "Main.java",
@@ -185,6 +189,7 @@ class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
         assertNotNull(serviceRoute)
         assertTrue(serviceRoute!!.targetUnresolved)
     }
+
     fun testCollectUnresolvedFactoryMethodTarget() {
         myFixture.configureByText(
             "Main.java",
@@ -211,6 +216,7 @@ class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
         assertNotNull(serviceRoute)
         assertTrue(serviceRoute!!.targetUnresolved)
     }
+
     fun testCollectServiceRegistration_requestTimeoutOnBuilderChain() {
         myFixture.addClass(
             """

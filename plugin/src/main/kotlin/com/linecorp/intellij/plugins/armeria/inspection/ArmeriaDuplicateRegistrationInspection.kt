@@ -12,7 +12,10 @@ import com.linecorp.intellij.plugins.armeria.message
 open class ArmeriaDuplicateRegistrationInspection : LocalInspectionTool() {
     override fun getDisplayName(): String = message("inspection.duplicate.registration.display.name")
 
-    override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor {
+    override fun buildVisitor(
+        holder: ProblemsHolder,
+        isOnTheFly: Boolean,
+    ): PsiElementVisitor {
         val hits = ArmeriaRouteDuplicateIndex.duplicateHitsInFile(holder.project, holder.file)
         if (hits.isEmpty()) {
             return PsiElementVisitor.EMPTY_VISITOR

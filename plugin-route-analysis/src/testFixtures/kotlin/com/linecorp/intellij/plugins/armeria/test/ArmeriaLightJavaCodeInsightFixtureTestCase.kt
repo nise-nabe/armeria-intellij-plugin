@@ -9,7 +9,6 @@ import java.io.File
  * [LightJavaCodeInsightFixtureTestCase] with 2026.2+ test sandbox root access for plugin runtime libraries.
  */
 abstract class ArmeriaLightJavaCodeInsightFixtureTestCase : LightJavaCodeInsightFixtureTestCase() {
-
     override fun setUp() {
         super.setUp()
         allowTestSandboxRoots()

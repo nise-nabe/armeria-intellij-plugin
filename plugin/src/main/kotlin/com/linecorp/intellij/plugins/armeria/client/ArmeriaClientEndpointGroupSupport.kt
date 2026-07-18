@@ -6,13 +6,14 @@ import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiVariable
 
 internal object ArmeriaClientEndpointGroupSupport {
-    private val ENDPOINT_GROUP_SIMPLE_NAMES = setOf(
-        "EndpointGroup",
-        "StaticEndpointGroup",
-        "DnsAddressEndpointGroup",
-        "DnsServiceEndpointGroup",
-        "HealthCheckedEndpointGroup",
-    )
+    private val ENDPOINT_GROUP_SIMPLE_NAMES =
+        setOf(
+            "EndpointGroup",
+            "StaticEndpointGroup",
+            "DnsAddressEndpointGroup",
+            "DnsServiceEndpointGroup",
+            "HealthCheckedEndpointGroup",
+        )
 
     fun labelJavaEndpointGroup(expression: PsiExpression?): String? {
         expression ?: return null
@@ -50,7 +51,10 @@ internal object ArmeriaClientEndpointGroupSupport {
         return label
     }
 
-    private fun labelJavaEndpointGroupCall(receiver: String?, arguments: List<PsiExpression>): String? {
+    private fun labelJavaEndpointGroupCall(
+        receiver: String?,
+        arguments: List<PsiExpression>,
+    ): String? {
         val simpleName = receiver?.substringAfterLast('.')?.takeIf { looksLikeEndpointGroupText(it) } ?: return null
         val detail = arguments.firstNotNullOfOrNull { ArmeriaClientCollector.extractString(it) }
         return if (detail != null) "$simpleName ($detail)" else simpleName

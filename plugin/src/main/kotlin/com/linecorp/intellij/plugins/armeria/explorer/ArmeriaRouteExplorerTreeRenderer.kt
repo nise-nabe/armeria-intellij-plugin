@@ -30,18 +30,19 @@ internal class ArmeriaRouteExplorerTreeRenderer : ColoredTreeCellRenderer() {
 
     private fun renderRoute(route: ArmeriaRoute) {
         val pillLabel = ArmeriaHttpMethodPill.pillLabel(route)
-        toolTipText = buildString {
-            append(route.methodLabel)
-            append(' ')
-            append(route.path)
-            append(" → ")
-            append(route.shortTarget)
-            ArmeriaRouteDetailFormatter.tooltipDelegationSuffix(route)?.let { suffix ->
-                append(" (")
-                append(suffix)
-                append(')')
+        toolTipText =
+            buildString {
+                append(route.methodLabel)
+                append(' ')
+                append(route.path)
+                append(" → ")
+                append(route.shortTarget)
+                ArmeriaRouteDetailFormatter.tooltipDelegationSuffix(route)?.let { suffix ->
+                    append(" (")
+                    append(suffix)
+                    append(')')
+                }
             }
-        }
         append(ArmeriaHttpMethodPill.pillText(pillLabel), ArmeriaHttpMethodPill.textAttributes(route))
         append("  ", SimpleTextAttributes.REGULAR_ATTRIBUTES)
         append(route.path, SimpleTextAttributes.REGULAR_ATTRIBUTES)

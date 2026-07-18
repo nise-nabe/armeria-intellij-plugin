@@ -13,16 +13,18 @@ import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 internal object ArmeriaKotlinDecoratorTargetSupport {
     fun extractKotlinDecoratorCandidate(call: KtCallExpression): ArmeriaDecoratorSupport.DecoratorCandidate? {
         val arguments = call.valueArguments
-        val pathPattern = if (arguments.size >= 2) {
-            extractKotlinPathPattern(arguments[0].getArgumentExpression())
-        } else {
-            null
-        }
-        val decoratorArgument = when {
-            arguments.size >= 2 -> arguments[1].getArgumentExpression()
-            arguments.isNotEmpty() -> arguments[0].getArgumentExpression()
-            else -> return null
-        } ?: return null
+        val pathPattern =
+            if (arguments.size >= 2) {
+                extractKotlinPathPattern(arguments[0].getArgumentExpression())
+            } else {
+                null
+            }
+        val decoratorArgument =
+            when {
+                arguments.size >= 2 -> arguments[1].getArgumentExpression()
+                arguments.isNotEmpty() -> arguments[0].getArgumentExpression()
+                else -> return null
+            } ?: return null
         return ArmeriaDecoratorSupport.DecoratorCandidate(
             ArmeriaDecoratorSupport.labelDecorator(extractKotlinDecoratorTarget(decoratorArgument)),
             pathPattern,
@@ -34,7 +36,8 @@ internal object ArmeriaKotlinDecoratorTargetSupport {
         if (unwrapped is KtClassLiteralExpression) {
             val classReceiver = unwrapped.receiverExpression
             if (classReceiver is KtNameReferenceExpression) {
-                ArmeriaKotlinDecoratorChainSupport.resolveQualifiedClassName(classReceiver.references.firstOrNull()?.resolve())
+                ArmeriaKotlinDecoratorChainSupport
+                    .resolveQualifiedClassName(classReceiver.references.firstOrNull()?.resolve())
                     ?.let { return it }
             }
             return unwrapped.text.removeSuffix("::class")
@@ -44,7 +47,8 @@ internal object ArmeriaKotlinDecoratorTargetSupport {
             if (receiver is KtClassLiteralExpression) {
                 val classReceiver = receiver.receiverExpression
                 if (classReceiver is KtNameReferenceExpression) {
-                    ArmeriaKotlinDecoratorChainSupport.resolveQualifiedClassName(classReceiver.references.firstOrNull()?.resolve())
+                    ArmeriaKotlinDecoratorChainSupport
+                        .resolveQualifiedClassName(classReceiver.references.firstOrNull()?.resolve())
                         ?.let { return it }
                 }
                 return receiver.text.removeSuffix("::class")
@@ -53,7 +57,8 @@ internal object ArmeriaKotlinDecoratorTargetSupport {
             if (selector is KtCallExpression) {
                 return extractKotlinDecoratorTargetFromCall(selector, expression)
             }
-            ArmeriaKotlinDecoratorChainSupport.resolveQualifiedClassName(receiver.references.firstOrNull()?.resolve())
+            ArmeriaKotlinDecoratorChainSupport
+                .resolveQualifiedClassName(receiver.references.firstOrNull()?.resolve())
                 ?.let { return it }
         }
         if (unwrapped is KtCallExpression) {
@@ -75,18 +80,23 @@ internal object ArmeriaKotlinDecoratorTargetSupport {
                     return resolved.type.presentableText
                 }
             }
-            ArmeriaKotlinDecoratorChainSupport.resolveQualifiedClassName(unwrapped.references.firstOrNull()?.resolve())
+            ArmeriaKotlinDecoratorChainSupport
+                .resolveQualifiedClassName(unwrapped.references.firstOrNull()?.resolve())
                 ?.let { return it }
         }
         return expression.text
     }
 
-    private fun extractKotlinDecoratorTargetFromCall(call: KtCallExpression, fallback: KtExpression): String {
+    private fun extractKotlinDecoratorTargetFromCall(
+        call: KtCallExpression,
+        fallback: KtExpression,
+    ): String {
         val callee = call.calleeExpression
-        val methodName = when (callee) {
-            is KtDotQualifiedExpression -> callee.selectorExpression?.text
-            else -> callee?.text
-        }
+        val methodName =
+            when (callee) {
+                is KtDotQualifiedExpression -> callee.selectorExpression?.text
+                else -> callee?.text
+            }
         if (methodName == "build") {
             ArmeriaKotlinDecoratorChainSupport.kotlinChainReceiver(call)?.let { receiver ->
                 return extractKotlinDecoratorTarget(receiver)
@@ -100,11 +110,12 @@ internal object ArmeriaKotlinDecoratorTargetSupport {
                 }
             }
             ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
-            val references = when (callee) {
-                is KtDotQualifiedExpression -> callee.references.toList()
-                is KtNameReferenceExpression -> callee.references.toList()
-                else -> emptyList()
-            }
+            val references =
+                when (callee) {
+                    is KtDotQualifiedExpression -> callee.references.toList()
+                    is KtNameReferenceExpression -> callee.references.toList()
+                    else -> emptyList()
+                }
             references.firstOrNull()?.resolve()?.let { resolved ->
                 ArmeriaKotlinDecoratorChainSupport.resolveQualifiedClassName(resolved)?.let { return it }
             }
@@ -121,10 +132,11 @@ internal object ArmeriaKotlinDecoratorTargetSupport {
     private fun unwrapKotlinDecoratorExpression(expression: KtExpression?): KtExpression? {
         var current = expression ?: return null
         while (true) {
-            current = when (current) {
-                is KtParenthesizedExpression -> current.expression ?: return null
-                else -> return current
-            }
+            current =
+                when (current) {
+                    is KtParenthesizedExpression -> current.expression ?: return null
+                    else -> return current
+                }
         }
     }
 
@@ -140,7 +152,11 @@ internal object ArmeriaKotlinDecoratorTargetSupport {
             }
             is KtDotQualifiedExpression -> extractKotlinPathPatternFromReference(unwrapped)
             is KtNameReferenceExpression -> extractKotlinPathPatternFromReference(unwrapped)
-            else -> unwrapped.text.trim().trim('"').takeIf { it.isNotEmpty() }
+            else ->
+                unwrapped.text
+                    .trim()
+                    .trim('"')
+                    .takeIf { it.isNotEmpty() }
         }
     }
 
@@ -153,13 +169,17 @@ internal object ArmeriaKotlinDecoratorTargetSupport {
         if (expression is KtDotQualifiedExpression) {
             val selector = expression.selectorExpression as? KtNameReferenceExpression ?: return null
             val receiver = expression.receiverExpression as? KtNameReferenceExpression ?: return null
-            val containingClass = receiver.references.firstOrNull()?.resolve() as? com.intellij.psi.PsiClass
-                ?: return null
+            val containingClass =
+                receiver.references.firstOrNull()?.resolve() as? com.intellij.psi.PsiClass
+                    ?: return null
             val field = containingClass.findFieldByName(selector.getReferencedName(), true)
             if (field != null) {
                 ArmeriaRouteSupport.evaluateJavaStringConstant(field)?.let { return it }
             }
         }
-        return expression.text.trim().trim('"').takeIf { it.isNotEmpty() }
+        return expression.text
+            .trim()
+            .trim('"')
+            .takeIf { it.isNotEmpty() }
     }
 }

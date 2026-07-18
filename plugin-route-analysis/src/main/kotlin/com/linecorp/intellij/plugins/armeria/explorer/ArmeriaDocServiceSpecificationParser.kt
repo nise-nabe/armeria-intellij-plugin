@@ -34,7 +34,10 @@ object ArmeriaDocServiceSpecificationParser {
         return ParsedSpecification(deduplicate(routes), docServiceMountPath)
     }
 
-    private fun parseMethodRoutes(serviceName: String, methodJson: String): List<ParsedRoute> {
+    private fun parseMethodRoutes(
+        serviceName: String,
+        methodJson: String,
+    ): List<ParsedRoute> {
         val methodName = extractJsonString(methodJson, "name").orEmpty()
         val httpMethod = extractJsonString(methodJson, "httpMethod")?.uppercase().orEmpty().ifBlank { "GET" }
         val routes = mutableListOf<ParsedRoute>()
@@ -71,7 +74,10 @@ object ArmeriaDocServiceSpecificationParser {
     private fun deduplicate(routes: List<ParsedRoute>): List<ParsedRoute> =
         routes.distinctBy { "${it.httpMethod.uppercase()}|${it.path}|${it.serviceName}|${it.methodName}" }
 
-    private fun extractJsonObject(json: String, fieldName: String): String? {
+    private fun extractJsonObject(
+        json: String,
+        fieldName: String,
+    ): String? {
         val fieldIndex = indexOfJsonField(json, fieldName) ?: return null
         val valueStart = skipWhitespace(json, fieldIndex)
         if (valueStart >= json.length || json[valueStart] != '{') {
@@ -80,7 +86,10 @@ object ArmeriaDocServiceSpecificationParser {
         return extractBalanced(json, valueStart, '{', '}')
     }
 
-    private fun extractJsonArray(json: String, fieldName: String): String? {
+    private fun extractJsonArray(
+        json: String,
+        fieldName: String,
+    ): String? {
         val fieldIndex = indexOfJsonField(json, fieldName) ?: return null
         val valueStart = skipWhitespace(json, fieldIndex)
         if (valueStart >= json.length || json[valueStart] != '[') {
@@ -89,7 +98,10 @@ object ArmeriaDocServiceSpecificationParser {
         return extractBalanced(json, valueStart, '[', ']')
     }
 
-    private fun extractJsonString(json: String, fieldName: String): String? {
+    private fun extractJsonString(
+        json: String,
+        fieldName: String,
+    ): String? {
         val fieldIndex = indexOfJsonField(json, fieldName) ?: return null
         val valueStart = skipWhitespace(json, fieldIndex)
         if (valueStart >= json.length || json[valueStart] != '"') {
@@ -98,9 +110,15 @@ object ArmeriaDocServiceSpecificationParser {
         return readJsonString(json, valueStart)?.value
     }
 
-    private data class ParsedJsonString(val value: String, val endIndex: Int)
+    private data class ParsedJsonString(
+        val value: String,
+        val endIndex: Int,
+    )
 
-    private fun indexOfJsonField(json: String, fieldName: String): Int? {
+    private fun indexOfJsonField(
+        json: String,
+        fieldName: String,
+    ): Int? {
         val trimmed = json.trim()
         if (!trimmed.startsWith("{")) {
             return null
@@ -132,7 +150,10 @@ object ArmeriaDocServiceSpecificationParser {
         return null
     }
 
-    private fun skipJsonValue(json: String, startIndex: Int): Int? {
+    private fun skipJsonValue(
+        json: String,
+        startIndex: Int,
+    ): Int? {
         if (startIndex >= json.length) {
             return null
         }
@@ -205,7 +226,10 @@ object ArmeriaDocServiceSpecificationParser {
         return values
     }
 
-    private fun readJsonString(json: String, startIndex: Int): ParsedJsonString? {
+    private fun readJsonString(
+        json: String,
+        startIndex: Int,
+    ): ParsedJsonString? {
         if (startIndex >= json.length || json[startIndex] != '"') {
             return null
         }
@@ -252,7 +276,12 @@ object ArmeriaDocServiceSpecificationParser {
         return null
     }
 
-    private fun extractBalanced(json: String, startIndex: Int, openChar: Char, closeChar: Char): String? {
+    private fun extractBalanced(
+        json: String,
+        startIndex: Int,
+        openChar: Char,
+        closeChar: Char,
+    ): String? {
         if (startIndex >= json.length || json[startIndex] != openChar) {
             return null
         }
@@ -285,7 +314,10 @@ object ArmeriaDocServiceSpecificationParser {
         return null
     }
 
-    private fun skipWhitespace(json: String, startIndex: Int): Int {
+    private fun skipWhitespace(
+        json: String,
+        startIndex: Int,
+    ): Int {
         var index = startIndex
         while (index < json.length && json[index].isWhitespace()) {
             index++

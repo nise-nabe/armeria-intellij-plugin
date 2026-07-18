@@ -24,28 +24,30 @@ internal object SpringArmeriaConfigSemantics {
         return raw.map { it.lowercase() }.filter { it in INTERNAL_SERVICE_IDS }.toSet()
     }
 
-    fun parseIncludeTokens(raw: String): Set<String> =
-        splitScalarList(raw).map { it.lowercase() }.toSet()
+    fun parseIncludeTokens(raw: String): Set<String> = splitScalarList(raw).map { it.lowercase() }.toSet()
 
     fun normalizeProtocols(tokens: Iterable<String>): List<String> =
-        tokens.map { it.uppercase() }
+        tokens
+            .map { it.uppercase() }
             .filter { it.isNotEmpty() }
             .distinct()
             .ifEmpty { listOf("HTTP") }
 
     fun splitScalarList(raw: String): List<String> {
-        val normalized = raw.trim()
-            .removePrefix("[")
-            .removeSuffix("]")
-            .trim()
+        val normalized =
+            raw
+                .trim()
+                .removePrefix("[")
+                .removeSuffix("]")
+                .trim()
         if (normalized.isEmpty()) {
             return emptyList()
         }
-        return normalized.split(',', ' ', '\t')
+        return normalized
+            .split(',', ' ', '\t')
             .map(::trimQuotes)
             .filter { it.isNotEmpty() }
     }
 
-    fun trimQuotes(raw: String): String =
-        raw.trim().removeSurrounding("\"").removeSurrounding("'")
+    fun trimQuotes(raw: String): String = raw.trim().removeSurrounding("\"").removeSurrounding("'")
 }

@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaKotlinExtendedRegistrationCollectorIgnoreTest : ArmeriaFixtureTestBase() {
-
     override fun registerArmeriaStubs() {
         registerKotlinExtendedRegistrationCollectorStubs()
     }
@@ -28,7 +27,6 @@ class ArmeriaKotlinExtendedRegistrationCollectorIgnoreTest : ArmeriaFixtureTestB
         assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
     }
 
-
     fun testIgnoreNonArmeriaServiceInVirtualHostLambda() {
         myFixture.configureByText(
             "Main.kt",
@@ -52,7 +50,6 @@ class ArmeriaKotlinExtendedRegistrationCollectorIgnoreTest : ArmeriaFixtureTestB
         val routes = ArmeriaRouteCollector.collect(project)
         assertTrue(routes.none { it.routeMatch == RouteMatch.SERVICE })
     }
-
 
     fun testIgnoreNonArmeriaFluentBuildInVirtualHostLambda() {
         myFixture.configureByText(
@@ -79,6 +76,4 @@ class ArmeriaKotlinExtendedRegistrationCollectorIgnoreTest : ArmeriaFixtureTestB
         val routes = ArmeriaRouteCollector.collect(project)
         assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
     }
-
-
 }

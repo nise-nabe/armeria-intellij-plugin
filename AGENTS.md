@@ -58,6 +58,8 @@ Prefer **Gradle MCP** for the tasks below. Use `background: true` and poll `grad
 | Goal | MCP (preferred) | Shell fallback |
 |------|---------------|----------------|
 | Full verify | `gradle_run_tasks` `["build"]` + background/poll | `./gradlew build` |
+| Lint Kotlin | `gradle_run_tasks` `["ktlintCheck"]` + background/poll | `./gradlew ktlintCheck` |
+| Format Kotlin | `gradle_run_tasks` `["ktlintFormat"]` + background/poll | `./gradlew ktlintFormat` |
 | Compile plugin | `gradle_run_tasks` `[":plugin:compileKotlin"]` | `./gradlew :plugin:compileKotlin` |
 | Plugin fixture tests | `gradle_run_tasks` `[":plugin:test"]` or `gradle_run_tests` per class + background/poll | `./gradlew :plugin:test` |
 | Route-analysis fixture tests | `gradle_run_tasks` `[":plugin-route-analysis:test"]` + background/poll | `./gradlew :plugin-route-analysis:test` |
@@ -68,7 +70,7 @@ Prefer **Gradle MCP** for the tasks below. Use `background: true` and poll `grad
 
 `:plugin:test` and `:plugin-route-analysis:test` run platform PSI fixture tests under each module's `src/test`. `:plugin-route-analysis:fastTest` runs pure unit tests under `plugin-route-analysis/src/fastTest` (still on the IntelliJ Platform test runtime, but without PSI fixtures). Use `build` to run the full suite across modules.
 
-There is no separate lint task; `build` is the compile/test gate.
+Kotlin style is enforced by ktlint (`com.linecorp.intellij.ktlint` convention, `ktlint_official`). `ktlintCheck` is part of `check` / `build`.
 
 ### Project layout
 

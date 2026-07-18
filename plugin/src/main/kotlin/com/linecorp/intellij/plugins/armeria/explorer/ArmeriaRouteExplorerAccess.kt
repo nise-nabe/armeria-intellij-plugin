@@ -21,7 +21,10 @@ object ArmeriaRouteExplorerAccess {
      * Armeria Services tool window so [ArmeriaRouteExplorerToolWindowFactory] can create content.
      * Passes null when the panel cannot be obtained.
      */
-    fun ensurePanel(project: Project, onReady: (ArmeriaRouteExplorerPanel?) -> Unit) {
+    fun ensurePanel(
+        project: Project,
+        onReady: (ArmeriaRouteExplorerPanel?) -> Unit,
+    ) {
         if (project.isDisposed) {
             invokeOnEdt { onReady(null) }
             return

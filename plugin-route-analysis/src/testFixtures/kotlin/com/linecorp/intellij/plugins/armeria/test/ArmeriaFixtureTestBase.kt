@@ -4,7 +4,6 @@ package com.linecorp.intellij.plugins.armeria.test
  * Shared Armeria PSI stubs for [LightJavaCodeInsightFixtureTestCase] subclasses.
  */
 abstract class ArmeriaFixtureTestBase : ArmeriaLightJavaCodeInsightFixtureTestCase() {
-
     override fun setUp() {
         super.setUp()
         registerArmeriaStubs()
@@ -46,6 +45,5 @@ abstract class ArmeriaFixtureTestBase : ArmeriaLightJavaCodeInsightFixtureTestCa
 
     protected fun registerExtendedRegistrationCollectorStubs() = myFixture.registerExtendedRegistrationCollectorStubs()
 
-    protected fun registerKotlinExtendedRegistrationCollectorStubs() =
-        myFixture.registerKotlinExtendedRegistrationCollectorStubs()
+    protected fun registerKotlinExtendedRegistrationCollectorStubs() = myFixture.registerKotlinExtendedRegistrationCollectorStubs()
 }

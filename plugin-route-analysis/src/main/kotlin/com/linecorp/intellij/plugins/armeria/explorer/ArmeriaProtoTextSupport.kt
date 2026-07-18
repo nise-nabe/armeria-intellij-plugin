@@ -59,7 +59,10 @@ internal object ArmeriaProtoTextSupport {
         return result.toString()
     }
 
-    fun findMatchingCloseBrace(text: String, openBraceIndex: Int): Int? {
+    fun findMatchingCloseBrace(
+        text: String,
+        openBraceIndex: Int,
+    ): Int? {
         if (openBraceIndex !in text.indices || text[openBraceIndex] != '{') {
             return null
         }
@@ -96,7 +99,10 @@ internal object ArmeriaProtoTextSupport {
         return null
     }
 
-    private fun ensureWhitespaceBetweenIdentifiers(result: StringBuilder, nextChar: Char?) {
+    private fun ensureWhitespaceBetweenIdentifiers(
+        result: StringBuilder,
+        nextChar: Char?,
+    ) {
         if (nextChar == null) {
             return
         }

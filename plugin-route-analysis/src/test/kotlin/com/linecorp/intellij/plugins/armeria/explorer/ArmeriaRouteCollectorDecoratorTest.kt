@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaRouteCollectorDecoratorTest : ArmeriaFixtureTestBase() {
-
     override fun registerArmeriaStubs() {
         registerRouteCollectorStubs()
     }
@@ -42,6 +41,7 @@ class ArmeriaRouteCollectorDecoratorTest : ArmeriaFixtureTestBase() {
         assertNotNull(serviceRoute)
         assertEquals(listOf("Logging"), serviceRoute!!.decorators)
     }
+
     fun testCollectProgrammaticDecoratorDoesNotBleedAcrossRegistrations() {
         myFixture.configureByText(
             "Main.java",
@@ -84,6 +84,7 @@ class ArmeriaRouteCollectorDecoratorTest : ArmeriaFixtureTestBase() {
         assertEquals(listOf("Logging"), routeA!!.decorators)
         assertEquals(listOf("CORS"), routeB!!.decorators)
     }
+
     fun testCollectPathScopedDecoratorUsesDecoratorArgument() {
         myFixture.configureByText(
             "Main.java",
@@ -118,6 +119,7 @@ class ArmeriaRouteCollectorDecoratorTest : ArmeriaFixtureTestBase() {
         assertNotNull(serviceRoute)
         assertEquals(listOf("Logging"), serviceRoute!!.decorators)
     }
+
     fun testCollectPathScopedDecoratorFiltersByRoute() {
         myFixture.configureByText(
             "Main.java",
@@ -152,6 +154,7 @@ class ArmeriaRouteCollectorDecoratorTest : ArmeriaFixtureTestBase() {
         assertNotNull(otherRoute)
         assertEquals(emptyList<String>(), otherRoute!!.decorators)
     }
+
     fun testCollectPathScopedDecoratorWithStaticFinalPathPattern() {
         myFixture.configureByText(
             "Main.java",

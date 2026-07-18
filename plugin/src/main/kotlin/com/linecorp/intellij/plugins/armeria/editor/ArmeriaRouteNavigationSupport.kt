@@ -25,8 +25,8 @@ import com.intellij.psi.search.searches.ReferencesSearch
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
-import com.linecorp.intellij.plugins.armeria.explorer.extractArmeriaRouteTarget
 import com.linecorp.intellij.plugins.armeria.explorer.ServiceRegistrationMethod
+import com.linecorp.intellij.plugins.armeria.explorer.extractArmeriaRouteTarget
 import com.linecorp.intellij.plugins.armeria.message
 
 internal object ArmeriaRouteNavigationSupport {
@@ -54,15 +54,17 @@ internal object ArmeriaRouteNavigationSupport {
         return ArmeriaKotlinRouteNavigationSupport.annotatedKotlinRouteFunction(element)
     }
 
-    fun httpMethod(handler: PsiElement): String? = when (handler) {
-        is PsiMethod -> ArmeriaRouteSupport.findRouteAnnotation(handler)?.second
-        else -> if (isKotlinPluginAvailable()) ArmeriaKotlinRouteNavigationSupport.httpMethod(handler) else null
-    }
+    fun httpMethod(handler: PsiElement): String? =
+        when (handler) {
+            is PsiMethod -> ArmeriaRouteSupport.findRouteAnnotation(handler)?.second
+            else -> if (isKotlinPluginAvailable()) ArmeriaKotlinRouteNavigationSupport.httpMethod(handler) else null
+        }
 
-    fun routePath(handler: PsiElement): String = when (handler) {
-        is PsiMethod -> routePathsForJavaMethod(handler).joinToString(", ")
-        else -> if (isKotlinPluginAvailable()) ArmeriaKotlinRouteNavigationSupport.routePath(handler) else ""
-    }
+    fun routePath(handler: PsiElement): String =
+        when (handler) {
+            is PsiMethod -> routePathsForJavaMethod(handler).joinToString(", ")
+            else -> if (isKotlinPluginAvailable()) ArmeriaKotlinRouteNavigationSupport.routePath(handler) else ""
+        }
 
     fun relatedRegistrations(handler: PsiElement): List<PsiElement> {
         if (isIndexUnavailable(handler.project)) {
@@ -70,15 +72,17 @@ internal object ArmeriaRouteNavigationSupport {
         }
         return try {
             when (handler) {
-                is PsiMethod -> findRegistrationsForServiceClass(
-                    handler.containingClass ?: return emptyList(),
-                    handler.project,
-                )
-                else -> if (isKotlinPluginAvailable()) {
-                    ArmeriaKotlinRouteNavigationSupport.relatedRegistrations(handler)
-                } else {
-                    emptyList()
-                }
+                is PsiMethod ->
+                    findRegistrationsForServiceClass(
+                        handler.containingClass ?: return emptyList(),
+                        handler.project,
+                    )
+                else ->
+                    if (isKotlinPluginAvailable()) {
+                        ArmeriaKotlinRouteNavigationSupport.relatedRegistrations(handler)
+                    } else {
+                        emptyList()
+                    }
             }
         } catch (_: IndexNotReadyException) {
             emptyList()
@@ -114,11 +118,12 @@ internal object ArmeriaRouteNavigationSupport {
 
     fun relatedHandlerGotoItems(context: PsiElement): List<GotoRelatedItem> =
         relatedHandlers(context).map { handler ->
-            val label = message(
-                "editor.route.gotoRelated.handler",
-                httpMethod(handler).orEmpty(),
-                routePath(handler),
-            )
+            val label =
+                message(
+                    "editor.route.gotoRelated.handler",
+                    httpMethod(handler).orEmpty(),
+                    routePath(handler),
+                )
             object : GotoRelatedItem(
                 handlerNavigationElement(handler),
                 message("editor.route.gotoRelated.handlers"),
@@ -127,15 +132,20 @@ internal object ArmeriaRouteNavigationSupport {
             }
         }
 
-    fun findRegistrationsForServiceClass(serviceClass: PsiClass, project: Project): List<PsiElement> {
+    fun findRegistrationsForServiceClass(
+        serviceClass: PsiClass,
+        project: Project,
+    ): List<PsiElement> {
         if (isIndexUnavailable(project)) {
             return emptyList()
         }
         val registrations = linkedSetOf<PsiElement>()
         val scope = GlobalSearchScope.projectScope(project)
-        val builderClass = JavaPsiFacade.getInstance(project)
-            .findClass(ArmeriaRouteSupport.SERVER_BUILDER_CLASS, scope)
-            ?: return emptyList()
+        val builderClass =
+            JavaPsiFacade
+                .getInstance(project)
+                .findClass(ArmeriaRouteSupport.SERVER_BUILDER_CLASS, scope)
+                ?: return emptyList()
         try {
             for (methodName in serviceRegistrationMethodNames) {
                 for (method in builderClass.findMethodsByName(methodName, false)) {
@@ -170,17 +180,25 @@ internal object ArmeriaRouteNavigationSupport {
         return handlers.toList()
     }
 
-    fun serviceTypesMatch(first: PsiClass, second: PsiClass): Boolean =
-        first == second || first.isInheritor(second, true) || second.isInheritor(first, true)
+    fun serviceTypesMatch(
+        first: PsiClass,
+        second: PsiClass,
+    ): Boolean = first == second || first.isInheritor(second, true) || second.isInheritor(first, true)
 
-    fun findClassByFqn(project: Project, target: String): PsiClass? {
+    fun findClassByFqn(
+        project: Project,
+        target: String,
+    ): PsiClass? {
         if (target.isBlank() || !target.contains('.')) {
             return null
         }
         return JavaPsiFacade.getInstance(project).findClass(target, GlobalSearchScope.projectScope(project))
     }
 
-    fun findClassByTarget(project: Project, target: String): PsiClass? {
+    fun findClassByTarget(
+        project: Project,
+        target: String,
+    ): PsiClass? {
         if (target.isBlank()) {
             return null
         }
@@ -193,9 +211,10 @@ internal object ArmeriaRouteNavigationSupport {
 
     private fun routePathsForJavaMethod(method: PsiMethod): List<String> {
         val annotation = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return emptyList()
-        val classPrefix = ArmeriaRouteSupport.extractPrimaryPath(
-            method.containingClass?.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION),
-        )
+        val classPrefix =
+            ArmeriaRouteSupport.extractPrimaryPath(
+                method.containingClass?.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION),
+            )
         return buildList {
             addAll(ArmeriaRouteSupport.extractPaths(annotation.first))
             addAll(ArmeriaRouteSupport.extractPathAnnotations(method))
@@ -204,11 +223,12 @@ internal object ArmeriaRouteNavigationSupport {
             .map { path -> ArmeriaRouteSupport.formatAnnotatedHandlerPath(classPrefix, path) }
     }
 
-    private fun methodFromElement(element: PsiElement): PsiMethod? = when (element) {
-        is PsiMethod -> element
-        is PsiIdentifier -> element.parent as? PsiMethod
-        else -> PsiTreeUtil.getParentOfType(element, PsiMethod::class.java)
-    }
+    private fun methodFromElement(element: PsiElement): PsiMethod? =
+        when (element) {
+            is PsiMethod -> element
+            is PsiIdentifier -> element.parent as? PsiMethod
+            else -> PsiTreeUtil.getParentOfType(element, PsiMethod::class.java)
+        }
 
     private fun collectRegistrationFromReference(
         element: PsiElement,
@@ -232,7 +252,8 @@ internal object ArmeriaRouteNavigationSupport {
         if (context is PsiMethodCallExpression && isJavaServiceRegistrationCall(context)) {
             return context
         }
-        return PsiTreeUtil.getParentOfType(context, PsiMethodCallExpression::class.java)
+        return PsiTreeUtil
+            .getParentOfType(context, PsiMethodCallExpression::class.java)
             ?.takeIf(::isJavaServiceRegistrationCall)
     }
 
@@ -249,7 +270,10 @@ internal object ArmeriaRouteNavigationSupport {
         return resolveServiceClassFromImplementation(implementation, call.project)
     }
 
-    private fun resolveServiceClassFromImplementation(expression: PsiElement, project: Project): PsiClass? {
+    private fun resolveServiceClassFromImplementation(
+        expression: PsiElement,
+        project: Project,
+    ): PsiClass? {
         resolvedClassFromReference(expression)?.let { return it }
         if (isKotlinPluginAvailable()) {
             ArmeriaKotlinRouteNavigationSupport.resolveServiceClassFromImplementation(expression)?.let { return it }
@@ -302,23 +326,27 @@ internal object ArmeriaRouteNavigationSupport {
         }
     }
 
-    private fun registrationNavigationElement(registration: PsiElement): PsiElement = when (registration) {
-        is PsiMethodCallExpression -> registration.methodExpression
-        else -> if (isKotlinPluginAvailable()) {
-            ArmeriaKotlinRouteNavigationSupport.registrationNavigationElement(registration)
-        } else {
-            registration
+    private fun registrationNavigationElement(registration: PsiElement): PsiElement =
+        when (registration) {
+            is PsiMethodCallExpression -> registration.methodExpression
+            else ->
+                if (isKotlinPluginAvailable()) {
+                    ArmeriaKotlinRouteNavigationSupport.registrationNavigationElement(registration)
+                } else {
+                    registration
+                }
         }
-    }
 
-    private fun handlerNavigationElement(handler: PsiElement): PsiElement = when (handler) {
-        is PsiMethod -> handler.nameIdentifier ?: handler
-        else -> if (isKotlinPluginAvailable()) {
-            ArmeriaKotlinRouteNavigationSupport.handlerNavigationElement(handler)
-        } else {
-            handler
+    private fun handlerNavigationElement(handler: PsiElement): PsiElement =
+        when (handler) {
+            is PsiMethod -> handler.nameIdentifier ?: handler
+            else ->
+                if (isKotlinPluginAvailable()) {
+                    ArmeriaKotlinRouteNavigationSupport.handlerNavigationElement(handler)
+                } else {
+                    handler
+                }
         }
-    }
 
     private fun isKotlinPluginAvailable(): Boolean = PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
 

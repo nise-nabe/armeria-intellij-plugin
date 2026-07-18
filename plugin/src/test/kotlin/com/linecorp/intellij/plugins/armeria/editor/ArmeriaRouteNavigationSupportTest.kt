@@ -101,19 +101,20 @@ class ArmeriaRouteNavigationSupportTest : ArmeriaLightJavaCodeInsightFixtureTest
     }
 
     fun testRelatedItemsBetweenKotlinHandlerAndRegistration() {
-        val helloServiceFile = myFixture.configureByText(
-            "HelloService.kt",
-            """
-            package example
+        val helloServiceFile =
+            myFixture.configureByText(
+                "HelloService.kt",
+                """
+                package example
 
-            import com.linecorp.armeria.server.annotation.Get
+                import com.linecorp.armeria.server.annotation.Get
 
-            class HelloService {
-                @Get("/hello")
-                fun hello(): String = "hello"
-            }
-            """.trimIndent(),
-        )
+                class HelloService {
+                    @Get("/hello")
+                    fun hello(): String = "hello"
+                }
+                """.trimIndent(),
+            )
         myFixture.configureByText(
             "Main.kt",
             """
@@ -130,8 +131,10 @@ class ArmeriaRouteNavigationSupportTest : ArmeriaLightJavaCodeInsightFixtureTest
         )
 
         val mainFile = myFixture.file
-        val registrationCall = PsiTreeUtil.collectElementsOfType(mainFile, KtCallExpression::class.java)
-            .first { it.text.contains("annotatedService") }
+        val registrationCall =
+            PsiTreeUtil
+                .collectElementsOfType(mainFile, KtCallExpression::class.java)
+                .first { it.text.contains("annotatedService") }
         assertEquals(1, ArmeriaRouteNavigationSupport.relatedHandlers(registrationCall).size)
 
         val function = PsiTreeUtil.findChildOfType(helloServiceFile, KtNamedFunction::class.java)!!
@@ -175,19 +178,20 @@ class ArmeriaRouteNavigationSupportTest : ArmeriaLightJavaCodeInsightFixtureTest
     }
 
     fun testRelatedItemsWithKotlinVariableReference() {
-        val helloServiceFile = myFixture.configureByText(
-            "HelloService.kt",
-            """
-            package com.acme
+        val helloServiceFile =
+            myFixture.configureByText(
+                "HelloService.kt",
+                """
+                package com.acme
 
-            import com.linecorp.armeria.server.annotation.Get
+                import com.linecorp.armeria.server.annotation.Get
 
-            class HelloService {
-                @Get("/hello")
-                fun hello(): String = "hello"
-            }
-            """.trimIndent(),
-        )
+                class HelloService {
+                    @Get("/hello")
+                    fun hello(): String = "hello"
+                }
+                """.trimIndent(),
+            )
         myFixture.configureByText(
             "Main.kt",
             """
@@ -211,19 +215,20 @@ class ArmeriaRouteNavigationSupportTest : ArmeriaLightJavaCodeInsightFixtureTest
     }
 
     fun testRelatedItemsWithKotlinObjectDeclaration() {
-        val helloServiceFile = myFixture.configureByText(
-            "HelloService.kt",
-            """
-            package com.acme
+        val helloServiceFile =
+            myFixture.configureByText(
+                "HelloService.kt",
+                """
+                package com.acme
 
-            import com.linecorp.armeria.server.annotation.Get
+                import com.linecorp.armeria.server.annotation.Get
 
-            object HelloService {
-                @Get("/hello")
-                fun hello(): String = "hello"
-            }
-            """.trimIndent(),
-        )
+                object HelloService {
+                    @Get("/hello")
+                    fun hello(): String = "hello"
+                }
+                """.trimIndent(),
+            )
         myFixture.configureByText(
             "Main.kt",
             """
@@ -412,11 +417,15 @@ class ArmeriaRouteNavigationSupportTest : ArmeriaLightJavaCodeInsightFixtureTest
         assertEquals(1, ArmeriaRouteNavigationSupport.relatedHandlers(registration).size)
     }
 
-    private fun findMethod(className: String, name: String): PsiMethod {
-        val clazz = JavaPsiFacade.getInstance(project).findClass(
-            className,
-            GlobalSearchScope.projectScope(project),
-        )
+    private fun findMethod(
+        className: String,
+        name: String,
+    ): PsiMethod {
+        val clazz =
+            JavaPsiFacade.getInstance(project).findClass(
+                className,
+                GlobalSearchScope.projectScope(project),
+            )
         assertNotNull(clazz)
         val method = clazz!!.findMethodsByName(name, false).singleOrNull()
         assertNotNull(method)
@@ -426,10 +435,14 @@ class ArmeriaRouteNavigationSupportTest : ArmeriaLightJavaCodeInsightFixtureTest
     private fun findMethod(name: String): PsiMethod = findMethod("example.HelloService", name)
 
     private fun registerArmeriaStubs() {
-        myFixture.addClass("package com.linecorp.armeria.server.annotation; public @interface Get { String[] value() default {}; String[] path() default {}; }")
+        myFixture.addClass(
+            "package com.linecorp.armeria.server.annotation; public @interface Get { String[] value() default {}; String[] path() default {}; }",
+        )
         myFixture.addClass("package com.linecorp.armeria.server.annotation; public @interface Path { String[] value() default {}; }")
         myFixture.addClass("package com.linecorp.armeria.server.annotation; public @interface PathPrefix { String value(); }")
-        myFixture.addClass("package com.linecorp.armeria.server; public final class Server { public static ServerBuilder builder() { return null; } }")
+        myFixture.addClass(
+            "package com.linecorp.armeria.server; public final class Server { public static ServerBuilder builder() { return null; } }",
+        )
         myFixture.addClass(
             """
             package com.linecorp.armeria.server;

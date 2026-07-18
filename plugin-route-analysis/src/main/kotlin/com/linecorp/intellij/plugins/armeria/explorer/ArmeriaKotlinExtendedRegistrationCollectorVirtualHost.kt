@@ -9,7 +9,6 @@ import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 internal object ArmeriaKotlinExtendedRegistrationCollectorVirtualHost {
-
     fun addVirtualHost(
         call: KtCallExpression,
         routes: MutableList<ArmeriaRoute>,
@@ -17,20 +16,22 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorVirtualHost {
     ) {
         val key = ArmeriaKotlinRegistrationChainSupport.registrationKey(call) ?: return
         val pathArg = call.valueArguments.firstOrNull()?.getArgumentExpression()
-        val hostname = ArmeriaKotlinExpressionSupport.extractKotlinString(pathArg) ?: pathArg?.text
-            ?: message("route.explorer.target.virtualHost")
+        val hostname =
+            ArmeriaKotlinExpressionSupport.extractKotlinString(pathArg) ?: pathArg?.text
+                ?: message("route.explorer.target.virtualHost")
         if (seenRegistrations.add(key)) {
-            routes += ArmeriaRoute.create(
-                element = call,
-                protocol = RouteProtocol.HTTP.presentableName(),
-                httpMethod = "",
-                path = "/",
-                target = hostname,
-                routeMatch = RouteMatch.VIRTUAL_HOST,
-                virtualHostName = hostname,
-                decorators = ArmeriaKotlinDecoratorSupport.collectProgrammaticDecorators(call, "/"),
-                timeoutHints = ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(call),
-            )
+            routes +=
+                ArmeriaRoute.create(
+                    element = call,
+                    protocol = RouteProtocol.HTTP.presentableName(),
+                    httpMethod = "",
+                    path = "/",
+                    target = hostname,
+                    routeMatch = RouteMatch.VIRTUAL_HOST,
+                    virtualHostName = hostname,
+                    decorators = ArmeriaKotlinDecoratorSupport.collectProgrammaticDecorators(call, "/"),
+                    timeoutHints = ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(call),
+                )
         }
         collectVirtualHostScopedRegistrations(call, routes, seenRegistrations, hostname)
     }
@@ -45,10 +46,12 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorVirtualHost {
         collectForwardChainedRegistrations(virtualHostCall, routes, seenRegistrations, hostname, scopedKeys)
         for (argument in virtualHostCall.valueArguments) {
             val argumentExpression = argument.getArgumentExpression() ?: continue
-            val lambdaBody = (argumentExpression as? KtLambdaExpression
-                ?: argumentExpression.getParentOfType<KtLambdaExpression>(strict = false))
-                ?.bodyExpression
-                ?: continue
+            val lambdaBody =
+                (
+                    argumentExpression as? KtLambdaExpression
+                        ?: argumentExpression.getParentOfType<KtLambdaExpression>(strict = false)
+                )?.bodyExpression
+                    ?: continue
             collectRegistrationsInVirtualHostScope(
                 lambdaBody,
                 virtualHostCall,
@@ -107,14 +110,15 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorVirtualHost {
         hostname: String,
         scopedKeys: MutableSet<String>,
     ) {
-        val calls = buildList {
-            if (root is KtCallExpression) {
-                add(root)
+        val calls =
+            buildList {
+                if (root is KtCallExpression) {
+                    add(root)
+                }
+                root.forEachDescendant { element ->
+                    (element as? KtCallExpression)?.let(::add)
+                }
             }
-            root.forEachDescendant { element ->
-                (element as? KtCallExpression)?.let(::add)
-            }
-        }
         calls.forEach { nested ->
             if (nested == outerVirtualHostCall || isInsideInnerVirtualHost(nested, outerVirtualHostCall)) {
                 return@forEach

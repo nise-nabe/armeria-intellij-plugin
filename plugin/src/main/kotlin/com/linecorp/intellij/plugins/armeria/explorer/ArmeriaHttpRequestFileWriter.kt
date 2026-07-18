@@ -12,7 +12,11 @@ import java.nio.file.Path
 
 internal object ArmeriaHttpRequestFileWriter {
     private val LOG = logger<ArmeriaHttpRequestFileWriter>()
-    fun createOrUpdate(project: Project, route: ArmeriaRoute) {
+
+    fun createOrUpdate(
+        project: Project,
+        route: ArmeriaRoute,
+    ) {
         val content = ArmeriaHttpRequestGenerator.requestText(route)
         val fileName = ArmeriaHttpRequestGenerator.fileName(route)
         val baseDir = project.basePath ?: return

@@ -11,47 +11,54 @@ import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.ui.Messages
 import com.linecorp.intellij.plugins.armeria.message
 
-class ArmeriaSyncRuntimeRoutesAction : DumbAwareAction(
-    message("route.explorer.action.syncRuntime"),
-) {
+class ArmeriaSyncRuntimeRoutesAction :
+    DumbAwareAction(
+        message("route.explorer.action.syncRuntime"),
+    ) {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
         val panel = ArmeriaRouteExplorerAccess.findPanel(project)
         val staticRoutes = panel?.staticRoutes().orEmpty()
-        val defaultMountPath = ArmeriaDocServiceMountResolver.candidateMountPaths(staticRoutes, userMountPath = null)
-            .firstOrNull()
-            .orEmpty()
-        val dialog = ArmeriaDocServiceSyncDialog(
-            project = project,
-            defaultHost = "localhost",
-            defaultPort = "8080",
-            defaultMountPath = defaultMountPath,
-            defaultUseHttps = false,
-        )
+        val defaultMountPath =
+            ArmeriaDocServiceMountResolver
+                .candidateMountPaths(staticRoutes, userMountPath = null)
+                .firstOrNull()
+                .orEmpty()
+        val dialog =
+            ArmeriaDocServiceSyncDialog(
+                project = project,
+                defaultHost = "localhost",
+                defaultPort = "8080",
+                defaultMountPath = defaultMountPath,
+                defaultUseHttps = false,
+            )
         if (!dialog.showAndGet()) {
             return
         }
         val port = ArmeriaDocServiceEndpointValidator.validatePort(dialog.portText) ?: return
-        val mountPaths = ArmeriaDocServiceMountResolver.candidateMountPaths(
-            staticRoutes = staticRoutes,
-            userMountPath = dialog.mountPath.takeIf { it.isNotBlank() },
-        )
-        val request = ArmeriaDocServiceFetchRequest(
-            host = dialog.host,
-            port = port,
-            useHttps = dialog.useHttps,
-            mountPaths = mountPaths,
-            project = project,
-        )
+        val mountPaths =
+            ArmeriaDocServiceMountResolver.candidateMountPaths(
+                staticRoutes = staticRoutes,
+                userMountPath = dialog.mountPath.takeIf { it.isNotBlank() },
+            )
+        val request =
+            ArmeriaDocServiceFetchRequest(
+                host = dialog.host,
+                port = port,
+                useHttps = dialog.useHttps,
+                mountPaths = mountPaths,
+                project = project,
+            )
         ProgressManager.getInstance().run(
             object : Task.Backgroundable(project, message("route.explorer.sync.progress"), true) {
                 override fun run(indicator: ProgressIndicator) {
                     indicator.isIndeterminate = true
-                    val result = try {
-                        ArmeriaRuntimeRouteFetcher.fetch(request)
-                    } catch (_: ProcessCanceledException) {
-                        return
-                    }
+                    val result =
+                        try {
+                            ArmeriaRuntimeRouteFetcher.fetch(request)
+                        } catch (_: ProcessCanceledException) {
+                            return
+                        }
                     if (indicator.isCanceled || project.isDisposed) {
                         return
                     }

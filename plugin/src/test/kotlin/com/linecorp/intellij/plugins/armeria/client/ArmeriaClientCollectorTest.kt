@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.client
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaClientFixtureTestBase
 
 class ArmeriaClientCollectorTest : ArmeriaClientFixtureTestBase() {
-
     fun testCollectWebClientOf() {
         myFixture.configureByText(
             "Main.java",
@@ -423,5 +422,4 @@ class ArmeriaClientCollectorTest : ArmeriaClientFixtureTestBase() {
 
         assertEquals(listOf("Circuit breaker"), endpoint.decorators)
     }
-
 }

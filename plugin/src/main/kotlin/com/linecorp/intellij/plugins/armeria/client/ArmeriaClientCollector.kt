@@ -27,11 +27,10 @@ import com.linecorp.intellij.plugins.armeria.message
 object ArmeriaClientCollector {
     private val KOTLIN_PLUGIN_ID = PluginId.getId("org.jetbrains.kotlin")
 
-    fun collect(project: Project): List<ArmeriaClientEndpoint> {
-        return CachedValuesManager.getManager(project).getCachedValue(project) {
+    fun collect(project: Project): List<ArmeriaClientEndpoint> =
+        CachedValuesManager.getManager(project).getCachedValue(project) {
             computeProjectEndpoints(project)
         }
-    }
 
     private fun computeProjectEndpoints(project: Project): CachedValueProvider.Result<List<ArmeriaClientEndpoint>> {
         val scope = GlobalSearchScope.projectScope(project)
@@ -59,12 +58,14 @@ object ArmeriaClientCollector {
             if (!ArmeriaRouteCollector.referencesArmeriaJavaContent(file)) {
                 continue
             }
-            file.accept(object : JavaRecursiveElementWalkingVisitor() {
-                override fun visitMethodCallExpression(expression: PsiMethodCallExpression) {
-                    collectClientFromMethodCall(expression, endpoints, seenEndpoints)
-                    super.visitMethodCallExpression(expression)
-                }
-            })
+            file.accept(
+                object : JavaRecursiveElementWalkingVisitor() {
+                    override fun visitMethodCallExpression(expression: PsiMethodCallExpression) {
+                        collectClientFromMethodCall(expression, endpoints, seenEndpoints)
+                        super.visitMethodCallExpression(expression)
+                    }
+                },
+            )
         }
     }
 
@@ -83,8 +84,9 @@ object ArmeriaClientCollector {
         val resolvedClass = expression.resolveMethod()?.containingClass?.qualifiedName ?: return
         val protocol = ArmeriaClientSupport.protocolForClass(resolvedClass) ?: return
         val metadata = extractClientMetadata(expression, methodName, protocol) ?: return
-        val target = expression.methodExpression.qualifierExpression?.text
-            ?: resolvedClass.substringAfterLast('.')
+        val target =
+            expression.methodExpression.qualifierExpression?.text
+                ?: resolvedClass.substringAfterLast('.')
         addEndpoint(
             element = expression,
             protocol = protocol,
@@ -126,11 +128,13 @@ object ArmeriaClientCollector {
                 when {
                     arguments.isEmpty() -> null
                     arguments.size >= 2 && isEndpointGroupArgument(arguments[1]) -> {
-                        val endpointGroup = ArmeriaClientEndpointGroupSupport.labelJavaEndpointGroup(arguments[1])
-                            ?: return null
+                        val endpointGroup =
+                            ArmeriaClientEndpointGroupSupport.labelJavaEndpointGroup(arguments[1])
+                                ?: return null
                         ClientMetadata(
-                            uri = ArmeriaClientEndpointGroupSupport.extractJavaEndpointGroupUri(arguments[1])
-                                ?: endpointGroup,
+                            uri =
+                                ArmeriaClientEndpointGroupSupport.extractJavaEndpointGroupUri(arguments[1])
+                                    ?: endpointGroup,
                             decorators = decorators,
                             endpointGroup = endpointGroup,
                         )
@@ -189,10 +193,12 @@ object ArmeriaClientCollector {
                 val arguments = call.argumentList.expressions
                 val decorators = ArmeriaClientDecoratorSupport.collectJavaClientDecorators(call)
                 if (arguments.size >= 2 && isEndpointGroupArgument(arguments[1])) {
-                    val endpointGroup = ArmeriaClientEndpointGroupSupport.labelJavaEndpointGroup(arguments[1])
-                        ?: return null
-                    val uri = ArmeriaClientEndpointGroupSupport.extractJavaEndpointGroupUri(arguments[1])
-                        ?: endpointGroup
+                    val endpointGroup =
+                        ArmeriaClientEndpointGroupSupport.labelJavaEndpointGroup(arguments[1])
+                            ?: return null
+                    val uri =
+                        ArmeriaClientEndpointGroupSupport.extractJavaEndpointGroupUri(arguments[1])
+                            ?: endpointGroup
                     return WebClientTransportInfo(uri = uri, decorators = decorators, endpointGroup = endpointGroup)
                 }
                 val uri = extractString(arguments.firstOrNull()) ?: return null
@@ -241,9 +247,8 @@ object ArmeriaClientCollector {
         return null
     }
 
-    private fun isEndpointGroupArgument(expression: PsiExpression): Boolean {
-        return ArmeriaClientEndpointGroupSupport.labelJavaEndpointGroup(expression) != null
-    }
+    private fun isEndpointGroupArgument(expression: PsiExpression): Boolean =
+        ArmeriaClientEndpointGroupSupport.labelJavaEndpointGroup(expression) != null
 
     internal fun addEndpoint(
         element: PsiElement,
@@ -261,39 +266,42 @@ object ArmeriaClientCollector {
         if (!seenEndpoints.add(dedupeKey)) {
             return
         }
-        endpoints += ArmeriaClientEndpoint.create(
-            element = element,
-            clientType = protocol.presentableName(),
-            target = target,
-            uri = uri,
-            decorators = decorators,
-            endpointGroup = endpointGroup,
-            transport = transport,
-        )
+        endpoints +=
+            ArmeriaClientEndpoint.create(
+                element = element,
+                clientType = protocol.presentableName(),
+                target = target,
+                uri = uri,
+                decorators = decorators,
+                endpointGroup = endpointGroup,
+                transport = transport,
+            )
     }
 
-    internal fun extractString(expression: PsiExpression?): String? {
-        return when (expression) {
+    internal fun extractString(expression: PsiExpression?): String? =
+        when (expression) {
             null -> null
             is PsiLiteralExpression -> expression.value as? String
             else -> {
-                val constantValue = JavaPsiFacade.getInstance(expression.project)
-                    .constantEvaluationHelper
-                    .computeConstantExpression(expression) as? String
+                val constantValue =
+                    JavaPsiFacade
+                        .getInstance(expression.project)
+                        .constantEvaluationHelper
+                        .computeConstantExpression(expression) as? String
                 constantValue ?: expression.text.takeIf { StringUtil.isNotEmpty(it) }
             }
         }
-    }
 
     private fun isKotlinPluginAvailable(): Boolean = PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
 
     private fun isNestedInsideClientFactoryArgument(expression: PsiMethodCallExpression): Boolean {
         var element: PsiElement? = expression.parent
         while (element != null) {
-            val outerCall = element as? PsiMethodCallExpression ?: run {
-                element = element.parent
-                continue
-            }
+            val outerCall =
+                element as? PsiMethodCallExpression ?: run {
+                    element = element.parent
+                    continue
+                }
             val methodName = outerCall.methodExpression.referenceName
             if (methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES &&
                 ArmeriaClientSupport.protocolForClass(outerCall.resolveMethod()?.containingClass?.qualifiedName) != null &&
@@ -306,7 +314,10 @@ object ArmeriaClientCollector {
         return false
     }
 
-    private fun isDescendantOfArgumentList(expression: PsiElement, argumentList: PsiExpressionList): Boolean {
+    private fun isDescendantOfArgumentList(
+        expression: PsiElement,
+        argumentList: PsiExpressionList,
+    ): Boolean {
         var current: PsiElement? = expression
         while (current != null) {
             if (current.parent == argumentList) {

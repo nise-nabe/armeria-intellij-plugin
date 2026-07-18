@@ -64,52 +64,52 @@ internal object ArmeriaSpringConfigRouteCollector {
         val routeMatch: RouteMatch,
     )
 
-    private val INTERNAL_SERVICE_SPECS = listOf(
-        InternalServiceSpec(
-            id = SpringArmeriaConfigSemantics.ID_DOCS,
-            path = { it.resolvedDocsPath() },
-            pathElement = { it.docsPathElement },
-            messageKey = "route.explorer.spring.docService",
-            protocol = RouteProtocol.DOC_SERVICE.presentableName(),
-            httpMethod = "",
-            isDocService = true,
-            routeMatch = RouteMatch.NON_HTTP,
-        ),
-        InternalServiceSpec(
-            id = SpringArmeriaConfigSemantics.ID_HEALTH,
-            path = { it.resolvedHealthPath() },
-            pathElement = { it.healthPathElement },
-            messageKey = "route.explorer.spring.healthCheck",
-            protocol = RouteProtocol.HTTP.presentableName(),
-            httpMethod = "GET",
-            isDocService = false,
-            routeMatch = RouteMatch.CONFIG,
-        ),
-        InternalServiceSpec(
-            id = SpringArmeriaConfigSemantics.ID_METRICS,
-            path = { it.resolvedMetricsPath() },
-            pathElement = { it.metricsPathElement },
-            messageKey = "route.explorer.spring.metrics",
-            protocol = RouteProtocol.HTTP.presentableName(),
-            httpMethod = "GET",
-            isDocService = false,
-            routeMatch = RouteMatch.CONFIG,
-        ),
-        InternalServiceSpec(
-            id = SpringArmeriaConfigSemantics.ID_ACTUATOR,
-            path = { "/actuator" },
-            pathElement = { null },
-            messageKey = "route.explorer.spring.actuator",
-            protocol = RouteProtocol.HTTP.presentableName(),
-            httpMethod = "GET",
-            isDocService = false,
-            routeMatch = RouteMatch.CONFIG,
-        ),
-    )
+    private val INTERNAL_SERVICE_SPECS =
+        listOf(
+            InternalServiceSpec(
+                id = SpringArmeriaConfigSemantics.ID_DOCS,
+                path = { it.resolvedDocsPath() },
+                pathElement = { it.docsPathElement },
+                messageKey = "route.explorer.spring.docService",
+                protocol = RouteProtocol.DOC_SERVICE.presentableName(),
+                httpMethod = "",
+                isDocService = true,
+                routeMatch = RouteMatch.NON_HTTP,
+            ),
+            InternalServiceSpec(
+                id = SpringArmeriaConfigSemantics.ID_HEALTH,
+                path = { it.resolvedHealthPath() },
+                pathElement = { it.healthPathElement },
+                messageKey = "route.explorer.spring.healthCheck",
+                protocol = RouteProtocol.HTTP.presentableName(),
+                httpMethod = "GET",
+                isDocService = false,
+                routeMatch = RouteMatch.CONFIG,
+            ),
+            InternalServiceSpec(
+                id = SpringArmeriaConfigSemantics.ID_METRICS,
+                path = { it.resolvedMetricsPath() },
+                pathElement = { it.metricsPathElement },
+                messageKey = "route.explorer.spring.metrics",
+                protocol = RouteProtocol.HTTP.presentableName(),
+                httpMethod = "GET",
+                isDocService = false,
+                routeMatch = RouteMatch.CONFIG,
+            ),
+            InternalServiceSpec(
+                id = SpringArmeriaConfigSemantics.ID_ACTUATOR,
+                path = { "/actuator" },
+                pathElement = { null },
+                messageKey = "route.explorer.spring.actuator",
+                protocol = RouteProtocol.HTTP.presentableName(),
+                httpMethod = "GET",
+                isDocService = false,
+                routeMatch = RouteMatch.CONFIG,
+            ),
+        )
 
     /** Exposed for tests — must stay equal to [SpringArmeriaConfigSemantics.INTERNAL_SERVICE_IDS]. */
-    internal fun internalServiceSpecIds(): Set<String> =
-        INTERNAL_SERVICE_SPECS.mapTo(linkedSetOf()) { it.id }
+    internal fun internalServiceSpecIds(): Set<String> = INTERNAL_SERVICE_SPECS.mapTo(linkedSetOf()) { it.id }
 
     fun collect(
         project: Project,
@@ -119,11 +119,13 @@ internal object ArmeriaSpringConfigRouteCollector {
     ) {
         // Resolve only filenames that match application*.{yml,yaml,properties} instead of
         // enumerating every yml/yaml/properties file in scope (common in large Spring repos).
-        val configFiles = FilenameIndex.getAllFilenames(project)
-            .asSequence()
-            .filter { isApplicationConfigFile(it) }
-            .flatMap { name -> FilenameIndex.getVirtualFilesByName(name, scope) }
-            .sortedWith(compareBy({ it.path }, { it.name }))
+        val configFiles =
+            FilenameIndex
+                .getAllFilenames(project)
+                .asSequence()
+                .filter { isApplicationConfigFile(it) }
+                .flatMap { name -> FilenameIndex.getVirtualFilesByName(name, scope) }
+                .sortedWith(compareBy({ it.path }, { it.name }))
         val psiManager = PsiManager.getInstance(project)
         for (virtualFile in configFiles) {
             val psiFile = psiManager.findFile(virtualFile) ?: continue
@@ -140,11 +142,12 @@ internal object ArmeriaSpringConfigRouteCollector {
         if (!text.contains("armeria")) {
             return
         }
-        val config = when {
-            psiFile.name.endsWith(".properties") -> parseProperties(text)
-            isYamlPluginAvailable() -> ArmeriaYamlSpringConfigReader.read(psiFile)
-            else -> return
-        }
+        val config =
+            when {
+                psiFile.name.endsWith(".properties") -> parseProperties(text)
+                isYamlPluginAvailable() -> ArmeriaYamlSpringConfigReader.read(psiFile)
+                else -> return
+            }
         emitRoutes(config, psiFile, profileFromFileName(psiFile.name), routes, seenConfigRoutes)
     }
 
@@ -162,9 +165,10 @@ internal object ArmeriaSpringConfigRouteCollector {
         PROPERTIES_PROTOCOL_PATTERN.findAll(text).forEach { match ->
             val portIndex = match.groupValues[1].toIntOrNull() ?: return@forEach
             val protocolIndex = match.groupValues[2].toIntOrNull()
-            val protocols = SpringArmeriaConfigSemantics
-                .splitScalarList(stripPropertiesInlineComment(match.groupValues[3]))
-                .filter { it.isNotEmpty() }
+            val protocols =
+                SpringArmeriaConfigSemantics
+                    .splitScalarList(stripPropertiesInlineComment(match.groupValues[3]))
+                    .filter { it.isNotEmpty() }
             if (protocols.isEmpty()) {
                 return@forEach
             }
@@ -180,18 +184,20 @@ internal object ArmeriaSpringConfigRouteCollector {
                 }
             }
         }
-        val ports = portsByIndex.entries
-            .sortedBy { it.key }
-            .map { (index, port) ->
-                val protocols = SpringArmeriaConfigSemantics.normalizeProtocols(
-                    protocolsByIndex[index]
-                        ?.entries
-                        ?.sortedBy { it.key }
-                        ?.map { it.value }
-                        .orEmpty(),
-                )
-                SpringArmeriaPortBinding(port = port, protocols = protocols)
-            }
+        val ports =
+            portsByIndex.entries
+                .sortedBy { it.key }
+                .map { (index, port) ->
+                    val protocols =
+                        SpringArmeriaConfigSemantics.normalizeProtocols(
+                            protocolsByIndex[index]
+                                ?.entries
+                                ?.sortedBy { it.key }
+                                ?.map { it.value }
+                                .orEmpty(),
+                        )
+                    SpringArmeriaPortBinding(port = port, protocols = protocols)
+                }
 
         // Unindexed keys are last-wins; indexed keys (include[N]) are last-wins per index.
         val includesByIndex = linkedMapOf<Int, Set<String>>()
@@ -209,22 +215,27 @@ internal object ArmeriaSpringConfigRouteCollector {
                 includesByIndex[index] = tokens
             }
         }
-        val includes = when {
-            includesByIndex.isNotEmpty() -> includesByIndex.values.flatten().toSet()
-            unindexedIncludes != null -> unindexedIncludes
-            else -> emptySet()
-        }
+        val includes =
+            when {
+                includesByIndex.isNotEmpty() -> includesByIndex.values.flatten().toSet()
+                unindexedIncludes != null -> unindexedIncludes
+                else -> emptySet()
+            }
         return SpringArmeriaConfig(
             ports = ports,
             includes = SpringArmeriaConfigSemantics.expandIncludes(includes),
-            docsPath = lastPropertiesMatch(PROPERTIES_DOCS_PATH_PATTERN, text)
-                ?.let { SpringArmeriaConfigSemantics.trimQuotes(stripPropertiesInlineComment(it)) },
-            healthPath = lastPropertiesMatch(PROPERTIES_HEALTH_PATH_PATTERN, text)
-                ?.let { SpringArmeriaConfigSemantics.trimQuotes(stripPropertiesInlineComment(it)) },
-            metricsPath = lastPropertiesMatch(PROPERTIES_METRICS_PATH_PATTERN, text)
-                ?.let { SpringArmeriaConfigSemantics.trimQuotes(stripPropertiesInlineComment(it)) },
-            internalServicesPort = lastPropertiesMatch(PROPERTIES_INTERNAL_PORT_PATTERN, text)
-                ?.let { stripPropertiesInlineComment(it) },
+            docsPath =
+                lastPropertiesMatch(PROPERTIES_DOCS_PATH_PATTERN, text)
+                    ?.let { SpringArmeriaConfigSemantics.trimQuotes(stripPropertiesInlineComment(it)) },
+            healthPath =
+                lastPropertiesMatch(PROPERTIES_HEALTH_PATH_PATTERN, text)
+                    ?.let { SpringArmeriaConfigSemantics.trimQuotes(stripPropertiesInlineComment(it)) },
+            metricsPath =
+                lastPropertiesMatch(PROPERTIES_METRICS_PATH_PATTERN, text)
+                    ?.let { SpringArmeriaConfigSemantics.trimQuotes(stripPropertiesInlineComment(it)) },
+            internalServicesPort =
+                lastPropertiesMatch(PROPERTIES_INTERNAL_PORT_PATTERN, text)
+                    ?.let { stripPropertiesInlineComment(it) },
         )
     }
 
@@ -242,10 +253,11 @@ internal object ArmeriaSpringConfigRouteCollector {
             addConfigRoute(
                 element = navigationElement(binding.element, fallbackElement),
                 path = ":${binding.port}",
-                target = profileAwareTarget(
-                    message("route.explorer.spring.port", binding.port, protocolLabel),
-                    profile,
-                ),
+                target =
+                    profileAwareTarget(
+                        message("route.explorer.spring.port", binding.port, protocolLabel),
+                        profile,
+                    ),
                 protocol = protocolLabel,
                 httpMethod = "",
                 routeMatch = RouteMatch.NON_HTTP,
@@ -269,20 +281,22 @@ internal object ArmeriaSpringConfigRouteCollector {
             }
             val path = spec.path(config)
             addConfigRoute(
-                element = navigationElement(
-                    spec.pathElement(config) ?: config.includeElement,
-                    fallbackElement,
-                ),
+                element =
+                    navigationElement(
+                        spec.pathElement(config) ?: config.includeElement,
+                        fallbackElement,
+                    ),
                 path = path,
                 target = profileAwareTarget(message(spec.messageKey) + portSuffix, profile),
                 protocol = spec.protocol,
                 httpMethod = spec.httpMethod,
                 routeMatch = spec.routeMatch,
                 isDocService = spec.isDocService,
-                dedupeKey = profileAwareKey(
-                    "${spec.id}:$path:${config.internalServicesPort.orEmpty()}",
-                    profile,
-                ),
+                dedupeKey =
+                    profileAwareKey(
+                        "${spec.id}:$path:${config.internalServicesPort.orEmpty()}",
+                        profile,
+                    ),
                 routes = routes,
                 seenConfigRoutes = seenConfigRoutes,
             )
@@ -293,7 +307,10 @@ internal object ArmeriaSpringConfigRouteCollector {
      * Keep key-level YAML PSI only when it lives in the same file the user opened. Dummy trees
      * from Plain Text-typed YAML share no virtual file with [fallback], so navigation falls back.
      */
-    private fun navigationElement(candidate: PsiElement?, fallback: PsiElement): PsiElement {
+    private fun navigationElement(
+        candidate: PsiElement?,
+        fallback: PsiElement,
+    ): PsiElement {
         if (candidate == null) {
             return fallback
         }
@@ -310,8 +327,7 @@ internal object ArmeriaSpringConfigRouteCollector {
         return fallback
     }
 
-    private fun isYamlPluginAvailable(): Boolean =
-        PluginManagerCore.isLoaded(YAML_PLUGIN_ID)
+    private fun isYamlPluginAvailable(): Boolean = PluginManagerCore.isLoaded(YAML_PLUGIN_ID)
 
     private fun isApplicationConfigFile(name: String): Boolean = APPLICATION_FILE_PATTERN.matches(name)
 
@@ -337,28 +353,39 @@ internal object ArmeriaSpringConfigRouteCollector {
         if (!seenConfigRoutes.add(moduleKey)) {
             return
         }
-        routes += ArmeriaRoute.create(
-            element = element,
-            protocol = protocol,
-            httpMethod = httpMethod,
-            path = path,
-            target = target,
-            routeMatch = routeMatch,
-            isDocService = isDocService,
-        )
+        routes +=
+            ArmeriaRoute.create(
+                element = element,
+                protocol = protocol,
+                httpMethod = httpMethod,
+                path = path,
+                target = target,
+                routeMatch = routeMatch,
+                isDocService = isDocService,
+            )
     }
 
-    private fun profileAwareTarget(base: String, profile: String?): String =
-        if (profile.isNullOrEmpty()) base else "$base [$profile]"
+    private fun profileAwareTarget(
+        base: String,
+        profile: String?,
+    ): String = if (profile.isNullOrEmpty()) base else "$base [$profile]"
 
-    private fun profileAwareKey(base: String, profile: String?): String =
-        if (profile.isNullOrEmpty()) base else "$base@$profile"
+    private fun profileAwareKey(
+        base: String,
+        profile: String?,
+    ): String = if (profile.isNullOrEmpty()) base else "$base@$profile"
 
     private val PROPERTIES_INLINE_COMMENT = Regex("""\s+[#!].*$""")
 
-    private fun lastPropertiesMatch(pattern: Regex, text: String): String? =
-        pattern.findAll(text).lastOrNull()?.groupValues?.get(1)
+    private fun lastPropertiesMatch(
+        pattern: Regex,
+        text: String,
+    ): String? =
+        pattern
+            .findAll(text)
+            .lastOrNull()
+            ?.groupValues
+            ?.get(1)
 
-    private fun stripPropertiesInlineComment(raw: String): String =
-        raw.trim().replace(PROPERTIES_INLINE_COMMENT, "").trimEnd()
+    private fun stripPropertiesInlineComment(raw: String): String = raw.trim().replace(PROPERTIES_INLINE_COMMENT, "").trimEnd()
 }

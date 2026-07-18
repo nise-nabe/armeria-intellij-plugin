@@ -1,8 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.client
 
+import com.intellij.psi.PsiElement
 import com.intellij.psi.SmartPointerManager
 import com.intellij.psi.SmartPsiElementPointer
-import com.intellij.psi.PsiElement
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteMetadata
 
 data class ArmeriaClientEndpoint(
@@ -24,8 +24,8 @@ data class ArmeriaClientEndpoint(
             decorators: List<String> = emptyList(),
             endpointGroup: String? = null,
             transport: String? = null,
-        ): ArmeriaClientEndpoint {
-            return ArmeriaClientEndpoint(
+        ): ArmeriaClientEndpoint =
+            ArmeriaClientEndpoint(
                 clientType = clientType,
                 target = target,
                 uri = uri,
@@ -35,6 +35,5 @@ data class ArmeriaClientEndpoint(
                 endpointGroup = endpointGroup,
                 transport = transport,
             )
-        }
     }
 }

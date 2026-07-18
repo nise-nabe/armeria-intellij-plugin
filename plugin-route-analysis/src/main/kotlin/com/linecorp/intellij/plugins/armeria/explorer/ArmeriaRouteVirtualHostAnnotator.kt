@@ -1,7 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 internal object ArmeriaRouteVirtualHostAnnotator {
-
     fun annotateRoutesAddedSince(
         routes: MutableList<ArmeriaRoute>,
         sizeBefore: Int,

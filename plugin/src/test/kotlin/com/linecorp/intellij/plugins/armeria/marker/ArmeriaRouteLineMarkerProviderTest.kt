@@ -3,8 +3,8 @@ package com.linecorp.intellij.plugins.armeria.marker
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.util.PsiTreeUtil
-import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 import com.linecorp.intellij.plugins.armeria.ArmeriaIcons
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 import org.jetbrains.kotlin.psi.KtNamedFunction
 
 class ArmeriaRouteLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
@@ -112,12 +112,15 @@ class ArmeriaRouteLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixtureTes
         val fileText = myFixture.file.text
         val serviceIndex = fileText.indexOf("service")
         val element = myFixture.file.findElementAt(serviceIndex)!!
-        val serviceCall = PsiTreeUtil.findChildrenOfType(myFixture.file, PsiMethodCallExpression::class.java)
-            .first { it.methodExpression.referenceName == "service" }
-        val path = ArmeriaJavaRouteLineMarkerProvider.javaRegistrationPath(
-            "service",
-            serviceCall.argumentList.expressions.toList(),
-        )
+        val serviceCall =
+            PsiTreeUtil
+                .findChildrenOfType(myFixture.file, PsiMethodCallExpression::class.java)
+                .first { it.methodExpression.referenceName == "service" }
+        val path =
+            ArmeriaJavaRouteLineMarkerProvider.javaRegistrationPath(
+                "service",
+                serviceCall.argumentList.expressions.toList(),
+            )
 
         assertEquals("/api", path)
         val marker = javaProvider.getLineMarkerInfo(element)
