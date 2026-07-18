@@ -5,9 +5,8 @@ min_version = "2024.11.1"
 java = "25"
 
 [tasks."cloud:install"]
-description = "Cursor Cloud environment setup (MCP JAR, gh CLI, IntelliJ Platform warm)"
+description = "Cursor Cloud environment setup (gh CLI, IntelliJ Platform warm; MCP JAR is installed by .cursor/install.sh first)"
 run = [
-  "bash .github/scripts/install-gradle-tapi-mcp.sh",
   "bash .cursor/scripts/setup-gh-cli.sh",
   "bash .cursor/scripts/warm-intellij-platform.sh",
 ]

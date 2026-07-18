@@ -6,10 +6,11 @@ IntelliJ Platform plugin for Armeria. Gradle multi-project build (`build-logic`,
 
 ### Prerequisites
 
+- **Cursor Cloud setup**: `mise.toml` pins Java 25 and defines the `cloud:install` task (gh CLI setup and IntelliJ Platform warm). `.cursor/install.sh` bootstraps mise when needed, installs the Gradle MCP JAR first (no Java dependency), then runs `mise run cloud:install`. Locally, reproduce the same steps with `mise run cloud:install` after `mise install`.
 - **Gradle daemon JVM**: Adoptium 25 (pinned in `gradle/gradle-daemon-jvm.properties`; Foojay resolver downloads it). The running daemon may report a different Java until it restarts and applies the pin — see `gradle_get_build_environment`.
 - **Compile toolchain**: Java 21 JetBrains (configured in `build-logic/src/main/kotlin/com.linecorp.intellij.platform-plugin.gradle.kts` and inherited by `plugin/`).
 - Gradle wrapper (`./gradlew`) remains available as a **fallback** when MCP is unavailable.
-- **IntelliJ Platform prefetch**: `.cursor/install.sh` runs `compileTestKotlin` on plugin modules so IPGP downloads Ultimate into the Gradle cache. Cursor checkpoints that disk state after a long `install`, so later cloud agents usually skip the cold IDE download. Bumping `idea-platform` in `gradle/libs.versions.toml` triggers a fresh download on the next install.
+- **IntelliJ Platform prefetch**: `cloud:install` runs `compileTestKotlin` on plugin modules so IPGP downloads Ultimate into the Gradle cache. Cursor checkpoints that disk state after a long `install`, so later cloud agents usually skip the cold IDE download. Bumping `idea-platform` in `gradle/libs.versions.toml` triggers a fresh download on the next install.
 
 ### MCP: Gradle Tooling API (default for Gradle tasks)
 

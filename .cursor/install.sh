@@ -10,6 +10,7 @@ ensure_mise() {
   fi
 
   echo "Installing mise..."
+  # mise.run bundles SHA-256 checksums for the pinned release it installs.
   curl -fsSL https://mise.run | sh
   export PATH="${HOME}/.local/bin:${PATH}"
 }
@@ -29,7 +30,10 @@ EOF
 ensure_mise
 export PATH="${HOME}/.local/bin:${PATH}"
 eval "$(mise activate bash)"
-ensure_mise_activate_in_shell
 
-mise install
+# MCP JAR has no Java dependency; install before mise-managed Java so a transient
+# Java download failure does not block Gradle MCP setup.
+bash "${repo_root}/.github/scripts/install-gradle-tapi-mcp.sh"
+
 mise run cloud:install
+ensure_mise_activate_in_shell
