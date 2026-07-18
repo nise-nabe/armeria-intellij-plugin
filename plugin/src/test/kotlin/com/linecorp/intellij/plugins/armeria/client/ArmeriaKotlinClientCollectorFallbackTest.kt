@@ -1,8 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.client
 
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 
-class ArmeriaKotlinClientCollectorFallbackTest : LightJavaCodeInsightFixtureTestCase() {
+class ArmeriaKotlinClientCollectorFallbackTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     fun testCollectWebClientOfViaImportWhenMethodResolutionFails() {
         myFixture.addClass(
             """

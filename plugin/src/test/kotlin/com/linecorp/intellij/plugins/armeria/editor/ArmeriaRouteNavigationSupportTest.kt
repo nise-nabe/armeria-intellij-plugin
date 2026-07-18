@@ -4,11 +4,11 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
 
-class ArmeriaRouteNavigationSupportTest : LightJavaCodeInsightFixtureTestCase() {
+class ArmeriaRouteNavigationSupportTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     override fun setUp() {
         super.setUp()
         registerArmeriaStubs()

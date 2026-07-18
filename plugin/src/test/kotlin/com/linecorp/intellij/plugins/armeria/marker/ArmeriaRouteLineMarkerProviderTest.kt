@@ -3,11 +3,11 @@ package com.linecorp.intellij.plugins.armeria.marker
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.util.PsiTreeUtil
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 import com.linecorp.intellij.plugins.armeria.ArmeriaIcons
 import org.jetbrains.kotlin.psi.KtNamedFunction
 
-class ArmeriaRouteLineMarkerProviderTest : LightJavaCodeInsightFixtureTestCase() {
+class ArmeriaRouteLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     private val javaProvider = ArmeriaJavaRouteLineMarkerProvider()
     private val kotlinProvider = ArmeriaKotlinRouteLineMarkerProvider()
 

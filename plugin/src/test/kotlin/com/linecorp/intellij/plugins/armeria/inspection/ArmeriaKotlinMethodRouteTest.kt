@@ -1,11 +1,11 @@
 package com.linecorp.intellij.plugins.armeria.inspection
 
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
 
-class ArmeriaKotlinMethodRouteTest : LightJavaCodeInsightFixtureTestCase() {
+class ArmeriaKotlinMethodRouteTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     override fun setUp() {
         super.setUp()
         myFixture.addClass(
