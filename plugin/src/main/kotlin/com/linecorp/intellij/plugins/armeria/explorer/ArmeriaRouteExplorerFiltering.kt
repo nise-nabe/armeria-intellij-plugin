@@ -85,6 +85,7 @@ internal object ArmeriaRouteExplorerFiltering {
             left.path == right.path &&
             left.target == right.target &&
             left.routeMatch == right.routeMatch &&
-            left.httpMethod == right.httpMethod
+            left.httpMethod == right.httpMethod &&
+            left.virtualHostName == right.virtualHostName
     }
 }

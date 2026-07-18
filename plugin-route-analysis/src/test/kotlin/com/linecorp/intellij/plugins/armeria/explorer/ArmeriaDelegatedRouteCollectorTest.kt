@@ -237,6 +237,72 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertEquals("api.example.com", delegatedRoute.virtualHostName)
     }
 
+    fun testDelegatedRoutesKeepSeparateChildrenPerVirtualHost() {
+        myFixture.configureByText(
+            "FirstMain.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.tomcat.TomcatService;
+
+            public class FirstMain {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .virtualHost("a.example.com")
+                        .serviceUnder("/spring/", TomcatService.of(null))
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "SecondMain.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.tomcat.TomcatService;
+
+            public class SecondMain {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .virtualHost("b.example.com")
+                        .serviceUnder("/spring/", TomcatService.of(null))
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "HelloController.java",
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.GetMapping;
+            import org.springframework.web.bind.annotation.RestController;
+
+            @RestController
+            public class HelloController {
+                @GetMapping("/hello")
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val delegated = routes.filter {
+            it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC && it.path == "/spring/hello"
+        }
+        assertEquals(2, delegated.size)
+        assertEquals(
+            setOf("a.example.com", "b.example.com"),
+            delegated.map { it.virtualHostName }.toSet(),
+        )
+    }
+
     fun testTomcatServiceBeanMountIsDetected() {
         myFixture.configureByText(
             "ArmeriaConfig.java",

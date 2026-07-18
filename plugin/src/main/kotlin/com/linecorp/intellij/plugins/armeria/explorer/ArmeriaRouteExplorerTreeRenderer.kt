@@ -36,28 +36,17 @@ internal class ArmeriaRouteExplorerTreeRenderer : ColoredTreeCellRenderer() {
             append(route.path)
             append(" → ")
             append(route.shortTarget)
-            if (route.delegationMountPath.isNotEmpty()) {
+            ArmeriaRouteDetailFormatter.tooltipDelegationSuffix(route)?.let { suffix ->
                 append(" (")
-                append(message("route.explorer.tooltip.delegatedVia", route.delegationMountPath))
+                append(suffix)
                 append(')')
             }
         }
         append(ArmeriaHttpMethodPill.pillText(pillLabel), ArmeriaHttpMethodPill.textAttributes(route))
         append("  ", SimpleTextAttributes.REGULAR_ATTRIBUTES)
         append(route.path, SimpleTextAttributes.REGULAR_ATTRIBUTES)
-        if (route.delegationMountPath.isNotEmpty()) {
-            append(
-                message("route.explorer.secondary.delegatedVia", route.delegationMountPath),
-                SimpleTextAttributes.GRAYED_ATTRIBUTES,
-            )
-        } else {
-            ArmeriaRouteDetailFormatter.delegationKindOf(route)?.let { delegationKind ->
-                append(
-                    message("route.explorer.secondary.separator") +
-                        ArmeriaRouteDetailFormatter.delegationBadge(delegationKind),
-                    SimpleTextAttributes.GRAYED_ATTRIBUTES,
-                )
-            }
+        ArmeriaRouteDetailFormatter.secondaryDelegationText(route)?.let { secondary ->
+            append(secondary, SimpleTextAttributes.GRAYED_ATTRIBUTES)
         }
     }
 }

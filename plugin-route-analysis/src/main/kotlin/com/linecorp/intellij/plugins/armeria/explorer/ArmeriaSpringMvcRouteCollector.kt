@@ -32,7 +32,7 @@ internal object ArmeriaSpringMvcRouteCollector {
         REQUEST_MAPPING to "",
     )
 
-    fun isSpringWebAvailable(psiFacade: JavaPsiFacade, scope: GlobalSearchScope): Boolean {
+    private fun isSpringWebAvailable(psiFacade: JavaPsiFacade, scope: GlobalSearchScope): Boolean {
         return psiFacade.findClass(REST_CONTROLLER, scope) != null ||
             psiFacade.findClass(CONTROLLER, scope) != null
     }

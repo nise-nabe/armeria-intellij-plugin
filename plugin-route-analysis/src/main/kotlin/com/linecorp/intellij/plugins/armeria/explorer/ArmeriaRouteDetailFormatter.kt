@@ -14,7 +14,7 @@ object ArmeriaRouteDetailFormatter {
             if (route.routeMatch == RouteMatch.RUNTIME) {
                 add(message("route.explorer.badge.runtime"))
             }
-            ArmeriaRouteDetailFormatter.delegationKindOf(route)?.let { kind ->
+            delegationKindOf(route)?.let { kind ->
                 add(delegationBadge(kind))
             }
             if (route.routeMatch != RouteMatch.RUNTIME) {
@@ -113,4 +113,19 @@ object ArmeriaRouteDetailFormatter {
 
     fun delegationKindOf(route: ArmeriaRoute): DelegationKind? =
         ArmeriaServletMountSupport.delegationKindOf(route)
+
+    fun secondaryDelegationText(route: ArmeriaRoute): String? {
+        if (route.delegationMountPath.isNotEmpty()) {
+            return message("route.explorer.secondary.delegatedVia", route.delegationMountPath)
+        }
+        val kind = delegationKindOf(route) ?: return null
+        return message("route.explorer.secondary.separator") + delegationBadge(kind)
+    }
+
+    fun tooltipDelegationSuffix(route: ArmeriaRoute): String? {
+        if (route.delegationMountPath.isEmpty()) {
+            return null
+        }
+        return message("route.explorer.tooltip.delegatedVia", route.delegationMountPath)
+    }
 }
