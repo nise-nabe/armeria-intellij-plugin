@@ -733,6 +733,165 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertEquals(listOf("GET"), routes.map { it.httpMethod })
     }
 
+    fun testBaseClassMappingIsDiscoveredUnderConcreteController() {
+        configureTomcatMount("/spring/")
+        myFixture.configureByText(
+            "BaseUserController.java",
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.GetMapping;
+
+            public abstract class BaseUserController {
+                @GetMapping("/{id}")
+                public String getUser() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "UserController.java",
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.RequestMapping;
+            import org.springframework.web.bind.annotation.RestController;
+
+            @RestController
+            @RequestMapping("/users")
+            public class UserController extends BaseUserController {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+        assertEquals("GET", delegatedRoute.httpMethod)
+        assertEquals("/spring/users/{id}", delegatedRoute.path)
+        assertEquals("example.UserController#getUser()", delegatedRoute.target)
+    }
+
+    fun testInterfaceMappingIsDiscoveredUnderConcreteController() {
+        configureTomcatMount("/spring/")
+        myFixture.configureByText(
+            "UserApi.java",
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.GetMapping;
+            import org.springframework.web.bind.annotation.RequestMapping;
+
+            @RequestMapping("/users")
+            public interface UserApi {
+                @GetMapping("/{id}")
+                String getUser();
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "UserController.java",
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.RestController;
+
+            @RestController
+            public class UserController implements UserApi {
+                @Override
+                public String getUser() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+        assertEquals("GET", delegatedRoute.httpMethod)
+        assertEquals("/spring/users/{id}", delegatedRoute.path)
+        assertEquals("example.UserController#getUser()", delegatedRoute.target)
+    }
+
+    fun testBaseClassRequestMappingPrefixAppliesToInheritedMethod() {
+        configureTomcatMount("/spring/")
+        myFixture.configureByText(
+            "BaseApiController.java",
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.GetMapping;
+            import org.springframework.web.bind.annotation.RequestMapping;
+
+            @RequestMapping("/api")
+            public abstract class BaseApiController {
+                @GetMapping("/hello")
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "HelloController.java",
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.RestController;
+
+            @RestController
+            public class HelloController extends BaseApiController {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+        assertEquals("GET", delegatedRoute.httpMethod)
+        assertEquals("/spring/api/hello", delegatedRoute.path)
+        assertEquals("example.HelloController#hello()", delegatedRoute.target)
+    }
+
+    fun testKotlinControllerInheritsJavaBaseClassMapping() {
+        configureTomcatMount("/spring/")
+        myFixture.configureByText(
+            "BaseGreetingController.java",
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.GetMapping;
+
+            public abstract class BaseGreetingController {
+                @GetMapping("/hello")
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "HelloController.kt",
+            """
+            package example
+
+            import org.springframework.web.bind.annotation.RestController
+
+            @RestController
+            class HelloController : BaseGreetingController()
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+        assertEquals("GET", delegatedRoute.httpMethod)
+        assertEquals("/spring/hello", delegatedRoute.path)
+        assertEquals("example.HelloController#hello()", delegatedRoute.target)
+    }
+
     private fun configureTomcatMount(path: String) {
         myFixture.configureByText(
             "ArmeriaConfig.java",
