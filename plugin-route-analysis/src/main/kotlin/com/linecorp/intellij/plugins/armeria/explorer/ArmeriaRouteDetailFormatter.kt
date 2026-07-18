@@ -13,7 +13,11 @@ object ArmeriaRouteDetailFormatter {
             }
             if (route.routeMatch == RouteMatch.RUNTIME) {
                 add(message("route.explorer.badge.runtime"))
-            } else {
+            }
+            ArmeriaServletMountSupport.delegationKindOf(route)?.let { kind ->
+                add(delegationBadge(kind))
+            }
+            if (route.routeMatch != RouteMatch.RUNTIME) {
                 add(message("route.explorer.badge.staticAnalysis"))
             }
         }
@@ -42,6 +46,9 @@ object ArmeriaRouteDetailFormatter {
             }
             if (route.contentHints.isNotEmpty()) {
                 add(message("route.explorer.detail.content", route.contentHints.joinToString(" · ")))
+            }
+            if (route.delegationMountPath.isNotEmpty()) {
+                add(message("route.explorer.detail.delegationMount", route.delegationMountPath))
             }
         }
         return parts.joinToString("\n")
@@ -81,9 +88,40 @@ object ArmeriaRouteDetailFormatter {
                 route.path,
             )
             RouteMatch.DECORATOR_UNDER -> message("route.explorer.registration.decoratorUnder", route.path)
+            RouteMatch.DELEGATED_SPRING_MVC -> delegatedRegistrationSummary(route)
             RouteMatch.NON_HTTP -> message("route.explorer.registration.nonHttp", route.protocol, route.path)
             RouteMatch.RUNTIME -> message("route.explorer.registration.runtime", route.httpMethod, route.path)
             RouteMatch.CONFIG -> message("route.explorer.registration.config", route.httpMethod, route.path)
         }
+    }
+
+    private fun delegatedRegistrationSummary(route: ArmeriaRoute): String {
+        val method = route.httpMethod.ifBlank { message("route.explorer.method.allHttp") }
+        return message(
+            "route.explorer.registration.delegated",
+            method,
+            route.path,
+            route.delegationMountPath,
+        )
+    }
+
+    fun delegationBadge(kind: DelegationKind): String = when (kind) {
+        DelegationKind.SPRING_MVC -> message("route.explorer.badge.springMvc")
+        DelegationKind.SERVLET -> message("route.explorer.badge.servlet")
+    }
+
+    fun secondaryDelegationText(route: ArmeriaRoute): String? {
+        if (route.delegationMountPath.isNotEmpty()) {
+            return message("route.explorer.secondary.delegatedVia", route.delegationMountPath)
+        }
+        val kind = ArmeriaServletMountSupport.delegationKindOf(route) ?: return null
+        return message("route.explorer.secondary.separator") + delegationBadge(kind)
+    }
+
+    fun tooltipDelegationSuffix(route: ArmeriaRoute): String? {
+        if (route.delegationMountPath.isEmpty()) {
+            return null
+        }
+        return message("route.explorer.tooltip.delegatedVia", route.delegationMountPath)
     }
 }

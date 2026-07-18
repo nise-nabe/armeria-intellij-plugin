@@ -5,7 +5,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiManager
-import com.intellij.psi.PsiVariable
 import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import org.jetbrains.kotlin.idea.KotlinFileType
@@ -19,6 +18,7 @@ import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtParenthesizedExpression
+import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtValueArgument
 import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
 
@@ -240,7 +240,10 @@ object ArmeriaKotlinRouteCollector {
         return expression
     }
 
-    private fun renderKotlinTarget(expression: KtExpression): String {
+    private fun renderKotlinTarget(
+        expression: KtExpression,
+        visitedProperties: MutableSet<KtProperty> = mutableSetOf(),
+    ): String {
         if (expression is KtCallExpression) {
             val callee = expression.calleeExpression
             val reference = callee as? KtNameReferenceExpression ?: callee?.let {
@@ -251,8 +254,11 @@ object ArmeriaKotlinRouteCollector {
             return reference?.getReferencedName() ?: expression.text
         }
         if (expression is KtNameReferenceExpression) {
-            val resolved = expression.references.firstOrNull()?.resolve()
-            resolveQualifiedClassName(resolved)?.let { return it }
+            ArmeriaKotlinDecoratorChainSupport.resolveKotlinTypedNameTarget(
+                expression,
+                visitedProperties,
+                ::renderKotlinTarget,
+            )?.let { return it }
             return expression.text
         }
         return expression.text

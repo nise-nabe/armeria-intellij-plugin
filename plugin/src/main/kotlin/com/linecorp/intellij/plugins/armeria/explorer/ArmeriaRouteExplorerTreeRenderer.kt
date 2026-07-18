@@ -36,9 +36,17 @@ internal class ArmeriaRouteExplorerTreeRenderer : ColoredTreeCellRenderer() {
             append(route.path)
             append(" → ")
             append(route.shortTarget)
+            ArmeriaRouteDetailFormatter.tooltipDelegationSuffix(route)?.let { suffix ->
+                append(" (")
+                append(suffix)
+                append(')')
+            }
         }
         append(ArmeriaHttpMethodPill.pillText(pillLabel), ArmeriaHttpMethodPill.textAttributes(route))
         append("  ", SimpleTextAttributes.REGULAR_ATTRIBUTES)
         append(route.path, SimpleTextAttributes.REGULAR_ATTRIBUTES)
+        ArmeriaRouteDetailFormatter.secondaryDelegationText(route)?.let { secondary ->
+            append(secondary, SimpleTextAttributes.GRAYED_ATTRIBUTES)
+        }
     }
 }

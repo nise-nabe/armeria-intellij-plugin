@@ -11,6 +11,7 @@ enum class RouteMatch {
     ROUTE_DECORATOR,
     ROUTE_FLUENT,
     DECORATOR_UNDER,
+    DELEGATED_SPRING_MVC,
     NON_HTTP,
     RUNTIME,
     /** Static application config (e.g. Spring Boot armeria.*) — HTTP-capable, not live DocService fetch. */
