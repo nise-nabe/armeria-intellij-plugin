@@ -212,7 +212,7 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
         val route = routes.single()
         assertEquals("Query.user", route.target)
         // Lexicographic path wins when FilenameIndex order is unstable.
-        assertEquals("copy.graphqls", route.element.containingFile.name)
+        assertEquals("copy.graphqls", route.pointer.element!!.containingFile.name)
     }
 
     fun testCollectThriftRoutesDedupesDuplicateOperationsAcrossFiles() {
@@ -233,7 +233,7 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
         val route = routes.single()
         assertEquals("HelloService.sayHello", route.target)
         // Lexicographic path wins when FilenameIndex order is unstable.
-        assertEquals("copy.thrift", route.element.containingFile.name)
+        assertEquals("copy.thrift", route.pointer.element!!.containingFile.name)
     }
 
     fun testSkipIdlRoutesWhenProtocolNotOnClasspath() {
