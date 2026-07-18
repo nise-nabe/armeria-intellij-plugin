@@ -67,29 +67,25 @@ internal object ArmeriaSpringMvcRouteCollector {
 
     private fun collectFromController(controller: PsiClass, routes: MutableList<SpringMvcRoute>) {
         val classPrefixes = extractMergedClassRequestMappingPrefixes(controller)
-        // BFS from the concrete controller: first mapped method per signature wins (most specific).
-        val mappedBySignature = linkedMapOf<String, PsiMethod>()
-        for (type in typesInHierarchy(controller)) {
-            for (method in type.methods) {
-                if (method.containingClass != type) {
-                    continue
-                }
-                if (!hasMappingAnnotation(method)) {
-                    continue
-                }
-                val signature = methodSignatureKey(method)
-                if (signature !in mappedBySignature) {
-                    mappedBySignature[signature] = method
-                }
+        // controller.methods is most-specific per signature (overrides hide ancestors).
+        // When the override has no mapping, resolveMappedMethod looks at super methods.
+        val seenSignatures = mutableSetOf<String>()
+        for (method in controller.methods) {
+            val containing = method.containingClass
+            if (containing != null && containing.qualifiedName == JAVA_LANG_OBJECT) {
+                continue
             }
-        }
-        for (method in mappedBySignature.values) {
-            for (annotation in method.annotations) {
+            val mappedMethod = resolveMappedMethod(method) ?: continue
+            val signature = methodSignatureKey(method)
+            if (!seenSignatures.add(signature)) {
+                continue
+            }
+            for (annotation in mappedMethod.annotations) {
                 val fqn = annotation.qualifiedName ?: continue
                 val defaultMethod = MAPPING_ANNOTATIONS[fqn] ?: continue
                 addRoutesFromMethod(
                     controller = controller,
-                    method = method,
+                    method = mappedMethod,
                     mappingAnnotation = annotation,
                     defaultMethod = defaultMethod,
                     classPrefixes = classPrefixes,
@@ -97,6 +93,22 @@ internal object ArmeriaSpringMvcRouteCollector {
                 )
             }
         }
+    }
+
+    /**
+     * Prefers a mapping on [method] itself; otherwise the nearest super method (base class or
+     * interface) that declares a Spring MVC mapping annotation.
+     */
+    private fun resolveMappedMethod(method: PsiMethod): PsiMethod? {
+        if (hasMappingAnnotation(method)) {
+            return method
+        }
+        for (superMethod in method.findSuperMethods()) {
+            if (hasMappingAnnotation(superMethod)) {
+                return superMethod
+            }
+        }
+        return null
     }
 
     private fun addRoutesFromMethod(

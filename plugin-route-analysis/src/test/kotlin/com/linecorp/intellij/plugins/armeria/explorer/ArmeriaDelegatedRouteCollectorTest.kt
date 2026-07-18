@@ -765,6 +765,13 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
+        val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.allScope(project))
+        assertEquals(
+            listOf("example.UserController#getUser()"),
+            springMvcRoutes.map { it.target },
+        )
+        assertEquals(listOf("/users/{id}"), springMvcRoutes.map { it.path })
+
         val routes = ArmeriaRouteCollector.collect(project)
 
         val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
