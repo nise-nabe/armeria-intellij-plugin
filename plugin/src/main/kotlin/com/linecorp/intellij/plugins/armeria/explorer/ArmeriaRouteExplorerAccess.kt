@@ -15,8 +15,9 @@ object ArmeriaRouteExplorerAccess {
     }
 
     /**
-     * Returns the Route Explorer panel, activating the Armeria Services tool window first when needed
-     * so [ArmeriaRouteExplorerToolWindowFactory] can create content.
+     * Invokes [onReady] with the Route Explorer panel after optionally activating the Armeria Services
+     * tool window so [ArmeriaRouteExplorerToolWindowFactory] can create content. Passes null when the
+     * panel cannot be obtained.
      */
     fun ensurePanel(project: Project, onReady: (ArmeriaRouteExplorerPanel?) -> Unit) {
         if (project.isDisposed) {
