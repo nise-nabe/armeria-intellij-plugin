@@ -67,7 +67,7 @@ internal object ArmeriaSpringConfigRouteCollector {
     private val INTERNAL_SERVICE_SPECS = listOf(
         InternalServiceSpec(
             id = SpringArmeriaConfigSemantics.ID_DOCS,
-            path = { it.docsPath },
+            path = { it.resolvedDocsPath() },
             pathElement = { it.docsPathElement },
             messageKey = "route.explorer.spring.docService",
             protocol = RouteProtocol.DOC_SERVICE.presentableName(),
@@ -77,7 +77,7 @@ internal object ArmeriaSpringConfigRouteCollector {
         ),
         InternalServiceSpec(
             id = SpringArmeriaConfigSemantics.ID_HEALTH,
-            path = { it.healthPath },
+            path = { it.resolvedHealthPath() },
             pathElement = { it.healthPathElement },
             messageKey = "route.explorer.spring.healthCheck",
             protocol = RouteProtocol.HTTP.presentableName(),
@@ -87,7 +87,7 @@ internal object ArmeriaSpringConfigRouteCollector {
         ),
         InternalServiceSpec(
             id = SpringArmeriaConfigSemantics.ID_METRICS,
-            path = { it.metricsPath },
+            path = { it.resolvedMetricsPath() },
             pathElement = { it.metricsPathElement },
             messageKey = "route.explorer.spring.metrics",
             protocol = RouteProtocol.HTTP.presentableName(),
@@ -218,14 +218,11 @@ internal object ArmeriaSpringConfigRouteCollector {
             ports = ports,
             includes = SpringArmeriaConfigSemantics.expandIncludes(includes),
             docsPath = lastPropertiesMatch(PROPERTIES_DOCS_PATH_PATTERN, text)
-                ?.let { SpringArmeriaConfigSemantics.trimQuotes(stripPropertiesInlineComment(it)) }
-                ?: SpringArmeriaConfigSemantics.DEFAULT_DOCS_PATH,
+                ?.let { SpringArmeriaConfigSemantics.trimQuotes(stripPropertiesInlineComment(it)) },
             healthPath = lastPropertiesMatch(PROPERTIES_HEALTH_PATH_PATTERN, text)
-                ?.let { SpringArmeriaConfigSemantics.trimQuotes(stripPropertiesInlineComment(it)) }
-                ?: SpringArmeriaConfigSemantics.DEFAULT_HEALTH_PATH,
+                ?.let { SpringArmeriaConfigSemantics.trimQuotes(stripPropertiesInlineComment(it)) },
             metricsPath = lastPropertiesMatch(PROPERTIES_METRICS_PATH_PATTERN, text)
-                ?.let { SpringArmeriaConfigSemantics.trimQuotes(stripPropertiesInlineComment(it)) }
-                ?: SpringArmeriaConfigSemantics.DEFAULT_METRICS_PATH,
+                ?.let { SpringArmeriaConfigSemantics.trimQuotes(stripPropertiesInlineComment(it)) },
             internalServicesPort = lastPropertiesMatch(PROPERTIES_INTERNAL_PORT_PATTERN, text)
                 ?.let { stripPropertiesInlineComment(it) },
         )

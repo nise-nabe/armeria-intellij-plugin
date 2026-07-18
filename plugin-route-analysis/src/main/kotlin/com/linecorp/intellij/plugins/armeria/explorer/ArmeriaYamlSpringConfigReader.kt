@@ -45,12 +45,9 @@ internal object ArmeriaYamlSpringConfigReader {
         return SpringArmeriaConfig(
             ports = ports,
             includes = includes,
-            docsPath = scalarText(docsPathKv?.value)
-                ?: SpringArmeriaConfigSemantics.DEFAULT_DOCS_PATH,
-            healthPath = scalarText(healthPathKv?.value)
-                ?: SpringArmeriaConfigSemantics.DEFAULT_HEALTH_PATH,
-            metricsPath = scalarText(metricsPathKv?.value)
-                ?: SpringArmeriaConfigSemantics.DEFAULT_METRICS_PATH,
+            docsPath = scalarText(docsPathKv?.value),
+            healthPath = scalarText(healthPathKv?.value),
+            metricsPath = scalarText(metricsPathKv?.value),
             internalServicesPort = internalServicesPort,
             includeElement = includeKv,
             docsPathElement = docsPathKv,

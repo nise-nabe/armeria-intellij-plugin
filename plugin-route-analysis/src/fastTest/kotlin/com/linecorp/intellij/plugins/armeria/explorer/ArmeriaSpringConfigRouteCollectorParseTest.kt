@@ -210,11 +210,18 @@ class ArmeriaSpringConfigRouteCollectorParseTest {
             SpringArmeriaConfigSemantics.INTERNAL_SERVICE_IDS,
             ArmeriaSpringConfigRouteCollector.internalServiceSpecIds(),
         )
-        assertEquals(
-            SpringArmeriaConfigSemantics.INTERNAL_SERVICE_IDS,
-            SpringArmeriaConfigSemantics.expandIncludes(
-                SpringArmeriaConfigSemantics.parseIncludeTokens("all"),
-            ),
+    }
+
+    @Test
+    fun parseProperties_absentPathsStayNullUntilResolved() {
+        val config = ArmeriaSpringConfigRouteCollector.parseProperties(
+            "armeria.internal-services.include=docs",
         )
+        assertEquals(null, config.docsPath)
+        assertEquals(null, config.healthPath)
+        assertEquals(null, config.metricsPath)
+        assertEquals(SpringArmeriaConfigSemantics.DEFAULT_DOCS_PATH, config.resolvedDocsPath())
+        assertEquals(SpringArmeriaConfigSemantics.DEFAULT_HEALTH_PATH, config.resolvedHealthPath())
+        assertEquals(SpringArmeriaConfigSemantics.DEFAULT_METRICS_PATH, config.resolvedMetricsPath())
     }
 }
