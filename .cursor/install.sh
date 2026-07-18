@@ -9,6 +9,11 @@ ensure_mise() {
     return 0
   fi
 
+  if ! command -v curl >/dev/null 2>&1; then
+    echo "Error: curl is required to install mise but was not found on PATH." >&2
+    exit 1
+  fi
+
   echo "Installing mise..."
   # mise.run bundles SHA-256 checksums for the pinned release it installs.
   curl -fsSL https://mise.run | sh
@@ -21,10 +26,17 @@ ensure_mise_activate_in_shell() {
     return 0
   fi
 
-  cat >>"${HOME}/.bashrc" <<'EOF'
+  if ! cat >>"${HOME}/.bashrc" 2>/dev/null <<'EOF'
 # cursor-cloud: mise activate
+case ":$PATH:" in
+  *:"${HOME}/.local/bin":*) ;;
+  *) export PATH="${HOME}/.local/bin:${PATH}" ;;
+esac
 eval "$(mise activate bash)"
 EOF
+  then
+    echo "Warning: could not append mise hook to ${HOME}/.bashrc (read-only HOME?)." >&2
+  fi
 }
 
 ensure_mise
