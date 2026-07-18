@@ -1,5 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import java.util.Collections
+
 /**
  * Shared Spring Boot `armeria.*` config semantics used by both the properties parser and the
  * optional YAML PSI reader. Keep this free of format-specific PSI so either path can depend on it.
@@ -9,8 +11,15 @@ internal object SpringArmeriaConfigSemantics {
     const val DEFAULT_HEALTH_PATH = "/internal/healthcheck"
     const val DEFAULT_METRICS_PATH = "/internal/metrics"
 
-    /** Must stay aligned with [ArmeriaSpringConfigRouteCollector] internal-service specs. */
-    val INTERNAL_SERVICE_IDS: Set<String> = linkedSetOf("docs", "health", "metrics", "actuator")
+    /** Canonical internal-service ids — also used by [ArmeriaSpringConfigRouteCollector] specs. */
+    const val ID_DOCS = "docs"
+    const val ID_HEALTH = "health"
+    const val ID_METRICS = "metrics"
+    const val ID_ACTUATOR = "actuator"
+
+    val INTERNAL_SERVICE_IDS: Set<String> = Collections.unmodifiableSet(
+        linkedSetOf(ID_DOCS, ID_HEALTH, ID_METRICS, ID_ACTUATOR),
+    )
 
     fun expandIncludes(raw: Set<String>): Set<String> {
         if (raw.any { it.equals("all", ignoreCase = true) }) {

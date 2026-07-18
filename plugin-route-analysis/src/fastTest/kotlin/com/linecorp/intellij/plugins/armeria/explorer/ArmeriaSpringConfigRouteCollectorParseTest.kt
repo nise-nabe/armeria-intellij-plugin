@@ -207,8 +207,8 @@ class ArmeriaSpringConfigRouteCollectorParseTest {
     @Test
     fun internalServiceIdsStayAlignedWithSemantics() {
         assertEquals(
-            setOf("docs", "health", "metrics", "actuator"),
             SpringArmeriaConfigSemantics.INTERNAL_SERVICE_IDS,
+            ArmeriaSpringConfigRouteCollector.internalServiceSpecIds(),
         )
         assertEquals(
             SpringArmeriaConfigSemantics.INTERNAL_SERVICE_IDS,

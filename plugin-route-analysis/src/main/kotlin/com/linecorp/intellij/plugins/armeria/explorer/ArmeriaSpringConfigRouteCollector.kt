@@ -89,7 +89,7 @@ internal object ArmeriaSpringConfigRouteCollector {
 
     private val INTERNAL_SERVICE_SPECS = listOf(
         InternalServiceSpec(
-            id = "docs",
+            id = SpringArmeriaConfigSemantics.ID_DOCS,
             path = { it.docsPath },
             pathElement = { it.docsPathElement ?: it.includeElement },
             messageKey = "route.explorer.spring.docService",
@@ -99,7 +99,7 @@ internal object ArmeriaSpringConfigRouteCollector {
             routeMatch = RouteMatch.NON_HTTP,
         ),
         InternalServiceSpec(
-            id = "health",
+            id = SpringArmeriaConfigSemantics.ID_HEALTH,
             path = { it.healthPath },
             pathElement = { it.healthPathElement ?: it.includeElement },
             messageKey = "route.explorer.spring.healthCheck",
@@ -109,7 +109,7 @@ internal object ArmeriaSpringConfigRouteCollector {
             routeMatch = RouteMatch.CONFIG,
         ),
         InternalServiceSpec(
-            id = "metrics",
+            id = SpringArmeriaConfigSemantics.ID_METRICS,
             path = { it.metricsPath },
             pathElement = { it.metricsPathElement ?: it.includeElement },
             messageKey = "route.explorer.spring.metrics",
@@ -119,7 +119,7 @@ internal object ArmeriaSpringConfigRouteCollector {
             routeMatch = RouteMatch.CONFIG,
         ),
         InternalServiceSpec(
-            id = "actuator",
+            id = SpringArmeriaConfigSemantics.ID_ACTUATOR,
             path = { "/actuator" },
             pathElement = { it.includeElement },
             messageKey = "route.explorer.spring.actuator",
@@ -129,6 +129,10 @@ internal object ArmeriaSpringConfigRouteCollector {
             routeMatch = RouteMatch.CONFIG,
         ),
     )
+
+    /** Exposed for tests — must stay equal to [SpringArmeriaConfigSemantics.INTERNAL_SERVICE_IDS]. */
+    internal fun internalServiceSpecIds(): Set<String> =
+        INTERNAL_SERVICE_SPECS.mapTo(linkedSetOf()) { it.id }
 
     fun collect(
         project: Project,
