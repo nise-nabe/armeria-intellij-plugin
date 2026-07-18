@@ -351,4 +351,163 @@ class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixture
         assertFalse(ArmeriaRouteDetailFormatter.statusLine(health).contains(message("route.explorer.badge.runtime")))
         assertTrue(ArmeriaRouteDetailFormatter.statusLine(health).contains(message("route.explorer.badge.staticAnalysis")))
     }
+
+    fun testYamlPortNavigationTargetsKeyElement() {
+        val psiFile = myFixture.configureByText(
+            "application.yml",
+            """
+            # preamble
+            armeria:
+              ports:
+                - port: 8080
+                  protocols: HTTP
+            """.trimIndent(),
+        )
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+
+        val portRoute = routes.single { it.path == ":8080" }
+        val element = portRoute.pointer.element
+        assertNotNull(element)
+        assertFalse(element is com.intellij.psi.PsiFile)
+        assertTrue(portRoute.resolveSourceHint().contains(":"))
+        assertFalse(portRoute.resolveSourceHint().endsWith(":1"))
+        assertSame(psiFile, element!!.containingFile)
+    }
+
+    fun testYamlMultiDocumentFindsArmeriaInLaterDocument() {
+        val psiFile = myFixture.configureByText(
+            "application.yml",
+            """
+            spring:
+              application:
+                name: demo
+            ---
+            armeria:
+              ports:
+                - port: 8080
+                  protocols: HTTP
+              internal-services:
+                include: docs
+            """.trimIndent(),
+        )
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+
+        assertTrue(routes.any { it.path == ":8080" })
+        assertTrue(routes.any { it.isDocService })
+    }
+
+    fun testYamlAcceptsCamelCaseKeysAndFlowIncludes() {
+        val psiFile = myFixture.configureByText(
+            "application.yml",
+            """
+            armeria:
+              internalServices:
+                include: [docs, metrics]
+              docsPath: /docs
+              healthCheckPath: /health
+              metricsPath: /metrics
+            """.trimIndent(),
+        )
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+
+        assertTrue(routes.any { it.isDocService && it.path == "/docs" })
+        assertTrue(routes.any { it.path == "/metrics" })
+        assertFalse(routes.any { it.path == "/health" || it.path == "/internal/healthcheck" })
+    }
+
+    fun testYamlIgnoresNestedArmeriaAndNestedPorts() {
+        val psiFile = myFixture.configureByText(
+            "application.yml",
+            """
+            wrapper:
+              armeria:
+                ports:
+                  - port: 9999
+                    protocols: HTTP
+            armeria:
+              foo:
+                ports:
+                  - port: 8888
+                    protocols: HTTP
+              ports:
+                - port: 8080
+                  protocols: HTTPS
+              bar:
+                internal-services:
+                  include: docs
+              internal-services:
+                include: health
+            """.trimIndent(),
+        )
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+
+        assertTrue(routes.any { it.path == ":8080" && it.protocol == "HTTPS" })
+        assertFalse(routes.any { it.path == ":9999" || it.path == ":8888" })
+        assertTrue(routes.any { it.path == "/internal/healthcheck" })
+        assertFalse(routes.any { it.isDocService })
+    }
+
+    fun testYamlBlockIncludeListAndCommentOnlyInlineIgnored() {
+        val withBlock = myFixture.configureByText(
+            "application.yml",
+            """
+            armeria:
+              internal-services:
+                include:
+                  - docs
+                  - health
+            """.trimIndent(),
+        )
+        val blockRoutes = mutableListOf<ArmeriaRoute>()
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(withBlock, blockRoutes, mutableSetOf())
+        assertTrue(blockRoutes.any { it.isDocService })
+        assertTrue(blockRoutes.any { it.path == "/internal/healthcheck" })
+
+        val commentOnly = myFixture.configureByText(
+            "application-empty.yml",
+            """
+            armeria:
+              internal-services:
+                include: # docs disabled
+              ports:
+                - port: 8080
+                  protocols: HTTP
+            """.trimIndent(),
+        )
+        val emptyIncludeRoutes = mutableListOf<ArmeriaRoute>()
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(commentOnly, emptyIncludeRoutes, mutableSetOf())
+        assertTrue(emptyIncludeRoutes.any { it.path == ":8080" })
+        assertFalse(emptyIncludeRoutes.any { it.isDocService })
+    }
+
+    fun testYamlProtocolsBeforePortAndMultiProtocol() {
+        val psiFile = myFixture.configureByText(
+            "application.yml",
+            """
+            armeria:
+              ports:
+                - protocols:
+                    - http
+                    - https
+                  port: 8080
+                - address: 127.0.0.1
+                  port: 8081
+                  protocols: HTTP
+            """.trimIndent(),
+        )
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+
+        assertEquals("HTTP, HTTPS", routes.single { it.path == ":8080" }.protocol)
+        assertEquals("HTTP", routes.single { it.path == ":8081" }.protocol)
+    }
 }

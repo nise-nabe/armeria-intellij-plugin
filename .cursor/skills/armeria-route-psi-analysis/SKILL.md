@@ -127,27 +127,26 @@ FilenameIndex.getAllFilenames(project)
 Sort candidates before any “first wins” dedupe — `FilenameIndex` iteration order is not stable,
 so unsorted first-wins produces non-deterministic Route Explorer output across refreshes.
 
-## Hand-rolled YAML / `.properties` parsers
+## Spring Boot config YAML / `.properties`
 
-Prefer a real parser when available. When keeping a lightweight text parser (as in
-`ArmeriaSpringConfigRouteCollector`), Copilot repeatedly flags the same gaps (PR #211):
+YAML (`application.yml` / `.yaml`) is read via optional IntelliJ YAML PSI
+(`org.jetbrains.plugins.yaml`, `ArmeriaYamlSpringConfigReader`). When the YAML plugin is
+not loaded, YAML config files are skipped; `.properties` still work.
 
-### YAML
+Prefer key-level `PsiElement` navigation targets from YAML PSI (`YAMLKeyValue`) when emitting
+config routes — do not attach the whole `PsiFile` if a more specific node is available.
+
+`.properties` remain on a lightweight text/regex parser in `ArmeriaSpringConfigRouteCollector`.
+Copilot repeatedly flags the same gaps (PR #211) for that path:
+
+### YAML PSI
 
 | Rule | Why |
 |------|-----|
-| Strip trailing `# …` on **unquoted** scalars, list items, and inline mapping values | Otherwise `protocols: http # primary` becomes tokens `http`, `#`, `primary` |
-| Treat comment-only values (`include: # comment`) as empty | Leading `#` is not matched by `\s+#.*$` alone |
-| Do **not** strip inside quoted strings | `"# not a comment"` must stay intact |
-| Match nested keys only at the **parent block’s indentation level** | First-anywhere `ports:` can pick up `armeria:\n  foo:\n    ports:` |
-| List scalars with `:` are **not** always inline mappings (PR #212) | `- http://example.com` must stay a scalar; require `:` + whitespace (or EOL) before treating as `key: value` |
-| Guard empty indent stack before `stack.last()` | Top-level YAML lists (or bad indentation) otherwise throw / skip the whole list silently |
-
-Apply stripping in **every** scalar path (inline mapping, nested list, `readYamlScalar`, include
-tokens) — fixing one call site while leaving siblings is a recurring miss.
-
-Add a regression test for colon-bearing list scalars (`- http://…`) whenever the flattener
-changes — this edge case has already slipped past review once.
+| Gate with `PluginManagerCore.isLoaded("org.jetbrains.plugins.yaml")` before calling the reader | Classloader only exposes YAML APIs when our optional `depends` is active |
+| Keep YAML PSI imports in `ArmeriaYamlSpringConfigReader` (not the always-loaded collector entry) | Same optional-plugin isolation pattern as Kotlin helpers |
+| Read only **top-level** `armeria` mappings (walk all YAML documents) | Nested `wrapper.armeria` / `armeria.foo.ports` must not emit routes |
+| Prefer `YAMLScalar.textValue` / sequence items over raw node text | Quotes and comments are already stripped by the PSI |
 
 ### Spring / Java `.properties`
 
@@ -183,9 +182,10 @@ When emitting routes that are not PSI call-site registrations:
 
 - gRPC/proto routes: use Proto Editor PSI when available; cache merged proto routes
   (`mergeProtoRoutesIfEnabled`) to avoid repeated merges.
-- Spring Boot config collectors: `ArmeriaSpringConfigRouteCollector` (YAML/properties) and
-  `ArmeriaSpringBootRouteCollector` (Java `@Bean` PSI walks) — follow the hand-rolled parser and
-  synthetic-route rules above; guard optional Spring/Kotlin PSI behind availability checks.
+- Spring Boot config collectors: `ArmeriaSpringConfigRouteCollector` (YAML via optional YAML PSI,
+  properties via text/regex) and `ArmeriaSpringBootRouteCollector` (Java `@Bean` PSI walks) —
+  follow the config YAML/properties and synthetic-route rules above; guard optional Spring/Kotlin
+  PSI behind availability checks.
 - GraphQL / Thrift deduplication: align dedupe keys with HTTP route keys (path + method + host).
 
 ## Regression tests
