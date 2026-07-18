@@ -66,6 +66,7 @@ class ArmeriaSyncRuntimeRoutesAction : DumbAwareAction(
                                         return@ensurePanel
                                     }
                                     if (explorerPanel != null) {
+                                        explorerPanel.scheduleInitialRefreshIfNeeded()
                                         explorerPanel.applyRuntimeRoutes(result.routes)
                                         Messages.showInfoMessage(
                                             project,

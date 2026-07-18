@@ -13,7 +13,7 @@
 ### Fixed
 
 - Route Explorer deduplicates GraphQL and Thrift IDL routes per module when the same operation appears in multiple schema or `.thrift` files.
-- DocService runtime route sync activates the Armeria Services tool window when needed so routes apply even if Route Explorer was never opened.
+- DocService runtime route sync activates the Armeria Services tool window when needed so routes apply even if it was closed before the fetch completed.
 
 ### Security
 
