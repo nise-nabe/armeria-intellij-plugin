@@ -147,6 +147,8 @@ Copilot repeatedly flags the same gaps (PR #211) for that path:
 | Keep YAML PSI imports in `ArmeriaYamlSpringConfigReader` (not the always-loaded collector entry) | Same optional-plugin isolation pattern as Kotlin helpers |
 | Read only **top-level** `armeria` mappings (walk all YAML documents) | Nested `wrapper.armeria` / `armeria.foo.ports` must not emit routes |
 | Prefer `YAMLScalar.textValue` / sequence items over raw node text | Quotes and comments are already stripped by the PSI |
+| If the file is not a `YAMLFile` (e.g. Plain Text), parse via `YAMLElementGenerator.createDummyYamlWithText` and leave navigation on the original `PsiFile` | Restores discovery without pointing at a disposable PSI tree |
+| Shared defaults / include expansion live in `SpringArmeriaConfigSemantics` | Keeps the optional YAML reader from depending on collector orchestration |
 
 ### Spring / Java `.properties`
 

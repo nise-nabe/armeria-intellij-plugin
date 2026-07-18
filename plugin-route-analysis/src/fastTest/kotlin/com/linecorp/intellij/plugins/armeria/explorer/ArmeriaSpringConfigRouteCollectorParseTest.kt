@@ -203,4 +203,16 @@ class ArmeriaSpringConfigRouteCollectorParseTest {
             config.ports,
         )
     }
+
+    @Test
+    fun internalServiceIdsStayAlignedWithSemantics() {
+        assertEquals(
+            setOf("docs", "health", "metrics", "actuator"),
+            SpringArmeriaConfigSemantics.INTERNAL_SERVICE_IDS,
+        )
+        assertEquals(
+            SpringArmeriaConfigSemantics.INTERNAL_SERVICE_IDS,
+            SpringArmeriaConfigSemantics.expandIncludes(setOf("all")),
+        )
+    }
 }

@@ -1,8 +1,12 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.openapi.fileTypes.PlainTextFileType
+import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.search.GlobalSearchScope
-import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 import com.linecorp.intellij.plugins.armeria.message
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
+import org.jetbrains.yaml.psi.YAMLFile
 
 class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     fun testCollectPortsAndInternalServicesFromYaml() {
@@ -370,7 +374,7 @@ class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixture
         val portRoute = routes.single { it.path == ":8080" }
         val element = portRoute.pointer.element
         assertNotNull(element)
-        assertFalse(element is com.intellij.psi.PsiFile)
+        assertFalse(element is PsiFile)
         assertTrue(portRoute.resolveSourceHint().contains(":"))
         assertFalse(portRoute.resolveSourceHint().endsWith(":1"))
         assertSame(psiFile, element!!.containingFile)
@@ -509,5 +513,82 @@ class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixture
 
         assertEquals("HTTP, HTTPS", routes.single { it.path == ":8080" }.protocol)
         assertEquals("HTTP", routes.single { it.path == ":8081" }.protocol)
+    }
+
+    fun testYamlInternalServiceNavigationTargetsKeyElements() {
+        val psiFile = myFixture.configureByText(
+            "application.yml",
+            """
+            # preamble
+            armeria:
+              docs-path: /custom/docs
+              health-check-path: /custom/health
+              metrics-path: /custom/metrics
+              internal-services:
+                include: docs, health, metrics
+            """.trimIndent(),
+        )
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+
+        val docs = routes.single { it.isDocService }
+        val health = routes.single { it.path == "/custom/health" }
+        val metrics = routes.single { it.path == "/custom/metrics" }
+        assertFalse(docs.pointer.element is PsiFile)
+        assertFalse(health.pointer.element is PsiFile)
+        assertFalse(metrics.pointer.element is PsiFile)
+        assertFalse(docs.resolveSourceHint().endsWith(":1"))
+        assertFalse(health.resolveSourceHint().endsWith(":1"))
+        assertFalse(metrics.resolveSourceHint().endsWith(":1"))
+        assertSame(psiFile, docs.pointer.element!!.containingFile)
+    }
+
+    fun testYamlCommentOnlyIncludeThenBlockList() {
+        val psiFile = myFixture.configureByText(
+            "application.yml",
+            """
+            armeria:
+              internal-services:
+                include: # docs disabled
+                  - docs
+                  - health
+            """.trimIndent(),
+        )
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+
+        assertTrue(routes.any { it.isDocService })
+        assertTrue(routes.any { it.path == "/internal/healthcheck" })
+    }
+
+    fun testYamlPlainTextFileTypeStillDiscoversRoutes() {
+        val content =
+            """
+            armeria:
+              ports:
+                - port: 8080
+                  protocols: HTTP
+              internal-services:
+                include: docs
+            """.trimIndent()
+        val psiFile = PsiFileFactory.getInstance(project).createFileFromText(
+            "application.yml",
+            PlainTextFileType.INSTANCE,
+            content,
+        )
+        assertFalse(
+            "Fixture must not be YAMLFile for this regression",
+            psiFile is YAMLFile,
+        )
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+
+        assertTrue(routes.any { it.path == ":8080" })
+        assertTrue(routes.any { it.isDocService })
+        // Dummy YAML tree is not attached; navigation stays on the original file.
+        assertSame(psiFile, routes.single { it.path == ":8080" }.pointer.element)
     }
 }

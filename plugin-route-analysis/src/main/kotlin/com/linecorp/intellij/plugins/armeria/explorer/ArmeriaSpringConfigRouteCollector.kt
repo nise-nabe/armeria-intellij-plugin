@@ -19,9 +19,9 @@ internal data class SpringArmeriaPortBinding(
 internal data class SpringArmeriaConfig(
     val ports: List<SpringArmeriaPortBinding> = emptyList(),
     val includes: Set<String> = emptySet(),
-    val docsPath: String = ArmeriaSpringConfigRouteCollector.DEFAULT_DOCS_PATH,
-    val healthPath: String = ArmeriaSpringConfigRouteCollector.DEFAULT_HEALTH_PATH,
-    val metricsPath: String = ArmeriaSpringConfigRouteCollector.DEFAULT_METRICS_PATH,
+    val docsPath: String = SpringArmeriaConfigSemantics.DEFAULT_DOCS_PATH,
+    val healthPath: String = SpringArmeriaConfigSemantics.DEFAULT_HEALTH_PATH,
+    val metricsPath: String = SpringArmeriaConfigSemantics.DEFAULT_METRICS_PATH,
     val internalServicesPort: String? = null,
     val includeElement: PsiElement? = null,
     val docsPathElement: PsiElement? = null,
@@ -30,9 +30,9 @@ internal data class SpringArmeriaConfig(
 )
 
 internal object ArmeriaSpringConfigRouteCollector {
-    const val DEFAULT_DOCS_PATH = "/internal/docs"
-    const val DEFAULT_HEALTH_PATH = "/internal/healthcheck"
-    const val DEFAULT_METRICS_PATH = "/internal/metrics"
+    const val DEFAULT_DOCS_PATH = SpringArmeriaConfigSemantics.DEFAULT_DOCS_PATH
+    const val DEFAULT_HEALTH_PATH = SpringArmeriaConfigSemantics.DEFAULT_HEALTH_PATH
+    const val DEFAULT_METRICS_PATH = SpringArmeriaConfigSemantics.DEFAULT_METRICS_PATH
 
     private val YAML_PLUGIN_ID = PluginId.getId("org.jetbrains.plugins.yaml")
 
@@ -130,9 +130,6 @@ internal object ArmeriaSpringConfigRouteCollector {
         ),
     )
 
-    private val INTERNAL_SERVICE_IDS: Set<String> =
-        INTERNAL_SERVICE_SPECS.mapTo(linkedSetOf()) { it.id }
-
     fun collect(
         project: Project,
         scope: GlobalSearchScope,
@@ -164,7 +161,7 @@ internal object ArmeriaSpringConfigRouteCollector {
         }
         val config = when {
             psiFile.name.endsWith(".properties") -> parseProperties(text)
-            isYamlPluginAvailable() -> ArmeriaYamlSpringConfigReader.read(psiFile) ?: return
+            isYamlPluginAvailable() -> ArmeriaYamlSpringConfigReader.read(psiFile)
             else -> return
         }
         emitRoutes(config, psiFile, profileFromFileName(psiFile.name), routes, seenConfigRoutes)
@@ -184,7 +181,9 @@ internal object ArmeriaSpringConfigRouteCollector {
         PROPERTIES_PROTOCOL_PATTERN.findAll(text).forEach { match ->
             val portIndex = match.groupValues[1].toIntOrNull() ?: return@forEach
             val protocolIndex = match.groupValues[2].toIntOrNull()
-            val protocols = splitScalarList(stripPropertiesInlineComment(match.groupValues[3])).map { it.uppercase() }
+            val protocols = SpringArmeriaConfigSemantics
+                .splitScalarList(stripPropertiesInlineComment(match.groupValues[3]))
+                .map { it.uppercase() }
             if (protocols.isEmpty()) {
                 return@forEach
             }
@@ -218,7 +217,7 @@ internal object ArmeriaSpringConfigRouteCollector {
         var unindexedIncludes: Set<String>? = null
         PROPERTIES_INCLUDE_PATTERN.findAll(text).forEach { match ->
             val rawValue = stripPropertiesInlineComment(match.groupValues[2])
-            val tokens = parseIncludeTokens(rawValue)
+            val tokens = SpringArmeriaConfigSemantics.parseIncludeTokens(rawValue)
             val indexGroup = match.groupValues[1]
             if (indexGroup.isEmpty()) {
                 unindexedIncludes = tokens
@@ -236,7 +235,7 @@ internal object ArmeriaSpringConfigRouteCollector {
         }
         return SpringArmeriaConfig(
             ports = ports,
-            includes = expandIncludes(includes),
+            includes = SpringArmeriaConfigSemantics.expandIncludes(includes),
             docsPath = lastPropertiesMatch(PROPERTIES_DOCS_PATH_PATTERN, text)
                 ?.let { stripPropertiesInlineComment(it).trimQuotes() }
                 ?: DEFAULT_DOCS_PATH,
@@ -309,29 +308,6 @@ internal object ArmeriaSpringConfigRouteCollector {
         }
     }
 
-    internal fun expandIncludes(raw: Set<String>): Set<String> {
-        if (raw.any { it.equals("all", ignoreCase = true) }) {
-            return INTERNAL_SERVICE_IDS
-        }
-        return raw.map { it.lowercase() }.filter { it in INTERNAL_SERVICE_IDS }.toSet()
-    }
-
-    internal fun parseIncludeTokens(raw: String): Set<String> =
-        splitScalarList(raw).map { it.lowercase() }.toSet()
-
-    internal fun splitScalarList(raw: String): List<String> {
-        val normalized = raw.trim()
-            .removePrefix("[")
-            .removeSuffix("]")
-            .trim()
-        if (normalized.isEmpty()) {
-            return emptyList()
-        }
-        return normalized.split(',', ' ', '\t')
-            .map { stripInlineComment(it).trimQuotes() }
-            .filter { it.isNotEmpty() }
-    }
-
     private fun isYamlPluginAvailable(): Boolean =
         PluginManagerCore.isLoaded(YAML_PLUGIN_ID)
 
@@ -380,27 +356,10 @@ internal object ArmeriaSpringConfigRouteCollector {
         trim().removeSurrounding("\"").removeSurrounding("'")
 
     private val PROPERTIES_INLINE_COMMENT = Regex("""\s+[#!].*$""")
-    private val INLINE_COMMENT = Regex("""\s+#.*$""")
 
     private fun lastPropertiesMatch(pattern: Regex, text: String): String? =
         pattern.findAll(text).lastOrNull()?.groupValues?.get(1)
 
     private fun stripPropertiesInlineComment(raw: String): String =
         raw.trim().replace(PROPERTIES_INLINE_COMMENT, "").trimEnd()
-
-    private fun stripInlineComment(raw: String): String {
-        val trimmed = raw.trim()
-        if (trimmed.isEmpty()) {
-            return trimmed
-        }
-        if ((trimmed.startsWith("\"") && trimmed.endsWith("\"")) ||
-            (trimmed.startsWith("'") && trimmed.endsWith("'"))
-        ) {
-            return trimmed
-        }
-        if (trimmed.startsWith("#")) {
-            return ""
-        }
-        return trimmed.replace(INLINE_COMMENT, "").trimEnd()
-    }
 }
