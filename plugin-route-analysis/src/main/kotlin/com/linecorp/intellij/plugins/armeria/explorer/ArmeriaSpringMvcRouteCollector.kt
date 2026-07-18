@@ -67,25 +67,32 @@ internal object ArmeriaSpringMvcRouteCollector {
 
     private fun collectFromController(controller: PsiClass, routes: MutableList<SpringMvcRoute>) {
         val classPrefixes = extractMergedClassRequestMappingPrefixes(controller)
-        // controller.methods is most-specific per signature (overrides hide ancestors).
-        // When the override has no mapping, resolveMappedMethod looks at super methods.
-        val seenSignatures = mutableSetOf<String>()
+        // Most-specific mapping wins: BFS from the controller, then fill gaps from visible
+        // methods / findSuperMethods (covers unannotated overrides of interface mappings).
+        val mappedBySignature = linkedMapOf<String, PsiMethod>()
+        for (type in typesInHierarchy(controller)) {
+            for (method in declaredMethods(type)) {
+                if (!hasMappingAnnotation(method)) {
+                    continue
+                }
+                mappedBySignature.putIfAbsent(methodSignatureKey(method), method)
+            }
+        }
         for (method in controller.methods) {
             val containing = method.containingClass
             if (containing != null && containing.qualifiedName == JAVA_LANG_OBJECT) {
                 continue
             }
             val mappedMethod = resolveMappedMethod(method) ?: continue
-            val signature = methodSignatureKey(method)
-            if (!seenSignatures.add(signature)) {
-                continue
-            }
-            for (annotation in mappedMethod.annotations) {
+            mappedBySignature.putIfAbsent(methodSignatureKey(method), mappedMethod)
+        }
+        for (method in mappedBySignature.values) {
+            for (annotation in method.annotations) {
                 val fqn = annotation.qualifiedName ?: continue
                 val defaultMethod = MAPPING_ANNOTATIONS[fqn] ?: continue
                 addRoutesFromMethod(
                     controller = controller,
-                    method = mappedMethod,
+                    method = method,
                     mappingAnnotation = annotation,
                     defaultMethod = defaultMethod,
                     classPrefixes = classPrefixes,
@@ -181,6 +188,12 @@ internal object ArmeriaSpringMvcRouteCollector {
             yield(current)
             current.superClass?.let { queue.add(it) }
             queue.addAll(current.interfaces)
+        }
+    }
+
+    private fun declaredMethods(type: PsiClass): List<PsiMethod> {
+        return type.methods.filter { method ->
+            method.containingClass?.isEquivalentTo(type) == true
         }
     }
 

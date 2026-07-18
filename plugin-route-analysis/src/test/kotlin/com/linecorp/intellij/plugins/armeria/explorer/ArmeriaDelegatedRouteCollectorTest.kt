@@ -735,8 +735,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
 
     fun testBaseClassMappingIsDiscoveredUnderConcreteController() {
         configureTomcatMount("/spring/")
-        myFixture.configureByText(
-            "BaseUserController.java",
+        myFixture.addClass(
             """
             package example;
 
@@ -765,7 +764,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.allScope(project))
+        val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.projectScope(project))
         assertEquals(
             listOf("example.UserController#getUser()"),
             springMvcRoutes.map { it.target },
@@ -782,8 +781,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
 
     fun testInterfaceMappingIsDiscoveredUnderConcreteController() {
         configureTomcatMount("/spring/")
-        myFixture.configureByText(
-            "UserApi.java",
+        myFixture.addClass(
             """
             package example;
 
@@ -824,8 +822,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
 
     fun testBaseClassRequestMappingPrefixAppliesToInheritedMethod() {
         configureTomcatMount("/spring/")
-        myFixture.configureByText(
-            "BaseApiController.java",
+        myFixture.addClass(
             """
             package example;
 
@@ -864,8 +861,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
 
     fun testKotlinControllerInheritsJavaBaseClassMapping() {
         configureTomcatMount("/spring/")
-        myFixture.configureByText(
-            "BaseGreetingController.java",
+        myFixture.addClass(
             """
             package example;
 
