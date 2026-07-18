@@ -1,0 +1,12 @@
+min_version = "2024.11.1"
+
+[tools]
+# Aligns with gradle/gradle-daemon-jvm.properties (daemon JVM) and CI (setup-java 25).
+java = "25"
+
+[tasks."cloud:install"]
+description = "Cursor Cloud environment setup (gh CLI, IntelliJ Platform warm; MCP JAR is installed by .cursor/install.sh first)"
+run = [
+  "bash .cursor/scripts/setup-gh-cli.sh",
+  "bash .cursor/scripts/warm-intellij-platform.sh",
+]
