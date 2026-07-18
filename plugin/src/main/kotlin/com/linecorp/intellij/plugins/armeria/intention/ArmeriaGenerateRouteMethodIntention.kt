@@ -48,15 +48,21 @@ class ArmeriaGenerateRouteMethodIntention : PsiElementBaseIntentionAction() {
             """.trimIndent(),
             serviceClass,
         )
-        WriteCommandAction.runWriteCommandAction(project) {
-            val anchor = serviceClass.rBrace ?: return@runWriteCommandAction
-            val added = serviceClass.addBefore(method, anchor) as PsiMethod
-            JavaCodeStyleManager.getInstance(project).shortenClassReferences(added)
-            CodeStyleManager.getInstance(project).reformat(added)
-            added.nameIdentifier?.textRange?.let { range ->
-                editor.caretModel.moveToOffset(range.startOffset)
-            }
-        }
+        WriteCommandAction.runWriteCommandAction(
+            project,
+            message("intention.generate.route.method"),
+            null,
+            {
+                val anchor = serviceClass.rBrace ?: return@runWriteCommandAction
+                val added = serviceClass.addBefore(method, anchor) as PsiMethod
+                JavaCodeStyleManager.getInstance(project).shortenClassReferences(added)
+                CodeStyleManager.getInstance(project).reformat(added)
+                added.nameIdentifier?.textRange?.let { range ->
+                    editor.caretModel.moveToOffset(range.startOffset)
+                }
+            },
+            serviceClass.containingFile,
+        )
     }
 
     private fun annotatedServiceClass(element: PsiElement): PsiClass? {
