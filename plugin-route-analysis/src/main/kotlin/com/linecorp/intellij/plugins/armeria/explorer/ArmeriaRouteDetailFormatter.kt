@@ -14,7 +14,7 @@ object ArmeriaRouteDetailFormatter {
             if (route.routeMatch == RouteMatch.RUNTIME) {
                 add(message("route.explorer.badge.runtime"))
             }
-            delegationKindOf(route)?.let { kind ->
+            ArmeriaServletMountSupport.delegationKindOf(route)?.let { kind ->
                 add(delegationBadge(kind))
             }
             if (route.routeMatch != RouteMatch.RUNTIME) {
@@ -95,7 +95,6 @@ object ArmeriaRouteDetailFormatter {
         }
     }
 
-
     private fun delegatedRegistrationSummary(route: ArmeriaRoute): String {
         val method = route.httpMethod.ifBlank { message("route.explorer.method.allHttp") }
         return message(
@@ -111,14 +110,11 @@ object ArmeriaRouteDetailFormatter {
         DelegationKind.SERVLET -> message("route.explorer.badge.servlet")
     }
 
-    fun delegationKindOf(route: ArmeriaRoute): DelegationKind? =
-        ArmeriaServletMountSupport.delegationKindOf(route)
-
     fun secondaryDelegationText(route: ArmeriaRoute): String? {
         if (route.delegationMountPath.isNotEmpty()) {
             return message("route.explorer.secondary.delegatedVia", route.delegationMountPath)
         }
-        val kind = delegationKindOf(route) ?: return null
+        val kind = ArmeriaServletMountSupport.delegationKindOf(route) ?: return null
         return message("route.explorer.secondary.separator") + delegationBadge(kind)
     }
 

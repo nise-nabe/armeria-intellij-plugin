@@ -34,19 +34,26 @@ internal object ArmeriaSpringMvcRouteCollector {
         REQUEST_MAPPING to "",
     )
 
-    private fun isSpringWebAvailable(psiFacade: JavaPsiFacade, scope: GlobalSearchScope): Boolean {
-        return psiFacade.findClass(REST_CONTROLLER, scope) != null ||
-            psiFacade.findClass(CONTROLLER, scope) != null
+    /**
+     * Stereotype annotation classes live in Spring library jars. Resolve them with [classpathScope]
+     * (typically [GlobalSearchScope.allScope]); search annotated controllers only in [scope]
+     * (typically project content) so library controllers are not pulled in.
+     */
+    private fun isSpringWebAvailable(psiFacade: JavaPsiFacade, classpathScope: GlobalSearchScope): Boolean {
+        return psiFacade.findClass(REST_CONTROLLER, classpathScope) != null ||
+            psiFacade.findClass(CONTROLLER, classpathScope) != null
     }
 
     fun collect(project: Project, scope: GlobalSearchScope): List<SpringMvcRoute> {
         val psiFacade = JavaPsiFacade.getInstance(project)
-        if (!isSpringWebAvailable(psiFacade, scope)) {
+        // Library jars (spring-web / spring-context) are outside projectScope.
+        val classpathScope = GlobalSearchScope.allScope(project)
+        if (!isSpringWebAvailable(psiFacade, classpathScope)) {
             return emptyList()
         }
         val controllers = linkedSetOf<PsiClass>()
         for (stereotypeFqn in CONTROLLER_STEREOTYPES) {
-            val annotationClass = psiFacade.findClass(stereotypeFqn, scope) ?: continue
+            val annotationClass = psiFacade.findClass(stereotypeFqn, classpathScope) ?: continue
             AnnotatedElementsSearch.searchPsiClasses(annotationClass, scope).forEach { controllers.add(it) }
         }
         val routes = mutableListOf<SpringMvcRoute>()

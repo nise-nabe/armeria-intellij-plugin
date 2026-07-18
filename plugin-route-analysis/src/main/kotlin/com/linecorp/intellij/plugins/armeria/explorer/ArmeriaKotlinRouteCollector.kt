@@ -5,7 +5,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiManager
-import com.intellij.psi.PsiVariable
 import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import org.jetbrains.kotlin.idea.KotlinFileType
@@ -18,7 +17,6 @@ import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
-import org.jetbrains.kotlin.psi.KtParameter
 import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtValueArgument
@@ -256,25 +254,11 @@ object ArmeriaKotlinRouteCollector {
             return reference?.getReferencedName() ?: expression.text
         }
         if (expression is KtNameReferenceExpression) {
-            val resolved = expression.references.firstOrNull()?.resolve()
-            // Resolve bean/parameter/property types so servlet mounts match Java (e.g. TomcatService).
-            when (resolved) {
-                is KtParameter -> {
-                    ArmeriaKotlinDecoratorChainSupport.resolveKotlinTypeReferenceText(resolved.typeReference)
-                        ?.let { return it }
-                }
-                is KtProperty -> {
-                    ArmeriaKotlinDecoratorChainSupport.resolveKotlinTypeReferenceText(resolved.typeReference)
-                        ?.let { return it }
-                    val initializer = resolved.initializer
-                    // Guard alias chains / mutual refs so collection cannot StackOverflowError.
-                    if (initializer != null && visitedProperties.add(resolved)) {
-                        return renderKotlinTarget(initializer, visitedProperties)
-                    }
-                }
-                is PsiVariable -> return resolved.type.presentableText
-            }
-            resolveQualifiedClassName(resolved)?.let { return it }
+            ArmeriaKotlinDecoratorChainSupport.resolveKotlinTypedNameTarget(
+                expression,
+                visitedProperties,
+                ::renderKotlinTarget,
+            )?.let { return it }
             return expression.text
         }
         return expression.text

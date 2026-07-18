@@ -7,11 +7,7 @@ import com.linecorp.intellij.plugins.armeria.message
 internal object ArmeriaDelegatedRouteCollector {
     fun collect(project: Project, scope: GlobalSearchScope, routes: MutableList<ArmeriaRoute>) {
         // Prefix mounts only: .service() is exact-match and must not invent child paths.
-        val springCapableMounts = routes.filter { route ->
-            route.routeMatch == RouteMatch.SERVICE_UNDER &&
-                ArmeriaServletMountSupport.detectDelegation(route.target, route.routeMatch) ==
-                DelegationKind.SPRING_MVC
-        }
+        val springCapableMounts = routes.filter(ArmeriaServletMountSupport::isExpandableSpringMvcMount)
         if (springCapableMounts.isEmpty()) {
             return
         }

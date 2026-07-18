@@ -14,6 +14,14 @@ internal object ArmeriaServletMountSupport {
         RouteMatch.SERVICE_UNDER,
     )
 
+    /**
+     * Prefix mounts that should fan Spring MVC controller mappings as delegated children.
+     * Exact `.service()` Tomcat mounts stay badge-only.
+     */
+    fun isExpandableSpringMvcMount(route: ArmeriaRoute): Boolean =
+        route.routeMatch == RouteMatch.SERVICE_UNDER &&
+            detectDelegation(route.target, route.routeMatch) == DelegationKind.SPRING_MVC
+
     fun detectDelegation(target: String, routeMatch: RouteMatch): DelegationKind? {
         if (routeMatch !in MOUNT_ROUTE_MATCHES) {
             return null
