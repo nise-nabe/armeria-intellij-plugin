@@ -22,6 +22,7 @@ dependencies {
         testFramework(TestFrameworkType.Plugin.Java)
         testFramework(TestFrameworkType.Plugin.Java, configurationName = "testFixturesImplementation")
     }
+    testFixturesImplementation(testFixtures(project(":plugin-route-analysis")))
     testFixturesImplementation(libs.junit4)
 }
 

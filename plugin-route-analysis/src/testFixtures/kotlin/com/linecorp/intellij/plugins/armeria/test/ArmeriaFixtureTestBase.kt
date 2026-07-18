@@ -1,11 +1,9 @@
 package com.linecorp.intellij.plugins.armeria.test
 
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
-
 /**
  * Shared Armeria PSI stubs for [LightJavaCodeInsightFixtureTestCase] subclasses.
  */
-abstract class ArmeriaFixtureTestBase : LightJavaCodeInsightFixtureTestCase() {
+abstract class ArmeriaFixtureTestBase : ArmeriaLightJavaCodeInsightFixtureTestCase() {
 
     override fun setUp() {
         super.setUp()

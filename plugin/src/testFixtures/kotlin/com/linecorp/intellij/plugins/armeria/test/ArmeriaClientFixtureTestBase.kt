@@ -1,8 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.test
 
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 
-abstract class ArmeriaClientFixtureTestBase : LightJavaCodeInsightFixtureTestCase() {
+abstract class ArmeriaClientFixtureTestBase : ArmeriaLightJavaCodeInsightFixtureTestCase() {
 
     override fun setUp() {
         super.setUp()

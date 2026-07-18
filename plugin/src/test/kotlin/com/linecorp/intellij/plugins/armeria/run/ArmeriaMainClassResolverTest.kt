@@ -1,8 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.run
 
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 
-class ArmeriaMainClassResolverTest : LightJavaCodeInsightFixtureTestCase() {
+class ArmeriaMainClassResolverTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
 
     fun testFindsJavaMainClass() {
         myFixture.configureByText(

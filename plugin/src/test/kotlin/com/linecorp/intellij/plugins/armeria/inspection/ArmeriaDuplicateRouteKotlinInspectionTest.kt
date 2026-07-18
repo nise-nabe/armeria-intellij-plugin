@@ -1,8 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.inspection
 
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 
-class ArmeriaDuplicateRouteKotlinInspectionTest : LightJavaCodeInsightFixtureTestCase() {
+class ArmeriaDuplicateRouteKotlinInspectionTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     override fun setUp() {
         super.setUp()
         registerArmeriaStubs()
