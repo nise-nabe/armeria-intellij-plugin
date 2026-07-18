@@ -1,11 +1,8 @@
 # Changelog
 
 ## [Unreleased]
-### Added
 
-- Extended Armeria Clients explorer with Retrofit/WebClient transport detection, client decorator collection, EndpointGroup usage, and a structured detail panel.
-- Live templates for annotated route methods, `Server.builder()`, and `WebClient` decorator chains (Java/Kotlin).
-- Intention action to generate `@Get` route method stubs in annotated Java service classes.
+### Added
 
 ### Changed
 
@@ -15,9 +12,19 @@
 
 ### Fixed
 
-- Armeria run configuration discovery now resolves Kotlin top-level `fun main()` via the file facade (`MainKt`), matching New Project Wizard Kotlin templates.
-
 ### Security
+
+## [0.2.0] - 2026-07-18
+
+### Added
+
+- Extended Armeria Clients explorer with Retrofit/WebClient transport detection, client decorator collection, EndpointGroup usage, and a structured detail panel.
+- Live templates for annotated route methods, `Server.builder()`, and `WebClient` decorator chains (Java/Kotlin).
+- Intention action to generate `@Get` route method stubs in annotated Java service classes.
+
+### Fixed
+
+- Armeria run configuration discovery now resolves Kotlin top-level `fun main()` via the file facade (`MainKt`), matching New Project Wizard Kotlin templates.
 
 ## [0.1.0] - 2026-07-04
 
