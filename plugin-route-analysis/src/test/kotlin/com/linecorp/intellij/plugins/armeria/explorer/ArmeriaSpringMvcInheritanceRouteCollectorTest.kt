@@ -51,7 +51,13 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
         )
         assertEquals(listOf("/users/{id}"), springMvcRoutes.map { it.path })
         assertEquals("example.UserController", springMvcRoutes.single().controller.qualifiedName)
-        assertEquals("example.BaseUserController", springMvcRoutes.single().element.containingClass?.qualifiedName)
+        assertEquals(
+            "example.BaseUserController",
+            springMvcRoutes
+                .single()
+                .element.containingClass
+                ?.qualifiedName,
+        )
 
         val routes = ArmeriaRouteCollector.collect(project)
 
@@ -228,7 +234,13 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
         val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.projectScope(project))
         assertEquals(listOf("/greet"), springMvcRoutes.map { it.path })
         assertEquals(listOf("example.HelloController#hello()"), springMvcRoutes.map { it.target })
-        assertEquals("example.HelloController", springMvcRoutes.single().element.containingClass?.qualifiedName)
+        assertEquals(
+            "example.HelloController",
+            springMvcRoutes
+                .single()
+                .element.containingClass
+                ?.qualifiedName,
+        )
 
         val routes = ArmeriaRouteCollector.collect(project)
         val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
@@ -345,8 +357,10 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.projectScope(project))
-            .sortedBy { it.path }
+        val springMvcRoutes =
+            ArmeriaSpringMvcRouteCollector
+                .collect(project, GlobalSearchScope.projectScope(project))
+                .sortedBy { it.path }
         assertEquals(listOf("/admin/hello", "/api/hello"), springMvcRoutes.map { it.path })
         assertEquals(
             listOf("example.ChildController#hello()", "example.ParentController#hello()"),
@@ -388,29 +402,32 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertEquals("example.HelloController", helloRoute.controller.qualifiedName)
 
         val controllerModule = ArmeriaRouteMetadata.moduleName(helloRoute.controller)
-        val matchingMount = ArmeriaRoute.create(
-            element = helloRoute.controller,
-            protocol = RouteProtocol.HTTP.presentableName(),
-            httpMethod = "",
-            path = "/spring/",
-            target = "TomcatService",
-            routeMatch = RouteMatch.SERVICE_UNDER,
-        )
+        val matchingMount =
+            ArmeriaRoute.create(
+                element = helloRoute.controller,
+                protocol = RouteProtocol.HTTP.presentableName(),
+                httpMethod = "",
+                path = "/spring/",
+                target = "TomcatService",
+                routeMatch = RouteMatch.SERVICE_UNDER,
+            )
         val unassignedModule = message("route.explorer.module.unassigned")
 
-        val scopedRoutes = ArmeriaDelegatedRouteCollector.springMvcRoutesForMount(
-            mountRoute = matchingMount,
-            springMvcRoutes = springMvcRoutes,
-            unassignedModule = unassignedModule,
-        )
+        val scopedRoutes =
+            ArmeriaDelegatedRouteCollector.springMvcRoutesForMount(
+                mountRoute = matchingMount,
+                springMvcRoutes = springMvcRoutes,
+                unassignedModule = unassignedModule,
+            )
         assertEquals(springMvcRoutes, scopedRoutes)
 
         val otherModuleMount = matchingMount.copy(moduleName = "$controllerModule-other")
-        val filteredRoutes = ArmeriaDelegatedRouteCollector.springMvcRoutesForMount(
-            mountRoute = otherModuleMount,
-            springMvcRoutes = springMvcRoutes,
-            unassignedModule = unassignedModule,
-        )
+        val filteredRoutes =
+            ArmeriaDelegatedRouteCollector.springMvcRoutesForMount(
+                mountRoute = otherModuleMount,
+                springMvcRoutes = springMvcRoutes,
+                unassignedModule = unassignedModule,
+            )
         assertTrue(filteredRoutes.isEmpty())
     }
 
@@ -461,7 +478,13 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
         val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.projectScope(project))
         assertEquals(listOf("/hello"), springMvcRoutes.map { it.path })
         assertEquals(listOf("example.HelloController#hello()"), springMvcRoutes.map { it.target })
-        assertEquals("example.GrandController", springMvcRoutes.single().element.containingClass?.qualifiedName)
+        assertEquals(
+            "example.GrandController",
+            springMvcRoutes
+                .single()
+                .element.containingClass
+                ?.qualifiedName,
+        )
         assertEquals("example.HelloController", springMvcRoutes.single().controller.qualifiedName)
     }
 
@@ -559,6 +582,12 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
 
         val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.projectScope(project))
         assertEquals(listOf("/api"), springMvcRoutes.map { it.path })
-        assertEquals("example.GreetingApi", springMvcRoutes.single().element.containingClass?.qualifiedName)
+        assertEquals(
+            "example.GreetingApi",
+            springMvcRoutes
+                .single()
+                .element.containingClass
+                ?.qualifiedName,
+        )
     }
 }

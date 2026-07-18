@@ -261,9 +261,10 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         configureHelloControllerJava()
 
         val routes = ArmeriaRouteCollector.collect(project)
-        val delegated = routes.filter {
-            it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC && it.path == "/spring/hello"
-        }
+        val delegated =
+            routes.filter {
+                it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC && it.path == "/spring/hello"
+            }
         assertEquals(2, delegated.size)
         assertEquals(
             setOf("a.example.com", "b.example.com"),
@@ -539,9 +540,10 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         )
 
         val routes = ArmeriaRouteCollector.collect(project)
-        val delegatedAtApi = routes.filter {
-            it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC && it.path == "/api"
-        }
+        val delegatedAtApi =
+            routes.filter {
+                it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC && it.path == "/api"
+            }
         assertEquals(
             setOf("/", "/api"),
             delegatedAtApi.map { it.delegationMountPath }.toSet(),
@@ -631,29 +633,32 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.allScope(project))
         val helloRoute = springMvcRoutes.single()
         val controllerModule = ArmeriaRouteMetadata.moduleName(helloRoute.controller)
-        val matchingMount = ArmeriaRoute.create(
-            element = helloRoute.controller,
-            protocol = RouteProtocol.HTTP.presentableName(),
-            httpMethod = "",
-            path = "/spring/",
-            target = "TomcatService",
-            routeMatch = RouteMatch.SERVICE_UNDER,
-        )
+        val matchingMount =
+            ArmeriaRoute.create(
+                element = helloRoute.controller,
+                protocol = RouteProtocol.HTTP.presentableName(),
+                httpMethod = "",
+                path = "/spring/",
+                target = "TomcatService",
+                routeMatch = RouteMatch.SERVICE_UNDER,
+            )
         val unassignedModule = message("route.explorer.module.unassigned")
 
-        val scopedRoutes = ArmeriaDelegatedRouteCollector.springMvcRoutesForMount(
-            mountRoute = matchingMount,
-            springMvcRoutes = springMvcRoutes,
-            unassignedModule = unassignedModule,
-        )
+        val scopedRoutes =
+            ArmeriaDelegatedRouteCollector.springMvcRoutesForMount(
+                mountRoute = matchingMount,
+                springMvcRoutes = springMvcRoutes,
+                unassignedModule = unassignedModule,
+            )
         assertEquals(springMvcRoutes, scopedRoutes)
 
         val otherModuleMount = matchingMount.copy(moduleName = "$controllerModule-other")
-        val filteredRoutes = ArmeriaDelegatedRouteCollector.springMvcRoutesForMount(
-            mountRoute = otherModuleMount,
-            springMvcRoutes = springMvcRoutes,
-            unassignedModule = unassignedModule,
-        )
+        val filteredRoutes =
+            ArmeriaDelegatedRouteCollector.springMvcRoutesForMount(
+                mountRoute = otherModuleMount,
+                springMvcRoutes = springMvcRoutes,
+                unassignedModule = unassignedModule,
+            )
         assertTrue(filteredRoutes.isEmpty())
     }
 
@@ -687,14 +692,15 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             ArmeriaServletMountSupport.detectDelegation("TomcatService?", RouteMatch.SERVICE_UNDER),
         )
 
-        val expandable = ArmeriaRoute.create(
-            element = myFixture.addClass("public class ExpandableMountProbe {}"),
-            protocol = RouteProtocol.HTTP.presentableName(),
-            httpMethod = "",
-            path = "/spring/",
-            target = "TomcatService",
-            routeMatch = RouteMatch.SERVICE_UNDER,
-        )
+        val expandable =
+            ArmeriaRoute.create(
+                element = myFixture.addClass("public class ExpandableMountProbe {}"),
+                protocol = RouteProtocol.HTTP.presentableName(),
+                httpMethod = "",
+                path = "/spring/",
+                target = "TomcatService",
+                routeMatch = RouteMatch.SERVICE_UNDER,
+            )
         val exactMount = expandable.copy(routeMatch = RouteMatch.SERVICE, path = "/spring")
         assertTrue(ArmeriaServletMountSupport.isExpandableSpringMvcMount(expandable))
         assertFalse(ArmeriaServletMountSupport.isExpandableSpringMvcMount(exactMount))
@@ -703,23 +709,24 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
     fun testSpringMvcCollectorResolvesStereotypesOutsideSearchScope() {
         // Stereotype annotation classes live outside a controller-only search scope (same as
         // library jars vs projectScope). Collection must still resolve them via classpath scope.
-        val controllerFile = myFixture.configureByText(
-            "HelloController.java",
-            """
-            package example;
+        val controllerFile =
+            myFixture.configureByText(
+                "HelloController.java",
+                """
+                package example;
 
-            import org.springframework.web.bind.annotation.GetMapping;
-            import org.springframework.web.bind.annotation.RestController;
+                import org.springframework.web.bind.annotation.GetMapping;
+                import org.springframework.web.bind.annotation.RestController;
 
-            @RestController
-            public class HelloController {
-                @GetMapping("/hello")
-                public String hello() {
-                    return "hello";
+                @RestController
+                public class HelloController {
+                    @GetMapping("/hello")
+                    public String hello() {
+                        return "hello";
+                    }
                 }
-            }
-            """.trimIndent(),
-        )
+                """.trimIndent(),
+            )
         val controllerOnlyScope = GlobalSearchScope.fileScope(controllerFile)
         val routes = ArmeriaSpringMvcRouteCollector.collect(project, controllerOnlyScope)
         assertEquals(listOf("/hello"), routes.map { it.path })

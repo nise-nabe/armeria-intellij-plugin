@@ -30,26 +30,32 @@ internal object ArmeriaSpringMvcRouteCollector {
 
     private val CONTROLLER_STEREOTYPES = listOf(REST_CONTROLLER, CONTROLLER)
 
-    private val MAPPING_ANNOTATIONS = mapOf(
-        "org.springframework.web.bind.annotation.GetMapping" to "GET",
-        "org.springframework.web.bind.annotation.PostMapping" to "POST",
-        "org.springframework.web.bind.annotation.PutMapping" to "PUT",
-        "org.springframework.web.bind.annotation.DeleteMapping" to "DELETE",
-        "org.springframework.web.bind.annotation.PatchMapping" to "PATCH",
-        REQUEST_MAPPING to "",
-    )
+    private val MAPPING_ANNOTATIONS =
+        mapOf(
+            "org.springframework.web.bind.annotation.GetMapping" to "GET",
+            "org.springframework.web.bind.annotation.PostMapping" to "POST",
+            "org.springframework.web.bind.annotation.PutMapping" to "PUT",
+            "org.springframework.web.bind.annotation.DeleteMapping" to "DELETE",
+            "org.springframework.web.bind.annotation.PatchMapping" to "PATCH",
+            REQUEST_MAPPING to "",
+        )
 
     /**
      * Stereotype annotation classes live in Spring library jars. Resolve them with [classpathScope]
      * (typically [GlobalSearchScope.allScope]); search annotated controllers only in [scope]
      * (typically project content) so library controllers are not pulled in.
      */
-    private fun isSpringWebAvailable(psiFacade: JavaPsiFacade, classpathScope: GlobalSearchScope): Boolean {
-        return psiFacade.findClass(REST_CONTROLLER, classpathScope) != null ||
+    private fun isSpringWebAvailable(
+        psiFacade: JavaPsiFacade,
+        classpathScope: GlobalSearchScope,
+    ): Boolean =
+        psiFacade.findClass(REST_CONTROLLER, classpathScope) != null ||
             psiFacade.findClass(CONTROLLER, classpathScope) != null
-    }
 
-    fun collect(project: Project, scope: GlobalSearchScope): List<SpringMvcRoute> {
+    fun collect(
+        project: Project,
+        scope: GlobalSearchScope,
+    ): List<SpringMvcRoute> {
         val psiFacade = JavaPsiFacade.getInstance(project)
         // Library jars (spring-web / spring-context) are outside projectScope.
         val classpathScope = GlobalSearchScope.allScope(project)
@@ -72,7 +78,10 @@ internal object ArmeriaSpringMvcRouteCollector {
         return routes
     }
 
-    private fun collectFromController(controller: PsiClass, routes: MutableList<SpringMvcRoute>) {
+    private fun collectFromController(
+        controller: PsiClass,
+        routes: MutableList<SpringMvcRoute>,
+    ) {
         val hierarchy = typesInHierarchy(controller)
         val classPrefixes = extractMergedClassRequestMappingPrefixes(hierarchy)
         // One most-specific method per visible signature; unannotated overrides resolve via supers.
@@ -101,7 +110,10 @@ internal object ArmeriaSpringMvcRouteCollector {
      * Walks [hierarchy] (Spring TYPE_HIERARCHY order) and returns the first same-signature method
      * that declares a Spring MVC mapping. Unannotated intermediate overrides do not stop the search.
      */
-    private fun resolveMappedMethod(hierarchy: List<PsiClass>, method: PsiMethod): PsiMethod? {
+    private fun resolveMappedMethod(
+        hierarchy: List<PsiClass>,
+        method: PsiMethod,
+    ): PsiMethod? {
         for (type in hierarchy) {
             val candidate = type.findMethodBySignature(method, false) ?: continue
             if (hasMappingAnnotation(candidate)) {
@@ -128,13 +140,14 @@ internal object ArmeriaSpringMvcRouteCollector {
             for (rawPath in paths) {
                 val combinedPath = ArmeriaRouteSupport.combinePaths(classPrefix, rawPath)
                 for (httpMethod in httpMethods) {
-                    routes += SpringMvcRoute(
-                        httpMethod = httpMethod,
-                        path = combinedPath,
-                        target = target,
-                        element = method,
-                        controller = controller,
-                    )
+                    routes +=
+                        SpringMvcRoute(
+                            httpMethod = httpMethod,
+                            path = combinedPath,
+                            target = target,
+                            element = method,
+                            controller = controller,
+                        )
                 }
             }
         }
@@ -151,9 +164,10 @@ internal object ArmeriaSpringMvcRouteCollector {
             if (requestMappings.isEmpty()) {
                 continue
             }
-            val prefixes = requestMappings.flatMap { mapping ->
-                ArmeriaRouteSupport.extractPaths(mapping).ifEmpty { listOf("") }
-            }
+            val prefixes =
+                requestMappings.flatMap { mapping ->
+                    ArmeriaRouteSupport.extractPaths(mapping).ifEmpty { listOf("") }
+                }
             return prefixes.ifEmpty { listOf("") }
         }
         return listOf("")
@@ -166,6 +180,7 @@ internal object ArmeriaSpringMvcRouteCollector {
     private fun typesInHierarchy(psiClass: PsiClass): List<PsiClass> {
         val visited = mutableSetOf<PsiClass>()
         val result = ArrayList<PsiClass>()
+
         fun walk(current: PsiClass) {
             if (current.qualifiedName == JAVA_LANG_OBJECT) {
                 return
@@ -183,17 +198,19 @@ internal object ArmeriaSpringMvcRouteCollector {
         return result
     }
 
-    private fun hasMappingAnnotation(method: PsiMethod): Boolean {
-        return method.annotations.any { annotation ->
+    private fun hasMappingAnnotation(method: PsiMethod): Boolean =
+        method.annotations.any { annotation ->
             annotation.qualifiedName in MAPPING_ANNOTATIONS
         }
-    }
 
     /**
      * Returns one entry per HTTP method. Empty attribute (all methods) yields a single blank method
      * so callers keep catch-all semantics.
      */
-    private fun resolveHttpMethods(annotation: PsiAnnotation, defaultMethod: String): List<String> {
+    private fun resolveHttpMethods(
+        annotation: PsiAnnotation,
+        defaultMethod: String,
+    ): List<String> {
         if (defaultMethod.isNotEmpty()) {
             return listOf(defaultMethod)
         }
@@ -205,8 +222,8 @@ internal object ArmeriaSpringMvcRouteCollector {
      * Resolves Spring `RequestMethod` enum references (and arrays) to HTTP method names.
      * Empty attribute means all methods — returns an empty list so callers keep `httpMethod` blank.
      */
-    private fun extractRequestMethods(value: PsiAnnotationMemberValue?): List<String> {
-        return when (value) {
+    private fun extractRequestMethods(value: PsiAnnotationMemberValue?): List<String> =
+        when (value) {
             null -> emptyList()
             is PsiArrayInitializerMemberValue -> value.initializers.flatMap(::extractRequestMethods)
             else -> {
@@ -215,9 +232,11 @@ internal object ArmeriaSpringMvcRouteCollector {
                 if (!name.isNullOrEmpty()) listOf(name) else emptyList()
             }
         }
-    }
 
-    private fun buildMethodTarget(psiClass: PsiClass, method: PsiMethod): String {
+    private fun buildMethodTarget(
+        psiClass: PsiClass,
+        method: PsiMethod,
+    ): String {
         val className = psiClass.qualifiedName ?: psiClass.name ?: "<anonymous>"
         return "$className#${method.name}()"
     }
