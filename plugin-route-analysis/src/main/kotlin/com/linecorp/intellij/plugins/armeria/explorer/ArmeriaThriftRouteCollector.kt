@@ -26,10 +26,11 @@ internal object ArmeriaThriftRouteCollector {
         val psiManager = PsiManager.getInstance(project)
         for (virtualFile in virtualFiles) {
             val psiFile = psiManager.findFile(virtualFile) ?: continue
+            val moduleName = ArmeriaRouteMetadata.moduleName(psiFile)
             for (operation in parseOperations(psiFile.text)) {
                 val path = "/${operation.serviceName}"
                 val target = "${operation.serviceName}.${operation.methodName}"
-                val dedupeKey = "${ArmeriaRouteMetadata.moduleName(psiFile)}:$path:$target"
+                val dedupeKey = "$moduleName:$path:$target"
                 if (!seenThriftRoutes.add(dedupeKey)) {
                     continue
                 }

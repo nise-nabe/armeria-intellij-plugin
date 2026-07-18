@@ -26,10 +26,11 @@ internal object ArmeriaGraphqlRouteCollector {
         val psiManager = PsiManager.getInstance(project)
         for (virtualFile in virtualFiles) {
             val psiFile = psiManager.findFile(virtualFile) ?: continue
+            val moduleName = ArmeriaRouteMetadata.moduleName(psiFile)
             for (operation in parseOperations(psiFile.text)) {
                 val target = "${operation.operationType}.${operation.fieldName}"
                 val dedupeKey =
-                    "${ArmeriaRouteMetadata.moduleName(psiFile)}:${ArmeriaIdlRouteSupport.DEFAULT_GRAPHQL_MOUNT_PATH}:$target"
+                    "$moduleName:${ArmeriaIdlRouteSupport.DEFAULT_GRAPHQL_MOUNT_PATH}:$target"
                 if (!seenGraphqlRoutes.add(dedupeKey)) {
                     continue
                 }
