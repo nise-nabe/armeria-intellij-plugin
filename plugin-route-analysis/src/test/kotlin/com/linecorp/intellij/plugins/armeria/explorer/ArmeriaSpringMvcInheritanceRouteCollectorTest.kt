@@ -335,117 +335,151 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertTrue(filteredRoutes.isEmpty())
     }
 
-    private fun configureTomcatMount(path: String) {
-        myFixture.configureByText(
-            "ArmeriaConfig.java",
+    fun testMultiLevelUnannotatedOverrideResolvesGrandparentMapping() {
+        myFixture.addClass(
             """
             package example;
 
-            import com.linecorp.armeria.server.Server;
-            import com.linecorp.armeria.server.tomcat.TomcatService;
+            import org.springframework.web.bind.annotation.GetMapping;
 
-            public class ArmeriaConfig {
-                public static void main(String[] args) {
-                    Server.builder()
-                        .serviceUnder("$path", TomcatService.of(null))
-                        .build();
+            public abstract class GrandController {
+                @GetMapping("/hello")
+                public String hello() {
+                    return "grand";
                 }
             }
             """.trimIndent(),
         )
+        myFixture.addClass(
+            """
+            package example;
+
+            public abstract class MidController extends GrandController {
+                @Override
+                public String hello() {
+                    return "mid";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "HelloController.java",
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.RestController;
+
+            @RestController
+            public class HelloController extends MidController {
+                @Override
+                public String hello() {
+                    return "child";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.projectScope(project))
+        assertEquals(listOf("/hello"), springMvcRoutes.map { it.path })
+        assertEquals(listOf("example.HelloController#hello()"), springMvcRoutes.map { it.target })
+        assertEquals("example.GrandController", springMvcRoutes.single().element.containingClass?.qualifiedName)
+        assertEquals("example.HelloController", springMvcRoutes.single().controller.qualifiedName)
     }
 
-    private fun registerServletServiceStubs() {
+    fun testInterfaceTypePrefixWinsOverSuperclassPrefix() {
         myFixture.addClass(
             """
-            package com.linecorp.armeria.server.tomcat;
+            package example;
 
-            public final class TomcatService {
-                public static TomcatService of(Object connector) {
-                    return null;
-                }
+            import org.springframework.web.bind.annotation.RequestMapping;
+
+            @RequestMapping("/base")
+            public abstract class BaseController {
             }
             """.trimIndent(),
         )
         myFixture.addClass(
             """
-            package com.linecorp.armeria.server.jetty;
+            package example;
 
-            public final class JettyService {
-                public static JettyService of(Object server) {
-                    return null;
+            import org.springframework.web.bind.annotation.GetMapping;
+            import org.springframework.web.bind.annotation.RequestMapping;
+
+            @RequestMapping("/api")
+            public interface GreetingApi {
+                @GetMapping("/hello")
+                String hello();
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "HelloController.java",
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.RestController;
+
+            @RestController
+            public class HelloController extends BaseController implements GreetingApi {
+                @Override
+                public String hello() {
+                    return "ok";
                 }
             }
             """.trimIndent(),
         )
+
+        val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.projectScope(project))
+        assertEquals(listOf("/api/hello"), springMvcRoutes.map { it.path })
+        assertEquals(listOf("example.HelloController#hello()"), springMvcRoutes.map { it.target })
     }
 
-    private fun registerSpringWebMvcStubs() {
+    fun testInterfaceMethodMappingPreferredOverSuperclassMapping() {
         myFixture.addClass(
             """
-            package org.springframework.stereotype;
+            package example;
 
-            public @interface Controller {
+            import org.springframework.web.bind.annotation.GetMapping;
+
+            public abstract class BaseController {
+                @GetMapping("/base")
+                public String hello() {
+                    return "base";
+                }
             }
             """.trimIndent(),
         )
         myFixture.addClass(
             """
-            package org.springframework.web.bind.annotation;
+            package example;
 
-            public @interface RestController {
+            import org.springframework.web.bind.annotation.GetMapping;
+
+            public interface GreetingApi {
+                @GetMapping("/api")
+                String hello();
             }
             """.trimIndent(),
         )
-        myFixture.addClass(
+        myFixture.configureByText(
+            "HelloController.java",
             """
-            package org.springframework.web.bind.annotation;
+            package example;
 
-            public enum RequestMethod {
-                GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS, TRACE
+            import org.springframework.web.bind.annotation.RestController;
+
+            @RestController
+            public class HelloController extends BaseController implements GreetingApi {
+                @Override
+                public String hello() {
+                    return "ok";
+                }
             }
             """.trimIndent(),
         )
-        myFixture.addClass(
-            """
-            package org.springframework.web.bind.annotation;
 
-            public @interface RequestMappings {
-                RequestMapping[] value();
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package org.springframework.web.bind.annotation;
-
-            @java.lang.annotation.Repeatable(RequestMappings.class)
-            public @interface RequestMapping {
-                String[] value() default {};
-                String[] path() default {};
-                RequestMethod[] method() default {};
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package org.springframework.web.bind.annotation;
-
-            public @interface GetMapping {
-                String[] value() default {};
-                String[] path() default {};
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package org.springframework.web.bind.annotation;
-
-            public @interface PostMapping {
-                String[] value() default {};
-                String[] path() default {};
-            }
-            """.trimIndent(),
-        )
+        val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.projectScope(project))
+        assertEquals(listOf("/api"), springMvcRoutes.map { it.path })
+        assertEquals("example.GreetingApi", springMvcRoutes.single().element.containingClass?.qualifiedName)
     }
 }

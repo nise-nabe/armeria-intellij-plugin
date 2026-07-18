@@ -11,7 +11,6 @@ import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiModifier
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.searches.AnnotatedElementsSearch
-import java.util.ArrayDeque
 
 internal data class SpringMvcRoute(
     val httpMethod: String,
@@ -110,19 +109,29 @@ internal object ArmeriaSpringMvcRouteCollector {
     }
 
     /**
-     * Prefers a mapping on [method] itself; otherwise the nearest super method (base class or
-     * interface) that declares a Spring MVC mapping annotation.
+     * Prefers a mapping on [method] itself; otherwise walks super methods (recursively) until a
+     * Spring MVC mapping annotation is found. Matches Spring's TYPE_HIERARCHY walk: at each level
+     * interface supers are considered before class supers, and unannotated intermediate overrides
+     * do not stop the search.
      */
     private fun resolveMappedMethod(method: PsiMethod): PsiMethod? {
         if (hasMappingAnnotation(method)) {
             return method
         }
-        for (superMethod in method.findSuperMethods()) {
-            if (hasMappingAnnotation(superMethod)) {
-                return superMethod
-            }
+        for (superMethod in orderedSuperMethods(method)) {
+            resolveMappedMethod(superMethod)?.let { return it }
         }
         return null
+    }
+
+    /**
+     * [PsiMethod.findSuperMethods] returns only immediate supers; sort them so interface methods
+     * precede class methods (Spring AnnotationsScanner TYPE_HIERARCHY order).
+     */
+    private fun orderedSuperMethods(method: PsiMethod): List<PsiMethod> {
+        return method.findSuperMethods().sortedBy { superMethod ->
+            if (superMethod.containingClass?.isInterface == true) 0 else 1
+        }
     }
 
     private fun addRoutesFromMethod(
@@ -155,8 +164,9 @@ internal object ArmeriaSpringMvcRouteCollector {
     }
 
     /**
-     * Walks [controller] then supers/interfaces. The first type that declares `@RequestMapping`
-     * supplies prefixes (most specific wins; parent applies when the child has none).
+     * Walks [controller] then supers/interfaces (Spring TYPE_HIERARCHY DFS: interfaces before
+     * superclass). The first type that declares `@RequestMapping` supplies prefixes (most specific
+     * wins; parent applies when the child has none).
      */
     private fun extractMergedClassRequestMappingPrefixes(controller: PsiClass): List<String> {
         for (type in typesInHierarchy(controller)) {
@@ -180,22 +190,28 @@ internal object ArmeriaSpringMvcRouteCollector {
         return prefixes.ifEmpty { listOf("") }
     }
 
-    private fun typesInHierarchy(psiClass: PsiClass): Sequence<PsiClass> = sequence {
+    /**
+     * Depth-first hierarchy walk matching Spring's AnnotationsScanner TYPE_HIERARCHY:
+     * current type, then each interface (recursively), then superclass (recursively).
+     */
+    private fun typesInHierarchy(psiClass: PsiClass): Sequence<PsiClass> {
         val visited = mutableSetOf<PsiClass>()
-        val queue = ArrayDeque<PsiClass>()
-        queue.add(psiClass)
-        while (queue.isNotEmpty()) {
-            val current = queue.removeFirst()
-            if (!visited.add(current)) {
-                continue
-            }
+        val result = ArrayList<PsiClass>()
+        fun walk(current: PsiClass) {
             if (current.qualifiedName == JAVA_LANG_OBJECT) {
-                continue
+                return
             }
-            yield(current)
-            current.superClass?.let { queue.add(it) }
-            queue.addAll(current.interfaces)
+            if (!visited.add(current)) {
+                return
+            }
+            result.add(current)
+            for (iface in current.interfaces) {
+                walk(iface)
+            }
+            current.superClass?.let { walk(it) }
         }
+        walk(psiClass)
+        return result.asSequence()
     }
 
     private fun hasMappingAnnotation(method: PsiMethod): Boolean {
