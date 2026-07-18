@@ -4,6 +4,7 @@ plugins {
     kotlin("jvm")
     `java-test-fixtures`
     id("org.jetbrains.intellij.platform")
+    id("com.linecorp.intellij.ktlint")
 }
 
 group = "com.linecorp.intellij"

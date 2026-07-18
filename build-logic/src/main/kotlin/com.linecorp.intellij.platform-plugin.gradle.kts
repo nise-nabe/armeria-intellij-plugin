@@ -5,6 +5,7 @@ plugins {
     `java-test-fixtures`
     id("org.jetbrains.intellij.platform")
     id("org.jetbrains.changelog")
+    id("com.linecorp.intellij.ktlint")
 }
 
 java {
