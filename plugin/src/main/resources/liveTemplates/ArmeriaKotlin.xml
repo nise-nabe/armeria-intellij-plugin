@@ -1,5 +1,5 @@
 <templateSet group="Armeria">
-  <template name="armroute-kotlin" key="live.template.annotated.route.method.kotlin.description" resource-bundle="messages.ArmeriaBundle" value="@com.linecorp.armeria.server.annotation.Get(&quot;$PATH$&quot;)&#10;fun $NAME$($PARAMS$): String {&#10;    return $END$&quot;&quot;&#10;}" description="Annotated Armeria route method (Kotlin)" toReformat="true" toShortenFQNames="true">
+  <template name="armroute-kotlin" key="live.template.annotated.route.method.kotlin.description" resource-bundle="messages.ArmeriaBundle" value="@com.linecorp.armeria.server.annotation.Get(&quot;$PATH$&quot;)&#10;fun $NAME$($PARAMS$): String {&#10;    return &quot;$END$&quot;&#10;}" description="Annotated Armeria route method (Kotlin)" toReformat="true" toShortenFQNames="true">
     <variable name="PATH" expression="" defaultValue="/" alwaysStopAt="true"/>
     <variable name="NAME" expression="" defaultValue="handler" alwaysStopAt="true"/>
     <variable name="PARAMS" expression="" defaultValue="" alwaysStopAt="true"/>
