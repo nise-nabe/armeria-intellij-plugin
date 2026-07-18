@@ -632,7 +632,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
 
         val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.allScope(project))
         val helloRoute = springMvcRoutes.single()
-        val controllerModule = ArmeriaRouteMetadata.moduleName(helloRoute.controller)
+        val controllerModule = helloRoute.moduleName()
         val matchingMount =
             ArmeriaRoute.create(
                 element = helloRoute.controller,

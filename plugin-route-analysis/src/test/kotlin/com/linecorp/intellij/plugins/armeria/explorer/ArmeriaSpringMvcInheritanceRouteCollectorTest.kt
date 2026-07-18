@@ -66,7 +66,7 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertEquals("/spring/users/{id}", delegatedRoute.path)
         assertEquals("example.UserController#getUser()", delegatedRoute.target)
         assertEquals(
-            ArmeriaRouteMetadata.moduleName(springMvcRoutes.single().controller),
+            springMvcRoutes.single().moduleName(),
             delegatedRoute.moduleName,
         )
     }
@@ -116,7 +116,7 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertEquals("/spring/users/{id}", delegatedRoute.path)
         assertEquals("example.UserController#getUser()", delegatedRoute.target)
         assertEquals(
-            ArmeriaRouteMetadata.moduleName(springMvcRoute.controller),
+            springMvcRoute.moduleName(),
             delegatedRoute.moduleName,
         )
     }
@@ -287,7 +287,7 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertEquals(listOf("/spring/hello"), delegated.map { it.path })
     }
 
-    fun testConcreteInheritorOfAbstractStereotypeWithoutOwnStereotype() {
+    fun testUnannotatedConcreteInheritorOfAbstractStereotypeIsNotDiscovered() {
         configureTomcatMount("/spring/")
         myFixture.addClass(
             """
@@ -315,25 +315,15 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
+        // @Controller is not @Inherited; default component scanning does not register UsersApi.
         val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.projectScope(project))
-        assertEquals(listOf("/hello"), springMvcRoutes.map { it.path })
-        assertEquals(listOf("example.UsersApi#hello()"), springMvcRoutes.map { it.target })
-        assertEquals("example.UsersApi", springMvcRoutes.single().controller.qualifiedName)
-        assertEquals(
-            "example.BaseApi",
-            springMvcRoutes
-                .single()
-                .element.containingClass
-                ?.qualifiedName,
-        )
+        assertTrue(springMvcRoutes.isEmpty())
 
         val routes = ArmeriaRouteCollector.collect(project)
-        val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
-        assertEquals(listOf("/spring/hello"), delegated.map { it.path })
-        assertEquals(listOf("example.UsersApi#hello()"), delegated.map { it.target })
+        assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
     }
 
-    fun testConcreteImplementorOfStereotypeInterfaceWithoutOwnStereotype() {
+    fun testUnannotatedConcreteImplementorOfStereotypeInterfaceIsNotDiscovered() {
         myFixture.addClass(
             """
             package example;
@@ -363,16 +353,7 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
         )
 
         val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.projectScope(project))
-        assertEquals(listOf("/hello"), springMvcRoutes.map { it.path })
-        assertEquals(listOf("example.GreetingService#hello()"), springMvcRoutes.map { it.target })
-        assertEquals("example.GreetingService", springMvcRoutes.single().controller.qualifiedName)
-        assertEquals(
-            "example.GreetingApi",
-            springMvcRoutes
-                .single()
-                .element.containingClass
-                ?.qualifiedName,
-        )
+        assertTrue(springMvcRoutes.isEmpty())
     }
 
     fun testAbstractStereotypeSubclassDoesNotSuppressConcreteParent() {
@@ -489,7 +470,7 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertEquals("example.BaseGreetingController", helloRoute.element.containingClass?.qualifiedName)
         assertEquals("example.HelloController", helloRoute.controller.qualifiedName)
 
-        val controllerModule = ArmeriaRouteMetadata.moduleName(helloRoute.controller)
+        val controllerModule = helloRoute.moduleName()
         val matchingMount =
             ArmeriaRoute.create(
                 element = helloRoute.controller,

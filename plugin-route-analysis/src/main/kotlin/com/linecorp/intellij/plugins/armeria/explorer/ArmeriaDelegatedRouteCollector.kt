@@ -48,7 +48,7 @@ internal object ArmeriaDelegatedRouteCollector {
                         routeMatch = RouteMatch.DELEGATED_SPRING_MVC,
                         virtualHostName = mountRoute.virtualHostName,
                         delegationMountPath = mountRoute.path,
-                        moduleName = ArmeriaRouteMetadata.moduleName(springMvcRoute.controller),
+                        moduleName = springMvcRoute.moduleName(),
                     )
             }
         }
@@ -66,7 +66,7 @@ internal object ArmeriaDelegatedRouteCollector {
             return springMvcRoutes
         }
         return springMvcRoutes.filter { route ->
-            ArmeriaRouteMetadata.moduleName(route.controller) == mountModule
+            route.moduleName() == mountModule
         }
     }
 }

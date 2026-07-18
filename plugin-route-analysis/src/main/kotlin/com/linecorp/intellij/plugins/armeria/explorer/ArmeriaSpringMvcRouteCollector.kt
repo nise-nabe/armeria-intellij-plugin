@@ -11,7 +11,6 @@ import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiModifier
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.searches.AnnotatedElementsSearch
-import com.intellij.psi.search.searches.ClassInheritorsSearch
 
 internal data class SpringMvcRoute(
     val httpMethod: String,
@@ -21,7 +20,10 @@ internal data class SpringMvcRoute(
     val element: PsiMethod,
     /** Stereotype-annotated concrete controller used for module attribution and target. */
     val controller: PsiClass,
-)
+) {
+    /** Module attribution always follows the concrete controller, not the mapping-owning method. */
+    fun moduleName(): String = ArmeriaRouteMetadata.moduleName(controller)
+}
 
 internal object ArmeriaSpringMvcRouteCollector {
     private const val REST_CONTROLLER = "org.springframework.web.bind.annotation.RestController"
@@ -63,22 +65,17 @@ internal object ArmeriaSpringMvcRouteCollector {
         if (!isSpringWebAvailable(psiFacade, classpathScope)) {
             return emptyList()
         }
-        // Direct stereotype hits plus concrete inheritors of abstract/interface stereotypes.
-        // Mirrors Spring RequestMappingHandlerMapping.isHandler (TYPE_HIERARCHY for @Controller).
-        val stereotypeTypes = linkedSetOf<PsiClass>()
+        // Only concrete stereotype-annotated types become controller beans. Abstract / interface
+        // stereotypes are skipped (Spring does not instantiate them). Unannotated concrete subtypes
+        // are also skipped: @Controller is not @Inherited, so default component scanning does not
+        // register them. Inherited mappings are still discovered via typesInHierarchy when a
+        // concrete annotated controller is in scope (see #261).
+        val controllers = linkedSetOf<PsiClass>()
         for (stereotypeFqn in CONTROLLER_STEREOTYPES) {
             val annotationClass = psiFacade.findClass(stereotypeFqn, classpathScope) ?: continue
-            AnnotatedElementsSearch.searchPsiClasses(annotationClass, scope).forEach { stereotypeTypes.add(it) }
-        }
-        val controllers = linkedSetOf<PsiClass>()
-        for (type in stereotypeTypes) {
-            if (isConcreteControllerType(type)) {
-                controllers.add(type)
-                continue
-            }
-            ClassInheritorsSearch.search(type, scope, true).forEach { inheritor ->
-                if (isConcreteControllerType(inheritor)) {
-                    controllers.add(inheritor)
+            AnnotatedElementsSearch.searchPsiClasses(annotationClass, scope).forEach { type ->
+                if (isConcreteControllerType(type)) {
+                    controllers.add(type)
                 }
             }
         }
@@ -100,7 +97,7 @@ internal object ArmeriaSpringMvcRouteCollector {
         routes: MutableList<SpringMvcRoute>,
     ) {
         val hierarchy = typesInHierarchy(controller)
-        val classPrefixes = extractMergedClassRequestMappingPrefixes(hierarchy)
+        val classPrefixes = resolveClassRequestMappingPrefixes(hierarchy)
         // One most-specific method per visible signature; unannotated overrides resolve via supers.
         for (signature in controller.visibleSignatures) {
             val method = signature.method
@@ -173,9 +170,9 @@ internal object ArmeriaSpringMvcRouteCollector {
     /**
      * Walks [hierarchy] (Spring TYPE_HIERARCHY DFS: interfaces before superclass). The first type
      * that declares `@RequestMapping` supplies prefixes (most specific wins; parent applies when
-     * the child has none).
+     * the child has none). Does not concatenate parent and child prefixes.
      */
-    private fun extractMergedClassRequestMappingPrefixes(hierarchy: List<PsiClass>): List<String> {
+    private fun resolveClassRequestMappingPrefixes(hierarchy: List<PsiClass>): List<String> {
         for (type in hierarchy) {
             val requestMappings = type.annotations.filter { it.qualifiedName == REQUEST_MAPPING }
             if (requestMappings.isEmpty()) {
