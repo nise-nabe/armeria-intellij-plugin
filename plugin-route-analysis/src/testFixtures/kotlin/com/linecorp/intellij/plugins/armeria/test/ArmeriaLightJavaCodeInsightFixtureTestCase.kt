@@ -16,9 +16,17 @@ abstract class ArmeriaLightJavaCodeInsightFixtureTestCase : LightJavaCodeInsight
     }
 
     private fun allowTestSandboxRoots() {
+        val sandboxRoot = File(PathManager.getConfigPath()).parentFile
+        val pluginsTestDir = sandboxRoot?.resolve("plugins-test")
+        if (pluginsTestDir != null && pluginsTestDir.isDirectory) {
+            VfsRootAccess.allowRootAccess(testRootDisposable, pluginsTestDir.absolutePath)
+            return
+        }
+
+        // Fallback for sandboxes that use a different layout.
         VfsRootAccess.allowRootAccess(testRootDisposable, PathManager.getPluginsPath())
-        File(PathManager.getConfigPath()).parentFile?.absolutePath?.let { sandboxRoot ->
-            VfsRootAccess.allowRootAccess(testRootDisposable, sandboxRoot)
+        sandboxRoot?.absolutePath?.let { root ->
+            VfsRootAccess.allowRootAccess(testRootDisposable, root)
         }
     }
 }
