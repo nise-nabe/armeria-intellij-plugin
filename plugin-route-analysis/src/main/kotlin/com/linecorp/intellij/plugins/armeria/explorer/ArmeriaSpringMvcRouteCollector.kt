@@ -11,6 +11,7 @@ import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiModifier
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.searches.AnnotatedElementsSearch
+import com.intellij.psi.search.searches.ClassInheritorsSearch
 
 internal data class SpringMvcRoute(
     val httpMethod: String,
@@ -62,21 +63,37 @@ internal object ArmeriaSpringMvcRouteCollector {
         if (!isSpringWebAvailable(psiFacade, classpathScope)) {
             return emptyList()
         }
-        val controllers = linkedSetOf<PsiClass>()
+        // Direct stereotype hits plus concrete inheritors of abstract/interface stereotypes.
+        // Mirrors Spring RequestMappingHandlerMapping.isHandler (TYPE_HIERARCHY for @Controller).
+        val stereotypeTypes = linkedSetOf<PsiClass>()
         for (stereotypeFqn in CONTROLLER_STEREOTYPES) {
             val annotationClass = psiFacade.findClass(stereotypeFqn, classpathScope) ?: continue
-            AnnotatedElementsSearch.searchPsiClasses(annotationClass, scope).forEach { controllers.add(it) }
+            AnnotatedElementsSearch.searchPsiClasses(annotationClass, scope).forEach { stereotypeTypes.add(it) }
+        }
+        val controllers = linkedSetOf<PsiClass>()
+        for (type in stereotypeTypes) {
+            if (isConcreteControllerType(type)) {
+                controllers.add(type)
+                continue
+            }
+            ClassInheritorsSearch.search(type, scope, true).forEach { inheritor ->
+                if (isConcreteControllerType(inheritor)) {
+                    controllers.add(inheritor)
+                }
+            }
         }
         val routes = mutableListOf<SpringMvcRoute>()
         for (controller in controllers) {
-            // Spring does not instantiate abstract / interface stereotype types.
-            if (controller.isInterface || controller.hasModifierProperty(PsiModifier.ABSTRACT)) {
-                continue
-            }
             collectFromController(controller, routes)
         }
         return routes
     }
+
+    /** Spring does not instantiate abstract / interface stereotype types as handler beans. */
+    private fun isConcreteControllerType(psiClass: PsiClass): Boolean =
+        !psiClass.isInterface &&
+            !psiClass.hasModifierProperty(PsiModifier.ABSTRACT) &&
+            !psiClass.name.isNullOrEmpty()
 
     private fun collectFromController(
         controller: PsiClass,

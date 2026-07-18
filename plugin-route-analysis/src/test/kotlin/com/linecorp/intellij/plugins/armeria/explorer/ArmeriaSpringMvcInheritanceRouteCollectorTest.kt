@@ -287,6 +287,94 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertEquals(listOf("/spring/hello"), delegated.map { it.path })
     }
 
+    fun testConcreteInheritorOfAbstractStereotypeWithoutOwnStereotype() {
+        configureTomcatMount("/spring/")
+        myFixture.addClass(
+            """
+            package example;
+
+            import org.springframework.stereotype.Controller;
+            import org.springframework.web.bind.annotation.GetMapping;
+
+            @Controller
+            public abstract class BaseApi {
+                @GetMapping("/hello")
+                public String hello() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "UsersApi.java",
+            """
+            package example;
+
+            public class UsersApi extends BaseApi {
+            }
+            """.trimIndent(),
+        )
+
+        val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.projectScope(project))
+        assertEquals(listOf("/hello"), springMvcRoutes.map { it.path })
+        assertEquals(listOf("example.UsersApi#hello()"), springMvcRoutes.map { it.target })
+        assertEquals("example.UsersApi", springMvcRoutes.single().controller.qualifiedName)
+        assertEquals(
+            "example.BaseApi",
+            springMvcRoutes
+                .single()
+                .element.containingClass
+                ?.qualifiedName,
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+        assertEquals(listOf("/spring/hello"), delegated.map { it.path })
+        assertEquals(listOf("example.UsersApi#hello()"), delegated.map { it.target })
+    }
+
+    fun testConcreteImplementorOfStereotypeInterfaceWithoutOwnStereotype() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import org.springframework.stereotype.Controller;
+            import org.springframework.web.bind.annotation.GetMapping;
+
+            @Controller
+            public interface GreetingApi {
+                @GetMapping("/hello")
+                String hello();
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "GreetingService.java",
+            """
+            package example;
+
+            public class GreetingService implements GreetingApi {
+                @Override
+                public String hello() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.projectScope(project))
+        assertEquals(listOf("/hello"), springMvcRoutes.map { it.path })
+        assertEquals(listOf("example.GreetingService#hello()"), springMvcRoutes.map { it.target })
+        assertEquals("example.GreetingService", springMvcRoutes.single().controller.qualifiedName)
+        assertEquals(
+            "example.GreetingApi",
+            springMvcRoutes
+                .single()
+                .element.containingClass
+                ?.qualifiedName,
+        )
+    }
+
     fun testAbstractStereotypeSubclassDoesNotSuppressConcreteParent() {
         myFixture.addClass(
             """
