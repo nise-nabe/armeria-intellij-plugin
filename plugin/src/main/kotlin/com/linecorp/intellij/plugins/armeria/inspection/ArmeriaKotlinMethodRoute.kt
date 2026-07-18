@@ -15,23 +15,28 @@ internal data class ArmeriaKotlinMethodRoute(
 ) {
     companion object {
         fun from(function: KtNamedFunction): ArmeriaKotlinMethodRoute? {
-            val methodAnnotation = function.annotationEntries.firstNotNullOfOrNull { entry ->
-                val qualifiedName = entry.qualifiedName() ?: return@firstNotNullOfOrNull null
-                val method = ArmeriaRouteSupport.routeAnnotations[qualifiedName] ?: return@firstNotNullOfOrNull null
-                entry to method
-            } ?: return null
-            val classPrefix = PsiTreeUtil.getParentOfType(function, KtClassOrObject::class.java)?.annotationEntries
-                ?.firstOrNull { it.qualifiedName() == ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION }
-                ?.let(::extractPathPrefix)
-                .orEmpty()
-            val paths = buildList {
-                addAll(extractPaths(methodAnnotation.first))
-                function.annotationEntries
-                    .filter { it.qualifiedName() == ArmeriaRouteSupport.PATH_ANNOTATION }
-                    .forEach { addAll(extractPaths(it)) }
-            }.ifEmpty { listOf("/") }
-                .map { rawPath -> ArmeriaRouteSupport.formatAnnotatedHandlerPath(classPrefix, rawPath) }
-                .distinct()
+            val methodAnnotation =
+                function.annotationEntries.firstNotNullOfOrNull { entry ->
+                    val qualifiedName = entry.qualifiedName() ?: return@firstNotNullOfOrNull null
+                    val method = ArmeriaRouteSupport.routeAnnotations[qualifiedName] ?: return@firstNotNullOfOrNull null
+                    entry to method
+                } ?: return null
+            val classPrefix =
+                PsiTreeUtil
+                    .getParentOfType(function, KtClassOrObject::class.java)
+                    ?.annotationEntries
+                    ?.firstOrNull { it.qualifiedName() == ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION }
+                    ?.let(::extractPathPrefix)
+                    .orEmpty()
+            val paths =
+                buildList {
+                    addAll(extractPaths(methodAnnotation.first))
+                    function.annotationEntries
+                        .filter { it.qualifiedName() == ArmeriaRouteSupport.PATH_ANNOTATION }
+                        .forEach { addAll(extractPaths(it)) }
+                }.ifEmpty { listOf("/") }
+                    .map { rawPath -> ArmeriaRouteSupport.formatAnnotatedHandlerPath(classPrefix, rawPath) }
+                    .distinct()
             return ArmeriaKotlinMethodRoute(methodAnnotation.second, paths)
         }
 
@@ -45,14 +50,16 @@ internal data class ArmeriaKotlinMethodRoute(
             return containingKtFile.declarations
                 .filterIsInstance<KtClass>()
                 .firstOrNull { it.name == shortName }
-                ?.fqName?.asString()
+                ?.fqName
+                ?.asString()
         }
 
         private fun KtAnnotationEntry.resolveAnnotationType(): String? {
-            val candidates = listOfNotNull(
-                typeReference?.references?.firstOrNull()?.resolve(),
-                calleeExpression?.references?.firstOrNull()?.resolve(),
-            )
+            val candidates =
+                listOfNotNull(
+                    typeReference?.references?.firstOrNull()?.resolve(),
+                    calleeExpression?.references?.firstOrNull()?.resolve(),
+                )
             for (resolved in candidates) {
                 when (resolved) {
                     is PsiClass -> resolved.qualifiedName?.let { return it }
@@ -62,9 +69,7 @@ internal data class ArmeriaKotlinMethodRoute(
             return null
         }
 
-        private fun extractPathPrefix(annotation: KtAnnotationEntry): String {
-            return extractPaths(annotation).firstOrNull().orEmpty()
-        }
+        private fun extractPathPrefix(annotation: KtAnnotationEntry): String = extractPaths(annotation).firstOrNull().orEmpty()
 
         private fun extractPaths(annotation: KtAnnotationEntry): List<String> {
             val valuePaths = extractNamedKotlinPaths(annotation, "value")
@@ -78,12 +83,16 @@ internal data class ArmeriaKotlinMethodRoute(
             return emptyList()
         }
 
-        private fun extractNamedKotlinPaths(annotation: KtAnnotationEntry, name: String): List<String> {
-            val named = annotation.valueArguments
-                .filter { it.getArgumentName()?.asName?.asString() == name }
-                .flatMap { argument ->
-                    ArmeriaKotlinRouteCollector.extractKotlinStrings(argument.getArgumentExpression())
-                }
+        private fun extractNamedKotlinPaths(
+            annotation: KtAnnotationEntry,
+            name: String,
+        ): List<String> {
+            val named =
+                annotation.valueArguments
+                    .filter { it.getArgumentName()?.asName?.asString() == name }
+                    .flatMap { argument ->
+                        ArmeriaKotlinRouteCollector.extractKotlinStrings(argument.getArgumentExpression())
+                    }
             if (named.isNotEmpty()) {
                 return named
             }

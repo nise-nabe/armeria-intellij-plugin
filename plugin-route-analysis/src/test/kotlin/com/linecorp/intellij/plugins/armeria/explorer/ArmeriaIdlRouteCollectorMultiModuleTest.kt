@@ -43,8 +43,10 @@ class ArmeriaIdlRouteCollectorMultiModuleTest : HeavyPlatformTestCase() {
         val additionalModule = createAdditionalModule("additionalModule")
         createTextFileInModule(additionalModule, "other.graphql", schema)
 
-        val routes = ArmeriaRouteCollector.collect(project)
-            .filter { it.protocol == RouteProtocol.GRAPHQL.presentableName() }
+        val routes =
+            ArmeriaRouteCollector
+                .collect(project)
+                .filter { it.protocol == RouteProtocol.GRAPHQL.presentableName() }
 
         assertEquals(2, routes.size)
         assertEquals(setOf("Query.user"), routes.map { it.target }.toSet())
@@ -62,8 +64,10 @@ class ArmeriaIdlRouteCollectorMultiModuleTest : HeavyPlatformTestCase() {
         val additionalModule = createAdditionalModule("additionalModule")
         createTextFileInModule(additionalModule, "other.thrift", thrift)
 
-        val routes = ArmeriaRouteCollector.collect(project)
-            .filter { it.protocol == RouteProtocol.THRIFT.presentableName() }
+        val routes =
+            ArmeriaRouteCollector
+                .collect(project)
+                .filter { it.protocol == RouteProtocol.THRIFT.presentableName() }
 
         assertEquals(2, routes.size)
         assertEquals(setOf("HelloService.sayHello"), routes.map { it.target }.toSet())
@@ -93,7 +97,11 @@ class ArmeriaIdlRouteCollectorMultiModuleTest : HeavyPlatformTestCase() {
         )
     }
 
-    private fun createTextFileInModule(targetModule: Module, relativePath: String, content: String): VirtualFile {
+    private fun createTextFileInModule(
+        targetModule: Module,
+        relativePath: String,
+        content: String,
+    ): VirtualFile {
         val sourceRoot = moduleSourceRoot(targetModule)
         val parts = relativePath.split("/")
         var directory = sourceRoot

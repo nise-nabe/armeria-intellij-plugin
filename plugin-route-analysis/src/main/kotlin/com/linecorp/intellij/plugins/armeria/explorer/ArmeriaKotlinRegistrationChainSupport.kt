@@ -4,7 +4,6 @@ import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 
 internal object ArmeriaKotlinRegistrationChainSupport {
-
     fun registrationKey(call: KtCallExpression): String? {
         val virtualFile = call.containingKtFile.virtualFile ?: return null
         val methodName = resolveCallName(call) ?: return null
@@ -23,13 +22,12 @@ internal object ArmeriaKotlinRegistrationChainSupport {
         }
     }
 
-    fun toChainStep(call: KtCallExpression): RegistrationChainStep {
-        return RegistrationChainStep(
+    fun toChainStep(call: KtCallExpression): RegistrationChainStep =
+        RegistrationChainStep(
             methodName = resolveCallName(call).orEmpty(),
             firstStringArg = ArmeriaKotlinExpressionSupport.extractKotlinString(call.valueArguments.firstOrNull()?.getArgumentExpression()),
             rawMethodArgs = call.valueArguments.mapNotNull { it.getArgumentExpression()?.text },
         )
-    }
 
     fun methodCallsBetweenInStatement(
         start: KtCallExpression,

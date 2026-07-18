@@ -12,8 +12,11 @@ import org.jetbrains.kotlin.psi.KtVisitorVoid
 class ArmeriaDuplicateRouteKotlinInspection : LocalInspectionTool() {
     override fun getDisplayName(): String = message("inspection.duplicate.route.kotlin.display.name")
 
-    override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor {
-        return object : KtVisitorVoid() {
+    override fun buildVisitor(
+        holder: ProblemsHolder,
+        isOnTheFly: Boolean,
+    ): PsiElementVisitor =
+        object : KtVisitorVoid() {
             override fun visitClass(klass: KtClass) {
                 super.visitClass(klass)
                 val duplicateFunctions = linkedSetOf<KtNamedFunction>()
@@ -37,7 +40,6 @@ class ArmeriaDuplicateRouteKotlinInspection : LocalInspectionTool() {
                 }
             }
         }
-    }
 
     private fun routeAnnotatedFunctions(klass: KtClass): List<KtNamedFunction> {
         val functions = linkedSetOf<KtNamedFunction>()
@@ -52,8 +54,15 @@ class ArmeriaDuplicateRouteKotlinInspection : LocalInspectionTool() {
     private fun superClass(klass: KtClass): KtClass? {
         val typeReference = klass.superTypeListEntries.firstOrNull()?.typeReference ?: return null
         (typeReference.references.firstOrNull()?.resolve() as? KtClass)?.let { return it }
-        val superName = klass.superTypeListEntries.firstOrNull()?.typeAsUserType?.referencedName ?: return null
-        klass.containingKtFile.declarations.filterIsInstance<KtClass>().firstOrNull { it.name == superName }?.let { return it }
+        val superName =
+            klass.superTypeListEntries
+                .firstOrNull()
+                ?.typeAsUserType
+                ?.referencedName ?: return null
+        klass.containingKtFile.declarations
+            .filterIsInstance<KtClass>()
+            .firstOrNull { it.name == superName }
+            ?.let { return it }
         return klass.toLightClass()?.superClass?.originalElement as? KtClass
     }
 }

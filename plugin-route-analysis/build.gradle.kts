@@ -9,7 +9,10 @@ plugins {
 dependencies {
     implementation(project(":plugin-shared"))
     intellijPlatform {
-        intellijIdeaUltimate(libs.versions.idea.platform.get())
+        intellijIdeaUltimate(
+            libs.versions.idea.platform
+                .get(),
+        )
         bundledPlugin("com.intellij.java")
         bundledPlugin("org.jetbrains.kotlin")
         bundledPlugin("org.jetbrains.plugins.yaml")
@@ -47,7 +50,11 @@ testing {
                     dependsOn("prepareTest", "instrumentTestCode", "fastTestClasses")
                     val fastTestClassesDirs =
                         project.sourceSets.named("fastTest").map { it.output.classesDirs }
-                    testClassesDirs = project.sourceSets.named("fastTest").get().output.classesDirs
+                    testClassesDirs =
+                        project.sourceSets
+                            .named("fastTest")
+                            .get()
+                            .output.classesDirs
                     val platformTestClasspath = project.tasks.named<Test>("test").map { it.classpath }
                     classpath = project.files(fastTestClassesDirs, platformTestClasspath)
                     javaLauncher.set(project.tasks.named<Test>("test").flatMap { it.javaLauncher })

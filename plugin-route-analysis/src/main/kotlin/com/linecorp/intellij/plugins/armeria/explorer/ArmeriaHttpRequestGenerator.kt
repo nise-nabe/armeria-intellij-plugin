@@ -9,8 +9,8 @@ object ArmeriaHttpRequestGenerator {
     private val COLON_PATH_VARIABLE = Regex(""":([A-Za-z_][A-Za-z0-9_]*)""")
     private val GRPC_METHOD_PATH = Regex("""^/[^/]+/[^/]+$""")
 
-    fun supports(route: ArmeriaRoute): Boolean {
-        return when (route.routeMatch) {
+    fun supports(route: ArmeriaRoute): Boolean =
+        when (route.routeMatch) {
             RouteMatch.ANNOTATED_HTTP -> route.httpMethod.isNotBlank()
             RouteMatch.DELEGATED_SPRING_MVC -> true
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.HEALTH_CHECK, RouteMatch.ROUTE_FLUENT -> true
@@ -20,10 +20,9 @@ object ArmeriaHttpRequestGenerator {
             RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
             -> false
         }
-    }
 
-    fun httpMethod(route: ArmeriaRoute): String {
-        return when (route.routeMatch) {
+    fun httpMethod(route: ArmeriaRoute): String =
+        when (route.routeMatch) {
             RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG -> route.httpMethod
             RouteMatch.DELEGATED_SPRING_MVC,
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.HEALTH_CHECK, RouteMatch.ROUTE_FLUENT,
@@ -39,7 +38,6 @@ object ArmeriaHttpRequestGenerator {
             RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
             -> error("Unsupported route match: ${route.routeMatch}")
         }
-    }
 
     fun fileName(route: ArmeriaRoute): String {
         if (isGrpcRoute(route)) {
@@ -50,7 +48,10 @@ object ArmeriaHttpRequestGenerator {
         return "armeria-$method-${pathSlug(route.path)}.http"
     }
 
-    fun requestText(route: ArmeriaRoute, baseUrl: String = DEFAULT_BASE_URL): String {
+    fun requestText(
+        route: ArmeriaRoute,
+        baseUrl: String = DEFAULT_BASE_URL,
+    ): String {
         val normalizedBaseUrl = normalizeBaseUrl(baseUrl)
         if (isGrpcRoute(route)) {
             return grpcRequestText(route, normalizedBaseUrl)
@@ -75,7 +76,10 @@ object ArmeriaHttpRequestGenerator {
         return GRPC_METHOD_PATH.matches(route.path)
     }
 
-    private fun grpcRequestText(route: ArmeriaRoute, baseUrl: String): String {
+    private fun grpcRequestText(
+        route: ArmeriaRoute,
+        baseUrl: String,
+    ): String {
         val grpcPath = route.path.trim('/')
         return buildString {
             appendLine("### gRPC ${route.target}")
@@ -88,7 +92,10 @@ object ArmeriaHttpRequestGenerator {
 
     private fun normalizeBaseUrl(baseUrl: String): String = baseUrl.trimEnd('/')
 
-    private fun pathWithPlaceholders(path: String, pathType: PathType): String {
+    private fun pathWithPlaceholders(
+        path: String,
+        pathType: PathType,
+    ): String {
         if (pathType == PathType.REGEX || pathType == PathType.GLOB) {
             return path
         }
@@ -119,7 +126,10 @@ object ArmeriaHttpRequestGenerator {
         return result.toString()
     }
 
-    private fun findMatchingBrace(path: String, start: Int): Int {
+    private fun findMatchingBrace(
+        path: String,
+        start: Int,
+    ): Int {
         if (start >= path.length || path[start] != '{') {
             return -1
         }
@@ -144,12 +154,13 @@ object ArmeriaHttpRequestGenerator {
         return if (colonIndex < 0) trimmed else trimmed.substring(0, colonIndex).trim()
     }
 
-    private fun sampleValue(name: String): String = when {
-        name.equals("id", ignoreCase = true) -> "1"
-        name.equals("name", ignoreCase = true) -> "example"
-        name.all { it.isDigit() } -> "sample"
-        else -> name.lowercase(Locale.ROOT)
-    }
+    private fun sampleValue(name: String): String =
+        when {
+            name.equals("id", ignoreCase = true) -> "1"
+            name.equals("name", ignoreCase = true) -> "example"
+            name.all { it.isDigit() } -> "sample"
+            else -> name.lowercase(Locale.ROOT)
+        }
 
     private fun pathSlug(path: String): String {
         val trimmed = path.trim('/')

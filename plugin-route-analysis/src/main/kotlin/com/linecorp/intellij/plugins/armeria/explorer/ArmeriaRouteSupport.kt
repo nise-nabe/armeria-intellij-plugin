@@ -18,11 +18,12 @@ object ArmeriaRouteSupport {
     const val SERVER_BUILDER_CLASS = "com.linecorp.armeria.server.ServerBuilder"
     const val SPRING_BEAN_ANNOTATION = "org.springframework.context.annotation.Bean"
 
-    val SPRING_BOOT_ARMERIA_FILE_INDICATORS = setOf(
-        "ArmeriaServerConfigurator",
-        "ArmeriaAutoConfiguration",
-        "spring-boot-starter-armeria",
-    )
+    val SPRING_BOOT_ARMERIA_FILE_INDICATORS =
+        setOf(
+            "ArmeriaServerConfigurator",
+            "ArmeriaAutoConfiguration",
+            "spring-boot-starter-armeria",
+        )
 
     const val SERVER_BUILDER_SIMPLE_NAME = "ServerBuilder"
     const val ARMERIA_HEADER_SCAN_LIMIT = 4096
@@ -45,31 +46,27 @@ object ArmeriaRouteSupport {
 
     val routeAnnotations = ArmeriaRouteAnnotationSupport.routeAnnotations
 
-    fun findRouteAnnotation(method: PsiMethod): Pair<PsiAnnotation, String>? =
-        ArmeriaRouteAnnotationSupport.findRouteAnnotation(method)
+    fun findRouteAnnotation(method: PsiMethod): Pair<PsiAnnotation, String>? = ArmeriaRouteAnnotationSupport.findRouteAnnotation(method)
 
-    fun extractPaths(annotation: com.intellij.psi.PsiAnnotation): List<String> =
-        ArmeriaRouteAnnotationSupport.extractPaths(annotation)
+    fun extractPaths(annotation: com.intellij.psi.PsiAnnotation): List<String> = ArmeriaRouteAnnotationSupport.extractPaths(annotation)
 
     fun extractPrimaryPath(annotation: com.intellij.psi.PsiAnnotation?): String =
         ArmeriaRouteAnnotationSupport.extractPrimaryPath(annotation)
 
-    fun extractNames(annotation: com.intellij.psi.PsiAnnotation?): List<String> =
-        ArmeriaRouteAnnotationSupport.extractNames(annotation)
+    fun extractNames(annotation: com.intellij.psi.PsiAnnotation?): List<String> = ArmeriaRouteAnnotationSupport.extractNames(annotation)
 
-    fun extractStrings(value: PsiAnnotationMemberValue?): List<String> =
-        ArmeriaRouteAnnotationSupport.extractStrings(value)
+    fun extractStrings(value: PsiAnnotationMemberValue?): List<String> = ArmeriaRouteAnnotationSupport.extractStrings(value)
 
-    fun renderMemberValue(value: PsiAnnotationMemberValue?): String =
-        ArmeriaRouteAnnotationSupport.renderMemberValue(value)
+    fun renderMemberValue(value: PsiAnnotationMemberValue?): String = ArmeriaRouteAnnotationSupport.renderMemberValue(value)
 
-    fun extractPathAnnotations(method: PsiMethod): List<String> =
-        ArmeriaRouteAnnotationSupport.extractPathAnnotations(method)
+    fun extractPathAnnotations(method: PsiMethod): List<String> = ArmeriaRouteAnnotationSupport.extractPathAnnotations(method)
 
-    internal fun parsePathType(rawPath: String): Pair<PathType, String> =
-        ArmeriaRouteAnnotationSupport.parsePathType(rawPath)
+    internal fun parsePathType(rawPath: String): Pair<PathType, String> = ArmeriaRouteAnnotationSupport.parsePathType(rawPath)
 
-    fun combinePaths(prefix: String, path: String): String {
+    fun combinePaths(
+        prefix: String,
+        path: String,
+    ): String {
         val normalizedPrefix = normalizePath(prefix)
         val normalizedPath = normalizePath(path)
         if (normalizedPrefix == "/") {
@@ -89,7 +86,10 @@ object ArmeriaRouteSupport {
         return if (candidate.startsWith("/")) candidate else "/$candidate"
     }
 
-    fun formatAnnotatedHandlerPath(classPrefix: String, rawPath: String): String {
+    fun formatAnnotatedHandlerPath(
+        classPrefix: String,
+        rawPath: String,
+    ): String {
         val (handlerPathType, handlerPath) = parsePathType(rawPath.ifBlank { "/" })
         val (prefixPathType, prefixPath) = parsePathType(classPrefix.ifBlank { "/" })
         val combinedBody = combineAnnotatedPathBodies(prefixPathType, prefixPath, handlerPathType, handlerPath)
@@ -102,7 +102,10 @@ object ArmeriaRouteSupport {
         }
     }
 
-    private fun annotatedPathDisplayType(prefixPathType: PathType, handlerPathType: PathType): PathType {
+    private fun annotatedPathDisplayType(
+        prefixPathType: PathType,
+        handlerPathType: PathType,
+    ): PathType {
         if (prefixPathType == PathType.REGEX || handlerPathType == PathType.REGEX) {
             return PathType.REGEX
         }
@@ -133,7 +136,10 @@ object ArmeriaRouteSupport {
         return combinePaths(prefixPath, handlerPath)
     }
 
-    private fun joinRegexPathBodies(prefix: String, handler: String): String {
+    private fun joinRegexPathBodies(
+        prefix: String,
+        handler: String,
+    ): String {
         val prefixBody = prefix.trim().removeSuffix("$")
         val trimmedHandler = handler.trim()
         val handlerHadStartAnchor = trimmedHandler.startsWith("^")
@@ -146,7 +152,10 @@ object ArmeriaRouteSupport {
         }
     }
 
-    fun decoratorPathPatternAppliesToRoute(pattern: String, routePath: String): Boolean {
+    fun decoratorPathPatternAppliesToRoute(
+        pattern: String,
+        routePath: String,
+    ): Boolean {
         val normalizedPattern = normalizePath(pattern.trim().trim('"'))
         val normalizedRoute = normalizePath(routePath)
         if (normalizedPattern.endsWith("/**")) {
@@ -167,26 +176,28 @@ object ArmeriaRouteSupport {
         return normalizedRoute == normalizedPattern
     }
 
-    fun isSpringBootArmeriaAvailable(psiFacade: JavaPsiFacade, scope: GlobalSearchScope): Boolean =
-        ArmeriaServerBuilderSupport.isSpringBootArmeriaAvailable(psiFacade, scope)
+    fun isSpringBootArmeriaAvailable(
+        psiFacade: JavaPsiFacade,
+        scope: GlobalSearchScope,
+    ): Boolean = ArmeriaServerBuilderSupport.isSpringBootArmeriaAvailable(psiFacade, scope)
 
-    fun isArmeriaServerBeanReturnType(method: PsiMethod, scope: GlobalSearchScope): Boolean =
-        ArmeriaServerBuilderSupport.isArmeriaServerBeanReturnType(method, scope)
+    fun isArmeriaServerBeanReturnType(
+        method: PsiMethod,
+        scope: GlobalSearchScope,
+    ): Boolean = ArmeriaServerBuilderSupport.isArmeriaServerBeanReturnType(method, scope)
 
-    fun isArmeriaServerBeanReturnType(returnType: String): Boolean =
-        ArmeriaServerBuilderSupport.isArmeriaServerBeanReturnType(returnType)
+    fun isArmeriaServerBeanReturnType(returnType: String): Boolean = ArmeriaServerBuilderSupport.isArmeriaServerBeanReturnType(returnType)
 
-    fun isServerBuilderType(typeText: String): Boolean =
-        ArmeriaServerBuilderSupport.isServerBuilderType(typeText)
+    fun isServerBuilderType(typeText: String): Boolean = ArmeriaServerBuilderSupport.isServerBuilderType(typeText)
 
-    fun evaluateJavaStringConstant(variable: PsiVariable): String? =
-        ArmeriaServerBuilderSupport.evaluateJavaStringConstant(variable)
+    fun evaluateJavaStringConstant(variable: PsiVariable): String? = ArmeriaServerBuilderSupport.evaluateJavaStringConstant(variable)
 
-    fun extractJavaStringConstant(expression: PsiExpression?): String? =
-        ArmeriaServerBuilderSupport.extractJavaStringConstant(expression)
+    fun extractJavaStringConstant(expression: PsiExpression?): String? = ArmeriaServerBuilderSupport.extractJavaStringConstant(expression)
 
-    fun referencesArmeriaInText(contents: CharSequence, scanLimit: Int = ARMERIA_HEADER_SCAN_LIMIT): Boolean =
-        ArmeriaRouteContentScan.referencesArmeriaInText(contents, scanLimit)
+    fun referencesArmeriaInText(
+        contents: CharSequence,
+        scanLimit: Int = ARMERIA_HEADER_SCAN_LIMIT,
+    ): Boolean = ArmeriaRouteContentScan.referencesArmeriaInText(contents, scanLimit)
 
     fun referencesArmeriaKotlinContentInText(contents: CharSequence): Boolean =
         ArmeriaRouteContentScan.referencesArmeriaKotlinContentInText(contents)
@@ -194,14 +205,15 @@ object ArmeriaRouteSupport {
     fun mayReferenceSpringBootArmeriaInText(contents: CharSequence): Boolean =
         ArmeriaRouteContentScan.mayReferenceSpringBootArmeriaInText(contents)
 
-    fun looksLikeServerBuilderReceiverText(text: String): Boolean =
-        ArmeriaRouteContentScan.looksLikeServerBuilderReceiverText(text)
+    fun looksLikeServerBuilderReceiverText(text: String): Boolean = ArmeriaRouteContentScan.looksLikeServerBuilderReceiverText(text)
 
-    fun looksLikeRouteDecoratorReceiverText(text: String): Boolean =
-        ArmeriaRouteContentScan.looksLikeRouteDecoratorReceiverText(text)
+    fun looksLikeRouteDecoratorReceiverText(text: String): Boolean = ArmeriaRouteContentScan.looksLikeRouteDecoratorReceiverText(text)
 
-    fun registrationKey(virtualFilePath: String, textRange: TextRange, methodName: String): String =
-        "$virtualFilePath:${textRange.startOffset}:${textRange.endOffset}:$methodName"
+    fun registrationKey(
+        virtualFilePath: String,
+        textRange: TextRange,
+        methodName: String,
+    ): String = "$virtualFilePath:${textRange.startOffset}:${textRange.endOffset}:$methodName"
 
     fun referencesArmeriaApplicationInSource(contents: CharSequence): Boolean =
         ArmeriaRouteContentScan.referencesArmeriaApplicationInSource(contents)

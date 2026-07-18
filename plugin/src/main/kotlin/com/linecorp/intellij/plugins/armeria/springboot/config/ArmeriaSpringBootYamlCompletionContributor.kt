@@ -41,8 +41,9 @@ class ArmeriaSpringBootYamlCompletionContributor : CompletionContributor() {
                     }
                     val seenInsertTexts = linkedSetOf<String>()
                     for (suggestion in ArmeriaSpringBootConfigKeys.COMPLETION_SUGGESTIONS) {
-                        val insertText = ArmeriaSpringBootConfigKeys.completionInsertText(completionPath, suggestion)
-                            ?: continue
+                        val insertText =
+                            ArmeriaSpringBootConfigKeys.completionInsertText(completionPath, suggestion)
+                                ?: continue
                         if (!seenInsertTexts.add(insertText)) {
                             continue
                         }
@@ -87,10 +88,11 @@ class ArmeriaSpringBootYamlCompletionContributor : CompletionContributor() {
                             val seqKey = sequence?.parent as? YAMLKeyValue
                             if (index >= 0 && seqKey?.keyText != null) {
                                 segments.add(0, "${seqKey.keyText}[$index]")
-                                current = when (val seqParent = seqKey.parent) {
-                                    is YAMLMapping -> seqParent.parent as? YAMLKeyValue
-                                    else -> null
-                                }
+                                current =
+                                    when (val seqParent = seqKey.parent) {
+                                        is YAMLMapping -> seqParent.parent as? YAMLKeyValue
+                                        else -> null
+                                    }
                             } else {
                                 current = null
                             }

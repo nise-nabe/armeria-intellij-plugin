@@ -5,7 +5,10 @@ plugins {
 dependencies {
     implementation(project(":plugin-shared"))
     intellijPlatform {
-        intellijIdeaUltimate(libs.versions.idea.platform.get())
+        intellijIdeaUltimate(
+            libs.versions.idea.platform
+                .get(),
+        )
         bundledPlugin("com.intellij.java")
         bundledPlugin("org.jetbrains.plugins.gradle")
         bundledPlugin("org.jetbrains.kotlin")

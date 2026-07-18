@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
-
     override fun registerArmeriaStubs() {
         registerKotlinRouteCollectorStubs()
     }
@@ -39,6 +38,7 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         assertNotNull(serviceRoute)
         assertEquals("example.HelloService", serviceRoute!!.target)
     }
+
     fun testCollectServiceRegistration() {
         myFixture.configureByText(
             "Main.kt",
@@ -76,6 +76,7 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         assertEquals("/api", serviceRoute!!.path)
         assertEquals("example.HelloService", serviceRoute.target)
     }
+
     fun testCollectServiceRegistration_requestTimeoutOnBuilderChain() {
         myFixture.addClass(
             """
@@ -117,6 +118,7 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         assertEquals(listOf("Request timeout: Duration.ofSeconds(30)"), route.timeoutHints)
         assertTrue(route.executionHints.isEmpty())
     }
+
     fun testCollectGrpcServiceRegistrationWithBuild() {
         myFixture.configureByText(
             "Main.kt",
@@ -149,6 +151,7 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         assertEquals("example.HelloGrpcService", grpcRoute!!.target)
         assertFalse(grpcRoute.target.equals("build", ignoreCase = true))
     }
+
     fun testCollectDocServiceRegistrationWithBuild() {
         myFixture.configureByText(
             "Main.kt",
@@ -172,6 +175,7 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         assertNotNull(docRoute)
         assertEquals("com.linecorp.armeria.server.docs.DocService", docRoute!!.target)
     }
+
     fun testCollectUnresolvedNewExpressionTarget() {
         myFixture.configureByText(
             "Main.kt",
@@ -194,6 +198,7 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         assertNotNull(serviceRoute)
         assertTrue(serviceRoute!!.targetUnresolved)
     }
+
     fun testCollectServiceRegistrationWithNamedArgumentsReversedOrder() {
         myFixture.configureByText(
             "Main.kt",
@@ -224,6 +229,7 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         assertNotNull(serviceRoute)
         assertEquals("example.HelloService", serviceRoute!!.target)
     }
+
     fun testCollectServiceRegistrationInApplyBlock() {
         myFixture.configureByText(
             "Main.kt",
@@ -254,6 +260,7 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         assertNotNull(serviceRoute)
         assertEquals("example.HelloService", serviceRoute!!.target)
     }
+
     fun testCollectServiceRegistrationInAlsoBlockWithExplicitReceiver() {
         myFixture.configureByText(
             "Main.kt",
@@ -284,6 +291,7 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         assertNotNull(serviceRoute)
         assertEquals("example.HelloService", serviceRoute!!.target)
     }
+
     fun testCollectServiceRegistrationWithConstValPath() {
         myFixture.configureByText(
             "Main.kt",

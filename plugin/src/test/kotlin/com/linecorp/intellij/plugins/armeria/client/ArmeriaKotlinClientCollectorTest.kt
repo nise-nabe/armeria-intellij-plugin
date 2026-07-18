@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.client
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaClientFixtureTestBase
 
 class ArmeriaKotlinClientCollectorTest : ArmeriaClientFixtureTestBase() {
-
     fun testCollectWebClientOfFromKotlin() {
         myFixture.configureByText(
             "Main.kt",
@@ -367,5 +366,4 @@ class ArmeriaKotlinClientCollectorTest : ArmeriaClientFixtureTestBase() {
         assertEquals("WebClient transport", endpoint.transport)
         assertEquals(listOf("Logging"), endpoint.decorators)
     }
-
 }

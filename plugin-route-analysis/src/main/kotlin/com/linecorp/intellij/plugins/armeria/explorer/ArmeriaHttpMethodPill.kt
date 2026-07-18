@@ -10,21 +10,22 @@ import java.awt.Color
 object ArmeriaHttpMethodPill {
     private val STANDARD_HTTP_METHODS: Set<String> = ArmeriaRouteSupport.routeAnnotations.values.toSet()
 
-    fun pillLabel(route: ArmeriaRoute): String = when (route.routeMatch) {
-        RouteMatch.ANNOTATED_HTTP -> route.httpMethod
-        RouteMatch.ANNOTATED_SERVICE -> "ANN"
-        RouteMatch.SERVICE -> "ALL"
-        RouteMatch.SERVICE_UNDER -> "PRE"
-        RouteMatch.FILE_SERVICE -> "FIL"
-        RouteMatch.HEALTH_CHECK -> "HLT"
-        RouteMatch.VIRTUAL_HOST -> "VHS"
-        RouteMatch.ROUTE_DECORATOR -> "DEC"
-        RouteMatch.ROUTE_FLUENT -> route.httpMethod.ifBlank { "ALL" }
-        RouteMatch.DECORATOR_UNDER -> "UND"
-        RouteMatch.DELEGATED_SPRING_MVC -> route.httpMethod.ifBlank { "MVC" }
-        RouteMatch.NON_HTTP -> route.protocol.uppercase()
-        RouteMatch.RUNTIME, RouteMatch.CONFIG -> route.httpMethod
-    }
+    fun pillLabel(route: ArmeriaRoute): String =
+        when (route.routeMatch) {
+            RouteMatch.ANNOTATED_HTTP -> route.httpMethod
+            RouteMatch.ANNOTATED_SERVICE -> "ANN"
+            RouteMatch.SERVICE -> "ALL"
+            RouteMatch.SERVICE_UNDER -> "PRE"
+            RouteMatch.FILE_SERVICE -> "FIL"
+            RouteMatch.HEALTH_CHECK -> "HLT"
+            RouteMatch.VIRTUAL_HOST -> "VHS"
+            RouteMatch.ROUTE_DECORATOR -> "DEC"
+            RouteMatch.ROUTE_FLUENT -> route.httpMethod.ifBlank { "ALL" }
+            RouteMatch.DECORATOR_UNDER -> "UND"
+            RouteMatch.DELEGATED_SPRING_MVC -> route.httpMethod.ifBlank { "MVC" }
+            RouteMatch.NON_HTTP -> route.protocol.uppercase()
+            RouteMatch.RUNTIME, RouteMatch.CONFIG -> route.httpMethod
+        }
 
     fun pillText(label: String): String = " $label "
 
@@ -40,21 +41,25 @@ object ArmeriaHttpMethodPill {
 
     fun isStandardHttpMethod(label: String): Boolean = label in STANDARD_HTTP_METHODS
 
-    private fun methodColors(method: String): PillColors? = when (method) {
-        "GET" -> PillColors(GET_FOREGROUND, GET_BACKGROUND)
-        "POST" -> PillColors(POST_FOREGROUND, POST_BACKGROUND)
-        "PUT" -> PillColors(PUT_FOREGROUND, PUT_BACKGROUND)
-        "DELETE" -> PillColors(DELETE_FOREGROUND, DELETE_BACKGROUND)
-        "PATCH" -> PillColors(PATCH_FOREGROUND, PATCH_BACKGROUND)
-        "HEAD" -> PillColors(HEAD_FOREGROUND, HEAD_BACKGROUND)
-        "OPTIONS" -> PillColors(OPTIONS_FOREGROUND, OPTIONS_BACKGROUND)
-        "TRACE" -> PillColors(TRACE_FOREGROUND, TRACE_BACKGROUND)
-        else -> null
-    }
+    private fun methodColors(method: String): PillColors? =
+        when (method) {
+            "GET" -> PillColors(GET_FOREGROUND, GET_BACKGROUND)
+            "POST" -> PillColors(POST_FOREGROUND, POST_BACKGROUND)
+            "PUT" -> PillColors(PUT_FOREGROUND, PUT_BACKGROUND)
+            "DELETE" -> PillColors(DELETE_FOREGROUND, DELETE_BACKGROUND)
+            "PATCH" -> PillColors(PATCH_FOREGROUND, PATCH_BACKGROUND)
+            "HEAD" -> PillColors(HEAD_FOREGROUND, HEAD_BACKGROUND)
+            "OPTIONS" -> PillColors(OPTIONS_FOREGROUND, OPTIONS_BACKGROUND)
+            "TRACE" -> PillColors(TRACE_FOREGROUND, TRACE_BACKGROUND)
+            else -> null
+        }
 
     private fun neutralColors(): PillColors = PillColors(NEUTRAL_FOREGROUND, NEUTRAL_BACKGROUND)
 
-    private data class PillColors(val foreground: Color, val background: Color)
+    private data class PillColors(
+        val foreground: Color,
+        val background: Color,
+    )
 
     // Swagger UI-like palette (fixed colors aligned with HTTP method tags in Services)
     private val GET_FOREGROUND = Color(0xFF, 0xFF, 0xFF)

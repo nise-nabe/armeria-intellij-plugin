@@ -22,24 +22,23 @@ import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtValueArgument
 
 internal object ArmeriaKotlinRouteNavigationSupport {
-    fun annotatedRouteHandler(element: PsiElement): PsiElement? =
-        annotatedKotlinRouteFunction(element)
+    fun annotatedRouteHandler(element: PsiElement): PsiElement? = annotatedKotlinRouteFunction(element)
 
     fun annotatedKotlinRouteFunction(element: PsiElement): PsiElement? {
         val function = kotlinFunctionFromElement(element) ?: return null
         return function.takeIf { kotlinMethodRoute(it) != null }
     }
 
-    fun httpMethod(handler: PsiElement): String? =
-        (handler as? KtNamedFunction)?.let { kotlinMethodRoute(it)?.httpMethod }
+    fun httpMethod(handler: PsiElement): String? = (handler as? KtNamedFunction)?.let { kotlinMethodRoute(it)?.httpMethod }
 
     fun routePath(handler: PsiElement): String =
         (handler as? KtNamedFunction)?.let { kotlinMethodRoute(it)?.paths?.joinToString(", ") }.orEmpty()
 
     fun relatedRegistrations(handler: PsiElement): List<PsiElement> {
         val function = handler as? KtNamedFunction ?: return emptyList()
-        val serviceClass = PsiTreeUtil.getParentOfType(function, KtClassOrObject::class.java)?.toLightClass()
-            ?: return emptyList()
+        val serviceClass =
+            PsiTreeUtil.getParentOfType(function, KtClassOrObject::class.java)?.toLightClass()
+                ?: return emptyList()
         return ArmeriaRouteNavigationSupport.findRegistrationsForServiceClass(serviceClass, function.project)
     }
 
@@ -66,30 +65,33 @@ internal object ArmeriaKotlinRouteNavigationSupport {
         return kotlinFunction.takeIf { kotlinMethodRoute(it) != null }
     }
 
-    fun resolvedClassFromReference(expression: PsiElement): PsiClass? = when (expression) {
-        is KtNameReferenceExpression -> classFromResolved(expression.references.firstOrNull()?.resolve())
-        else -> null
-    }
+    fun resolvedClassFromReference(expression: PsiElement): PsiClass? =
+        when (expression) {
+            is KtNameReferenceExpression -> classFromResolved(expression.references.firstOrNull()?.resolve())
+            else -> null
+        }
 
-    fun classFromResolved(resolved: PsiElement?): PsiClass? = when (resolved) {
-        is PsiClass -> resolved
-        is PsiMethod -> resolved.takeIf { it.isConstructor }?.containingClass
-        is PsiVariable -> (resolved.type as? com.intellij.psi.PsiClassType)?.resolve()
-        is KtClassOrObject -> resolved.toLightClass()
-        is KtConstructor<*> -> resolved.getContainingClassOrObject().toLightClass()
-        is KtProperty -> classFromKotlinProperty(resolved)
-        else -> null
-    }
+    fun classFromResolved(resolved: PsiElement?): PsiClass? =
+        when (resolved) {
+            is PsiClass -> resolved
+            is PsiMethod -> resolved.takeIf { it.isConstructor }?.containingClass
+            is PsiVariable -> (resolved.type as? com.intellij.psi.PsiClassType)?.resolve()
+            is KtClassOrObject -> resolved.toLightClass()
+            is KtConstructor<*> -> resolved.getContainingClassOrObject().toLightClass()
+            is KtProperty -> classFromKotlinProperty(resolved)
+            else -> null
+        }
 
     fun resolveServiceClassFromImplementation(expression: PsiElement): PsiClass? {
         resolvedClassFromReference(expression)?.let { return it }
         when (expression) {
             is KtCallExpression -> {
-                val reference = when (val callee = expression.calleeExpression) {
-                    is KtNameReferenceExpression -> callee
-                    is KtDotQualifiedExpression -> callee.selectorExpression as? KtNameReferenceExpression
-                    else -> null
-                }
+                val reference =
+                    when (val callee = expression.calleeExpression) {
+                        is KtNameReferenceExpression -> callee
+                        is KtDotQualifiedExpression -> callee.selectorExpression as? KtNameReferenceExpression
+                        else -> null
+                    }
                 classFromResolved(reference?.references?.firstOrNull()?.resolve())?.let { return it }
             }
             is KtProperty -> return classFromKotlinProperty(expression)
@@ -127,16 +129,18 @@ internal object ArmeriaKotlinRouteNavigationSupport {
         }
     }
 
-    private fun kotlinFunctionFromElement(element: PsiElement): KtNamedFunction? = when (element) {
-        is KtNamedFunction -> element
-        else -> PsiTreeUtil.getParentOfType(element, KtNamedFunction::class.java, false)
-    }
+    private fun kotlinFunctionFromElement(element: PsiElement): KtNamedFunction? =
+        when (element) {
+            is KtNamedFunction -> element
+            else -> PsiTreeUtil.getParentOfType(element, KtNamedFunction::class.java, false)
+        }
 
     private fun kotlinRegistrationCallFromReference(start: PsiElement): KtCallExpression? {
         var current: PsiElement? = start
         while (current != null) {
-            val call = PsiTreeUtil.getParentOfType(current, KtCallExpression::class.java, false)
-                ?: break
+            val call =
+                PsiTreeUtil.getParentOfType(current, KtCallExpression::class.java, false)
+                    ?: break
             if (isKotlinServiceRegistrationCall(call)) {
                 return call
             }
@@ -149,7 +153,8 @@ internal object ArmeriaKotlinRouteNavigationSupport {
         if (context is KtCallExpression && isKotlinServiceRegistrationCall(context)) {
             return context
         }
-        return PsiTreeUtil.getParentOfType(context, KtCallExpression::class.java)
+        return PsiTreeUtil
+            .getParentOfType(context, KtCallExpression::class.java)
             ?.takeIf(::isKotlinServiceRegistrationCall)
     }
 
@@ -171,11 +176,12 @@ internal object ArmeriaKotlinRouteNavigationSupport {
         }
         val initializer = property.initializer ?: return null
         if (initializer is KtCallExpression) {
-            val reference = when (val callee = initializer.calleeExpression) {
-                is KtNameReferenceExpression -> callee
-                is KtDotQualifiedExpression -> callee.selectorExpression as? KtNameReferenceExpression
-                else -> null
-            }
+            val reference =
+                when (val callee = initializer.calleeExpression) {
+                    is KtNameReferenceExpression -> callee
+                    is KtDotQualifiedExpression -> callee.selectorExpression as? KtNameReferenceExpression
+                    else -> null
+                }
             classFromResolved(reference?.references?.firstOrNull()?.resolve())?.let { return it }
         }
         return ArmeriaRouteNavigationSupport.findClassByTarget(
@@ -184,21 +190,21 @@ internal object ArmeriaKotlinRouteNavigationSupport {
         )
     }
 
-    private fun extractKotlinRouteTarget(expression: KtExpression): String {
-        return when (expression) {
+    private fun extractKotlinRouteTarget(expression: KtExpression): String =
+        when (expression) {
             is KtCallExpression -> {
                 val callee = expression.calleeExpression
-                val reference = when (callee) {
-                    is KtNameReferenceExpression -> callee
-                    is KtDotQualifiedExpression -> callee.selectorExpression as? KtNameReferenceExpression
-                    else -> null
-                }
+                val reference =
+                    when (callee) {
+                        is KtNameReferenceExpression -> callee
+                        is KtDotQualifiedExpression -> callee.selectorExpression as? KtNameReferenceExpression
+                        else -> null
+                    }
                 reference?.getReferencedName() ?: expression.text.trim()
             }
             is KtNameReferenceExpression -> expression.getReferencedName()
             else -> expression.text.trim()
         }
-    }
 
     private fun kotlinServiceImplementationExpression(call: KtCallExpression): KtExpression? {
         val arguments = call.valueArguments
@@ -217,25 +223,24 @@ internal object ArmeriaKotlinRouteNavigationSupport {
         parameterName: String,
         positionalIndex: Int,
     ): KtExpression? {
-        arguments.firstOrNull { it.getArgumentName()?.asName?.identifier == parameterName }
+        arguments
+            .firstOrNull { it.getArgumentName()?.asName?.identifier == parameterName }
             ?.getArgumentExpression()
             ?.let { return it }
         return arguments.getOrNull(positionalIndex)?.getArgumentExpression()
     }
 
-    private fun kotlinCallName(call: KtCallExpression): String? {
-        return when (val callee = call.calleeExpression) {
+    private fun kotlinCallName(call: KtCallExpression): String? =
+        when (val callee = call.calleeExpression) {
             is KtDotQualifiedExpression -> callee.selectorExpression?.text
             is KtNameReferenceExpression -> callee.text
             else -> callee?.text
         }
-    }
 
-    private fun kotlinCallReferenceNameElement(call: KtCallExpression): PsiElement? {
-        return when (val callee = call.calleeExpression) {
+    private fun kotlinCallReferenceNameElement(call: KtCallExpression): PsiElement? =
+        when (val callee = call.calleeExpression) {
             is KtDotQualifiedExpression -> callee.selectorExpression
             is KtNameReferenceExpression -> callee
             else -> null
         }
-    }
 }

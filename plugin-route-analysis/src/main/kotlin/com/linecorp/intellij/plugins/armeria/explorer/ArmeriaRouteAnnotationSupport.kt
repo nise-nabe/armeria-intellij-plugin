@@ -24,16 +24,17 @@ internal object ArmeriaRouteAnnotationSupport {
     const val PATCH_ANNOTATION = "com.linecorp.armeria.server.annotation.Patch"
     const val TRACE_ANNOTATION = "com.linecorp.armeria.server.annotation.Trace"
 
-    val routeAnnotations = mapOf(
-        GET_ANNOTATION to "GET",
-        HEAD_ANNOTATION to "HEAD",
-        POST_ANNOTATION to "POST",
-        PUT_ANNOTATION to "PUT",
-        DELETE_ANNOTATION to "DELETE",
-        OPTIONS_ANNOTATION to "OPTIONS",
-        PATCH_ANNOTATION to "PATCH",
-        TRACE_ANNOTATION to "TRACE",
-    )
+    val routeAnnotations =
+        mapOf(
+            GET_ANNOTATION to "GET",
+            HEAD_ANNOTATION to "HEAD",
+            POST_ANNOTATION to "POST",
+            PUT_ANNOTATION to "PUT",
+            DELETE_ANNOTATION to "DELETE",
+            OPTIONS_ANNOTATION to "OPTIONS",
+            PATCH_ANNOTATION to "PATCH",
+            TRACE_ANNOTATION to "TRACE",
+        )
 
     fun findRouteAnnotation(method: PsiMethod): Pair<PsiAnnotation, String>? {
         return method.modifierList.annotations.firstNotNullOfOrNull { candidate ->
@@ -66,35 +67,37 @@ internal object ArmeriaRouteAnnotationSupport {
             return emptyList()
         }
         val value = annotation.findDeclaredAttributeValue("value")
-        val names = when (value) {
-            is PsiArrayInitializerMemberValue -> {
-                extractStrings(value).ifEmpty {
-                    value.initializers.map(::renderMemberValue)
+        val names =
+            when (value) {
+                is PsiArrayInitializerMemberValue -> {
+                    extractStrings(value).ifEmpty {
+                        value.initializers.map(::renderMemberValue)
+                    }
                 }
+                else -> extractStrings(value).ifEmpty { listOf(renderMemberValue(value)) }
             }
-            else -> extractStrings(value).ifEmpty { listOf(renderMemberValue(value)) }
-        }
         return names.mapNotNull { it.takeIf(String::isNotBlank) }
     }
 
-    fun extractStrings(value: PsiAnnotationMemberValue?): List<String> {
-        return when (value) {
+    fun extractStrings(value: PsiAnnotationMemberValue?): List<String> =
+        when (value) {
             null -> emptyList()
             is PsiLiteralExpression -> listOfNotNull(value.value as? String)
             is PsiArrayInitializerMemberValue -> value.initializers.flatMap(::extractStrings)
             else -> evaluateConstant(value)?.let { listOf(it) } ?: emptyList()
         }
-    }
 
-    fun renderMemberValue(value: PsiAnnotationMemberValue?): String {
-        return value?.text?.removePrefix("\"")?.removeSuffix("\"").orEmpty()
-    }
+    fun renderMemberValue(value: PsiAnnotationMemberValue?): String =
+        value
+            ?.text
+            ?.removePrefix("\"")
+            ?.removeSuffix("\"")
+            .orEmpty()
 
-    fun extractPathAnnotations(method: PsiMethod): List<String> {
-        return method.annotations
+    fun extractPathAnnotations(method: PsiMethod): List<String> =
+        method.annotations
             .filter { it.qualifiedName == PATH_ANNOTATION }
             .flatMap(::extractPaths)
-    }
 
     fun parsePathType(rawPath: String): Pair<PathType, String> {
         val trimmed = rawPath.trim()

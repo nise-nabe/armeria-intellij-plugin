@@ -19,7 +19,10 @@ internal class NavigateToConflictingRouteQuickFix(
 
     override fun startInWriteAction(): Boolean = false
 
-    override fun applyFix(project: Project, descriptor: ProblemDescriptor) {
+    override fun applyFix(
+        project: Project,
+        descriptor: ProblemDescriptor,
+    ) {
         ArmeriaRouteNavigation.navigateToPointer(project, targetPointer)
     }
 
@@ -28,7 +31,6 @@ internal class NavigateToConflictingRouteQuickFix(
             conflicts
                 .map { conflict ->
                     NavigateToConflictingRouteQuickFix(conflict.navigationLabel, conflict.pointer)
-                }
-                .toTypedArray()
+                }.toTypedArray()
     }
 }

@@ -5,7 +5,7 @@ import com.linecorp.intellij.plugins.armeria.ArmeriaIcons
 import com.linecorp.intellij.plugins.armeria.message
 import javax.swing.Icon
 
-class ArmeriaModuleType: ModuleType<ArmeriaModuleBuilder>(ARMERIA_MODULE) {
+class ArmeriaModuleType : ModuleType<ArmeriaModuleBuilder>(ARMERIA_MODULE) {
     override fun createModuleBuilder(): ArmeriaModuleBuilder = ArmeriaModuleBuilder()
 
     override fun getName() = message("module.type.armeria.name")

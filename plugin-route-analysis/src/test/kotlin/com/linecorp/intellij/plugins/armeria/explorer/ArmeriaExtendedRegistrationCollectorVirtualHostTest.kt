@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaExtendedRegistrationCollectorVirtualHostTest : ArmeriaFixtureTestBase() {
-
     override fun registerArmeriaStubs() {
         registerExtendedRegistrationCollectorStubs()
     }
@@ -33,7 +32,6 @@ class ArmeriaExtendedRegistrationCollectorVirtualHostTest : ArmeriaFixtureTestBa
         assertEquals("api.example.com", virtualHostRoute.virtualHostName)
     }
 
-
     fun testCollectChainedVirtualHostDoesNotAnnotatePrecedingServiceRoute() {
         myFixture.configureByText(
             "Main.java",
@@ -61,7 +59,6 @@ class ArmeriaExtendedRegistrationCollectorVirtualHostTest : ArmeriaFixtureTestBa
         assertEquals("", serviceRoute.virtualHostName)
     }
 
-
     fun testCollectVirtualHostThenServiceAnnotatesServiceRoute() {
         myFixture.configureByText(
             "Main.java",
@@ -88,7 +85,6 @@ class ArmeriaExtendedRegistrationCollectorVirtualHostTest : ArmeriaFixtureTestBa
         assertEquals("/api", serviceRoute!!.path)
         assertEquals("api.example.com", serviceRoute.virtualHostName)
     }
-
 
     fun testCollectVirtualHostChainAnnotatesOnlyPostVirtualHostService() {
         myFixture.configureByText(
@@ -120,7 +116,6 @@ class ArmeriaExtendedRegistrationCollectorVirtualHostTest : ArmeriaFixtureTestBa
         assertEquals("api.example.com", hostedRoute!!.virtualHostName)
     }
 
-
     fun testCollectNestedVirtualHostLambdaUsesInnerHostname() {
         myFixture.configureByText(
             "Main.java",
@@ -149,7 +144,6 @@ class ArmeriaExtendedRegistrationCollectorVirtualHostTest : ArmeriaFixtureTestBa
         assertEquals("inner.example.com", serviceRoute.virtualHostName)
     }
 
-
     fun testCollectVirtualHostLambdaAnnotatesFileService() {
         myFixture.configureByText(
             "Main.java",
@@ -175,6 +169,4 @@ class ArmeriaExtendedRegistrationCollectorVirtualHostTest : ArmeriaFixtureTestBa
         assertEquals("/files/", fileRoute!!.path)
         assertEquals("api.example.com", fileRoute.virtualHostName)
     }
-
-
 }

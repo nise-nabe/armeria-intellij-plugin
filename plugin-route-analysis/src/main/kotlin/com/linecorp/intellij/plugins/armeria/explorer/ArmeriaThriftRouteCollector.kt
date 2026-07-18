@@ -15,14 +15,20 @@ internal object ArmeriaThriftRouteCollector {
     private val METHOD_PATTERN = Regex("""^\s*[\w.<>,\s]+\s+(\w+)\s*\(""", RegexOption.MULTILINE)
     private val THRIFT_KEYWORDS = setOf("oneway", "throws", "extends", "performs")
 
-    fun collect(project: Project, scope: GlobalSearchScope, routes: MutableList<ArmeriaRoute>) {
+    fun collect(
+        project: Project,
+        scope: GlobalSearchScope,
+        routes: MutableList<ArmeriaRoute>,
+    ) {
         if (!ArmeriaIdlRouteSupport.isThriftOnClasspath(project, scope)) {
             return
         }
         val seenThriftRoutes = mutableSetOf<String>()
         // FilenameIndex iteration order is unstable; sort so first-wins dedupe is deterministic.
-        val virtualFiles = FilenameIndex.getAllFilesByExt(project, "thrift", scope)
-            .sortedWith(compareBy({ it.path }, { it.name }))
+        val virtualFiles =
+            FilenameIndex
+                .getAllFilesByExt(project, "thrift", scope)
+                .sortedWith(compareBy({ it.path }, { it.name }))
         val psiManager = PsiManager.getInstance(project)
         for (virtualFile in virtualFiles) {
             val psiFile = psiManager.findFile(virtualFile) ?: continue
@@ -34,14 +40,15 @@ internal object ArmeriaThriftRouteCollector {
                 if (!seenThriftRoutes.add(dedupeKey)) {
                     continue
                 }
-                routes += ArmeriaRoute.create(
-                    element = psiFile,
-                    protocol = RouteProtocol.THRIFT.presentableName(),
-                    httpMethod = "",
-                    path = path,
-                    target = target,
-                    routeMatch = RouteMatch.NON_HTTP,
-                )
+                routes +=
+                    ArmeriaRoute.create(
+                        element = psiFile,
+                        protocol = RouteProtocol.THRIFT.presentableName(),
+                        httpMethod = "",
+                        path = path,
+                        target = target,
+                        routeMatch = RouteMatch.NON_HTTP,
+                    )
             }
         }
     }
@@ -64,7 +71,10 @@ internal object ArmeriaThriftRouteCollector {
         return operations
     }
 
-    private fun isOnewayMethod(body: String, matchStart: Int): Boolean {
+    private fun isOnewayMethod(
+        body: String,
+        matchStart: Int,
+    ): Boolean {
         val lineStart = body.lastIndexOf('\n', matchStart - 1).let { if (it < 0) 0 else it + 1 }
         val lineEnd = body.indexOf('\n', matchStart).let { if (it < 0) body.length else it }
         val line = body.substring(lineStart, lineEnd)

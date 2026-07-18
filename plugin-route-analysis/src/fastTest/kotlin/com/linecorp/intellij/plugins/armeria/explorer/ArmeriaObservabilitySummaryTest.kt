@@ -14,15 +14,17 @@ import org.junit.Test
 class ArmeriaObservabilitySummaryTest {
     @Test
     fun summarize_listsMatchedDecoratorsAndHealthCheck() {
-        val routes = listOf(
-            route(
-                decorators = listOf(
-                    message("route.explorer.decorator.logging"),
-                    message("route.explorer.decorator.brave"),
+        val routes =
+            listOf(
+                route(
+                    decorators =
+                        listOf(
+                            message("route.explorer.decorator.logging"),
+                            message("route.explorer.decorator.brave"),
+                        ),
                 ),
-            ),
-            route(routeMatch = RouteMatch.HEALTH_CHECK, path = "/internal/healthcheck"),
-        )
+                route(routeMatch = RouteMatch.HEALTH_CHECK, path = "/internal/healthcheck"),
+            )
 
         val summary = ArmeriaObservabilitySummary.summarize(routes)
 
@@ -59,14 +61,15 @@ class ArmeriaObservabilitySummaryTest {
 
     @Test
     fun summarize_omitsDocServiceEvenWhenDecorated() {
-        val routes = listOf(
-            route(
-                isDocService = true,
-                routeMatch = RouteMatch.NON_HTTP,
-                protocol = "gRPC",
-                decorators = listOf(message("route.explorer.decorator.logging")),
-            ),
-        )
+        val routes =
+            listOf(
+                route(
+                    isDocService = true,
+                    routeMatch = RouteMatch.NON_HTTP,
+                    protocol = "gRPC",
+                    decorators = listOf(message("route.explorer.decorator.logging")),
+                ),
+            )
 
         assertEquals("", ArmeriaObservabilitySummary.summarize(routes))
     }
@@ -84,8 +87,8 @@ class ArmeriaObservabilitySummaryTest {
         protocol: String = "HTTP",
         routeMatch: RouteMatch = RouteMatch.SERVICE,
         path: String = "/api",
-    ): ArmeriaRoute {
-        return ArmeriaRoute(
+    ): ArmeriaRoute =
+        ArmeriaRoute(
             protocol = protocol,
             httpMethod = "GET",
             path = path,
@@ -98,7 +101,6 @@ class ArmeriaObservabilitySummaryTest {
             exceptionHandlers = emptyList(),
             pointer = TestPsiPointer,
         )
-    }
 
     private object TestPsiPointer : SmartPsiElementPointer<PsiElement> {
         override fun getElement(): PsiElement? = null

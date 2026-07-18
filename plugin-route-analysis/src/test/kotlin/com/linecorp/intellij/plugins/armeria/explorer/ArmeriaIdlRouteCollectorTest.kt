@@ -8,14 +8,15 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
     }
 
     fun testParseGraphqlQueryFields() {
-        val operations = ArmeriaGraphqlRouteCollector.parseOperations(
-            """
-            type Query {
-                user: User
-                posts: [Post!]!
-            }
-            """.trimIndent(),
-        )
+        val operations =
+            ArmeriaGraphqlRouteCollector.parseOperations(
+                """
+                type Query {
+                    user: User
+                    posts: [Post!]!
+                }
+                """.trimIndent(),
+            )
 
         assertEquals(2, operations.size)
         assertEquals(GraphqlOperation("Query", "user"), operations[0])
@@ -23,17 +24,18 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
     }
 
     fun testParseGraphqlExtendTypeAndSubscription() {
-        val operations = ArmeriaGraphqlRouteCollector.parseOperations(
-            """
-            extend type Query {
-                search(term: String!): [Result!]!
-            }
+        val operations =
+            ArmeriaGraphqlRouteCollector.parseOperations(
+                """
+                extend type Query {
+                    search(term: String!): [Result!]!
+                }
 
-            type Subscription {
-                messageAdded: Message
-            }
-            """.trimIndent(),
-        )
+                type Subscription {
+                    messageAdded: Message
+                }
+                """.trimIndent(),
+            )
 
         assertEquals(2, operations.size)
         assertEquals(GraphqlOperation("Query", "search"), operations[0])
@@ -41,30 +43,32 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
     }
 
     fun testParseGraphqlMultilineFieldArguments() {
-        val operations = ArmeriaGraphqlRouteCollector.parseOperations(
-            """
-            type Query {
-                user(
-                    id: ID!
-                ): User
-            }
-            """.trimIndent(),
-        )
+        val operations =
+            ArmeriaGraphqlRouteCollector.parseOperations(
+                """
+                type Query {
+                    user(
+                        id: ID!
+                    ): User
+                }
+                """.trimIndent(),
+            )
 
         assertEquals(1, operations.size)
         assertEquals(GraphqlOperation("Query", "user"), operations.single())
     }
 
     fun testParseThriftServiceMethods() {
-        val operations = ArmeriaThriftRouteCollector.parseOperations(
-            """
-            service HelloService {
-                void ping(),
-                string echo(1: string message),
-                oneway void fireAndForget(),
-            }
-            """.trimIndent(),
-        )
+        val operations =
+            ArmeriaThriftRouteCollector.parseOperations(
+                """
+                service HelloService {
+                    void ping(),
+                    string echo(1: string message),
+                    oneway void fireAndForget(),
+                }
+                """.trimIndent(),
+            )
 
         assertEquals(2, operations.size)
         assertEquals(ThriftOperation("HelloService", "ping"), operations[0])
@@ -72,57 +76,61 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
     }
 
     fun testParseThriftServiceIgnoresBlockCommentWithBraces() {
-        val operations = ArmeriaThriftRouteCollector.parseOperations(
-            """
-            service HelloService {
-                /** legacy { block } */
-                void ping(),
-            }
-            """.trimIndent(),
-        )
+        val operations =
+            ArmeriaThriftRouteCollector.parseOperations(
+                """
+                service HelloService {
+                    /** legacy { block } */
+                    void ping(),
+                }
+                """.trimIndent(),
+            )
 
         assertEquals(1, operations.size)
         assertEquals(ThriftOperation("HelloService", "ping"), operations.single())
     }
 
     fun testParseThriftServiceWithExtends() {
-        val operations = ArmeriaThriftRouteCollector.parseOperations(
-            """
-            service DerivedService extends BaseService {
-                void ping(),
-            }
-            """.trimIndent(),
-        )
+        val operations =
+            ArmeriaThriftRouteCollector.parseOperations(
+                """
+                service DerivedService extends BaseService {
+                    void ping(),
+                }
+                """.trimIndent(),
+            )
 
         assertEquals(1, operations.size)
         assertEquals(ThriftOperation("DerivedService", "ping"), operations.single())
     }
 
     fun testParseGraphqlIgnoresHashComments() {
-        val operations = ArmeriaGraphqlRouteCollector.parseOperations(
-            """
-            # Query type
-            type Query {
-                # user field
-                user: User
-            }
-            """.trimIndent(),
-        )
+        val operations =
+            ArmeriaGraphqlRouteCollector.parseOperations(
+                """
+                # Query type
+                type Query {
+                    # user field
+                    user: User
+                }
+                """.trimIndent(),
+            )
 
         assertEquals(1, operations.size)
         assertEquals(GraphqlOperation("Query", "user"), operations.single())
     }
 
     fun testParseThriftIgnoresHashComments() {
-        val operations = ArmeriaThriftRouteCollector.parseOperations(
-            """
-            # Hello service
-            service HelloService {
-                # ping method
-                void ping(),
-            }
-            """.trimIndent(),
-        )
+        val operations =
+            ArmeriaThriftRouteCollector.parseOperations(
+                """
+                # Hello service
+                service HelloService {
+                    # ping method
+                    void ping(),
+                }
+                """.trimIndent(),
+            )
 
         assertEquals(1, operations.size)
         assertEquals(ThriftOperation("HelloService", "ping"), operations.single())
@@ -143,8 +151,10 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
-            .filter { it.protocol == RouteProtocol.GRAPHQL.presentableName() }
+        val routes =
+            ArmeriaRouteCollector
+                .collect(project)
+                .filter { it.protocol == RouteProtocol.GRAPHQL.presentableName() }
 
         assertEquals(2, routes.size)
         assertTrue(routes.all { it.path == ArmeriaIdlRouteSupport.DEFAULT_GRAPHQL_MOUNT_PATH })
@@ -165,8 +175,10 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
-            .filter { it.protocol == RouteProtocol.GRAPHQL.presentableName() }
+        val routes =
+            ArmeriaRouteCollector
+                .collect(project)
+                .filter { it.protocol == RouteProtocol.GRAPHQL.presentableName() }
 
         assertEquals(1, routes.size)
         assertEquals("Query.health", routes.single().target)
@@ -183,8 +195,10 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
-            .filter { it.protocol == RouteProtocol.THRIFT.presentableName() }
+        val routes =
+            ArmeriaRouteCollector
+                .collect(project)
+                .filter { it.protocol == RouteProtocol.THRIFT.presentableName() }
 
         assertEquals(1, routes.size)
         val route = routes.single()
@@ -205,14 +219,20 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
         myFixture.configureByText("schema.graphql", schema)
         myFixture.configureByText("copy.graphqls", schema)
 
-        val routes = ArmeriaRouteCollector.collect(project)
-            .filter { it.protocol == RouteProtocol.GRAPHQL.presentableName() }
+        val routes =
+            ArmeriaRouteCollector
+                .collect(project)
+                .filter { it.protocol == RouteProtocol.GRAPHQL.presentableName() }
 
         assertEquals(1, routes.size)
         val route = routes.single()
         assertEquals("Query.user", route.target)
         // Lexicographic path wins when FilenameIndex order is unstable.
-        assertEquals("copy.graphqls", route.pointer.element!!.containingFile.name)
+        assertEquals(
+            "copy.graphqls",
+            route.pointer.element!!
+                .containingFile.name,
+        )
     }
 
     fun testCollectThriftRoutesDedupesDuplicateOperationsAcrossFiles() {
@@ -226,14 +246,20 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
         myFixture.configureByText("hello.thrift", thrift)
         myFixture.configureByText("copy.thrift", thrift)
 
-        val routes = ArmeriaRouteCollector.collect(project)
-            .filter { it.protocol == RouteProtocol.THRIFT.presentableName() }
+        val routes =
+            ArmeriaRouteCollector
+                .collect(project)
+                .filter { it.protocol == RouteProtocol.THRIFT.presentableName() }
 
         assertEquals(1, routes.size)
         val route = routes.single()
         assertEquals("HelloService.sayHello", route.target)
         // Lexicographic path wins when FilenameIndex order is unstable.
-        assertEquals("copy.thrift", route.pointer.element!!.containingFile.name)
+        assertEquals(
+            "copy.thrift",
+            route.pointer.element!!
+                .containingFile.name,
+        )
     }
 
     fun testSkipIdlRoutesWhenProtocolNotOnClasspath() {
@@ -254,8 +280,10 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routesWithoutIdlStubs = ArmeriaRouteCollector.collect(project)
-            .filter { it.routeMatch == RouteMatch.NON_HTTP }
+        val routesWithoutIdlStubs =
+            ArmeriaRouteCollector
+                .collect(project)
+                .filter { it.routeMatch == RouteMatch.NON_HTTP }
 
         assertTrue(routesWithoutIdlStubs.isEmpty())
     }

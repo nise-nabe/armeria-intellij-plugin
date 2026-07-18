@@ -26,22 +26,30 @@ class ArmeriaRunProfileState(
     environment: ExecutionEnvironment,
     private val configuration: ArmeriaRunConfiguration,
 ) : JavaCommandLineState(environment) {
-
     override fun createJavaParameters(): JavaParameters {
         val params = JavaParameters()
-        val mainClass = configuration.getMainClass()?.takeIf { it.isNotBlank() }
-            ?: throw ExecutionException(message("armeria.run.configuration.main.class.not.specified"))
+        val mainClass =
+            configuration.getMainClass()?.takeIf { it.isNotBlank() }
+                ?: throw ExecutionException(message("armeria.run.configuration.main.class.not.specified"))
         params.mainClass = mainClass
-        val module = configuration.getConfigurationModule().module
-            ?: throw ExecutionException(message("armeria.run.configuration.module.not.specified"))
+        val module =
+            configuration.getConfigurationModule().module
+                ?: throw ExecutionException(message("armeria.run.configuration.module.not.specified"))
         JavaParametersUtil.configureModule(module, params, JavaParameters.JDK_AND_CLASSES, null)
         params.workingDirectory = params.workingDirectory
-            ?: ModuleRootManager.getInstance(module).contentRoots.firstOrNull()?.path
+            ?: ModuleRootManager
+                .getInstance(module)
+                .contentRoots
+                .firstOrNull()
+                ?.path
             ?: configuration.project.basePath
         return params
     }
 
-    override fun execute(executor: Executor, runner: ProgramRunner<*>): ExecutionResult {
+    override fun execute(
+        executor: Executor,
+        runner: ProgramRunner<*>,
+    ): ExecutionResult {
         val result = super.execute(executor, runner)
         val docServiceUrl = resolveDocServiceUrl()
         if (docServiceUrl != null) {
@@ -63,16 +71,20 @@ class ArmeriaRunProfileState(
             return null
         }
         return try {
-            val routes = ReadAction.compute<List<ArmeriaRoute>, RuntimeException> {
-                ArmeriaRouteCollector.collect(project)
-            }
+            val routes =
+                ReadAction.compute<List<ArmeriaRoute>, RuntimeException> {
+                    ArmeriaRouteCollector.collect(project)
+                }
             ArmeriaDocServiceSupport.primaryUrl(routes.filter { it.moduleName == module.name })
         } catch (_: IndexNotReadyException) {
             null
         }
     }
 
-    private fun printDocServiceHint(result: ExecutionResult, url: String) {
+    private fun printDocServiceHint(
+        result: ExecutionResult,
+        url: String,
+    ) {
         val console = result.executionConsole as? ConsoleView ?: return
         console.print(message("armeria.run.docService.console.prefix"), ConsoleViewContentType.SYSTEM_OUTPUT)
         console.print(" ", ConsoleViewContentType.SYSTEM_OUTPUT)

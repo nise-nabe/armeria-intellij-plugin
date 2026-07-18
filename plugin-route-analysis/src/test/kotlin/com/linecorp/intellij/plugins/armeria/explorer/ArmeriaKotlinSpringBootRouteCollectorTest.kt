@@ -457,6 +457,4 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
         val subtypeRoutes = routes.filter { it.path == "/subtype" && it.routeMatch == RouteMatch.SERVICE }
         assertEquals(1, subtypeRoutes.size)
     }
-
-
 }

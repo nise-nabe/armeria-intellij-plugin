@@ -2,11 +2,11 @@ package com.linecorp.intellij.plugins.armeria.run
 
 import com.intellij.execution.Executor
 import com.intellij.execution.configurations.ConfigurationFactory
-import com.intellij.execution.configurations.RuntimeConfigurationError
 import com.intellij.execution.configurations.JavaRunConfigurationModule
 import com.intellij.execution.configurations.LocatableConfigurationBase
 import com.intellij.execution.configurations.RunConfigurationModule
 import com.intellij.execution.configurations.RunProfileState
+import com.intellij.execution.configurations.RuntimeConfigurationError
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
@@ -19,16 +19,14 @@ class ArmeriaRunConfiguration(
     factory: ConfigurationFactory,
     name: String,
 ) : LocatableConfigurationBase<ArmeriaRunConfigurationOptions>(project, factory, name) {
-
     private val runConfigurationModule = JavaRunConfigurationModule(project, true)
 
-    override fun getOptions(): ArmeriaRunConfigurationOptions {
-        return super.getOptions() as ArmeriaRunConfigurationOptions
-    }
+    override fun getOptions(): ArmeriaRunConfigurationOptions = super.getOptions() as ArmeriaRunConfigurationOptions
 
-    override fun getState(executor: Executor, environment: ExecutionEnvironment): RunProfileState? {
-        return ArmeriaRunProfileState(environment, this)
-    }
+    override fun getState(
+        executor: Executor,
+        environment: ExecutionEnvironment,
+    ): RunProfileState? = ArmeriaRunProfileState(environment, this)
 
     fun getMainClass(): String? = options.getMainClass()
 

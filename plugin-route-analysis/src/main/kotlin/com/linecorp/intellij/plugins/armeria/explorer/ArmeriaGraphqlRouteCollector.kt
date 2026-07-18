@@ -14,15 +14,20 @@ internal object ArmeriaGraphqlRouteCollector {
     private val TYPE_HEADER_PATTERN =
         Regex("""(?:extend\s+)?type\s+(Query|Mutation|Subscription)\s*\{""")
 
-    fun collect(project: Project, scope: GlobalSearchScope, routes: MutableList<ArmeriaRoute>) {
+    fun collect(
+        project: Project,
+        scope: GlobalSearchScope,
+        routes: MutableList<ArmeriaRoute>,
+    ) {
         if (!ArmeriaIdlRouteSupport.isGraphqlOnClasspath(project, scope)) {
             return
         }
         val seenGraphqlRoutes = mutableSetOf<String>()
         // FilenameIndex iteration order is unstable; sort so first-wins dedupe is deterministic.
-        val virtualFiles = GRAPHQL_EXTENSIONS
-            .flatMap { extension -> FilenameIndex.getAllFilesByExt(project, extension, scope) }
-            .sortedWith(compareBy({ it.path }, { it.name }))
+        val virtualFiles =
+            GRAPHQL_EXTENSIONS
+                .flatMap { extension -> FilenameIndex.getAllFilesByExt(project, extension, scope) }
+                .sortedWith(compareBy({ it.path }, { it.name }))
         val psiManager = PsiManager.getInstance(project)
         for (virtualFile in virtualFiles) {
             val psiFile = psiManager.findFile(virtualFile) ?: continue
@@ -34,14 +39,15 @@ internal object ArmeriaGraphqlRouteCollector {
                 if (!seenGraphqlRoutes.add(dedupeKey)) {
                     continue
                 }
-                routes += ArmeriaRoute.create(
-                    element = psiFile,
-                    protocol = RouteProtocol.GRAPHQL.presentableName(),
-                    httpMethod = "",
-                    path = ArmeriaIdlRouteSupport.DEFAULT_GRAPHQL_MOUNT_PATH,
-                    target = target,
-                    routeMatch = RouteMatch.NON_HTTP,
-                )
+                routes +=
+                    ArmeriaRoute.create(
+                        element = psiFile,
+                        protocol = RouteProtocol.GRAPHQL.presentableName(),
+                        httpMethod = "",
+                        path = ArmeriaIdlRouteSupport.DEFAULT_GRAPHQL_MOUNT_PATH,
+                        target = target,
+                        routeMatch = RouteMatch.NON_HTTP,
+                    )
             }
         }
     }
@@ -58,7 +64,10 @@ internal object ArmeriaGraphqlRouteCollector {
         return operations
     }
 
-    private fun parseFields(operationType: String, body: String): List<GraphqlOperation> {
+    private fun parseFields(
+        operationType: String,
+        body: String,
+    ): List<GraphqlOperation> {
         val fields = mutableListOf<GraphqlOperation>()
         val lines = body.lineSequence().toList()
         var index = 0
@@ -88,9 +97,10 @@ internal object ArmeriaGraphqlRouteCollector {
         for (character in line) {
             when (character) {
                 '(' -> delta++
-                ')' -> if (delta > 0) {
-                    delta--
-                }
+                ')' ->
+                    if (delta > 0) {
+                        delta--
+                    }
             }
         }
         return delta

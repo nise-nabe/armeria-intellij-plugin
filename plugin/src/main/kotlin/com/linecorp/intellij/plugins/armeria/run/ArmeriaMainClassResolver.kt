@@ -21,7 +21,8 @@ internal object ArmeriaMainClassResolver {
             return null
         }
 
-        PsiTreeUtil.getParentOfType(element, false, PsiClass::class.java)
+        PsiTreeUtil
+            .getParentOfType(element, false, PsiClass::class.java)
             ?.takeIf(::isJvmMainClass)
             ?.let { return it }
 
@@ -62,6 +63,5 @@ internal object ArmeriaMainClassResolver {
         }
     }
 
-    private fun isKotlinPluginAvailable(): Boolean =
-        PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
+    private fun isKotlinPluginAvailable(): Boolean = PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
 }

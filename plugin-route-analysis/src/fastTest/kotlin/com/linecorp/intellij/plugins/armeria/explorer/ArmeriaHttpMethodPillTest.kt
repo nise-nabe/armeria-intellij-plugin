@@ -59,8 +59,8 @@ class ArmeriaHttpMethodPillTest {
         httpMethod: String = "GET",
         protocol: String = "HTTP",
         routeMatch: RouteMatch = RouteMatch.ANNOTATED_HTTP,
-    ): ArmeriaRoute {
-        return ArmeriaRoute(
+    ): ArmeriaRoute =
+        ArmeriaRoute(
             protocol = protocol,
             httpMethod = httpMethod,
             path = "/api",
@@ -73,7 +73,6 @@ class ArmeriaHttpMethodPillTest {
             exceptionHandlers = emptyList(),
             pointer = TestPsiPointer,
         )
-    }
 
     private object TestPsiPointer : SmartPsiElementPointer<PsiElement> {
         override fun getElement(): PsiElement? = null

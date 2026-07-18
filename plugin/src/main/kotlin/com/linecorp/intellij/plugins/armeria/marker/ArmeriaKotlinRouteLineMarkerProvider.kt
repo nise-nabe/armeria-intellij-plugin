@@ -62,40 +62,44 @@ internal class ArmeriaKotlinRouteLineMarkerProvider : LineMarkerProvider {
         )
     }
 
-    private fun isOnReferenceName(element: PsiElement, referenceName: PsiElement): Boolean {
-        return element == referenceName || element.parent == referenceName
-    }
+    private fun isOnReferenceName(
+        element: PsiElement,
+        referenceName: PsiElement,
+    ): Boolean = element == referenceName || element.parent == referenceName
 
-    private fun kotlinCallReferenceNameElement(call: KtCallExpression): PsiElement? {
-        return when (val callee = call.calleeExpression) {
+    private fun kotlinCallReferenceNameElement(call: KtCallExpression): PsiElement? =
+        when (val callee = call.calleeExpression) {
             is KtDotQualifiedExpression -> callee.selectorExpression
             is KtNameReferenceExpression -> callee
             else -> null
         }
-    }
 
-    private fun kotlinCallName(call: KtCallExpression): String? {
-        return when (val callee = call.calleeExpression) {
+    private fun kotlinCallName(call: KtCallExpression): String? =
+        when (val callee = call.calleeExpression) {
             is KtDotQualifiedExpression -> callee.selectorExpression?.text
             is KtNameReferenceExpression -> callee.text
             else -> callee?.text
         }
-    }
 
-    private fun kotlinRegistrationPath(methodName: String, arguments: List<KtValueArgument>): String? {
-        return when (ServiceRegistrationMethod.fromMethodName(methodName)) {
+    private fun kotlinRegistrationPath(
+        methodName: String,
+        arguments: List<KtValueArgument>,
+    ): String? =
+        when (ServiceRegistrationMethod.fromMethodName(methodName)) {
             ServiceRegistrationMethod.SERVICE ->
                 ArmeriaKotlinExpressionSupport.extractKotlinString(arguments.firstOrNull()?.getArgumentExpression())
             ServiceRegistrationMethod.SERVICE_UNDER ->
                 ArmeriaKotlinExpressionSupport.extractKotlinString(
-                    arguments.firstOrNull { it.getArgumentName()?.asName?.identifier == "pathPrefix" }
+                    arguments
+                        .firstOrNull { it.getArgumentName()?.asName?.identifier == "pathPrefix" }
                         ?.getArgumentExpression()
                         ?: arguments.firstOrNull()?.getArgumentExpression(),
                 )
             ServiceRegistrationMethod.ANNOTATED_SERVICE ->
                 if (arguments.size > 1) {
                     ArmeriaKotlinExpressionSupport.extractKotlinString(
-                        arguments.firstOrNull { it.getArgumentName()?.asName?.identifier == "pathPrefix" }
+                        arguments
+                            .firstOrNull { it.getArgumentName()?.asName?.identifier == "pathPrefix" }
                             ?.getArgumentExpression()
                             ?: arguments.firstOrNull()?.getArgumentExpression(),
                     )
@@ -104,5 +108,4 @@ internal class ArmeriaKotlinRouteLineMarkerProvider : LineMarkerProvider {
                 }
             else -> null
         }
-    }
 }

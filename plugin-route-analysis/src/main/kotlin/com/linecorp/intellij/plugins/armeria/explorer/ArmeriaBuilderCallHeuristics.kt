@@ -7,8 +7,7 @@ internal object ArmeriaBuilderCallHeuristics {
     fun looksLikeJavaBuilderCall(expression: PsiMethodCallExpression): Boolean =
         ArmeriaJavaBuilderCallHeuristics.looksLikeJavaBuilderCall(expression)
 
-    fun looksLikeKotlinBuilderCall(call: KtCallExpression): Boolean =
-        ArmeriaKotlinBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)
+    fun looksLikeKotlinBuilderCall(call: KtCallExpression): Boolean = ArmeriaKotlinBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)
 
     fun looksLikeArmeriaFluentRouteBuild(expression: PsiMethodCallExpression): Boolean =
         ArmeriaJavaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(expression)

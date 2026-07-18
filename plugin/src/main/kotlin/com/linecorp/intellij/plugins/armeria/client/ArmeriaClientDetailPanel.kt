@@ -25,27 +25,33 @@ class ArmeriaClientDetailPanel : JPanel(BorderLayout()) {
     private val decoratorsBlock: JPanel
 
     init {
-        val overviewBody = formBody(
-            labeledField(message("client.explorer.detail.clientType"), detailClientType),
-            labeledField(message("client.explorer.detail.uri"), detailUri),
-            labeledField(message("client.explorer.detail.target"), detailTarget),
-            labeledField(message("client.explorer.detail.module"), detailModule),
-        )
+        val overviewBody =
+            formBody(
+                labeledField(message("client.explorer.detail.clientType"), detailClientType),
+                labeledField(message("client.explorer.detail.uri"), detailUri),
+                labeledField(message("client.explorer.detail.target"), detailTarget),
+                labeledField(message("client.explorer.detail.module"), detailModule),
+            )
         transportRow = labeledField(message("client.explorer.detail.transport"), detailTransport)
         endpointGroupRow = labeledField(message("client.explorer.detail.endpointGroup"), detailEndpointGroup)
-        metadataBlock = detailSection(
-            message("client.explorer.detail.block.metadata"),
-            formBody(transportRow, endpointGroupRow),
-        )
-        decoratorsBlock = detailSection(
-            message("client.explorer.detail.block.decorators"),
-            JPanel(BorderLayout()).apply {
-                add(detailDecorators, BorderLayout.CENTER)
-            },
-        )
+        metadataBlock =
+            detailSection(
+                message("client.explorer.detail.block.metadata"),
+                formBody(transportRow, endpointGroupRow),
+            )
+        decoratorsBlock =
+            detailSection(
+                message("client.explorer.detail.block.decorators"),
+                JPanel(BorderLayout()).apply {
+                    add(detailDecorators, BorderLayout.CENTER)
+                },
+            )
 
         add(
-            JPanel(com.intellij.ui.components.panels.VerticalLayout(JBUI.scale(10))).apply {
+            JPanel(
+                com.intellij.ui.components.panels
+                    .VerticalLayout(JBUI.scale(10)),
+            ).apply {
                 add(detailSection(message("client.explorer.detail.block.overview"), overviewBody))
                 add(metadataBlock)
                 add(decoratorsBlock)
@@ -93,8 +99,11 @@ class ArmeriaClientDetailPanel : JPanel(BorderLayout()) {
         decoratorsBlock.isVisible = false
     }
 
-    private fun detailSection(title: String, body: JComponent): JPanel {
-        return JPanel(BorderLayout()).apply {
+    private fun detailSection(
+        title: String,
+        body: JComponent,
+    ): JPanel =
+        JPanel(BorderLayout()).apply {
             add(TitledSeparator(title), BorderLayout.NORTH)
             add(
                 JPanel(BorderLayout()).apply {
@@ -104,7 +113,6 @@ class ArmeriaClientDetailPanel : JPanel(BorderLayout()) {
                 BorderLayout.CENTER,
             )
         }
-    }
 
     private fun formBody(vararg rows: JComponent): JPanel {
         val builder = FormBuilder.createFormBuilder()
@@ -112,20 +120,26 @@ class ArmeriaClientDetailPanel : JPanel(BorderLayout()) {
         return builder.panel
     }
 
-    private fun labeledField(label: String, value: JComponent): JPanel =
-        FormBuilder.createFormBuilder()
+    private fun labeledField(
+        label: String,
+        value: JComponent,
+    ): JPanel =
+        FormBuilder
+            .createFormBuilder()
             .addLabeledComponent(JBLabel(label), value, 1, false)
             .panel
 
-    private fun wrappingValueLabel(): JBLabel {
-        return JBLabel().apply {
+    private fun wrappingValueLabel(): JBLabel =
+        JBLabel().apply {
             putClientProperty("html.disable", false)
         }
-    }
 
     private fun detailWrapWidth(): Int = JBUI.scale(280)
 
-    private fun setWrappingText(label: JBLabel, text: String) {
+    private fun setWrappingText(
+        label: JBLabel,
+        text: String,
+    ) {
         if (text.isEmpty()) {
             label.text = ""
             label.toolTipText = null
@@ -135,6 +149,5 @@ class ArmeriaClientDetailPanel : JPanel(BorderLayout()) {
         label.toolTipText = text.takeIf { it.length > 80 }
     }
 
-    private fun escapeHtml(text: String): String =
-        StringUtil.escapeXmlEntities(text).replace("\n", "<br/>")
+    private fun escapeHtml(text: String): String = StringUtil.escapeXmlEntities(text).replace("\n", "<br/>")
 }

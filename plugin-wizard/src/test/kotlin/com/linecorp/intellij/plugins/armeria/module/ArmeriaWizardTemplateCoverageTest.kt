@@ -37,8 +37,9 @@ class ArmeriaWizardTemplateCoverageTest {
     }
 
     private fun readClasspathResource(path: String): String {
-        val bytes = javaClass.classLoader.getResourceAsStream(path)?.readAllBytes()
-            ?: error("Missing resource: $path")
+        val bytes =
+            javaClass.classLoader.getResourceAsStream(path)?.readAllBytes()
+                ?: error("Missing resource: $path")
         return bytes.toString(StandardCharsets.UTF_8)
     }
 }

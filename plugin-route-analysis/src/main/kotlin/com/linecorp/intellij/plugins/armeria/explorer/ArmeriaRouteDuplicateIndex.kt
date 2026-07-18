@@ -25,23 +25,25 @@ import com.intellij.psi.util.PsiModificationTracker
  * [com.linecorp.intellij.plugins.armeria.inspection.ArmeriaDuplicateRouteKotlinInspection] cover them.
  */
 object ArmeriaRouteDuplicateIndex {
-    private val CHECKED_MATCHES = setOf(
-        RouteMatch.ANNOTATED_HTTP,
-        RouteMatch.ANNOTATED_SERVICE,
-        RouteMatch.SERVICE,
-        RouteMatch.SERVICE_UNDER,
-        RouteMatch.ROUTE_FLUENT,
-        RouteMatch.HEALTH_CHECK,
-    )
+    private val CHECKED_MATCHES =
+        setOf(
+            RouteMatch.ANNOTATED_HTTP,
+            RouteMatch.ANNOTATED_SERVICE,
+            RouteMatch.SERVICE,
+            RouteMatch.SERVICE_UNDER,
+            RouteMatch.ROUTE_FLUENT,
+            RouteMatch.HEALTH_CHECK,
+        )
 
-    fun duplicateHitsInFile(project: Project, file: PsiFile): List<DuplicateRegistrationHit> {
+    fun duplicateHitsInFile(
+        project: Project,
+        file: PsiFile,
+    ): List<DuplicateRegistrationHit> {
         val virtualFile = file.virtualFile ?: return emptyList()
         return getIndex(project).hitsByVirtualFile[virtualFile].orEmpty()
     }
 
-    internal fun duplicateGroups(project: Project): List<DuplicateRegistrationGroup> {
-        return getIndex(project).groups
-    }
+    internal fun duplicateGroups(project: Project): List<DuplicateRegistrationGroup> = getIndex(project).groups
 
     /** Exposed for regression tests that simulate duplicate [ArmeriaRoute] entries in a group. */
     internal fun duplicateHitsForGroups(groups: List<DuplicateRegistrationGroup>): Map<VirtualFile, List<DuplicateRegistrationHit>> =
@@ -63,8 +65,8 @@ object ArmeriaRouteDuplicateIndex {
         return groups
     }
 
-    private fun getIndex(project: Project): DuplicateRegistrationIndex {
-        return CachedValuesManager.getManager(project).getCachedValue(project) {
+    private fun getIndex(project: Project): DuplicateRegistrationIndex =
+        CachedValuesManager.getManager(project).getCachedValue(project) {
             val groups = findDuplicateGroups(ArmeriaRouteCollector.collect(project))
             CachedValueProvider.Result.create(
                 DuplicateRegistrationIndex(
@@ -74,7 +76,6 @@ object ArmeriaRouteDuplicateIndex {
                 PsiModificationTracker.MODIFICATION_COUNT,
             )
         }
-    }
 
     private fun findConnectedComponents(routes: List<ArmeriaRoute>): List<List<ArmeriaRoute>> {
         val parent = IntArray(routes.size) { it }
@@ -94,7 +95,10 @@ object ArmeriaRouteDuplicateIndex {
             return root
         }
 
-        fun union(first: Int, second: Int) {
+        fun union(
+            first: Int,
+            second: Int,
+        ) {
             var firstRoot = find(first)
             var secondRoot = find(second)
             if (firstRoot == secondRoot) {
@@ -140,13 +144,20 @@ object ArmeriaRouteDuplicateIndex {
         return true
     }
 
-    private fun routesOverlap(first: ArmeriaRoute, second: ArmeriaRoute): Boolean =
-        virtualHostsOverlap(first, second) && pathsOverlap(first, second)
+    private fun routesOverlap(
+        first: ArmeriaRoute,
+        second: ArmeriaRoute,
+    ): Boolean = virtualHostsOverlap(first, second) && pathsOverlap(first, second)
 
-    private fun virtualHostsOverlap(first: ArmeriaRoute, second: ArmeriaRoute): Boolean =
-        first.virtualHostName == second.virtualHostName
+    private fun virtualHostsOverlap(
+        first: ArmeriaRoute,
+        second: ArmeriaRoute,
+    ): Boolean = first.virtualHostName == second.virtualHostName
 
-    private fun pathsOverlap(first: ArmeriaRoute, second: ArmeriaRoute): Boolean {
+    private fun pathsOverlap(
+        first: ArmeriaRoute,
+        second: ArmeriaRoute,
+    ): Boolean {
         val firstIsPrefixMount = isPrefixMount(first)
         val secondIsPrefixMount = isPrefixMount(second)
         return when {
@@ -172,11 +183,15 @@ object ArmeriaRouteDuplicateIndex {
         when (route.routeMatch) {
             RouteMatch.SERVICE_UNDER -> true
             RouteMatch.ANNOTATED_SERVICE -> route.annotatedServiceHasPathPrefix
-            else -> route.pathType == PathType.PREFIX ||
-                (route.pathType == PathType.GLOB && route.path.endsWith("/**"))
+            else ->
+                route.pathType == PathType.PREFIX ||
+                    (route.pathType == PathType.GLOB && route.path.endsWith("/**"))
         }
 
-    private fun pathIsUnder(path: String, prefix: String): Boolean {
+    private fun pathIsUnder(
+        path: String,
+        prefix: String,
+    ): Boolean {
         val normalizedPath = ArmeriaRouteSupport.normalizePath(path)
         val normalizedPrefix = normalizePrefixMount(prefix)
         if (normalizedPrefix == "/") {
@@ -193,7 +208,10 @@ object ArmeriaRouteDuplicateIndex {
         return if (normalized == "/") "/" else normalized.removeSuffix("/")
     }
 
-    private fun httpMethodsOverlap(first: ArmeriaRoute, second: ArmeriaRoute): Boolean {
+    private fun httpMethodsOverlap(
+        first: ArmeriaRoute,
+        second: ArmeriaRoute,
+    ): Boolean {
         if (matchesAllHttpMethods(first) || matchesAllHttpMethods(second)) {
             return true
         }
@@ -208,7 +226,8 @@ object ArmeriaRouteDuplicateIndex {
     }
 
     private fun parseHttpMethods(httpMethod: String): Set<String> =
-        httpMethod.split(',')
+        httpMethod
+            .split(',')
             .map { it.trim() }
             .filter { it.isNotEmpty() }
             .toSet()
@@ -255,15 +274,20 @@ object ArmeriaRouteDuplicateIndex {
         return hitsByVirtualFile
     }
 
-    private fun buildConflictingRoutes(current: ArmeriaRoute, groupRoutes: List<ArmeriaRoute>): List<ConflictingRouteRegistration> {
+    private fun buildConflictingRoutes(
+        current: ArmeriaRoute,
+        groupRoutes: List<ArmeriaRoute>,
+    ): List<ConflictingRouteRegistration> {
         val currentElement = current.pointer.element
-        val conflicts = groupRoutes.filter { route ->
-            val element = route.pointer.element
-            element != null &&
-                element !== currentElement &&
-                routesOverlap(current, route) &&
-                httpMethodsOverlap(current, route)
-        }.distinctBy { it.pointer.element }
+        val conflicts =
+            groupRoutes
+                .filter { route ->
+                    val element = route.pointer.element
+                    element != null &&
+                        element !== currentElement &&
+                        routesOverlap(current, route) &&
+                        httpMethodsOverlap(current, route)
+                }.distinctBy { it.pointer.element }
         val labelCounts = conflicts.groupingBy(::registrationLabel).eachCount()
         return conflicts.map { route ->
             val baseLabel = registrationLabel(route)
@@ -274,7 +298,11 @@ object ArmeriaRouteDuplicateIndex {
         }
     }
 
-    private fun disambiguatedNavigationLabel(route: ArmeriaRoute, baseLabel: String, labelCount: Int): String {
+    private fun disambiguatedNavigationLabel(
+        route: ArmeriaRoute,
+        baseLabel: String,
+        labelCount: Int,
+    ): String {
         if (labelCount <= 1) {
             return baseLabel
         }
@@ -286,8 +314,9 @@ object ArmeriaRouteDuplicateIndex {
         val element = pointer.element ?: return ""
         val containingFile = element.containingFile ?: return ""
         val virtualFile = containingFile.virtualFile ?: return ""
-        val document = PsiDocumentManager.getInstance(element.project).getDocument(containingFile)
-            ?: return virtualFile.name
+        val document =
+            PsiDocumentManager.getInstance(element.project).getDocument(containingFile)
+                ?: return virtualFile.name
         val line = document.getLineNumber(element.textRange.startOffset) + 1
         return "${virtualFile.name}:$line"
     }

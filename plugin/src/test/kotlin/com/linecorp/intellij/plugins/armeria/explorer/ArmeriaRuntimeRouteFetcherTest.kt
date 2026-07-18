@@ -9,17 +9,19 @@ class ArmeriaRuntimeRouteFetcherTest {
     fun fetchFromSpecification_mapsRoutesToRuntimeArmeriaRoutes() {
         val json = javaClass.getResourceAsStream("/doc-service-specification.json")!!.reader().readText()
 
-        val routes = ArmeriaRuntimeRouteFetcher.fetchFromSpecification(
-            specificationJson = json,
-            moduleName = "Runtime (DocService)",
-            protocol = "DocService (runtime)",
-        )
+        val routes =
+            ArmeriaRuntimeRouteFetcher.fetchFromSpecification(
+                specificationJson = json,
+                moduleName = "Runtime (DocService)",
+                protocol = "DocService (runtime)",
+            )
 
         assertEquals(3, routes.size)
         assertTrue(routes.all { it.routeMatch == RouteMatch.RUNTIME })
         assertEquals(
             setOf("GET /api/users/{id}", "POST /api/users"),
-            routes.filter { it.target.startsWith("com.example.FooService") }
+            routes
+                .filter { it.target.startsWith("com.example.FooService") }
                 .map { "${it.httpMethod} ${it.path}" }
                 .toSet(),
         )

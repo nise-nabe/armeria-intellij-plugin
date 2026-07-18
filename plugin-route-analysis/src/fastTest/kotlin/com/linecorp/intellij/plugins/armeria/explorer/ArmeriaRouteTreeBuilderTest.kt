@@ -14,11 +14,12 @@ import javax.swing.tree.DefaultMutableTreeNode
 class ArmeriaRouteTreeBuilderTest {
     @Test
     fun buildRoot_groupsRoutesByModule() {
-        val routes = listOf(
-            testRoute(moduleName = "app", path = "/a"),
-            testRoute(moduleName = "app", path = "/b"),
-            testRoute(moduleName = "lib", path = "/c"),
-        )
+        val routes =
+            listOf(
+                testRoute(moduleName = "app", path = "/a"),
+                testRoute(moduleName = "app", path = "/b"),
+                testRoute(moduleName = "lib", path = "/c"),
+            )
 
         val root = ArmeriaRouteTreeBuilder.buildRoot(routes)
 
@@ -41,8 +42,11 @@ class ArmeriaRouteTreeBuilderTest {
         assertNull(ArmeriaRouteTreeBuilder.selectedRoute(moduleNode))
     }
 
-    private fun testRoute(moduleName: String, path: String): ArmeriaRoute {
-        return ArmeriaRoute(
+    private fun testRoute(
+        moduleName: String,
+        path: String,
+    ): ArmeriaRoute =
+        ArmeriaRoute(
             protocol = "HTTP",
             httpMethod = "GET",
             path = path,
@@ -55,7 +59,6 @@ class ArmeriaRouteTreeBuilderTest {
             exceptionHandlers = emptyList(),
             pointer = TestPsiPointer,
         )
-    }
 
     private object TestPsiPointer : SmartPsiElementPointer<PsiElement> {
         override fun getElement(): PsiElement? = null

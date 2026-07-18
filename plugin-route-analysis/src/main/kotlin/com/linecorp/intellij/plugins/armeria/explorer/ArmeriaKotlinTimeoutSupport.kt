@@ -21,7 +21,10 @@ internal object ArmeriaKotlinTimeoutSupport {
         return hints.distinct()
     }
 
-    private fun collectTimeoutCallsFromReceiver(expression: KtExpression, hints: MutableList<String>) {
+    private fun collectTimeoutCallsFromReceiver(
+        expression: KtExpression,
+        hints: MutableList<String>,
+    ) {
         var current: KtExpression? = kotlinChainReceiver(expression)
         while (current != null) {
             val call = asKotlinCallExpression(current)
@@ -55,20 +58,18 @@ internal object ArmeriaKotlinTimeoutSupport {
         }
     }
 
-    private fun unwrapKotlinExpression(expression: KtExpression): KtExpression {
-        return when (expression) {
+    private fun unwrapKotlinExpression(expression: KtExpression): KtExpression =
+        when (expression) {
             is KtParenthesizedExpression -> expression.expression?.let(::unwrapKotlinExpression) ?: expression
             else -> expression
         }
-    }
 
-    private fun asKotlinCallExpression(expression: KtExpression): KtCallExpression? {
-        return when (val unwrapped = unwrapKotlinExpression(expression)) {
+    private fun asKotlinCallExpression(expression: KtExpression): KtCallExpression? =
+        when (val unwrapped = unwrapKotlinExpression(expression)) {
             is KtCallExpression -> unwrapped
             is KtDotQualifiedExpression -> unwrapped.selectorExpression as? KtCallExpression
             else -> null
         }
-    }
 
     private fun resolveKotlinCallName(call: KtCallExpression): String? {
         val callee = call.calleeExpression ?: return null
@@ -89,25 +90,26 @@ internal object ArmeriaKotlinTimeoutSupport {
             }
         }
         val callee = call.calleeExpression ?: return false
-        val references = when (callee) {
-            is KtNameReferenceExpression -> callee.references.toList()
-            is KtDotQualifiedExpression -> callee.references.toList()
-            else -> emptyList()
-        }
+        val references =
+            when (callee) {
+                is KtNameReferenceExpression -> callee.references.toList()
+                is KtDotQualifiedExpression -> callee.references.toList()
+                else -> emptyList()
+            }
         if (references.any { isArmeriaServerBuilderMethod(it.resolve()) }) {
             return true
         }
-        val receiver = when (callee) {
-            is KtDotQualifiedExpression -> callee.receiverExpression
-            else -> dotQualified?.receiverExpression
-        }
+        val receiver =
+            when (callee) {
+                is KtDotQualifiedExpression -> callee.receiverExpression
+                else -> dotQualified?.receiverExpression
+            }
         return receiver != null && isKotlinServerBuilderReceiver(receiver)
     }
 
-    private fun isArmeriaServerBuilderMethod(resolved: PsiElement?): Boolean {
-        return resolved is PsiMethod &&
+    private fun isArmeriaServerBuilderMethod(resolved: PsiElement?): Boolean =
+        resolved is PsiMethod &&
             resolved.containingClass?.qualifiedName?.startsWith(ArmeriaRouteSupport.ARMERIA_SERVER_PACKAGE_PREFIX) == true
-    }
 
     private fun isKotlinServerBuilderReceiver(receiver: KtExpression): Boolean {
         val receiverExpression = unwrapKotlinExpression(receiver)
@@ -151,7 +153,10 @@ internal object ArmeriaKotlinTimeoutSupport {
         } ?: typeReference.text
     }
 
-    private fun formatKotlinTimeoutCall(bundleKey: String, call: KtCallExpression): String {
+    private fun formatKotlinTimeoutCall(
+        bundleKey: String,
+        call: KtCallExpression,
+    ): String {
         val argument = call.valueArguments.firstOrNull()?.getArgumentExpression()
         val value = argument?.text ?: "…"
         return message(bundleKey, value)

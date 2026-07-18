@@ -19,22 +19,26 @@ import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.psi.KtFile
 
 object ArmeriaRouteCollector {
-
     private val KOTLIN_PLUGIN_ID = PluginId.getId("org.jetbrains.kotlin")
 
-    fun collect(project: Project, includeProtoRoutes: Boolean = false): List<ArmeriaRoute> {
+    fun collect(
+        project: Project,
+        includeProtoRoutes: Boolean = false,
+    ): List<ArmeriaRoute> {
         val metrics = ArmeriaRouteCollectionMetrics()
         val startedAt = System.nanoTime()
-        val routes = ArmeriaRouteCollectionMetrics.runWith(metrics) {
-            val cachedRoutes = CachedValuesManager.getManager(project).getCachedValue(project) {
-                computeProjectRoutes(project)
+        val routes =
+            ArmeriaRouteCollectionMetrics.runWith(metrics) {
+                val cachedRoutes =
+                    CachedValuesManager.getManager(project).getCachedValue(project) {
+                        computeProjectRoutes(project)
+                    }
+                if (includeProtoRoutes) {
+                    mergeProtoRoutesIfEnabled(project, cachedRoutes)
+                } else {
+                    cachedRoutes
+                }
             }
-            if (includeProtoRoutes) {
-                mergeProtoRoutesIfEnabled(project, cachedRoutes)
-            } else {
-                cachedRoutes
-            }
-        }
         metrics.elapsedMs = (System.nanoTime() - startedAt) / 1_000_000
         ArmeriaRouteCollectionMetrics.logIfEnabled(metrics.snapshot())
         return routes
@@ -111,7 +115,10 @@ object ArmeriaRouteCollector {
         )
     }
 
-    private fun mergeProtoRoutesIfEnabled(project: Project, baseRoutes: List<ArmeriaRoute>): List<ArmeriaRoute> {
+    private fun mergeProtoRoutesIfEnabled(
+        project: Project,
+        baseRoutes: List<ArmeriaRoute>,
+    ): List<ArmeriaRoute> {
         if (!ArmeriaGrpcRouteCollector.isProtoRouteDiscoveryEnabled()) {
             return baseRoutes
         }
@@ -154,15 +161,15 @@ object ArmeriaRouteCollector {
         }
     }
 
-    private fun collectionScope(project: Project): GlobalSearchScope =
-        GlobalSearchScope.projectScope(project)
+    private fun collectionScope(project: Project): GlobalSearchScope = GlobalSearchScope.projectScope(project)
 
     fun referencesArmeriaJavaContent(file: PsiJavaFile): Boolean {
-        val hasArmeriaImports = file.importList
-            ?.allImportStatements
-            ?.any { statement ->
-                statement.importReference?.qualifiedName?.startsWith(ArmeriaRouteSupport.ARMERIA_PACKAGE_PREFIX) == true
-            } ?: false
+        val hasArmeriaImports =
+            file.importList
+                ?.allImportStatements
+                ?.any { statement ->
+                    statement.importReference?.qualifiedName?.startsWith(ArmeriaRouteSupport.ARMERIA_PACKAGE_PREFIX) == true
+                } ?: false
         if (hasArmeriaImports) {
             return true
         }
@@ -172,7 +179,10 @@ object ArmeriaRouteCollector {
     fun looksLikeArmeriaBuilderCall(expression: PsiMethodCallExpression): Boolean =
         ArmeriaBuilderCallHeuristics.looksLikeJavaBuilderCall(expression)
 
-    internal fun collectProgrammaticDecorators(element: PsiElement, registrationPath: String): List<String> {
+    internal fun collectProgrammaticDecorators(
+        element: PsiElement,
+        registrationPath: String,
+    ): List<String> {
         if (element is PsiMethodCallExpression) {
             return ArmeriaDecoratorSupport.collectProgrammaticDecorators(element, registrationPath)
         }
@@ -192,6 +202,5 @@ object ArmeriaRouteCollector {
         return emptyList()
     }
 
-    private fun isKotlinPluginAvailable(): Boolean =
-        PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
+    private fun isKotlinPluginAvailable(): Boolean = PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
 }

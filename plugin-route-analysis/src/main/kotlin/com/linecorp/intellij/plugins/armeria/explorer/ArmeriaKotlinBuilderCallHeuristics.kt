@@ -27,10 +27,11 @@ internal object ArmeriaKotlinBuilderCallHeuristics {
         if (resolvesKotlinCallToArmeriaServerBuilder(call)) {
             return true
         }
-        val dotQualified = when (val callee = call.calleeExpression) {
-            is KtDotQualifiedExpression -> callee
-            else -> call.parent as? KtDotQualifiedExpression
-        }
+        val dotQualified =
+            when (val callee = call.calleeExpression) {
+                is KtDotQualifiedExpression -> callee
+                else -> call.parent as? KtDotQualifiedExpression
+            }
         if (dotQualified != null && isKotlinServerBuilderReceiver(dotQualified.receiverExpression)) {
             return true
         }
@@ -100,11 +101,12 @@ internal object ArmeriaKotlinBuilderCallHeuristics {
             }
         }
         val callee = call.calleeExpression ?: return null
-        val references = when (callee) {
-            is KtNameReferenceExpression -> callee.references.toList()
-            is KtDotQualifiedExpression -> callee.references.toList()
-            else -> emptyList()
-        }
+        val references =
+            when (callee) {
+                is KtNameReferenceExpression -> callee.references.toList()
+                is KtDotQualifiedExpression -> callee.references.toList()
+                else -> emptyList()
+            }
         return references.firstNotNullOfOrNull { reference ->
             (reference.resolve() as? PsiMethod)?.containingClass?.qualifiedName
         }
@@ -121,18 +123,18 @@ internal object ArmeriaKotlinBuilderCallHeuristics {
             }
         }
         val callee = call.calleeExpression ?: return false
-        val references = when (callee) {
-            is KtNameReferenceExpression -> callee.references.toList()
-            is KtDotQualifiedExpression -> callee.references.toList()
-            else -> emptyList()
-        }
+        val references =
+            when (callee) {
+                is KtNameReferenceExpression -> callee.references.toList()
+                is KtDotQualifiedExpression -> callee.references.toList()
+                else -> emptyList()
+            }
         return references.any { isArmeriaServerBuilderMethod(it.resolve()) }
     }
 
-    private fun isArmeriaServerBuilderMethod(resolved: PsiElement?): Boolean {
-        return resolved is PsiMethod &&
+    private fun isArmeriaServerBuilderMethod(resolved: PsiElement?): Boolean =
+        resolved is PsiMethod &&
             resolved.containingClass?.qualifiedName?.startsWith(ArmeriaRouteSupport.ARMERIA_SERVER_PACKAGE_PREFIX) == true
-    }
 
     private fun isKotlinServerBuilderReceiver(receiver: KtExpression): Boolean {
         val receiverExpression = unwrapKotlinReceiverExpression(receiver)
@@ -163,7 +165,12 @@ internal object ArmeriaKotlinBuilderCallHeuristics {
             return null
         }
         val userType = typeReference.typeElement as? KtUserType
-        val resolved = userType?.referenceExpression?.references?.firstOrNull()?.resolve()
+        val resolved =
+            userType
+                ?.referenceExpression
+                ?.references
+                ?.firstOrNull()
+                ?.resolve()
         return when (resolved) {
             is KtTypeAlias -> resolved.getTypeReference()?.text ?: typeReference.text
             is KtClassOrObject -> resolved.fqName?.asString() ?: typeReference.text
@@ -171,13 +178,12 @@ internal object ArmeriaKotlinBuilderCallHeuristics {
         }
     }
 
-    private fun unwrapKotlinReceiverExpression(receiver: KtExpression): KtExpression {
-        return when (receiver) {
+    private fun unwrapKotlinReceiverExpression(receiver: KtExpression): KtExpression =
+        when (receiver) {
             is KtUnaryExpression -> receiver.baseExpression?.let(::unwrapKotlinReceiverExpression) ?: receiver
             is KtParenthesizedExpression -> receiver.expression?.let(::unwrapKotlinReceiverExpression) ?: receiver
             else -> receiver
         }
-    }
 
     private fun hasKotlinServerBuilderImplicitReceiver(call: KtCallExpression): Boolean {
         val lambda = call.getParentOfType<KtLambdaExpression>(strict = true) ?: return false
@@ -187,10 +193,11 @@ internal object ArmeriaKotlinBuilderCallHeuristics {
         if (scopeMethod !in BUILDER_SCOPE_METHOD_NAMES) {
             return false
         }
-        val scopeReceiver = when (val callee = scopeCall.calleeExpression) {
-            is KtDotQualifiedExpression -> callee.receiverExpression
-            else -> (scopeCall.parent as? KtDotQualifiedExpression)?.receiverExpression
-        } ?: return false
+        val scopeReceiver =
+            when (val callee = scopeCall.calleeExpression) {
+                is KtDotQualifiedExpression -> callee.receiverExpression
+                else -> (scopeCall.parent as? KtDotQualifiedExpression)?.receiverExpression
+            } ?: return false
         if (!isKotlinServerBuilderReceiver(scopeReceiver) && !kotlinReceiverChainContainsServerBuilder(scopeReceiver)) {
             return false
         }
@@ -205,10 +212,11 @@ internal object ArmeriaKotlinBuilderCallHeuristics {
         call: KtCallExpression,
         scopeLambda: KtLambdaExpression,
     ): Boolean {
-        val dotQualified = when (val callee = call.calleeExpression) {
-            is KtDotQualifiedExpression -> callee
-            else -> call.parent as? KtDotQualifiedExpression
-        } ?: return false
+        val dotQualified =
+            when (val callee = call.calleeExpression) {
+                is KtDotQualifiedExpression -> callee
+                else -> call.parent as? KtDotQualifiedExpression
+            } ?: return false
 
         val receiver = dotQualified.receiverExpression
         if (isKotlinServerBuilderReceiver(receiver)) {
@@ -227,16 +235,17 @@ internal object ArmeriaKotlinBuilderCallHeuristics {
             if (isKotlinServerBuilderReceiver(current)) {
                 return true
             }
-            current = when (current) {
-                is KtDotQualifiedExpression -> current.receiverExpression
-                is KtCallExpression -> {
-                    when (val callee = current.calleeExpression) {
-                        is KtDotQualifiedExpression -> callee.receiverExpression
-                        else -> (current.parent as? KtDotQualifiedExpression)?.receiverExpression
+            current =
+                when (current) {
+                    is KtDotQualifiedExpression -> current.receiverExpression
+                    is KtCallExpression -> {
+                        when (val callee = current.calleeExpression) {
+                            is KtDotQualifiedExpression -> callee.receiverExpression
+                            else -> (current.parent as? KtDotQualifiedExpression)?.receiverExpression
+                        }
                     }
+                    else -> null
                 }
-                else -> null
-            }
         }
         return false
     }

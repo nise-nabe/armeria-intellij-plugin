@@ -32,10 +32,11 @@ internal class ArmeriaRuntimeRoutePointer private constructor(
     override fun getPsiRange(): TextRange? = null
 
     companion object {
-        private val withoutProject = ArmeriaRuntimeRoutePointer(
-            projectProvider = { ProjectManager.getInstance().defaultProject },
-            virtualFileProvider = { virtualFileForProject(ProjectManager.getInstance().defaultProject) },
-        )
+        private val withoutProject =
+            ArmeriaRuntimeRoutePointer(
+                projectProvider = { ProjectManager.getInstance().defaultProject },
+                virtualFileProvider = { virtualFileForProject(ProjectManager.getInstance().defaultProject) },
+            )
 
         fun withoutProject(): SmartPsiElementPointer<PsiElement> = withoutProject
 

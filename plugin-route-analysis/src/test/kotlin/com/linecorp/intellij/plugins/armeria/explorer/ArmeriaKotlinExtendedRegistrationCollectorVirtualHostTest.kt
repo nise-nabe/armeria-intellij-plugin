@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaKotlinExtendedRegistrationCollectorVirtualHostTest : ArmeriaFixtureTestBase() {
-
     override fun registerArmeriaStubs() {
         registerKotlinExtendedRegistrationCollectorStubs()
     }
@@ -33,7 +32,6 @@ class ArmeriaKotlinExtendedRegistrationCollectorVirtualHostTest : ArmeriaFixture
         assertEquals("", serviceRoute.virtualHostName)
     }
 
-
     fun testCollectKotlinVirtualHostThenServiceAnnotatesServiceRoute() {
         myFixture.configureByText(
             "Main.kt",
@@ -58,7 +56,6 @@ class ArmeriaKotlinExtendedRegistrationCollectorVirtualHostTest : ArmeriaFixture
         assertEquals("/api", serviceRoute!!.path)
         assertEquals("api.example.com", serviceRoute.virtualHostName)
     }
-
 
     fun testCollectKotlinNestedVirtualHostLambdaUsesInnerHostname() {
         myFixture.configureByText(
@@ -88,7 +85,6 @@ class ArmeriaKotlinExtendedRegistrationCollectorVirtualHostTest : ArmeriaFixture
         assertEquals("inner.example.com", serviceRoute.virtualHostName)
     }
 
-
     fun testCollectKotlinVirtualHostRegistration() {
         myFixture.configureByText(
             "Main.kt",
@@ -110,7 +106,6 @@ class ArmeriaKotlinExtendedRegistrationCollectorVirtualHostTest : ArmeriaFixture
         assertNotNull(virtualHostRoute)
         assertEquals("api.example.com", virtualHostRoute!!.virtualHostName)
     }
-
 
     fun testCollectKotlinVirtualHostLambdaAnnotatesFileService() {
         myFixture.configureByText(
@@ -137,6 +132,4 @@ class ArmeriaKotlinExtendedRegistrationCollectorVirtualHostTest : ArmeriaFixture
         assertEquals("/files/", fileRoute!!.path)
         assertEquals("api.example.com", fileRoute.virtualHostName)
     }
-
-
 }

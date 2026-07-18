@@ -4,7 +4,10 @@ import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.psi.KtCallExpression
 
 internal object ArmeriaKotlinDecoratorSupport {
-    fun collectProgrammaticDecorators(element: PsiElement, registrationPath: String): List<String> {
+    fun collectProgrammaticDecorators(
+        element: PsiElement,
+        registrationPath: String,
+    ): List<String> {
         val registrationCall = element as? KtCallExpression ?: return emptyList()
         return collectKotlinDecoratorsOnBuilderChain(registrationCall, registrationPath)
     }

@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaKotlinExtendedRegistrationCollectorRouteDecoratorTest : ArmeriaFixtureTestBase() {
-
     override fun registerArmeriaStubs() {
         registerKotlinExtendedRegistrationCollectorStubs()
     }
@@ -33,7 +32,6 @@ class ArmeriaKotlinExtendedRegistrationCollectorRouteDecoratorTest : ArmeriaFixt
         assertEquals("/**", decoratorRoute.path)
     }
 
-
     fun testCollectKotlinRouteDecoratorRegistration() {
         myFixture.configureByText(
             "Main.kt",
@@ -60,7 +58,6 @@ class ArmeriaKotlinExtendedRegistrationCollectorRouteDecoratorTest : ArmeriaFixt
         assertEquals("/decorated/**", decoratorRoute.path)
     }
 
-
     fun testCollectKotlinRouteDecoratorMethodsStripHttpMethodPrefix() {
         myFixture.configureByText(
             "Main.kt",
@@ -86,7 +83,6 @@ class ArmeriaKotlinExtendedRegistrationCollectorRouteDecoratorTest : ArmeriaFixt
         assertNotNull(decoratorRoute)
         assertEquals("POST, PUT", decoratorRoute!!.httpMethod)
     }
-
 
     fun testCollectKotlinRouteDecoratorIgnoresPathCallsInsideDecoratorLambda() {
         myFixture.configureByText(
@@ -117,6 +113,4 @@ class ArmeriaKotlinExtendedRegistrationCollectorRouteDecoratorTest : ArmeriaFixt
         assertNotNull(decoratorRoute)
         assertEquals("/decorated/**", decoratorRoute!!.path)
     }
-
-
 }

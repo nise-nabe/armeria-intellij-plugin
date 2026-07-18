@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaRouteCollectorAnnotatedRouteTest : ArmeriaFixtureTestBase() {
-
     override fun registerArmeriaStubs() {
         registerRouteCollectorStubs()
     }
@@ -34,6 +33,7 @@ class ArmeriaRouteCollectorAnnotatedRouteTest : ArmeriaFixtureTestBase() {
         assertEquals(RouteMatch.ANNOTATED_HTTP, route.routeMatch)
         assertTrue(route.target.contains("HelloService#hello"))
     }
+
     fun testCollectAnnotatedServiceRegistration() {
         myFixture.configureByText(
             "HelloService.java",
@@ -82,6 +82,7 @@ class ArmeriaRouteCollectorAnnotatedRouteTest : ArmeriaFixtureTestBase() {
         assertNotNull(annotatedMethodRoute)
         assertEquals(RouteMatch.ANNOTATED_HTTP, annotatedMethodRoute!!.routeMatch)
     }
+
     fun testCollectPathPrefix() {
         myFixture.configureByText(
             "PrefixedService.java",
@@ -106,6 +107,7 @@ class ArmeriaRouteCollectorAnnotatedRouteTest : ArmeriaFixtureTestBase() {
         assertEquals(1, routes.size)
         assertEquals("/v1/items", routes.single().path)
     }
+
     fun testCollectAnnotatedRoute_blockingOnMethod() {
         myFixture.addClass(
             """
@@ -138,6 +140,7 @@ class ArmeriaRouteCollectorAnnotatedRouteTest : ArmeriaFixtureTestBase() {
         assertEquals(listOf("Blocking"), route.executionHints)
         assertTrue(route.timeoutHints.isEmpty())
     }
+
     fun testCollectAnnotatedRoute_blockingOnClass() {
         myFixture.addClass(
             """
@@ -169,6 +172,7 @@ class ArmeriaRouteCollectorAnnotatedRouteTest : ArmeriaFixtureTestBase() {
 
         assertEquals(listOf("Blocking"), route.executionHints)
     }
+
     fun testCollectAnnotatedRoute_doesNotAttachUnrelatedFileTimeouts() {
         myFixture.addClass(
             """

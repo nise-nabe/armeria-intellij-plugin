@@ -9,10 +9,9 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.message
 
 object ArmeriaRouteMetadata {
-    fun moduleName(element: PsiElement): String {
-        return ModuleUtilCore.findModuleForPsiElement(element)?.name
+    fun moduleName(element: PsiElement): String =
+        ModuleUtilCore.findModuleForPsiElement(element)?.name
             ?: message("route.explorer.module.unassigned")
-    }
 
     fun sourceHint(element: PsiElement): String {
         val containingFile = element.containingFile ?: return ""
@@ -23,11 +22,12 @@ object ArmeriaRouteMetadata {
     }
 
     fun registeredInHint(element: PsiElement): String {
-        val anchor = when (element) {
-            is PsiMethod -> element
-            is PsiMethodCallExpression -> PsiTreeUtil.getParentOfType(element, PsiMethod::class.java)
-            else -> PsiTreeUtil.getParentOfType(element, PsiMethod::class.java)
-        } ?: return ""
+        val anchor =
+            when (element) {
+                is PsiMethod -> element
+                is PsiMethodCallExpression -> PsiTreeUtil.getParentOfType(element, PsiMethod::class.java)
+                else -> PsiTreeUtil.getParentOfType(element, PsiMethod::class.java)
+            } ?: return ""
         val containingClass = anchor.containingClass
         val className = containingClass?.qualifiedName ?: containingClass?.name ?: message("route.explorer.registeredIn.anonymousClass")
         return message("route.explorer.registeredIn.method", className, anchor.name)

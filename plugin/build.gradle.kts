@@ -14,7 +14,10 @@ dependencies {
     implementation(project(":plugin-route-analysis"))
     implementation(project(":plugin-wizard"))
     intellijPlatform {
-        intellijIdeaUltimate(libs.versions.idea.platform.get())
+        intellijIdeaUltimate(
+            libs.versions.idea.platform
+                .get(),
+        )
         bundledPlugin("com.intellij.java")
         bundledPlugin("org.jetbrains.plugins.gradle")
         bundledPlugin("org.jetbrains.kotlin")
@@ -60,15 +63,16 @@ intellijPlatform {
             url = "https://github.com/nise-nabe/armeria-intellij-plugin"
         }
         val changelog = project.changelog
-        changeNotes = providers.gradleProperty("pluginVersion").map { pluginVersion ->
-            with(changelog) {
-                renderItem(
-                    (getOrNull(pluginVersion) ?: getUnreleased())
-                        .withHeader(false)
-                        .withEmptySections(false),
-                    Changelog.OutputType.HTML,
-                )
+        changeNotes =
+            providers.gradleProperty("pluginVersion").map { pluginVersion ->
+                with(changelog) {
+                    renderItem(
+                        (getOrNull(pluginVersion) ?: getUnreleased())
+                            .withHeader(false)
+                            .withEmptySections(false),
+                        Changelog.OutputType.HTML,
+                    )
+                }
             }
-        }
     }
 }

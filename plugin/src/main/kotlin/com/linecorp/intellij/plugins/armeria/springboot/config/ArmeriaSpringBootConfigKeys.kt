@@ -8,16 +8,17 @@ object ArmeriaSpringBootConfigKeys {
     const val MANAGEMENT_SERVER_PORT = "management.server.port"
     const val SPRING_WEB_APPLICATION_TYPE = "spring.main.web-application-type"
     val RELATED_ROOT_KEYS = setOf(SERVER_PORT, MANAGEMENT_SERVER_PORT, SPRING_WEB_APPLICATION_TYPE)
-    private val DOCUMENTATION_MESSAGE_KEYS = mapOf(
-        "armeria.ports" to "springboot.config.doc.armeria.ports",
-        "armeria.internal-services.port" to "springboot.config.doc.armeria.internal-services.port",
-        "armeria.internal-services.include" to "springboot.config.doc.armeria.internal-services.include",
-        "armeria.compression.enabled" to "springboot.config.doc.armeria.compression.enabled",
-        "armeria.enable-auto-injection" to "springboot.config.doc.armeria.enable-auto-injection",
-        SERVER_PORT to "springboot.config.doc.server.port",
-        MANAGEMENT_SERVER_PORT to "springboot.config.doc.management.server.port",
-        SPRING_WEB_APPLICATION_TYPE to "springboot.config.doc.spring.main.web-application-type",
-    )
+    private val DOCUMENTATION_MESSAGE_KEYS =
+        mapOf(
+            "armeria.ports" to "springboot.config.doc.armeria.ports",
+            "armeria.internal-services.port" to "springboot.config.doc.armeria.internal-services.port",
+            "armeria.internal-services.include" to "springboot.config.doc.armeria.internal-services.include",
+            "armeria.compression.enabled" to "springboot.config.doc.armeria.compression.enabled",
+            "armeria.enable-auto-injection" to "springboot.config.doc.armeria.enable-auto-injection",
+            SERVER_PORT to "springboot.config.doc.server.port",
+            MANAGEMENT_SERVER_PORT to "springboot.config.doc.management.server.port",
+            SPRING_WEB_APPLICATION_TYPE to "springboot.config.doc.spring.main.web-application-type",
+        )
     val COMPLETION_SUGGESTIONS = DOCUMENTATION_MESSAGE_KEYS.keys.toList()
 
     fun isArmeriaRelatedKey(key: String): Boolean {
@@ -45,7 +46,10 @@ object ArmeriaSpringBootConfigKeys {
      * Under a nested mapping this is the next path segment (not the leaf), so
      * `armeria` + `armeria.internal-services.port` → `internal-services`.
      */
-    fun completionInsertText(currentPath: String, suggestion: String): String? {
+    fun completionInsertText(
+        currentPath: String,
+        suggestion: String,
+    ): String? {
         if (currentPath.isEmpty()) {
             return suggestion
         }

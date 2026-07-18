@@ -9,12 +9,12 @@ import com.intellij.openapi.util.Ref
 import com.intellij.psi.PsiElement
 
 class ArmeriaRunConfigurationProducer : LazyRunConfigurationProducer<ArmeriaRunConfiguration>() {
-    override fun getConfigurationFactory(): ConfigurationFactory {
-        return ConfigurationType.CONFIGURATION_TYPE_EP.findExtension(ArmeriaRunConfigurationType::class.java)
+    override fun getConfigurationFactory(): ConfigurationFactory =
+        ConfigurationType.CONFIGURATION_TYPE_EP
+            .findExtension(ArmeriaRunConfigurationType::class.java)
             ?.configurationFactories
             ?.first()
             ?: ArmeriaRunConfigurationType().configurationFactories[0]
-    }
 
     override fun setupConfigurationFromContext(
         configuration: ArmeriaRunConfiguration,

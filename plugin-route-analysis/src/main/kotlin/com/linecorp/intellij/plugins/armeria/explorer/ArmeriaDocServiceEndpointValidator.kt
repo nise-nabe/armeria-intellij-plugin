@@ -34,7 +34,12 @@ object ArmeriaDocServiceEndpointValidator {
         return withLeadingSlash.trimEnd('/')
     }
 
-    fun buildSpecificationUrl(host: String, port: Int, useHttps: Boolean, mountPath: String): String {
+    fun buildSpecificationUrl(
+        host: String,
+        port: Int,
+        useHttps: Boolean,
+        mountPath: String,
+    ): String {
         val scheme = if (useHttps) "https" else "http"
         val normalizedMount = normalizeMountPath(mountPath)
         val base = if (normalizedMount == "/") "" else normalizedMount

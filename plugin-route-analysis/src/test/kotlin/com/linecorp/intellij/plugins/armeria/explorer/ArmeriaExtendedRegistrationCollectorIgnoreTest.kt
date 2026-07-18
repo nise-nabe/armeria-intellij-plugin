@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaExtendedRegistrationCollectorIgnoreTest : ArmeriaFixtureTestBase() {
-
     override fun registerArmeriaStubs() {
         registerExtendedRegistrationCollectorStubs()
     }
@@ -30,7 +29,6 @@ class ArmeriaExtendedRegistrationCollectorIgnoreTest : ArmeriaFixtureTestBase() 
         assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
     }
 
-
     fun testIgnoreNonArmeriaVirtualHostCalls() {
         myFixture.configureByText(
             "Main.java",
@@ -50,7 +48,6 @@ class ArmeriaExtendedRegistrationCollectorIgnoreTest : ArmeriaFixtureTestBase() 
         val routes = ArmeriaRouteCollector.collect(project)
         assertTrue(routes.none { it.routeMatch == RouteMatch.VIRTUAL_HOST })
     }
-
 
     fun testIgnoreNonArmeriaFluentBuildInVirtualHostLambda() {
         myFixture.configureByText(
@@ -80,7 +77,6 @@ class ArmeriaExtendedRegistrationCollectorIgnoreTest : ArmeriaFixtureTestBase() 
         assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
     }
 
-
     fun testIgnoreNonArmeriaServiceInVirtualHostLambda() {
         myFixture.configureByText(
             "Main.java",
@@ -106,6 +102,4 @@ class ArmeriaExtendedRegistrationCollectorIgnoreTest : ArmeriaFixtureTestBase() 
         val routes = ArmeriaRouteCollector.collect(project)
         assertTrue(routes.none { it.routeMatch == RouteMatch.SERVICE })
     }
-
-
 }

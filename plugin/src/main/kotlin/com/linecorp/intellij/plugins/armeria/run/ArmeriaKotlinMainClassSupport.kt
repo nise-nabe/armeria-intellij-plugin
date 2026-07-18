@@ -18,7 +18,8 @@ internal object ArmeriaKotlinMainClassSupport {
     fun findMainClass(element: PsiElement): PsiClass? {
         val ktFile = element.containingFile as? KtFile ?: return null
 
-        PsiTreeUtil.getParentOfType(element, false, KtClassOrObject::class.java)
+        PsiTreeUtil
+            .getParentOfType(element, false, KtClassOrObject::class.java)
             ?.toLightClass()
             ?.takeIf(PsiMethodUtil::hasMainInClass)
             ?.let { return it }

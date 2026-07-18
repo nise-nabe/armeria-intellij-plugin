@@ -4,7 +4,6 @@ import com.intellij.psi.PsiMethodCallExpression
 import com.linecorp.intellij.plugins.armeria.message
 
 internal object ArmeriaExtendedRegistrationCollectorFluentRoute {
-
     fun tryCollectFluentRoute(
         buildCall: PsiMethodCallExpression,
         routes: MutableList<ArmeriaRoute>,
@@ -50,7 +49,10 @@ internal object ArmeriaExtendedRegistrationCollectorFluentRoute {
             steps += ArmeriaJavaRegistrationChainSupport.toChainStep(current)
             current = ArmeriaJavaRegistrationChainSupport.previousMethodCallInChain(current)
         }
-        val handlerArg = buildCall.argumentList.expressions.firstOrNull()?.text
+        val handlerArg =
+            buildCall.argumentList.expressions
+                .firstOrNull()
+                ?.text
         return ArmeriaRegistrationChainReducer.reduceFluentRouteChain(
             stepsFromBuildUpward = steps,
             requireRouteAnchor = requireRouteAnchor,
@@ -62,8 +64,8 @@ internal object ArmeriaExtendedRegistrationCollectorFluentRoute {
     private fun createFluentRoute(
         element: PsiMethodCallExpression,
         chainInfo: FluentRouteChainInfo,
-    ): ArmeriaRoute {
-        return ArmeriaRoute.create(
+    ): ArmeriaRoute =
+        ArmeriaRoute.create(
             element = element,
             protocol = RouteProtocol.HTTP.presentableName(),
             httpMethod = chainInfo.httpMethod,
@@ -74,5 +76,4 @@ internal object ArmeriaExtendedRegistrationCollectorFluentRoute {
             decorators = ArmeriaDecoratorSupport.collectProgrammaticDecorators(element, chainInfo.path),
             timeoutHints = ArmeriaTimeoutSupport.collectBuilderTimeoutHints(element),
         )
-    }
 }

@@ -38,8 +38,11 @@ class ArmeriaRouteExplorerRouteStateTest {
         assertEquals(listOf(second), state.runtimeRoutes)
     }
 
-    private fun testRoute(moduleName: String, path: String): ArmeriaRoute {
-        return ArmeriaRoute(
+    private fun testRoute(
+        moduleName: String,
+        path: String,
+    ): ArmeriaRoute =
+        ArmeriaRoute(
             protocol = "HTTP",
             httpMethod = "GET",
             path = path,
@@ -52,7 +55,6 @@ class ArmeriaRouteExplorerRouteStateTest {
             exceptionHandlers = emptyList(),
             pointer = TestPsiPointer,
         )
-    }
 
     private object TestPsiPointer : SmartPsiElementPointer<PsiElement> {
         override fun getElement(): PsiElement? = null

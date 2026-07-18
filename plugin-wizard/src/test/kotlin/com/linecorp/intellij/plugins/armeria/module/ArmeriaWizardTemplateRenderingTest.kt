@@ -10,11 +10,12 @@ import org.junit.Test
 class ArmeriaWizardTemplateRenderingTest {
     @Test
     fun gradleKtsKotlinServerGrpcJunit5() {
-        val context = ArmeriaWizardTemplateTestContext(
-            language = "kotlin",
-            testRunnerId = "junit5",
-            libraries = setOf("armeria-grpc"),
-        )
+        val context =
+            ArmeriaWizardTemplateTestContext(
+                language = "kotlin",
+                testRunnerId = "junit5",
+                libraries = setOf("armeria-grpc"),
+            )
         val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-build.gradle.kts.ft", context)
 
         assertTrue(rendered.contains("kotlin(\"jvm\")"))
@@ -26,11 +27,12 @@ class ArmeriaWizardTemplateRenderingTest {
 
     @Test
     fun gradleGroovyScalaArmeriaScala213() {
-        val context = ArmeriaWizardTemplateTestContext(
-            language = "scala",
-            testRunnerId = "junit5",
-            libraries = setOf("armeria-scala_2.13"),
-        )
+        val context =
+            ArmeriaWizardTemplateTestContext(
+                language = "scala",
+                testRunnerId = "junit5",
+                libraries = setOf("armeria-scala_2.13"),
+            )
         val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-build.gradle.ft", context)
 
         assertTrue(rendered.contains("id 'scala'"))
@@ -40,11 +42,12 @@ class ArmeriaWizardTemplateRenderingTest {
 
     @Test
     fun mavenKotlinTomcat8() {
-        val context = ArmeriaWizardTemplateTestContext(
-            language = "kotlin",
-            testRunnerId = "junit5",
-            libraries = setOf("armeria-tomcat8"),
-        )
+        val context =
+            ArmeriaWizardTemplateTestContext(
+                language = "kotlin",
+                testRunnerId = "junit5",
+                libraries = setOf("armeria-tomcat8"),
+            )
         val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-pom.xml.ft", context)
 
         assertTrue(rendered.contains("<artifactId>armeria-tomcat8</artifactId>"))
@@ -54,11 +57,12 @@ class ArmeriaWizardTemplateRenderingTest {
 
     @Test
     fun gradleKtsSpringBoot3Starter() {
-        val context = ArmeriaWizardTemplateTestContext(
-            language = "kotlin",
-            testRunnerId = "junit5",
-            libraries = setOf("armeria-spring-boot3-starter"),
-        )
+        val context =
+            ArmeriaWizardTemplateTestContext(
+                language = "kotlin",
+                testRunnerId = "junit5",
+                libraries = setOf("armeria-spring-boot3-starter"),
+            )
         val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-build.gradle.kts.ft", context)
 
         assertTrue(rendered.contains("armeria-spring-boot3-starter"))
@@ -112,15 +116,18 @@ class ArmeriaWizardTemplateRenderingTest {
 
     @Test
     fun logbackTemplateRendersConsoleAppender() {
-        val rendered = renderBuildTemplate(
-            "fileTemplates/j2ee/armeria-logback.xml.ft",
-            ArmeriaWizardTemplateTestContext(),
-        )
+        val rendered =
+            renderBuildTemplate(
+                "fileTemplates/j2ee/armeria-logback.xml.ft",
+                ArmeriaWizardTemplateTestContext(),
+            )
 
         assertTrue(rendered.contains("ch.qos.logback.core.ConsoleAppender"))
         assertTrue(rendered.contains("<root level=\"INFO\">"))
     }
 
-    private fun renderBuildTemplate(resourcePath: String, context: ArmeriaWizardTemplateTestContext): String =
-        ArmeriaWizardTemplateRenderer.renderClasspathTemplate(resourcePath, context)
+    private fun renderBuildTemplate(
+        resourcePath: String,
+        context: ArmeriaWizardTemplateTestContext,
+    ): String = ArmeriaWizardTemplateRenderer.renderClasspathTemplate(resourcePath, context)
 }

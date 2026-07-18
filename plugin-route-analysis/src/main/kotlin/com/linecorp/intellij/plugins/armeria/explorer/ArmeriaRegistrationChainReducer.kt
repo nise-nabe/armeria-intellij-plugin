@@ -21,7 +21,6 @@ internal data class RouteDecoratorChainInfo(
 )
 
 internal object ArmeriaRegistrationChainReducer {
-
     fun reduceFluentRouteChain(
         stepsFromBuildUpward: List<RegistrationChainStep>,
         requireRouteAnchor: Boolean,
@@ -50,12 +49,13 @@ internal object ArmeriaRegistrationChainReducer {
                         foundPath = true
                     }
                 }
-                "path" -> parsePathFromStep(step)?.let { parsed ->
-                    methodPath = parsed.second
-                    path = parsed.second
-                    pathType = parsed.first
-                    foundPath = true
-                }
+                "path" ->
+                    parsePathFromStep(step)?.let { parsed ->
+                        methodPath = parsed.second
+                        path = parsed.second
+                        pathType = parsed.first
+                        foundPath = true
+                    }
                 "pathPrefix" -> {
                     val raw = step.firstStringArg ?: path
                     val parsed = ArmeriaRouteSupport.parsePathType("prefix:$raw")
@@ -79,9 +79,10 @@ internal object ArmeriaRegistrationChainReducer {
                     foundPath = true
                 }
                 "methods", "method" -> {
-                    httpMethod = step.rawMethodArgs.joinToString(", ") { argument ->
-                        formatHttpMethodArgument(argument)
-                    }
+                    httpMethod =
+                        step.rawMethodArgs.joinToString(", ") { argument ->
+                            formatHttpMethodArgument(argument)
+                        }
                 }
             }
         }
@@ -91,16 +92,18 @@ internal object ArmeriaRegistrationChainReducer {
         if (!requireRouteAnchor && !foundPath) {
             return null
         }
-        val resolvedPath = if (mountPrefix != null && methodPath != null) {
-            ArmeriaRouteSupport.combinePaths(mountPrefix, methodPath)
-        } else {
-            path
-        }
-        val resolvedPathType = if (mountPrefix != null && methodPath != null) {
-            PathType.EXACT
-        } else {
-            pathType
-        }
+        val resolvedPath =
+            if (mountPrefix != null && methodPath != null) {
+                ArmeriaRouteSupport.combinePaths(mountPrefix, methodPath)
+            } else {
+                path
+            }
+        val resolvedPathType =
+            if (mountPrefix != null && methodPath != null) {
+                PathType.EXACT
+            } else {
+                pathType
+            }
         return FluentRouteChainInfo(
             httpMethod = httpMethod,
             path = resolvedPath,
@@ -121,21 +124,23 @@ internal object ArmeriaRegistrationChainReducer {
             when (step.methodName) {
                 "path", "pathPrefix", "pathRegex", "pathGlob" -> {
                     val raw = step.firstStringArg ?: pathPattern
-                    val parsed = ArmeriaRouteSupport.parsePathType(
-                        when (step.methodName) {
-                            "pathPrefix" -> "prefix:$raw"
-                            "pathRegex" -> "regex:$raw"
-                            "pathGlob" -> "glob:$raw"
-                            else -> raw
-                        },
-                    )
+                    val parsed =
+                        ArmeriaRouteSupport.parsePathType(
+                            when (step.methodName) {
+                                "pathPrefix" -> "prefix:$raw"
+                                "pathRegex" -> "regex:$raw"
+                                "pathGlob" -> "glob:$raw"
+                                else -> raw
+                            },
+                        )
                     pathType = parsed.first
                     pathPattern = parsed.second
                 }
                 "methods", "method" -> {
-                    methods = step.rawMethodArgs.joinToString(", ") { argument ->
-                        formatHttpMethodArgument(argument)
-                    }
+                    methods =
+                        step.rawMethodArgs.joinToString(", ") { argument ->
+                            formatHttpMethodArgument(argument)
+                        }
                 }
                 "build" -> {
                     val decoratorArg = step.rawMethodArgs.firstOrNull()
@@ -153,6 +158,5 @@ internal object ArmeriaRegistrationChainReducer {
         return ArmeriaRouteSupport.parsePathType(raw)
     }
 
-    private fun formatHttpMethodArgument(argument: String): String =
-        argument.trim().substringAfterLast('.').uppercase()
+    private fun formatHttpMethodArgument(argument: String): String = argument.trim().substringAfterLast('.').uppercase()
 }

@@ -16,7 +16,11 @@ internal object ArmeriaGrpcRouteCollector {
     private val RPC_PATTERN = Regex("""\brpc\s+(\w+)\s*\(""")
     private val PACKAGE_PATTERN = Regex("""\bpackage\s+([\w.]+)\s*;?""")
 
-    fun collect(project: Project, scope: GlobalSearchScope, routes: MutableList<ArmeriaRoute>) {
+    fun collect(
+        project: Project,
+        scope: GlobalSearchScope,
+        routes: MutableList<ArmeriaRoute>,
+    ) {
         if (!isProtoRouteDiscoveryEnabled() || !isGrpcOnClasspath(project, scope)) {
             return
         }
@@ -35,7 +39,12 @@ internal object ArmeriaGrpcRouteCollector {
         seenProtoRoutes: MutableSet<String> = mutableSetOf(),
     ) {
         val strippedText = ArmeriaProtoTextSupport.stripComments(text)
-        val packageName = PACKAGE_PATTERN.find(strippedText)?.groupValues?.get(1).orEmpty()
+        val packageName =
+            PACKAGE_PATTERN
+                .find(strippedText)
+                ?.groupValues
+                ?.get(1)
+                .orEmpty()
         for ((serviceName, body) in findServiceBodies(strippedText)) {
             val fqService = if (packageName.isBlank()) serviceName else "$packageName.$serviceName"
             for (rpc in RPC_PATTERN.findAll(body)) {
@@ -45,14 +54,15 @@ internal object ArmeriaGrpcRouteCollector {
                 if (!seenProtoRoutes.add(dedupeKey)) {
                     continue
                 }
-                routes += ArmeriaRoute.create(
-                    element = element,
-                    protocol = message("route.explorer.protocol.grpc"),
-                    httpMethod = "",
-                    path = path,
-                    target = "$fqService.$methodName",
-                    routeMatch = RouteMatch.NON_HTTP,
-                )
+                routes +=
+                    ArmeriaRoute.create(
+                        element = element,
+                        protocol = message("route.explorer.protocol.grpc"),
+                        httpMethod = "",
+                        path = path,
+                        target = "$fqService.$methodName",
+                        routeMatch = RouteMatch.NON_HTTP,
+                    )
             }
         }
     }
@@ -64,8 +74,10 @@ internal object ArmeriaGrpcRouteCollector {
             true
         }
 
-    internal fun isGrpcOnClasspath(project: Project, scope: GlobalSearchScope): Boolean =
-        JavaPsiFacade.getInstance(project).findClass(GRPC_SERVICE_CLASS, scope) != null
+    internal fun isGrpcOnClasspath(
+        project: Project,
+        scope: GlobalSearchScope,
+    ): Boolean = JavaPsiFacade.getInstance(project).findClass(GRPC_SERVICE_CLASS, scope) != null
 
     private fun findServiceBodies(text: String): List<Pair<String, String>> {
         val results = mutableListOf<Pair<String, String>>()

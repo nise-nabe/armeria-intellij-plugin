@@ -8,8 +8,13 @@ import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.openapi.wm.ex.ToolWindowManagerListener
 import com.intellij.ui.content.ContentFactory
 
-class ArmeriaRouteExplorerToolWindowFactory : ToolWindowFactory, DumbAware {
-    override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
+class ArmeriaRouteExplorerToolWindowFactory :
+    ToolWindowFactory,
+    DumbAware {
+    override fun createToolWindowContent(
+        project: Project,
+        toolWindow: ToolWindow,
+    ) {
         val panel = ArmeriaRouteExplorerPanel(project)
         val content = ContentFactory.getInstance().createContent(panel, "", false)
         Disposer.register(content, panel)

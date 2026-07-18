@@ -5,7 +5,10 @@ object ArmeriaDocServiceSupport {
 
     fun hasDocService(routes: List<ArmeriaRoute>): Boolean = routes.any { it.isDocService }
 
-    fun url(route: ArmeriaRoute, baseUrl: String = ArmeriaHttpRequestGenerator.DEFAULT_BASE_URL): String {
+    fun url(
+        route: ArmeriaRoute,
+        baseUrl: String = ArmeriaHttpRequestGenerator.DEFAULT_BASE_URL,
+    ): String {
         val normalizedBase = baseUrl.trimEnd('/')
         val path = route.path.takeIf { it.startsWith("/") } ?: "/${route.path}"
         return normalizedBase + path

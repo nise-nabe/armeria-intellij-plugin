@@ -1,7 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -25,7 +24,8 @@ class ArmeriaDocServiceSpecificationParserTest {
 
     @Test
     fun parse_usesExamplePathsWhenEndpointsMissing() {
-        val json = """
+        val json =
+            """
             {
               "services": [
                 {
@@ -40,7 +40,7 @@ class ArmeriaDocServiceSpecificationParserTest {
                 }
               ]
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val parsed = ArmeriaDocServiceSpecificationParser.parse(json)
 
@@ -52,7 +52,8 @@ class ArmeriaDocServiceSpecificationParserTest {
 
     @Test
     fun parse_readsEscapedExamplePaths() {
-        val json = """
+        val json =
+            """
             {
               "services": [
                 {
@@ -67,7 +68,7 @@ class ArmeriaDocServiceSpecificationParserTest {
                 }
               ]
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val parsed = ArmeriaDocServiceSpecificationParser.parse(json)
 
@@ -79,7 +80,8 @@ class ArmeriaDocServiceSpecificationParserTest {
 
     @Test
     fun parse_keepsDistinctRoutesWithSameMethodAndPath() {
-        val json = """
+        val json =
+            """
             {
               "services": [
                 {
@@ -108,7 +110,7 @@ class ArmeriaDocServiceSpecificationParserTest {
                 }
               ]
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val parsed = ArmeriaDocServiceSpecificationParser.parse(json)
 
@@ -121,7 +123,8 @@ class ArmeriaDocServiceSpecificationParserTest {
 
     @Test
     fun parse_readsJsonEscapeSequencesInStrings() {
-        val json = """
+        val json =
+            """
             {
               "services": [
                 {
@@ -136,7 +139,7 @@ class ArmeriaDocServiceSpecificationParserTest {
                 }
               ]
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val parsed = ArmeriaDocServiceSpecificationParser.parse(json)
 
@@ -149,7 +152,8 @@ class ArmeriaDocServiceSpecificationParserTest {
     @Test
     fun parse_readsUnicodeEscapeSequenceInStrings() {
         val jsonUnicodePath = "/unicode" + '\\' + "u0041"
-        val json = """
+        val json =
+            """
             {
               "services": [
                 {
@@ -164,7 +168,7 @@ class ArmeriaDocServiceSpecificationParserTest {
                 }
               ]
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val parsed = ArmeriaDocServiceSpecificationParser.parse(json)
 
@@ -176,7 +180,8 @@ class ArmeriaDocServiceSpecificationParserTest {
 
     @Test
     fun parse_readsServiceNameWhenMethodsAppearBeforeNameField() {
-        val json = """
+        val json =
+            """
             {
               "services": [
                 {
@@ -193,7 +198,7 @@ class ArmeriaDocServiceSpecificationParserTest {
                 }
               ]
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val parsed = ArmeriaDocServiceSpecificationParser.parse(json)
 
@@ -204,7 +209,8 @@ class ArmeriaDocServiceSpecificationParserTest {
 
     @Test
     fun parse_ignoresOpenApiStylePathFields() {
-        val json = """
+        val json =
+            """
             {
               "services": [],
               "paths": {
@@ -213,7 +219,7 @@ class ArmeriaDocServiceSpecificationParserTest {
                 }
               }
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val parsed = ArmeriaDocServiceSpecificationParser.parse(json)
 

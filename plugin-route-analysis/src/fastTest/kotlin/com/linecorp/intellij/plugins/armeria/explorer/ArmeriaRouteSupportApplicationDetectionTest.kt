@@ -7,7 +7,8 @@ import org.junit.Test
 class ArmeriaRouteSupportApplicationDetectionTest {
     @Test
     fun referencesArmeriaApplicationInSource_matchesFqcnServerBuilderCallWithoutImports() {
-        val source = """
+        val source =
+            """
             package example;
 
             public class Main {
@@ -15,7 +16,7 @@ class ArmeriaRouteSupportApplicationDetectionTest {
                     com.linecorp.armeria.server.Server.builder().build();
                 }
             }
-        """.trimIndent()
+            """.trimIndent()
 
         assertTrue(ArmeriaRouteSupport.referencesArmeriaApplicationInSource(source))
     }
@@ -23,7 +24,8 @@ class ArmeriaRouteSupportApplicationDetectionTest {
     @Test
     fun referencesArmeriaApplicationInSource_matchesArmeriaPackageReferenceAfterLongHeader() {
         val longHeader = "/* " + "x".repeat(ArmeriaRouteSupport.ARMERIA_HEADER_SCAN_LIMIT) + " */"
-        val source = """
+        val source =
+            """
             $longHeader
             package example;
 
@@ -32,14 +34,15 @@ class ArmeriaRouteSupportApplicationDetectionTest {
                     com.linecorp.armeria.server.Server.builder().build();
                 }
             }
-        """.trimIndent()
+            """.trimIndent()
 
         assertTrue(ArmeriaRouteSupport.referencesArmeriaApplicationInSource(source))
     }
 
     @Test
     fun referencesArmeriaApplicationInSource_matchesArmeriaImportInHeader() {
-        val source = """
+        val source =
+            """
             package example;
 
             import com.linecorp.armeria.server.Server;
@@ -49,14 +52,15 @@ class ArmeriaRouteSupportApplicationDetectionTest {
                     Server.builder().build();
                 }
             }
-        """.trimIndent()
+            """.trimIndent()
 
         assertTrue(ArmeriaRouteSupport.referencesArmeriaApplicationInSource(source))
     }
 
     @Test
     fun referencesArmeriaApplicationInSource_doesNotMatchUnqualifiedServerBuilderWithoutArmeriaReferences() {
-        val source = """
+        val source =
+            """
             package example;
 
             public class Main {
@@ -64,14 +68,15 @@ class ArmeriaRouteSupportApplicationDetectionTest {
                     Server.builder().build();
                 }
             }
-        """.trimIndent()
+            """.trimIndent()
 
         assertFalse(ArmeriaRouteSupport.referencesArmeriaApplicationInSource(source))
     }
 
     @Test
     fun referencesArmeriaApplicationInSource_doesNotMatchBareServerBuilderIdentifier() {
-        val source = """
+        val source =
+            """
             package example;
 
             public class Main {
@@ -79,14 +84,15 @@ class ArmeriaRouteSupportApplicationDetectionTest {
                     serverBuilder.start();
                 }
             }
-        """.trimIndent()
+            """.trimIndent()
 
         assertFalse(ArmeriaRouteSupport.referencesArmeriaApplicationInSource(source))
     }
 
     @Test
     fun referencesArmeriaApplicationInSource_doesNotMatchFqcnServerBuilderCallInStringLiteral() {
-        val source = """
+        val source =
+            """
             package example;
 
             public class Main {
@@ -94,14 +100,15 @@ class ArmeriaRouteSupportApplicationDetectionTest {
                     System.out.println("com.linecorp.armeria.server.Server.builder()");
                 }
             }
-        """.trimIndent()
+            """.trimIndent()
 
         assertFalse(ArmeriaRouteSupport.referencesArmeriaApplicationInSource(source))
     }
 
     @Test
     fun referencesArmeriaApplicationInSource_doesNotMatchArmeriaClientWithoutServerBuilder() {
-        val source = """
+        val source =
+            """
             package example;
 
             import com.linecorp.armeria.client.WebClient;
@@ -111,14 +118,15 @@ class ArmeriaRouteSupportApplicationDetectionTest {
                     WebClient.of("https://example.com");
                 }
             }
-        """.trimIndent()
+            """.trimIndent()
 
         assertFalse(ArmeriaRouteSupport.referencesArmeriaApplicationInSource(source))
     }
 
     @Test
     fun referencesArmeriaApplicationInSource_doesNotMatchOtherServerBuilderCalls() {
-        val source = """
+        val source =
+            """
             package example;
 
             import com.example.other.Server;
@@ -128,7 +136,7 @@ class ArmeriaRouteSupportApplicationDetectionTest {
                     Server.builder().build();
                 }
             }
-        """.trimIndent()
+            """.trimIndent()
 
         assertFalse(ArmeriaRouteSupport.referencesArmeriaApplicationInSource(source))
     }

@@ -63,25 +63,29 @@ internal object ArmeriaKotlinClientDecoratorSupport {
         return null
     }
 
-    private fun asKotlinCallExpression(expression: KtExpression): KtCallExpression? {
-        return when (expression) {
+    private fun asKotlinCallExpression(expression: KtExpression): KtCallExpression? =
+        when (expression) {
             is KtCallExpression -> expression
             is KtDotQualifiedExpression -> expression.selectorExpression as? KtCallExpression
             else -> null
         }
-    }
 
     private fun isKotlinClientDecoratorCall(call: KtCallExpression): Boolean {
         if (resolveKotlinCallName(call) != "decorator") {
             return false
         }
-        val references = call.calleeExpression?.references?.toList().orEmpty()
+        val references =
+            call.calleeExpression
+                ?.references
+                ?.toList()
+                .orEmpty()
         for (reference in references) {
             val resolved = reference.resolve()
-            val containingClass = when (resolved) {
-                is PsiMethod -> resolved.containingClass?.qualifiedName
-                else -> null
-            }
+            val containingClass =
+                when (resolved) {
+                    is PsiMethod -> resolved.containingClass?.qualifiedName
+                    else -> null
+                }
             if (containingClass?.startsWith(ArmeriaClientSupport.ARMERIA_CLIENT_PACKAGE_PREFIX) == true) {
                 return true
             }
@@ -96,8 +100,8 @@ internal object ArmeriaKotlinClientDecoratorSupport {
         return ArmeriaClientDecoratorSupport.labelClientDecorator(target)
     }
 
-    private fun extractKotlinDecoratorTarget(expression: KtExpression): String {
-        return when (expression) {
+    private fun extractKotlinDecoratorTarget(expression: KtExpression): String =
+        when (expression) {
             is KtCallExpression -> {
                 when (val callee = expression.calleeExpression) {
                     is KtDotQualifiedExpression -> callee.receiverExpression.text
@@ -115,7 +119,6 @@ internal object ArmeriaKotlinClientDecoratorSupport {
             }
             else -> expression.text
         }
-    }
 
     private fun resolveKotlinCallName(call: KtCallExpression): String? {
         val callee = call.calleeExpression ?: return null
@@ -126,21 +129,22 @@ internal object ArmeriaKotlinClientDecoratorSupport {
     }
 
     private fun kotlinChainReceiver(expression: KtExpression): KtExpression? {
-        val receiver = when (expression) {
-            is KtDotQualifiedExpression -> expression.receiverExpression
-            is KtCallExpression -> {
-                val parent = expression.parent
-                if (parent is KtDotQualifiedExpression && parent.selectorExpression == expression) {
-                    parent.receiverExpression
-                } else {
-                    when (val callee = expression.calleeExpression) {
-                        is KtDotQualifiedExpression -> callee.receiverExpression
-                        else -> null
+        val receiver =
+            when (expression) {
+                is KtDotQualifiedExpression -> expression.receiverExpression
+                is KtCallExpression -> {
+                    val parent = expression.parent
+                    if (parent is KtDotQualifiedExpression && parent.selectorExpression == expression) {
+                        parent.receiverExpression
+                    } else {
+                        when (val callee = expression.calleeExpression) {
+                            is KtDotQualifiedExpression -> callee.receiverExpression
+                            else -> null
+                        }
                     }
                 }
-            }
-            else -> null
-        } ?: return null
+                else -> null
+            } ?: return null
         return unwrapKotlinExpression(receiver)
     }
 

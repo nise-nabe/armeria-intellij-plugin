@@ -32,32 +32,39 @@ class ArmeriaRouteDetailPanel : JPanel(BorderLayout()) {
     private val attachmentsBlock: JPanel
 
     init {
-        val overviewBody = formBody(
-            labeledField(message("route.explorer.detail.status"), detailStatus),
-            labeledField(message("route.explorer.detail.method"), detailMethod),
-            labeledField(message("route.explorer.detail.protocol"), detailProtocol),
-            labeledField(message("route.explorer.detail.path"), detailPath),
-            labeledField(message("route.explorer.detail.module"), detailModule),
-        )
+        val overviewBody =
+            formBody(
+                labeledField(message("route.explorer.detail.status"), detailStatus),
+                labeledField(message("route.explorer.detail.method"), detailMethod),
+                labeledField(message("route.explorer.detail.protocol"), detailProtocol),
+                labeledField(message("route.explorer.detail.path"), detailPath),
+                labeledField(message("route.explorer.detail.module"), detailModule),
+            )
         registeredInRow = labeledField(message("route.explorer.detail.registeredIn"), detailRegisteredIn)
         definitionRow = labeledField(message("route.explorer.detail.definition"), detailDefinition)
-        val registrationBody = formBody(
-            labeledField(message("route.explorer.detail.registration"), detailRegistration),
-            registeredInRow,
-        )
-        val implementationBody = formBody(
-            labeledField(handlerFieldLabel, detailHandler),
-            definitionRow,
-        )
-        attachmentsBlock = detailSection(
-            message("route.explorer.detail.block.attachments"),
-            JPanel(BorderLayout()).apply {
-                add(detailAttachments, BorderLayout.CENTER)
-            },
-        )
+        val registrationBody =
+            formBody(
+                labeledField(message("route.explorer.detail.registration"), detailRegistration),
+                registeredInRow,
+            )
+        val implementationBody =
+            formBody(
+                labeledField(handlerFieldLabel, detailHandler),
+                definitionRow,
+            )
+        attachmentsBlock =
+            detailSection(
+                message("route.explorer.detail.block.attachments"),
+                JPanel(BorderLayout()).apply {
+                    add(detailAttachments, BorderLayout.CENTER)
+                },
+            )
 
         add(
-            JPanel(com.intellij.ui.components.panels.VerticalLayout(JBUI.scale(10))).apply {
+            JPanel(
+                com.intellij.ui.components.panels
+                    .VerticalLayout(JBUI.scale(10)),
+            ).apply {
                 add(detailSection(message("route.explorer.detail.block.overview"), overviewBody))
                 add(detailSection(message("route.explorer.detail.block.registration"), registrationBody))
                 add(detailSection(message("route.explorer.detail.block.implementation"), implementationBody))
@@ -113,8 +120,11 @@ class ArmeriaRouteDetailPanel : JPanel(BorderLayout()) {
         attachmentsBlock.isVisible = false
     }
 
-    private fun detailSection(title: String, body: JComponent): JPanel {
-        return JPanel(BorderLayout()).apply {
+    private fun detailSection(
+        title: String,
+        body: JComponent,
+    ): JPanel =
+        JPanel(BorderLayout()).apply {
             add(TitledSeparator(title), BorderLayout.NORTH)
             add(
                 JPanel(BorderLayout()).apply {
@@ -124,7 +134,6 @@ class ArmeriaRouteDetailPanel : JPanel(BorderLayout()) {
                 BorderLayout.CENTER,
             )
         }
-    }
 
     private fun formBody(vararg rows: JComponent): JPanel {
         val builder = FormBuilder.createFormBuilder()
@@ -132,24 +141,32 @@ class ArmeriaRouteDetailPanel : JPanel(BorderLayout()) {
         return builder.panel
     }
 
-    private fun labeledField(label: String, value: JComponent): JPanel =
-        labeledField(JBLabel(label), value)
+    private fun labeledField(
+        label: String,
+        value: JComponent,
+    ): JPanel = labeledField(JBLabel(label), value)
 
-    private fun labeledField(label: JBLabel, value: JComponent): JPanel {
-        return FormBuilder.createFormBuilder()
+    private fun labeledField(
+        label: JBLabel,
+        value: JComponent,
+    ): JPanel =
+        FormBuilder
+            .createFormBuilder()
             .addLabeledComponent(label, value, 1, false)
             .panel
-    }
 
-    private fun wrappingValueLabel(): JBLabel {
-        return JBLabel().apply {
+    private fun wrappingValueLabel(): JBLabel =
+        JBLabel().apply {
             putClientProperty("html.disable", false)
         }
-    }
 
     private fun detailWrapWidth(): Int = JBUI.scale(280)
 
-    private fun setWrappingText(label: JBLabel, text: String, toolTip: String? = null) {
+    private fun setWrappingText(
+        label: JBLabel,
+        text: String,
+        toolTip: String? = null,
+    ) {
         if (text.isEmpty()) {
             label.text = ""
             label.toolTipText = null
@@ -159,6 +176,5 @@ class ArmeriaRouteDetailPanel : JPanel(BorderLayout()) {
         label.toolTipText = toolTip?.takeIf { it.length > 80 } ?: text.takeIf { it.length > 80 }
     }
 
-    private fun escapeHtml(text: String): String =
-        StringUtil.escapeXmlEntities(text).replace("\n", "<br/>")
+    private fun escapeHtml(text: String): String = StringUtil.escapeXmlEntities(text).replace("\n", "<br/>")
 }

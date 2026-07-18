@@ -21,6 +21,7 @@ Read `.cursor/skills/gradle-tapi-mcp/SKILL.md` for the full workflow.
 | Environment / versions | `gradle_get_build_environment` |
 | Module tree | `gradle_get_project_overview` |
 | Compile | `gradle_run_tasks` with `[":plugin:compileKotlin"]` |
+| Lint Kotlin | `gradle_run_tasks` with `["ktlintCheck"]`, `background: true` + poll |
 | Tests (batch classes/methods in one call) | `gradle_run_tests` with `background: true` + poll |
 | Full verify | `gradle_run_tasks` with `["build"]`, `background: true` + poll |
 

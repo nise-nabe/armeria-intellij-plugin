@@ -12,15 +12,17 @@ import org.junit.Test
 class ArmeriaDocServiceMountResolverTest {
     @Test
     fun candidateMountPaths_prefersUserAndStaticDocServicePaths() {
-        val staticRoutes = listOf(
-            runtimeLikeRoute(path = "/docs", isDocService = true),
-            runtimeLikeRoute(path = "/api"),
-        )
+        val staticRoutes =
+            listOf(
+                runtimeLikeRoute(path = "/docs", isDocService = true),
+                runtimeLikeRoute(path = "/api"),
+            )
 
-        val candidates = ArmeriaDocServiceMountResolver.candidateMountPaths(
-            staticRoutes = staticRoutes,
-            userMountPath = "/custom/docs",
-        )
+        val candidates =
+            ArmeriaDocServiceMountResolver.candidateMountPaths(
+                staticRoutes = staticRoutes,
+                userMountPath = "/custom/docs",
+            )
 
         assertEquals(
             listOf("/custom/docs", "/docs", "/internal/docs"),
@@ -28,8 +30,11 @@ class ArmeriaDocServiceMountResolverTest {
         )
     }
 
-    private fun runtimeLikeRoute(path: String, isDocService: Boolean = false): ArmeriaRoute {
-        return ArmeriaRoute(
+    private fun runtimeLikeRoute(
+        path: String,
+        isDocService: Boolean = false,
+    ): ArmeriaRoute =
+        ArmeriaRoute(
             protocol = "HTTP",
             httpMethod = "GET",
             path = path,
@@ -42,7 +47,6 @@ class ArmeriaDocServiceMountResolverTest {
             exceptionHandlers = emptyList(),
             pointer = TestPsiPointer,
         )
-    }
 
     private object TestPsiPointer : SmartPsiElementPointer<PsiElement> {
         override fun getElement(): PsiElement? = null

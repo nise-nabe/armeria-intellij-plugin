@@ -15,19 +15,17 @@ object ArmeriaRouteNavigation {
         pointer: SmartPsiElementPointer<PsiElement>,
         parentDisposable: Disposable? = null,
     ) {
-        ReadAction.nonBlocking<Navigatable?> {
-            val element = pointer.element
-            (element as? Navigatable)?.takeIf { it.canNavigate() }
-                ?: (element?.navigationElement as? Navigatable)?.takeIf { it.canNavigate() }
-        }
-            .inSmartMode(project)
+        ReadAction
+            .nonBlocking<Navigatable?> {
+                val element = pointer.element
+                (element as? Navigatable)?.takeIf { it.canNavigate() }
+                    ?: (element?.navigationElement as? Navigatable)?.takeIf { it.canNavigate() }
+            }.inSmartMode(project)
             .expireWith(project)
             .let { coordinator ->
                 if (parentDisposable != null) coordinator.expireWith(parentDisposable) else coordinator
-            }
-            .finishOnUiThread(ModalityState.any()) { navigatable ->
+            }.finishOnUiThread(ModalityState.any()) { navigatable ->
                 navigatable?.navigate(true)
-            }
-            .submit(AppExecutorUtil.getAppExecutorService())
+            }.submit(AppExecutorUtil.getAppExecutorService())
     }
 }

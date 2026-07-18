@@ -1,18 +1,21 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 internal object ArmeriaServletMountSupport {
-    private val SPRING_MVC_SERVICE_NAMES = setOf(
-        "TomcatService",
-    )
+    private val SPRING_MVC_SERVICE_NAMES =
+        setOf(
+            "TomcatService",
+        )
 
-    private val SERVLET_SERVICE_NAMES = setOf(
-        "JettyService",
-    )
+    private val SERVLET_SERVICE_NAMES =
+        setOf(
+            "JettyService",
+        )
 
-    private val MOUNT_ROUTE_MATCHES = setOf(
-        RouteMatch.SERVICE,
-        RouteMatch.SERVICE_UNDER,
-    )
+    private val MOUNT_ROUTE_MATCHES =
+        setOf(
+            RouteMatch.SERVICE,
+            RouteMatch.SERVICE_UNDER,
+        )
 
     /**
      * Prefix mounts that should fan Spring MVC controller mappings as delegated children.
@@ -22,7 +25,10 @@ internal object ArmeriaServletMountSupport {
         route.routeMatch == RouteMatch.SERVICE_UNDER &&
             detectDelegation(route.target, route.routeMatch) == DelegationKind.SPRING_MVC
 
-    fun detectDelegation(target: String, routeMatch: RouteMatch): DelegationKind? {
+    fun detectDelegation(
+        target: String,
+        routeMatch: RouteMatch,
+    ): DelegationKind? {
         if (routeMatch !in MOUNT_ROUTE_MATCHES) {
             return null
         }
@@ -44,5 +50,9 @@ internal object ArmeriaServletMountSupport {
         }
 
     private fun targetSimpleName(target: String): String =
-        target.substringBefore('(').substringAfterLast('.').trim().trimEnd('?')
+        target
+            .substringBefore('(')
+            .substringAfterLast('.')
+            .trim()
+            .trimEnd('?')
 }

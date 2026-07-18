@@ -28,12 +28,9 @@ internal data class SpringArmeriaConfig(
     val healthPathElement: PsiElement? = null,
     val metricsPathElement: PsiElement? = null,
 ) {
-    fun resolvedDocsPath(): String =
-        docsPath ?: SpringArmeriaConfigSemantics.DEFAULT_DOCS_PATH
+    fun resolvedDocsPath(): String = docsPath ?: SpringArmeriaConfigSemantics.DEFAULT_DOCS_PATH
 
-    fun resolvedHealthPath(): String =
-        healthPath ?: SpringArmeriaConfigSemantics.DEFAULT_HEALTH_PATH
+    fun resolvedHealthPath(): String = healthPath ?: SpringArmeriaConfigSemantics.DEFAULT_HEALTH_PATH
 
-    fun resolvedMetricsPath(): String =
-        metricsPath ?: SpringArmeriaConfigSemantics.DEFAULT_METRICS_PATH
+    fun resolvedMetricsPath(): String = metricsPath ?: SpringArmeriaConfigSemantics.DEFAULT_METRICS_PATH
 }

@@ -39,16 +39,17 @@ class ArmeriaDocServiceSyncDialog(
     val useHttps: Boolean
         get() = useHttpsCheckBox.isSelected
 
-    override fun createCenterPanel(): JComponent {
-        return FormBuilder.createFormBuilder()
+    override fun createCenterPanel(): JComponent =
+        FormBuilder
+            .createFormBuilder()
             .addLabeledComponent(message("route.explorer.sync.host.prompt"), hostField)
             .addLabeledComponent(message("route.explorer.sync.port.prompt"), portField)
             .addLabeledComponent(message("route.explorer.sync.mountPath.prompt"), mountPathField)
             .addComponent(useHttpsCheckBox)
-            .panel.apply {
+            .panel
+            .apply {
                 preferredSize = Dimension(JBUI.scale(420), preferredSize.height)
             }
-    }
 
     override fun doValidate(): com.intellij.openapi.ui.ValidationInfo? {
         when (ArmeriaDocServiceEndpointValidator.validateHost(host)) {

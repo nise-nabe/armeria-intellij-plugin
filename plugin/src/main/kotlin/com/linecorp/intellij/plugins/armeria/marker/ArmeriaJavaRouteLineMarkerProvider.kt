@@ -31,9 +31,10 @@ internal class ArmeriaJavaRouteLineMarkerProvider : LineMarkerProvider {
     }
 
     private fun annotatedJavaMarker(element: PsiElement): LineMarkerInfo<*>? {
-        val method = (element.parent as? PsiMethod)
-            ?: PsiTreeUtil.getParentOfType(element, PsiMethod::class.java, false)
-            ?: return null
+        val method =
+            (element.parent as? PsiMethod)
+                ?: PsiTreeUtil.getParentOfType(element, PsiMethod::class.java, false)
+                ?: return null
         if (element != method.nameIdentifier) {
             return null
         }
@@ -65,8 +66,11 @@ internal class ArmeriaJavaRouteLineMarkerProvider : LineMarkerProvider {
     }
 
     companion object {
-        internal fun javaRegistrationPath(methodName: String, expressions: List<PsiExpression>): String? {
-            return when (methodName) {
+        internal fun javaRegistrationPath(
+            methodName: String,
+            expressions: List<PsiExpression>,
+        ): String? =
+            when (methodName) {
                 "annotatedService" -> {
                     if (expressions.size > 1) {
                         ArmeriaRouteSupport.extractJavaStringConstant(expressions[0])
@@ -76,6 +80,5 @@ internal class ArmeriaJavaRouteLineMarkerProvider : LineMarkerProvider {
                 }
                 else -> ArmeriaRouteSupport.extractJavaStringConstant(expressions.firstOrNull())
             }
-        }
     }
 }

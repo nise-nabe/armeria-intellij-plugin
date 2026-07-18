@@ -26,7 +26,11 @@ class ArmeriaGenerateRouteMethodIntention : PsiElementBaseIntentionAction() {
 
     override fun startInWriteAction(): Boolean = false
 
-    override fun isAvailable(project: Project, editor: Editor, element: PsiElement): Boolean {
+    override fun isAvailable(
+        project: Project,
+        editor: Editor,
+        element: PsiElement,
+    ): Boolean {
         val serviceClass = annotatedServiceClass(element) ?: return false
         if (serviceClass.containingFile !is PsiJavaFile) {
             return false
@@ -34,20 +38,25 @@ class ArmeriaGenerateRouteMethodIntention : PsiElementBaseIntentionAction() {
         return isMemberDeclarationContext(element, serviceClass)
     }
 
-    override fun invoke(project: Project, editor: Editor, element: PsiElement) {
+    override fun invoke(
+        project: Project,
+        editor: Editor,
+        element: PsiElement,
+    ) {
         val serviceClass = annotatedServiceClass(element) ?: return
         val methodName = suggestMethodName(serviceClass, "handler")
         val path = "/$methodName"
         val factory = JavaPsiFacade.getElementFactory(project)
-        val method = factory.createMethodFromText(
-            """
-            @${ArmeriaRouteSupport.GET_ANNOTATION}("$path")
-            public String $methodName() {
-                return "";
-            }
-            """.trimIndent(),
-            serviceClass,
-        )
+        val method =
+            factory.createMethodFromText(
+                """
+                @${ArmeriaRouteSupport.GET_ANNOTATION}("$path")
+                public String $methodName() {
+                    return "";
+                }
+                """.trimIndent(),
+                serviceClass,
+            )
         WriteCommandAction.runWriteCommandAction(
             project,
             message("intention.generate.route.method"),
@@ -55,9 +64,10 @@ class ArmeriaGenerateRouteMethodIntention : PsiElementBaseIntentionAction() {
             {
                 val anchor = serviceClass.rBrace ?: return@runWriteCommandAction
                 val added = serviceClass.addBefore(method, anchor) as PsiMethod
-                val formatted = CodeStyleManager.getInstance(project).reformat(
-                    JavaCodeStyleManager.getInstance(project).shortenClassReferences(added),
-                ) as PsiMethod
+                val formatted =
+                    CodeStyleManager.getInstance(project).reformat(
+                        JavaCodeStyleManager.getInstance(project).shortenClassReferences(added),
+                    ) as PsiMethod
                 formatted.nameIdentifier?.textRange?.let { range ->
                     editor.caretModel.moveToOffset(range.startOffset)
                 }
@@ -71,7 +81,10 @@ class ArmeriaGenerateRouteMethodIntention : PsiElementBaseIntentionAction() {
         return serviceClass.takeIf(::isAnnotatedServiceCandidate)
     }
 
-    private fun isMemberDeclarationContext(element: PsiElement, serviceClass: PsiClass): Boolean {
+    private fun isMemberDeclarationContext(
+        element: PsiElement,
+        serviceClass: PsiClass,
+    ): Boolean {
         val lBrace = serviceClass.lBrace ?: return false
         val rBrace = serviceClass.rBrace ?: return false
         if (element.textOffset !in lBrace.textOffset..rBrace.textOffset) {
@@ -88,16 +101,20 @@ class ArmeriaGenerateRouteMethodIntention : PsiElementBaseIntentionAction() {
         ) == null
     }
 
-    private fun suggestMethodName(serviceClass: PsiClass, baseName: String): String {
+    private fun suggestMethodName(
+        serviceClass: PsiClass,
+        baseName: String,
+    ): String {
         val declaredMethods = serviceClass.methods.filter { it.containingClass == serviceClass }
         val usedNames = declaredMethods.mapTo(linkedSetOf()) { it.name }
-        val usedGetPaths = declaredMethods.mapNotNullTo(linkedSetOf()) { method ->
-            val (annotation, httpMethod) = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return@mapNotNullTo null
-            if (httpMethod != "GET") {
-                return@mapNotNullTo null
+        val usedGetPaths =
+            declaredMethods.mapNotNullTo(linkedSetOf()) { method ->
+                val (annotation, httpMethod) = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return@mapNotNullTo null
+                if (httpMethod != "GET") {
+                    return@mapNotNullTo null
+                }
+                ArmeriaRouteSupport.extractPrimaryPath(annotation).takeIf { it.isNotEmpty() }
             }
-            ArmeriaRouteSupport.extractPrimaryPath(annotation).takeIf { it.isNotEmpty() }
-        }
         var candidate = baseName
         var suffix = 2
         while (candidate in usedNames || "/$candidate" in usedGetPaths) {

@@ -254,16 +254,23 @@ class ArmeriaTimeoutSupportTest : ArmeriaFixtureTestBase() {
         assertEquals(emptyList<String>(), routes["/other"]!!.executionHints)
     }
 
-    private fun findMethod(className: String, methodName: String) =
-        JavaPsiFacade.getInstance(project)
-            .findClass(className, myFixture.file.resolveScope)
-            ?.findMethodsByName(methodName, false)
-            ?.single()
-            ?: error("Method not found: $className#$methodName")
+    private fun findMethod(
+        className: String,
+        methodName: String,
+    ) = JavaPsiFacade
+        .getInstance(project)
+        .findClass(className, myFixture.file.resolveScope)
+        ?.findMethodsByName(methodName, false)
+        ?.single()
+        ?: error("Method not found: $className#$methodName")
 
-    private fun findServiceRegistrationCall(className: String, methodName: String): PsiMethodCallExpression {
+    private fun findServiceRegistrationCall(
+        className: String,
+        methodName: String,
+    ): PsiMethodCallExpression {
         val method = findMethod(className, methodName)
-        return PsiTreeUtil.findChildrenOfType(method, PsiMethodCallExpression::class.java)
+        return PsiTreeUtil
+            .findChildrenOfType(method, PsiMethodCallExpression::class.java)
             .first { it.methodExpression.referenceName == "service" }
     }
 }

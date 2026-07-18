@@ -9,7 +9,6 @@ import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
 
 internal object ArmeriaKotlinExtendedRegistrationCollectorFluentRoute {
-
     fun tryCollectFluentRoute(
         buildCall: KtCallExpression,
         routes: MutableList<ArmeriaRoute>,
@@ -55,7 +54,11 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorFluentRoute {
             steps += ArmeriaKotlinRegistrationChainSupport.toChainStep(current)
             current = ArmeriaKotlinRegistrationChainSupport.parentCallExpression(current)
         }
-        val handlerArg = buildCall.valueArguments.firstOrNull()?.getArgumentExpression()?.text
+        val handlerArg =
+            buildCall.valueArguments
+                .firstOrNull()
+                ?.getArgumentExpression()
+                ?.text
         return ArmeriaRegistrationChainReducer.reduceFluentRouteChain(
             stepsFromBuildUpward = steps,
             requireRouteAnchor = requireRouteAnchor,
@@ -83,8 +86,8 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorFluentRoute {
     private fun createFluentRoute(
         element: KtCallExpression,
         chainInfo: FluentRouteChainInfo,
-    ): ArmeriaRoute {
-        return ArmeriaRoute.create(
+    ): ArmeriaRoute =
+        ArmeriaRoute.create(
             element = element,
             protocol = RouteProtocol.HTTP.presentableName(),
             httpMethod = chainInfo.httpMethod,
@@ -95,7 +98,6 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorFluentRoute {
             decorators = ArmeriaKotlinDecoratorSupport.collectProgrammaticDecorators(element, chainInfo.path),
             timeoutHints = ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(element),
         )
-    }
 
     private fun findFluentRouteBuildAfterCall(withRouteCall: KtCallExpression): KtCallExpression? {
         findFluentRouteBuildInScope(
@@ -137,8 +139,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorFluentRoute {
     fun findFluentRouteBuildForWithRoute(
         withRouteCall: KtCallExpression,
         lambdaBody: KtExpression,
-    ): KtCallExpression? {
-        return findFluentRouteBuildInLambda(lambdaBody)
+    ): KtCallExpression? =
+        findFluentRouteBuildInLambda(lambdaBody)
             ?: findFluentRouteBuildAfterCall(withRouteCall)
-    }
 }

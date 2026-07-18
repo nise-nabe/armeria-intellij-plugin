@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaRouteDuplicateIndexFluentHealthCheckTest : ArmeriaFixtureTestBase() {
-
     override fun registerArmeriaStubs() {
         registerRouteDuplicateIndexStubs()
     }
@@ -53,7 +52,6 @@ class ArmeriaRouteDuplicateIndexFluentHealthCheckTest : ArmeriaFixtureTestBase()
         assertEquals(2, groups.single().routes.size)
         assertTrue(groups.single().routes.all { it.routeMatch == RouteMatch.ROUTE_FLUENT })
     }
-
 
     fun testFluentRouteWithMultipleMethodsConflictsWithSingleMethodRoute() {
         myFixture.configureByText(
@@ -112,7 +110,6 @@ class ArmeriaRouteDuplicateIndexFluentHealthCheckTest : ArmeriaFixtureTestBase()
         assertEquals(2, groups.single().routes.size)
     }
 
-
     fun testFluentRouteWithPathPrefixConflictsWithAnnotatedRoute() {
         myFixture.configureByText(
             "Main.java",
@@ -155,10 +152,13 @@ class ArmeriaRouteDuplicateIndexFluentHealthCheckTest : ArmeriaFixtureTestBase()
         assertEquals(2, groups.single().routes.size)
         assertEquals(
             setOf(RouteMatch.ROUTE_FLUENT, RouteMatch.ANNOTATED_HTTP),
-            groups.single().routes.map { it.routeMatch }.toSet(),
+            groups
+                .single()
+                .routes
+                .map { it.routeMatch }
+                .toSet(),
         )
     }
-
 
     fun testDuplicateFluentRoutesWithDifferentMethodsOnSamePathAreNotDuplicates() {
         myFixture.configureByText(
@@ -188,7 +188,6 @@ class ArmeriaRouteDuplicateIndexFluentHealthCheckTest : ArmeriaFixtureTestBase()
         assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
     }
 
-
     fun testHealthCheckServiceConflictsWithServiceRegistration() {
         myFixture.configureByText(
             "Main.java",
@@ -215,10 +214,13 @@ class ArmeriaRouteDuplicateIndexFluentHealthCheckTest : ArmeriaFixtureTestBase()
         assertEquals(2, groups.single().routes.size)
         assertEquals(
             setOf(RouteMatch.SERVICE, RouteMatch.HEALTH_CHECK),
-            groups.single().routes.map { it.routeMatch }.toSet(),
+            groups
+                .single()
+                .routes
+                .map { it.routeMatch }
+                .toSet(),
         )
     }
-
 
     fun testHealthCheckDuplicateRegistrationLabelIncludesHttpMethod() {
         myFixture.configureByText(
@@ -245,6 +247,4 @@ class ArmeriaRouteDuplicateIndexFluentHealthCheckTest : ArmeriaFixtureTestBase()
         assertNotNull(healthHit)
         assertEquals("GET /internal/healthcheck", healthHit!!.registrationLabel)
     }
-
-
 }

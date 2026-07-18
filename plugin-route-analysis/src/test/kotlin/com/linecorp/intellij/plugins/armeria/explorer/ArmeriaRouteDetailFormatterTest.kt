@@ -6,12 +6,10 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.SmartPsiElementPointer
+import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
-import com.linecorp.intellij.plugins.armeria.message
-
 class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
-
     override fun registerArmeriaStubs() {
         registerRouteDetailFormatterStubs()
     }
@@ -38,21 +36,22 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
     }
 
     fun testAttachmentsLine_includesExecutionHints() {
-        val route = ArmeriaRoute(
-            protocol = "HTTP",
-            httpMethod = "GET",
-            path = "/hello",
-            target = "example.HelloService",
-            routeMatch = RouteMatch.ANNOTATED_HTTP,
-            moduleName = "app",
-            targetUnresolved = false,
-            isDocService = false,
-            annotatedServiceHasPathPrefix = false,
-            decorators = emptyList(),
-            exceptionHandlers = emptyList(),
-            executionHints = listOf(message("route.explorer.execution.blocking")),
-            pointer = TestPsiPointer,
-        )
+        val route =
+            ArmeriaRoute(
+                protocol = "HTTP",
+                httpMethod = "GET",
+                path = "/hello",
+                target = "example.HelloService",
+                routeMatch = RouteMatch.ANNOTATED_HTTP,
+                moduleName = "app",
+                targetUnresolved = false,
+                isDocService = false,
+                annotatedServiceHasPathPrefix = false,
+                decorators = emptyList(),
+                exceptionHandlers = emptyList(),
+                executionHints = listOf(message("route.explorer.execution.blocking")),
+                pointer = TestPsiPointer,
+            )
 
         val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
 
@@ -60,21 +59,22 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
     }
 
     fun testAttachmentsLine_includesTimeoutHints() {
-        val route = ArmeriaRoute(
-            protocol = "HTTP",
-            httpMethod = "GET",
-            path = "/hello",
-            target = "example.HelloService",
-            routeMatch = RouteMatch.SERVICE,
-            moduleName = "app",
-            targetUnresolved = false,
-            isDocService = false,
-            annotatedServiceHasPathPrefix = false,
-            decorators = emptyList(),
-            exceptionHandlers = emptyList(),
-            timeoutHints = listOf("5s"),
-            pointer = TestPsiPointer,
-        )
+        val route =
+            ArmeriaRoute(
+                protocol = "HTTP",
+                httpMethod = "GET",
+                path = "/hello",
+                target = "example.HelloService",
+                routeMatch = RouteMatch.SERVICE,
+                moduleName = "app",
+                targetUnresolved = false,
+                isDocService = false,
+                annotatedServiceHasPathPrefix = false,
+                decorators = emptyList(),
+                exceptionHandlers = emptyList(),
+                timeoutHints = listOf("5s"),
+                pointer = TestPsiPointer,
+            )
 
         val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
 
@@ -116,19 +116,20 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
     }
 
     fun testRegistrationSummary_runtimeRoute() {
-        val route = ArmeriaRoute(
-            protocol = "DocService (runtime)",
-            httpMethod = "GET",
-            path = "/api/users/{id}",
-            target = "com.example.FooService/getUser",
-            routeMatch = RouteMatch.RUNTIME,
-            moduleName = "Runtime (DocService)",
-            targetUnresolved = false,
-            isDocService = false,
-            decorators = emptyList(),
-            exceptionHandlers = emptyList(),
-            pointer = TestPsiPointer,
-        )
+        val route =
+            ArmeriaRoute(
+                protocol = "DocService (runtime)",
+                httpMethod = "GET",
+                path = "/api/users/{id}",
+                target = "com.example.FooService/getUser",
+                routeMatch = RouteMatch.RUNTIME,
+                moduleName = "Runtime (DocService)",
+                targetUnresolved = false,
+                isDocService = false,
+                decorators = emptyList(),
+                exceptionHandlers = emptyList(),
+                pointer = TestPsiPointer,
+            )
         assertEquals(
             "GET /api/users/{id} (runtime)",
             ArmeriaRouteDetailFormatter.registrationSummary(route),
@@ -137,20 +138,21 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
     }
 
     fun testRegistrationSummary_annotatedServiceWithoutPathPrefix() {
-        val route = ArmeriaRoute(
-            protocol = "HTTP",
-            httpMethod = "",
-            path = "/",
-            target = "example.HelloService",
-            routeMatch = RouteMatch.ANNOTATED_SERVICE,
-            moduleName = "app",
-            targetUnresolved = false,
-            isDocService = false,
-            annotatedServiceHasPathPrefix = false,
-            decorators = emptyList(),
-            exceptionHandlers = emptyList(),
-            pointer = TestPsiPointer,
-        )
+        val route =
+            ArmeriaRoute(
+                protocol = "HTTP",
+                httpMethod = "",
+                path = "/",
+                target = "example.HelloService",
+                routeMatch = RouteMatch.ANNOTATED_SERVICE,
+                moduleName = "app",
+                targetUnresolved = false,
+                isDocService = false,
+                annotatedServiceHasPathPrefix = false,
+                decorators = emptyList(),
+                exceptionHandlers = emptyList(),
+                pointer = TestPsiPointer,
+            )
         assertEquals(
             "Server.builder().annotatedService(…)",
             ArmeriaRouteDetailFormatter.registrationSummary(route),
@@ -158,20 +160,21 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
     }
 
     fun testRegistrationSummary_annotatedServiceWithPathPrefix() {
-        val route = ArmeriaRoute(
-            protocol = "HTTP",
-            httpMethod = "",
-            path = "/api",
-            target = "example.HelloService",
-            routeMatch = RouteMatch.ANNOTATED_SERVICE,
-            moduleName = "app",
-            targetUnresolved = false,
-            isDocService = false,
-            annotatedServiceHasPathPrefix = true,
-            decorators = emptyList(),
-            exceptionHandlers = emptyList(),
-            pointer = TestPsiPointer,
-        )
+        val route =
+            ArmeriaRoute(
+                protocol = "HTTP",
+                httpMethod = "",
+                path = "/api",
+                target = "example.HelloService",
+                routeMatch = RouteMatch.ANNOTATED_SERVICE,
+                moduleName = "app",
+                targetUnresolved = false,
+                isDocService = false,
+                annotatedServiceHasPathPrefix = true,
+                decorators = emptyList(),
+                exceptionHandlers = emptyList(),
+                pointer = TestPsiPointer,
+            )
         assertEquals(
             "Server.builder().annotatedService(\"/api\", …)",
             ArmeriaRouteDetailFormatter.registrationSummary(route),
@@ -201,21 +204,22 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
     }
 
     fun testAttachmentsLine_includesVirtualHostName() {
-        val route = ArmeriaRoute(
-            protocol = "HTTP",
-            httpMethod = "GET",
-            path = "/api",
-            target = "example.ApiService",
-            routeMatch = RouteMatch.SERVICE,
-            moduleName = "app",
-            targetUnresolved = false,
-            isDocService = false,
-            annotatedServiceHasPathPrefix = false,
-            decorators = emptyList(),
-            exceptionHandlers = emptyList(),
-            virtualHostName = "api.example.com",
-            pointer = TestPsiPointer,
-        )
+        val route =
+            ArmeriaRoute(
+                protocol = "HTTP",
+                httpMethod = "GET",
+                path = "/api",
+                target = "example.ApiService",
+                routeMatch = RouteMatch.SERVICE,
+                moduleName = "app",
+                targetUnresolved = false,
+                isDocService = false,
+                annotatedServiceHasPathPrefix = false,
+                decorators = emptyList(),
+                exceptionHandlers = emptyList(),
+                virtualHostName = "api.example.com",
+                pointer = TestPsiPointer,
+            )
 
         val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
 
@@ -226,21 +230,22 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
     }
 
     fun testAttachmentsLine_includesPathType() {
-        val route = ArmeriaRoute(
-            protocol = "HTTP",
-            httpMethod = "GET",
-            path = "/api/**",
-            target = "example.ApiService",
-            routeMatch = RouteMatch.SERVICE_UNDER,
-            pathType = PathType.GLOB,
-            moduleName = "app",
-            targetUnresolved = false,
-            isDocService = false,
-            annotatedServiceHasPathPrefix = false,
-            decorators = emptyList(),
-            exceptionHandlers = emptyList(),
-            pointer = TestPsiPointer,
-        )
+        val route =
+            ArmeriaRoute(
+                protocol = "HTTP",
+                httpMethod = "GET",
+                path = "/api/**",
+                target = "example.ApiService",
+                routeMatch = RouteMatch.SERVICE_UNDER,
+                pathType = PathType.GLOB,
+                moduleName = "app",
+                targetUnresolved = false,
+                isDocService = false,
+                annotatedServiceHasPathPrefix = false,
+                decorators = emptyList(),
+                exceptionHandlers = emptyList(),
+                pointer = TestPsiPointer,
+            )
 
         val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
 
@@ -251,24 +256,26 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
     }
 
     fun testAttachmentsLine_includesContentHints() {
-        val route = ArmeriaRoute(
-            protocol = "HTTP",
-            httpMethod = "POST",
-            path = "/users/{id}",
-            target = "example.UserService",
-            routeMatch = RouteMatch.ANNOTATED_HTTP,
-            moduleName = "app",
-            targetUnresolved = false,
-            isDocService = false,
-            annotatedServiceHasPathPrefix = false,
-            decorators = emptyList(),
-            exceptionHandlers = emptyList(),
-            contentHints = listOf(
-                message("route.explorer.hint.statusCode", "201"),
-                message("route.explorer.hint.consumes", "application/json"),
-            ),
-            pointer = TestPsiPointer,
-        )
+        val route =
+            ArmeriaRoute(
+                protocol = "HTTP",
+                httpMethod = "POST",
+                path = "/users/{id}",
+                target = "example.UserService",
+                routeMatch = RouteMatch.ANNOTATED_HTTP,
+                moduleName = "app",
+                targetUnresolved = false,
+                isDocService = false,
+                annotatedServiceHasPathPrefix = false,
+                decorators = emptyList(),
+                exceptionHandlers = emptyList(),
+                contentHints =
+                    listOf(
+                        message("route.explorer.hint.statusCode", "201"),
+                        message("route.explorer.hint.consumes", "application/json"),
+                    ),
+                pointer = TestPsiPointer,
+            )
 
         val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
 
@@ -341,7 +348,6 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
             ),
         )
     }
-
 
     private object TestPsiPointer : SmartPsiElementPointer<PsiElement> {
         override fun getElement(): PsiElement? = null

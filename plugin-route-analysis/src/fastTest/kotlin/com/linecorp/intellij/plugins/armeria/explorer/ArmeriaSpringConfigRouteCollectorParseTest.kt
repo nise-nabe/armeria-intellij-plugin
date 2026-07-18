@@ -6,15 +6,16 @@ import org.junit.Test
 class ArmeriaSpringConfigRouteCollectorParseTest {
     @Test
     fun parseProperties_sparsePortIndexes() {
-        val config = ArmeriaSpringConfigRouteCollector.parseProperties(
-            """
-            armeria.ports[0].port=8080
-            armeria.ports[0].protocols[0]=http
-            armeria.ports[2].port=8443
-            armeria.ports[2].protocols[0]=https
-            armeria.ports[2].protocols[1]=http
-            """.trimIndent(),
-        )
+        val config =
+            ArmeriaSpringConfigRouteCollector.parseProperties(
+                """
+                armeria.ports[0].port=8080
+                armeria.ports[0].protocols[0]=http
+                armeria.ports[2].port=8443
+                armeria.ports[2].protocols[0]=https
+                armeria.ports[2].protocols[1]=http
+                """.trimIndent(),
+            )
 
         assertEquals(
             listOf(
@@ -27,14 +28,15 @@ class ArmeriaSpringConfigRouteCollectorParseTest {
 
     @Test
     fun parseProperties_includeAndPathsScopedToArmeria() {
-        val config = ArmeriaSpringConfigRouteCollector.parseProperties(
-            """
-            other.docs-path=/wrong
-            armeria.docs-path=/internal/docs
-            armeria.internal-services.include=docs,health
-            armeria.internal-services.port=18080
-            """.trimIndent(),
-        )
+        val config =
+            ArmeriaSpringConfigRouteCollector.parseProperties(
+                """
+                other.docs-path=/wrong
+                armeria.docs-path=/internal/docs
+                armeria.internal-services.include=docs,health
+                armeria.internal-services.port=18080
+                """.trimIndent(),
+            )
 
         assertEquals("/internal/docs", config.docsPath)
         assertEquals(setOf("docs", "health"), config.includes)
@@ -43,12 +45,13 @@ class ArmeriaSpringConfigRouteCollectorParseTest {
 
     @Test
     fun parseProperties_acceptsCamelCaseInternalServices() {
-        val config = ArmeriaSpringConfigRouteCollector.parseProperties(
-            """
-            armeria.internalServices.include=docs,metrics
-            armeria.internalServices.port=19090
-            """.trimIndent(),
-        )
+        val config =
+            ArmeriaSpringConfigRouteCollector.parseProperties(
+                """
+                armeria.internalServices.include=docs,metrics
+                armeria.internalServices.port=19090
+                """.trimIndent(),
+            )
 
         assertEquals(setOf("docs", "metrics"), config.includes)
         assertEquals("19090", config.internalServicesPort)
@@ -56,12 +59,13 @@ class ArmeriaSpringConfigRouteCollectorParseTest {
 
     @Test
     fun parseProperties_commaSeparatedProtocols() {
-        val config = ArmeriaSpringConfigRouteCollector.parseProperties(
-            """
-            armeria.ports[0].port=8080
-            armeria.ports[0].protocols=http,https
-            """.trimIndent(),
-        )
+        val config =
+            ArmeriaSpringConfigRouteCollector.parseProperties(
+                """
+                armeria.ports[0].port=8080
+                armeria.ports[0].protocols=http,https
+                """.trimIndent(),
+            )
 
         assertEquals(
             listOf(SpringArmeriaPortBinding("8080", listOf("HTTP", "HTTPS"))),
@@ -71,32 +75,35 @@ class ArmeriaSpringConfigRouteCollectorParseTest {
 
     @Test
     fun parseProperties_includeAllAndIndexedIncludeEntries() {
-        val all = ArmeriaSpringConfigRouteCollector.parseProperties(
-            "armeria.internal-services.include=all",
-        )
+        val all =
+            ArmeriaSpringConfigRouteCollector.parseProperties(
+                "armeria.internal-services.include=all",
+            )
         assertEquals(setOf("docs", "health", "metrics", "actuator"), all.includes)
 
-        val indexed = ArmeriaSpringConfigRouteCollector.parseProperties(
-            """
-            armeria.internal-services.include[0]=docs
-            armeria.internal-services.include[1]=actuator
-            """.trimIndent(),
-        )
+        val indexed =
+            ArmeriaSpringConfigRouteCollector.parseProperties(
+                """
+                armeria.internal-services.include[0]=docs
+                armeria.internal-services.include[1]=actuator
+                """.trimIndent(),
+            )
         assertEquals(setOf("docs", "actuator"), indexed.includes)
     }
 
     @Test
     fun parseProperties_acceptsColonDelimiterAndPlaceholders() {
-        val config = ArmeriaSpringConfigRouteCollector.parseProperties(
-            """
-            armeria.ports[0].port: ${'$'}{SERVER_PORT:8080}
-            armeria.ports[0].protocols: http,https
-            armeria.internal-services.port: ${'$'}{INTERNAL_PORT:18080}
-            armeria.internal-services.include: docs,health
-            armeria.docs-path: ${'$'}{DOCS_PATH:/internal/docs}
-            armeria.health-check-path: /internal/healthcheck # comment
-            """.trimIndent(),
-        )
+        val config =
+            ArmeriaSpringConfigRouteCollector.parseProperties(
+                """
+                armeria.ports[0].port: ${'$'}{SERVER_PORT:8080}
+                armeria.ports[0].protocols: http,https
+                armeria.internal-services.port: ${'$'}{INTERNAL_PORT:18080}
+                armeria.internal-services.include: docs,health
+                armeria.docs-path: ${'$'}{DOCS_PATH:/internal/docs}
+                armeria.health-check-path: /internal/healthcheck # comment
+                """.trimIndent(),
+            )
 
         assertEquals(
             listOf(SpringArmeriaPortBinding("\${SERVER_PORT:8080}", listOf("HTTP", "HTTPS"))),
@@ -110,18 +117,19 @@ class ArmeriaSpringConfigRouteCollectorParseTest {
 
     @Test
     fun parseProperties_lastDuplicateKeyWins() {
-        val config = ArmeriaSpringConfigRouteCollector.parseProperties(
-            """
-            armeria.docs-path=/stale/docs
-            armeria.health-check-path=/stale/health
-            armeria.metrics-path=/stale/metrics
-            armeria.internal-services.port=17070
-            armeria.docs-path=/internal/docs
-            armeria.health-check-path=/internal/healthcheck
-            armeria.metrics-path=/internal/metrics
-            armeria.internal-services.port=18080
-            """.trimIndent(),
-        )
+        val config =
+            ArmeriaSpringConfigRouteCollector.parseProperties(
+                """
+                armeria.docs-path=/stale/docs
+                armeria.health-check-path=/stale/health
+                armeria.metrics-path=/stale/metrics
+                armeria.internal-services.port=17070
+                armeria.docs-path=/internal/docs
+                armeria.health-check-path=/internal/healthcheck
+                armeria.metrics-path=/internal/metrics
+                armeria.internal-services.port=18080
+                """.trimIndent(),
+            )
 
         assertEquals("/internal/docs", config.docsPath)
         assertEquals("/internal/healthcheck", config.healthPath)
@@ -131,39 +139,42 @@ class ArmeriaSpringConfigRouteCollectorParseTest {
 
     @Test
     fun parseProperties_includeLastDuplicateKeyWins() {
-        val unindexed = ArmeriaSpringConfigRouteCollector.parseProperties(
-            """
-            armeria.internal-services.include=docs
-            armeria.internal-services.include=health
-            """.trimIndent(),
-        )
+        val unindexed =
+            ArmeriaSpringConfigRouteCollector.parseProperties(
+                """
+                armeria.internal-services.include=docs
+                armeria.internal-services.include=health
+                """.trimIndent(),
+            )
         assertEquals(setOf("health"), unindexed.includes)
 
-        val indexed = ArmeriaSpringConfigRouteCollector.parseProperties(
-            """
-            armeria.internal-services.include[0]=docs
-            armeria.internal-services.include[0]=health
-            armeria.internal-services.include[1]=metrics
-            """.trimIndent(),
-        )
+        val indexed =
+            ArmeriaSpringConfigRouteCollector.parseProperties(
+                """
+                armeria.internal-services.include[0]=docs
+                armeria.internal-services.include[0]=health
+                armeria.internal-services.include[1]=metrics
+                """.trimIndent(),
+            )
         assertEquals(setOf("health", "metrics"), indexed.includes)
     }
 
     @Test
     fun parseProperties_ignoresCommentedOutKeys() {
-        val config = ArmeriaSpringConfigRouteCollector.parseProperties(
-            """
-            # armeria.ports[0].port=9999
-            ! armeria.ports[0].port=8888
-            armeria.ports[0].port=8080
-            # armeria.ports[0].protocols=http
-            armeria.ports[0].protocols=https
-            # armeria.internal-services.include=docs
-            armeria.internal-services.include=health
-            # armeria.docs-path=/stale/docs
-            armeria.docs-path=/internal/docs
-            """.trimIndent(),
-        )
+        val config =
+            ArmeriaSpringConfigRouteCollector.parseProperties(
+                """
+                # armeria.ports[0].port=9999
+                ! armeria.ports[0].port=8888
+                armeria.ports[0].port=8080
+                # armeria.ports[0].protocols=http
+                armeria.ports[0].protocols=https
+                # armeria.internal-services.include=docs
+                armeria.internal-services.include=health
+                # armeria.docs-path=/stale/docs
+                armeria.docs-path=/internal/docs
+                """.trimIndent(),
+            )
 
         assertEquals(listOf(SpringArmeriaPortBinding("8080", listOf("HTTPS"))), config.ports)
         assertEquals(setOf("health"), config.includes)
@@ -172,14 +183,15 @@ class ArmeriaSpringConfigRouteCollectorParseTest {
 
     @Test
     fun parseProperties_protocolIndexLastWins() {
-        val config = ArmeriaSpringConfigRouteCollector.parseProperties(
-            """
-            armeria.ports[0].port=8080
-            armeria.ports[0].protocols[0]=http
-            armeria.ports[0].protocols[0]=https
-            armeria.ports[0].protocols[1]=http
-            """.trimIndent(),
-        )
+        val config =
+            ArmeriaSpringConfigRouteCollector.parseProperties(
+                """
+                armeria.ports[0].port=8080
+                armeria.ports[0].protocols[0]=http
+                armeria.ports[0].protocols[0]=https
+                armeria.ports[0].protocols[1]=http
+                """.trimIndent(),
+            )
 
         assertEquals(
             listOf(SpringArmeriaPortBinding("8080", listOf("HTTPS", "HTTP"))),
@@ -189,14 +201,15 @@ class ArmeriaSpringConfigRouteCollectorParseTest {
 
     @Test
     fun parseProperties_commaListReplacesPriorIndexedProtocols() {
-        val config = ArmeriaSpringConfigRouteCollector.parseProperties(
-            """
-            armeria.ports[0].port=8080
-            armeria.ports[0].protocols[0]=http
-            armeria.ports[0].protocols[1]=https
-            armeria.ports[0].protocols=h2c
-            """.trimIndent(),
-        )
+        val config =
+            ArmeriaSpringConfigRouteCollector.parseProperties(
+                """
+                armeria.ports[0].port=8080
+                armeria.ports[0].protocols[0]=http
+                armeria.ports[0].protocols[1]=https
+                armeria.ports[0].protocols=h2c
+                """.trimIndent(),
+            )
 
         assertEquals(
             listOf(SpringArmeriaPortBinding("8080", listOf("H2C"))),
@@ -214,9 +227,10 @@ class ArmeriaSpringConfigRouteCollectorParseTest {
 
     @Test
     fun parseProperties_absentPathsStayNullUntilResolved() {
-        val config = ArmeriaSpringConfigRouteCollector.parseProperties(
-            "armeria.internal-services.include=docs",
-        )
+        val config =
+            ArmeriaSpringConfigRouteCollector.parseProperties(
+                "armeria.internal-services.include=docs",
+            )
         assertEquals(null, config.docsPath)
         assertEquals(null, config.healthPath)
         assertEquals(null, config.metricsPath)

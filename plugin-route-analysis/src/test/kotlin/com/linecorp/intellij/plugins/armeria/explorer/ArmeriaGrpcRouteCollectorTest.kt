@@ -203,21 +203,22 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
     }
 
     fun testUnbalancedBraceDoesNotSkipLaterServices() {
-        val file = myFixture.configureByText(
-            "broken.proto",
-            """
-            syntax = "proto3";
-            package com.example;
+        val file =
+            myFixture.configureByText(
+                "broken.proto",
+                """
+                syntax = "proto3";
+                package com.example;
 
-            service Broken {
-              rpc MissingBrace(HelloRequest) returns (HelloResponse) {
-            }
+                service Broken {
+                  rpc MissingBrace(HelloRequest) returns (HelloResponse) {
+                }
 
-            service Greeter {
-              rpc SayHello(HelloRequest) returns (HelloResponse);
-            }
-            """.trimIndent(),
-        )
+                service Greeter {
+                  rpc SayHello(HelloRequest) returns (HelloResponse);
+                }
+                """.trimIndent(),
+            )
         val routes = mutableListOf<ArmeriaRoute>()
         ArmeriaGrpcRouteCollector.collectFromProtoText(file.text, file, routes)
 
@@ -225,17 +226,18 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
     }
 
     fun testDuplicateProtoRoutesAreDeduplicated() {
-        val file = myFixture.configureByText(
-            "greeter.proto",
-            """
-            syntax = "proto3";
-            package com.example;
+        val file =
+            myFixture.configureByText(
+                "greeter.proto",
+                """
+                syntax = "proto3";
+                package com.example;
 
-            service Greeter {
-              rpc SayHello(HelloRequest) returns (HelloResponse);
-            }
-            """.trimIndent(),
-        )
+                service Greeter {
+                  rpc SayHello(HelloRequest) returns (HelloResponse);
+                }
+                """.trimIndent(),
+            )
         val routes = mutableListOf<ArmeriaRoute>()
         val seenProtoRoutes = mutableSetOf<String>()
         val element = file

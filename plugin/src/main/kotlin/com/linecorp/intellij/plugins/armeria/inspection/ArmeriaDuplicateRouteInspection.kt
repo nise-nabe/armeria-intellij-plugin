@@ -12,8 +12,11 @@ import com.linecorp.intellij.plugins.armeria.message
 class ArmeriaDuplicateRouteInspection : AbstractBaseJavaLocalInspectionTool() {
     override fun getDisplayName(): String = message("inspection.duplicate.route.display.name")
 
-    override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor {
-        return object : JavaElementVisitor() {
+    override fun buildVisitor(
+        holder: ProblemsHolder,
+        isOnTheFly: Boolean,
+    ): PsiElementVisitor =
+        object : JavaElementVisitor() {
             override fun visitClass(aClass: PsiClass) {
                 val duplicateRoutes = mutableSetOf<PsiMethod>()
                 val seen = mutableMapOf<Pair<String, String>, PsiMethod>()
@@ -36,7 +39,6 @@ class ArmeriaDuplicateRouteInspection : AbstractBaseJavaLocalInspectionTool() {
                 }
             }
         }
-    }
 }
 
 private data class ArmeriaMethodRoute(
@@ -47,9 +49,10 @@ private data class ArmeriaMethodRoute(
     companion object {
         fun from(method: PsiMethod): ArmeriaMethodRoute? {
             val annotation = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return null
-            val classPrefix = ArmeriaRouteSupport.extractPrimaryPath(
-                method.containingClass?.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION),
-            )
+            val classPrefix =
+                ArmeriaRouteSupport.extractPrimaryPath(
+                    method.containingClass?.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION),
+                )
             val paths = ArmeriaRouteSupport.extractPaths(annotation.first).ifEmpty { listOf("/") }
             return ArmeriaMethodRoute(annotation.second, classPrefix, paths)
         }

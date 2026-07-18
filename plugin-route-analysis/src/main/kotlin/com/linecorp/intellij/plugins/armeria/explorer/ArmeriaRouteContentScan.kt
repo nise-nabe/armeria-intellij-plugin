@@ -15,7 +15,10 @@ internal object ArmeriaRouteContentScan {
         Regex("""(?:$FQCN_SERVER_BUILDER_CALL_PATTERN|$UNQUALIFIED_SERVER_BUILDER_CALL_PATTERN)""")
     private val ROUTE_DECORATOR_CALL = Regex("""(?<![\w"])routeDecorator\s*\(""")
 
-    fun referencesArmeriaInText(contents: CharSequence, scanLimit: Int = ArmeriaRouteSupport.ARMERIA_HEADER_SCAN_LIMIT): Boolean {
+    fun referencesArmeriaInText(
+        contents: CharSequence,
+        scanLimit: Int = ArmeriaRouteSupport.ARMERIA_HEADER_SCAN_LIMIT,
+    ): Boolean {
         val searchWindow = contents.subSequence(0, minOf(contents.length, scanLimit))
         return ARMERIA_REFERENCE_PATTERN.containsMatchIn(searchWindow)
     }
@@ -38,13 +41,10 @@ internal object ArmeriaRouteContentScan {
         }
     }
 
-    fun looksLikeServerBuilderReceiverText(text: String): Boolean {
-        return SERVER_BUILDER_CALL.containsMatchIn(text) || SERVER_BUILDER_IDENTIFIER.containsMatchIn(text)
-    }
+    fun looksLikeServerBuilderReceiverText(text: String): Boolean =
+        SERVER_BUILDER_CALL.containsMatchIn(text) || SERVER_BUILDER_IDENTIFIER.containsMatchIn(text)
 
-    fun looksLikeRouteDecoratorReceiverText(text: String): Boolean {
-        return ROUTE_DECORATOR_CALL.containsMatchIn(text)
-    }
+    fun looksLikeRouteDecoratorReceiverText(text: String): Boolean = ROUTE_DECORATOR_CALL.containsMatchIn(text)
 
     fun referencesArmeriaApplicationInSource(contents: CharSequence): Boolean {
         if (FQCN_SERVER_BUILDER_CALL.containsMatchIn(contents)) {

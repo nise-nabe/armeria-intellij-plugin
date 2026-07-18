@@ -24,7 +24,9 @@ sealed interface ArmeriaDocServiceFetchResult {
         val specificationUrl: String,
     ) : ArmeriaDocServiceFetchResult
 
-    data class Failure(val message: String) : ArmeriaDocServiceFetchResult
+    data class Failure(
+        val message: String,
+    ) : ArmeriaDocServiceFetchResult
 }
 
 object ArmeriaRuntimeRouteFetcher {
@@ -37,20 +39,22 @@ object ArmeriaRuntimeRouteFetcher {
         val errors = mutableListOf<String>()
         for (mountPath in request.mountPaths.distinct()) {
             ProgressManager.checkCanceled()
-            val url = ArmeriaDocServiceEndpointValidator.buildSpecificationUrl(
-                request.host,
-                request.port,
-                request.useHttps,
-                mountPath,
-            )
+            val url =
+                ArmeriaDocServiceEndpointValidator.buildSpecificationUrl(
+                    request.host,
+                    request.port,
+                    request.useHttps,
+                    mountPath,
+                )
             when (val readResult = readUrl(url)) {
                 is ReadResult.Success -> {
                     val parsed = ArmeriaDocServiceSpecificationParser.parse(readResult.body)
                     val routes = toArmeriaRoutes(parsed.routes, project = request.project)
                     if (routes.isNotEmpty()) {
-                        val resolvedMountPath = parsed.docServiceMountPath
-                            ?.let(ArmeriaDocServiceEndpointValidator::normalizeMountPath)
-                            ?: mountPath
+                        val resolvedMountPath =
+                            parsed.docServiceMountPath
+                                ?.let(ArmeriaDocServiceEndpointValidator::normalizeMountPath)
+                                ?: mountPath
                         return ArmeriaDocServiceFetchResult.Success(
                             routes = routes,
                             resolvedMountPath = resolvedMountPath,
@@ -76,22 +80,21 @@ object ArmeriaRuntimeRouteFetcher {
         moduleName: String,
         protocol: String,
         project: Project? = null,
-    ): List<ArmeriaRoute> {
-        return toArmeriaRoutes(
+    ): List<ArmeriaRoute> =
+        toArmeriaRoutes(
             ArmeriaDocServiceSpecificationParser.parse(specificationJson).routes,
             moduleName = moduleName,
             protocol = protocol,
             project = project,
         )
-    }
 
     private fun toArmeriaRoutes(
         routes: List<ArmeriaDocServiceSpecificationParser.ParsedRoute>,
         moduleName: String = message("route.explorer.module.runtime"),
         protocol: String = message("route.explorer.protocol.runtime"),
         project: Project? = null,
-    ): List<ArmeriaRoute> {
-        return routes.map { parsed ->
+    ): List<ArmeriaRoute> =
+        routes.map { parsed ->
             ArmeriaRoute.createRuntime(
                 httpMethod = parsed.httpMethod,
                 path = parsed.path,
@@ -101,11 +104,15 @@ object ArmeriaRuntimeRouteFetcher {
                 project = project,
             )
         }
-    }
 
     private sealed interface ReadResult {
-        data class Success(val body: String) : ReadResult
-        data class Failure(val message: String) : ReadResult
+        data class Success(
+            val body: String,
+        ) : ReadResult
+
+        data class Failure(
+            val message: String,
+        ) : ReadResult
     }
 
     private fun readUrl(url: String): ReadResult {

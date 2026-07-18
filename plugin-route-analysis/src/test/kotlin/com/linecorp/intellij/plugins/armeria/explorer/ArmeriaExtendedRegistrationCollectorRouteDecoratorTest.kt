@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaExtendedRegistrationCollectorRouteDecoratorTest : ArmeriaFixtureTestBase() {
-
     override fun registerArmeriaStubs() {
         registerExtendedRegistrationCollectorStubs()
     }
@@ -35,7 +34,6 @@ class ArmeriaExtendedRegistrationCollectorRouteDecoratorTest : ArmeriaFixtureTes
         assertEquals("/**", decoratorRoute.path)
     }
 
-
     fun testCollectRouteDecoratorMethodsStripHttpMethodPrefix() {
         myFixture.configureByText(
             "Main.java",
@@ -63,7 +61,6 @@ class ArmeriaExtendedRegistrationCollectorRouteDecoratorTest : ArmeriaFixtureTes
         assertNotNull(decoratorRoute)
         assertEquals("POST, PUT", decoratorRoute!!.httpMethod)
     }
-
 
     fun testCollectRouteDecoratorIgnoresUnrelatedCallsInSameBlock() {
         myFixture.configureByText(
@@ -93,7 +90,6 @@ class ArmeriaExtendedRegistrationCollectorRouteDecoratorTest : ArmeriaFixtureTes
         assertEquals("/decorated/**", decoratorRoute!!.path)
         assertEquals(1, routes.count { it.routeMatch == RouteMatch.ROUTE_DECORATOR })
     }
-
 
     fun testCollectRouteDecoratorIgnoresPathCallsInsideDecoratorLambda() {
         myFixture.configureByText(
@@ -127,7 +123,6 @@ class ArmeriaExtendedRegistrationCollectorRouteDecoratorTest : ArmeriaFixtureTes
         assertEquals("/decorated/**", decoratorRoute!!.path)
     }
 
-
     fun testCollectRouteDecoratorRegistration() {
         myFixture.configureByText(
             "Main.java",
@@ -153,6 +148,4 @@ class ArmeriaExtendedRegistrationCollectorRouteDecoratorTest : ArmeriaFixtureTes
         val decoratorRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_DECORATOR }
         assertNotNull(decoratorRoute)
     }
-
-
 }
