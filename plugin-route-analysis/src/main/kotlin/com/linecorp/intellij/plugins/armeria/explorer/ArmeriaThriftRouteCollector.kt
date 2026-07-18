@@ -19,15 +19,27 @@ internal object ArmeriaThriftRouteCollector {
         if (!ArmeriaIdlRouteSupport.isThriftOnClasspath(project, scope)) {
             return
         }
-        for (virtualFile in FilenameIndex.getAllFilesByExt(project, "thrift", scope)) {
-            val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: continue
+        val seenThriftRoutes = mutableSetOf<String>()
+        // FilenameIndex iteration order is unstable; sort so first-wins dedupe is deterministic.
+        val virtualFiles = FilenameIndex.getAllFilesByExt(project, "thrift", scope)
+            .sortedWith(compareBy({ it.path }, { it.name }))
+        val psiManager = PsiManager.getInstance(project)
+        for (virtualFile in virtualFiles) {
+            val psiFile = psiManager.findFile(virtualFile) ?: continue
+            val moduleName = ArmeriaRouteMetadata.moduleName(psiFile)
             for (operation in parseOperations(psiFile.text)) {
+                val path = "/${operation.serviceName}"
+                val target = "${operation.serviceName}.${operation.methodName}"
+                val dedupeKey = "$moduleName:$path:$target"
+                if (!seenThriftRoutes.add(dedupeKey)) {
+                    continue
+                }
                 routes += ArmeriaRoute.create(
                     element = psiFile,
                     protocol = RouteProtocol.THRIFT.presentableName(),
                     httpMethod = "",
-                    path = "/${operation.serviceName}",
-                    target = "${operation.serviceName}.${operation.methodName}",
+                    path = path,
+                    target = target,
                     routeMatch = RouteMatch.NON_HTTP,
                 )
             }

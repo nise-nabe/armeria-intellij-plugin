@@ -18,19 +18,30 @@ internal object ArmeriaGraphqlRouteCollector {
         if (!ArmeriaIdlRouteSupport.isGraphqlOnClasspath(project, scope)) {
             return
         }
-        for (extension in GRAPHQL_EXTENSIONS) {
-            for (virtualFile in FilenameIndex.getAllFilesByExt(project, extension, scope)) {
-                val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: continue
-                for (operation in parseOperations(psiFile.text)) {
-                    routes += ArmeriaRoute.create(
-                        element = psiFile,
-                        protocol = RouteProtocol.GRAPHQL.presentableName(),
-                        httpMethod = "",
-                        path = ArmeriaIdlRouteSupport.DEFAULT_GRAPHQL_MOUNT_PATH,
-                        target = "${operation.operationType}.${operation.fieldName}",
-                        routeMatch = RouteMatch.NON_HTTP,
-                    )
+        val seenGraphqlRoutes = mutableSetOf<String>()
+        // FilenameIndex iteration order is unstable; sort so first-wins dedupe is deterministic.
+        val virtualFiles = GRAPHQL_EXTENSIONS
+            .flatMap { extension -> FilenameIndex.getAllFilesByExt(project, extension, scope) }
+            .sortedWith(compareBy({ it.path }, { it.name }))
+        val psiManager = PsiManager.getInstance(project)
+        for (virtualFile in virtualFiles) {
+            val psiFile = psiManager.findFile(virtualFile) ?: continue
+            val moduleName = ArmeriaRouteMetadata.moduleName(psiFile)
+            for (operation in parseOperations(psiFile.text)) {
+                val target = "${operation.operationType}.${operation.fieldName}"
+                val dedupeKey =
+                    "$moduleName:${ArmeriaIdlRouteSupport.DEFAULT_GRAPHQL_MOUNT_PATH}:$target"
+                if (!seenGraphqlRoutes.add(dedupeKey)) {
+                    continue
                 }
+                routes += ArmeriaRoute.create(
+                    element = psiFile,
+                    protocol = RouteProtocol.GRAPHQL.presentableName(),
+                    httpMethod = "",
+                    path = ArmeriaIdlRouteSupport.DEFAULT_GRAPHQL_MOUNT_PATH,
+                    target = target,
+                    routeMatch = RouteMatch.NON_HTTP,
+                )
             }
         }
     }

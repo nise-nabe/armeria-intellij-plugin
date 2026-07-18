@@ -194,6 +194,48 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertTrue(route.httpMethod.isBlank())
     }
 
+    fun testCollectGraphqlRoutesDedupesDuplicateOperationsAcrossFiles() {
+        registerArmeriaIdlStubs()
+        val schema =
+            """
+            type Query {
+                user: User
+            }
+            """.trimIndent()
+        myFixture.configureByText("schema.graphql", schema)
+        myFixture.configureByText("copy.graphqls", schema)
+
+        val routes = ArmeriaRouteCollector.collect(project)
+            .filter { it.protocol == RouteProtocol.GRAPHQL.presentableName() }
+
+        assertEquals(1, routes.size)
+        val route = routes.single()
+        assertEquals("Query.user", route.target)
+        // Lexicographic path wins when FilenameIndex order is unstable.
+        assertEquals("copy.graphqls", route.pointer.element!!.containingFile.name)
+    }
+
+    fun testCollectThriftRoutesDedupesDuplicateOperationsAcrossFiles() {
+        registerArmeriaIdlStubs()
+        val thrift =
+            """
+            service HelloService {
+                string sayHello(1: string name),
+            }
+            """.trimIndent()
+        myFixture.configureByText("hello.thrift", thrift)
+        myFixture.configureByText("copy.thrift", thrift)
+
+        val routes = ArmeriaRouteCollector.collect(project)
+            .filter { it.protocol == RouteProtocol.THRIFT.presentableName() }
+
+        assertEquals(1, routes.size)
+        val route = routes.single()
+        assertEquals("HelloService.sayHello", route.target)
+        // Lexicographic path wins when FilenameIndex order is unstable.
+        assertEquals("copy.thrift", route.pointer.element!!.containingFile.name)
+    }
+
     fun testSkipIdlRoutesWhenProtocolNotOnClasspath() {
         myFixture.configureByText(
             "schema.graphql",
