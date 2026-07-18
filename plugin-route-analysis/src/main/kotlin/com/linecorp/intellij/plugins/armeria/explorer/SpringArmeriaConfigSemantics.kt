@@ -42,28 +42,10 @@ internal object SpringArmeriaConfigSemantics {
             return emptyList()
         }
         return normalized.split(',', ' ', '\t')
-            .map { stripInlineComment(it).let(::trimQuotes) }
+            .map(::trimQuotes)
             .filter { it.isNotEmpty() }
     }
 
     fun trimQuotes(raw: String): String =
         raw.trim().removeSurrounding("\"").removeSurrounding("'")
-
-    private val INLINE_COMMENT = Regex("""\s+#.*$""")
-
-    private fun stripInlineComment(raw: String): String {
-        val trimmed = raw.trim()
-        if (trimmed.isEmpty()) {
-            return trimmed
-        }
-        if ((trimmed.startsWith("\"") && trimmed.endsWith("\"")) ||
-            (trimmed.startsWith("'") && trimmed.endsWith("'"))
-        ) {
-            return trimmed
-        }
-        if (trimmed.startsWith("#")) {
-            return ""
-        }
-        return trimmed.replace(INLINE_COMMENT, "").trimEnd()
-    }
 }

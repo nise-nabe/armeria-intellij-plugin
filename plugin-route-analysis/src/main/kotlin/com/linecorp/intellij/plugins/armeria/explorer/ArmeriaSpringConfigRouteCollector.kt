@@ -10,25 +10,6 @@ import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.message
 
-internal data class SpringArmeriaPortBinding(
-    val port: String,
-    val protocols: List<String>,
-    val element: PsiElement? = null,
-)
-
-internal data class SpringArmeriaConfig(
-    val ports: List<SpringArmeriaPortBinding> = emptyList(),
-    val includes: Set<String> = emptySet(),
-    val docsPath: String = SpringArmeriaConfigSemantics.DEFAULT_DOCS_PATH,
-    val healthPath: String = SpringArmeriaConfigSemantics.DEFAULT_HEALTH_PATH,
-    val metricsPath: String = SpringArmeriaConfigSemantics.DEFAULT_METRICS_PATH,
-    val internalServicesPort: String? = null,
-    val includeElement: PsiElement? = null,
-    val docsPathElement: PsiElement? = null,
-    val healthPathElement: PsiElement? = null,
-    val metricsPathElement: PsiElement? = null,
-)
-
 internal object ArmeriaSpringConfigRouteCollector {
     private val YAML_PLUGIN_ID = PluginId.getId("org.jetbrains.plugins.yaml")
 
@@ -183,7 +164,6 @@ internal object ArmeriaSpringConfigRouteCollector {
             val protocolIndex = match.groupValues[2].toIntOrNull()
             val protocols = SpringArmeriaConfigSemantics
                 .splitScalarList(stripPropertiesInlineComment(match.groupValues[3]))
-                .map { it.uppercase() }
                 .filter { it.isNotEmpty() }
             if (protocols.isEmpty()) {
                 return@forEach
