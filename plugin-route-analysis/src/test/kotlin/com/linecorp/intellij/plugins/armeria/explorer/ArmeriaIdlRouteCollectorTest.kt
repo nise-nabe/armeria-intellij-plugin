@@ -1,5 +1,12 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.openapi.application.WriteAction
+import com.intellij.openapi.module.JavaModuleType
+import com.intellij.openapi.module.Module
+import com.intellij.openapi.module.ModuleUtilCore
+import com.intellij.openapi.vfs.VfsUtil
+import com.intellij.psi.PsiDocumentManager
+import com.intellij.testFramework.PsiTestUtil
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
@@ -236,6 +243,46 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertEquals("copy.thrift", route.pointer.element!!.containingFile.name)
     }
 
+    fun testCollectGraphqlRoutesKeepDuplicateOperationsAcrossModules() {
+        registerArmeriaIdlStubs()
+        val schema =
+            """
+            type Query {
+                user: User
+            }
+            """.trimIndent()
+        myFixture.configureByText("schema.graphql", schema)
+        val additionalModule = addAdditionalModuleWithTextFile("other.graphql", schema)
+
+        val routes = ArmeriaRouteCollector.collect(project)
+            .filter { it.protocol == RouteProtocol.GRAPHQL.presentableName() }
+
+        assertEquals(2, routes.size)
+        assertEquals(setOf("Query.user"), routes.map { it.target }.toSet())
+        val defaultModuleName = ModuleUtilCore.findModuleForPsiElement(myFixture.file)!!.name
+        assertEquals(setOf(defaultModuleName, additionalModule.name), routes.map { it.moduleName }.toSet())
+    }
+
+    fun testCollectThriftRoutesKeepDuplicateOperationsAcrossModules() {
+        registerArmeriaIdlStubs()
+        val thrift =
+            """
+            service HelloService {
+                string sayHello(1: string name),
+            }
+            """.trimIndent()
+        myFixture.configureByText("hello.thrift", thrift)
+        val additionalModule = addAdditionalModuleWithTextFile("other.thrift", thrift)
+
+        val routes = ArmeriaRouteCollector.collect(project)
+            .filter { it.protocol == RouteProtocol.THRIFT.presentableName() }
+
+        assertEquals(2, routes.size)
+        assertEquals(setOf("HelloService.sayHello"), routes.map { it.target }.toSet())
+        val defaultModuleName = ModuleUtilCore.findModuleForPsiElement(myFixture.file)!!.name
+        assertEquals(setOf(defaultModuleName, additionalModule.name), routes.map { it.moduleName }.toSet())
+    }
+
     fun testSkipIdlRoutesWhenProtocolNotOnClasspath() {
         myFixture.configureByText(
             "schema.graphql",
@@ -258,5 +305,16 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
             .filter { it.routeMatch == RouteMatch.NON_HTTP }
 
         assertTrue(routesWithoutIdlStubs.isEmpty())
+    }
+
+    private fun addAdditionalModuleWithTextFile(fileName: String, content: String): Module {
+        val moduleRoot = myFixture.tempDirFixture.createDir("additional-module")
+        val module = PsiTestUtil.addModule(project, JavaModuleType.getInstance(), "additionalModule", moduleRoot)
+        WriteAction.runAndWait {
+            val virtualFile = moduleRoot.createChildData(this, fileName)
+            VfsUtil.saveText(virtualFile, content)
+        }
+        PsiDocumentManager.getInstance(project).commitAllDocuments()
+        return module
     }
 }
