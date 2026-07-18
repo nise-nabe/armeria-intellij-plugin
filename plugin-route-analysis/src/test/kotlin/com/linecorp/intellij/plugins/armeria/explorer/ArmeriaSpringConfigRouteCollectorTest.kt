@@ -7,6 +7,7 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 import org.jetbrains.yaml.psi.YAMLFile
+import org.jetbrains.yaml.psi.YAMLKeyValue
 
 class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     fun testCollectPortsAndInternalServicesFromYaml() {
@@ -178,6 +179,27 @@ class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixture
         assertTrue(routes.any { it.path == "/internal/metrics" })
         assertTrue(routes.any { it.path == "/actuator" })
         assertTrue(routes.all { !it.isDocService || it.target.contains(":18080") })
+    }
+
+    fun testYamlIncludeAllExpandsAndSurfacesInternalPort() {
+        val psiFile = myFixture.configureByText(
+            "application.yml",
+            """
+            armeria:
+              internal-services:
+                include: all
+                port: 18080
+              docs-path: /custom/docs
+            """.trimIndent(),
+        )
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+
+        assertTrue(routes.any { it.isDocService && it.path == "/custom/docs" && it.target.contains(":18080") })
+        assertTrue(routes.any { it.path == "/internal/healthcheck" && it.target.contains(":18080") })
+        assertTrue(routes.any { it.path == "/internal/metrics" && it.target.contains(":18080") })
+        assertTrue(routes.any { it.path == "/actuator" && it.target.contains(":18080") })
     }
 
     fun testUnrelatedDocsPathDoesNotOverrideArmeriaPath() {
@@ -374,10 +396,13 @@ class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixture
         val portRoute = routes.single { it.path == ":8080" }
         val element = portRoute.pointer.element
         assertNotNull(element)
-        assertFalse(element is PsiFile)
-        assertTrue(portRoute.resolveSourceHint().contains(":"))
+        assertTrue(
+            "Port route should navigate to the YAML port key, not the whole file",
+            element is org.jetbrains.yaml.psi.YAMLKeyValue,
+        )
+        assertEquals("port", (element as org.jetbrains.yaml.psi.YAMLKeyValue).keyText)
         assertFalse(portRoute.resolveSourceHint().endsWith(":1"))
-        assertSame(psiFile, element!!.containingFile)
+        assertSame(psiFile, element.containingFile)
     }
 
     fun testYamlMultiDocumentFindsArmeriaInLaterDocument() {

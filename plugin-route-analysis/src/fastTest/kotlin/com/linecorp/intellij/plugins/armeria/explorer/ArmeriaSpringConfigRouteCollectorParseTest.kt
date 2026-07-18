@@ -212,7 +212,9 @@ class ArmeriaSpringConfigRouteCollectorParseTest {
         )
         assertEquals(
             SpringArmeriaConfigSemantics.INTERNAL_SERVICE_IDS,
-            SpringArmeriaConfigSemantics.expandIncludes(setOf("all")),
+            SpringArmeriaConfigSemantics.expandIncludes(
+                SpringArmeriaConfigSemantics.parseIncludeTokens("all"),
+            ),
         )
     }
 }

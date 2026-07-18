@@ -95,7 +95,8 @@ internal object ArmeriaYamlSpringConfigReader {
             bindings += SpringArmeriaPortBinding(
                 port = port,
                 protocols = protocols,
-                element = if (attachElements) (portKv ?: item) else null,
+                // portKv is non-null here: scalarText(portKv?.value) already continued otherwise.
+                element = if (attachElements) portKv else null,
             )
         }
         return bindings
@@ -121,9 +122,8 @@ internal object ArmeriaYamlSpringConfigReader {
         }
         val value = includeKv.value
         val tokens = when (value) {
-            is YAMLSequence -> value.items.mapNotNull { scalarText(it.value) }.map { it.lowercase() }.toSet()
+            is YAMLSequence -> value.items.mapNotNull { scalarText(it.value) }.toSet()
             is YAMLScalar -> SpringArmeriaConfigSemantics.parseIncludeTokens(value.textValue)
-            null -> emptySet()
             else -> emptySet()
         }
         return SpringArmeriaConfigSemantics.expandIncludes(tokens)

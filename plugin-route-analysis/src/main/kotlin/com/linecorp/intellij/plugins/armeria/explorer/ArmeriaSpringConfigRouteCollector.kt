@@ -30,10 +30,6 @@ internal data class SpringArmeriaConfig(
 )
 
 internal object ArmeriaSpringConfigRouteCollector {
-    const val DEFAULT_DOCS_PATH = SpringArmeriaConfigSemantics.DEFAULT_DOCS_PATH
-    const val DEFAULT_HEALTH_PATH = SpringArmeriaConfigSemantics.DEFAULT_HEALTH_PATH
-    const val DEFAULT_METRICS_PATH = SpringArmeriaConfigSemantics.DEFAULT_METRICS_PATH
-
     private val YAML_PLUGIN_ID = PluginId.getId("org.jetbrains.plugins.yaml")
 
     private val APPLICATION_FILE_PATTERN = Regex("""^application(-[\w.-]+)?\.(yml|yaml|properties)$""")
@@ -91,7 +87,7 @@ internal object ArmeriaSpringConfigRouteCollector {
         InternalServiceSpec(
             id = SpringArmeriaConfigSemantics.ID_DOCS,
             path = { it.docsPath },
-            pathElement = { it.docsPathElement ?: it.includeElement },
+            pathElement = { it.docsPathElement },
             messageKey = "route.explorer.spring.docService",
             protocol = RouteProtocol.DOC_SERVICE.presentableName(),
             httpMethod = "",
@@ -101,7 +97,7 @@ internal object ArmeriaSpringConfigRouteCollector {
         InternalServiceSpec(
             id = SpringArmeriaConfigSemantics.ID_HEALTH,
             path = { it.healthPath },
-            pathElement = { it.healthPathElement ?: it.includeElement },
+            pathElement = { it.healthPathElement },
             messageKey = "route.explorer.spring.healthCheck",
             protocol = RouteProtocol.HTTP.presentableName(),
             httpMethod = "GET",
@@ -111,7 +107,7 @@ internal object ArmeriaSpringConfigRouteCollector {
         InternalServiceSpec(
             id = SpringArmeriaConfigSemantics.ID_METRICS,
             path = { it.metricsPath },
-            pathElement = { it.metricsPathElement ?: it.includeElement },
+            pathElement = { it.metricsPathElement },
             messageKey = "route.explorer.spring.metrics",
             protocol = RouteProtocol.HTTP.presentableName(),
             httpMethod = "GET",
@@ -121,7 +117,7 @@ internal object ArmeriaSpringConfigRouteCollector {
         InternalServiceSpec(
             id = SpringArmeriaConfigSemantics.ID_ACTUATOR,
             path = { "/actuator" },
-            pathElement = { it.includeElement },
+            pathElement = { null },
             messageKey = "route.explorer.spring.actuator",
             protocol = RouteProtocol.HTTP.presentableName(),
             httpMethod = "GET",
@@ -242,13 +238,13 @@ internal object ArmeriaSpringConfigRouteCollector {
             includes = SpringArmeriaConfigSemantics.expandIncludes(includes),
             docsPath = lastPropertiesMatch(PROPERTIES_DOCS_PATH_PATTERN, text)
                 ?.let { stripPropertiesInlineComment(it).trimQuotes() }
-                ?: DEFAULT_DOCS_PATH,
+                ?: SpringArmeriaConfigSemantics.DEFAULT_DOCS_PATH,
             healthPath = lastPropertiesMatch(PROPERTIES_HEALTH_PATH_PATTERN, text)
                 ?.let { stripPropertiesInlineComment(it).trimQuotes() }
-                ?: DEFAULT_HEALTH_PATH,
+                ?: SpringArmeriaConfigSemantics.DEFAULT_HEALTH_PATH,
             metricsPath = lastPropertiesMatch(PROPERTIES_METRICS_PATH_PATTERN, text)
                 ?.let { stripPropertiesInlineComment(it).trimQuotes() }
-                ?: DEFAULT_METRICS_PATH,
+                ?: SpringArmeriaConfigSemantics.DEFAULT_METRICS_PATH,
             internalServicesPort = lastPropertiesMatch(PROPERTIES_INTERNAL_PORT_PATTERN, text)
                 ?.let { stripPropertiesInlineComment(it) },
         )
@@ -295,7 +291,9 @@ internal object ArmeriaSpringConfigRouteCollector {
             }
             val path = spec.path(config)
             addConfigRoute(
-                element = spec.pathElement(config) ?: fallbackElement,
+                element = spec.pathElement(config)
+                    ?: config.includeElement
+                    ?: fallbackElement,
                 path = path,
                 target = profileAwareTarget(message(spec.messageKey) + portSuffix, profile),
                 protocol = spec.protocol,
