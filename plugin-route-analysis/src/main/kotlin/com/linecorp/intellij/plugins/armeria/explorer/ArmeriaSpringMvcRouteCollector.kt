@@ -63,7 +63,8 @@ internal object ArmeriaSpringMvcRouteCollector {
         }
         val routes = mutableListOf<SpringMvcRoute>()
         for (controller in controllers) {
-            if (!isConcreteControllerBean(controller, controllers)) {
+            // Spring does not instantiate abstract / interface stereotype types.
+            if (controller.isInterface || controller.hasModifierProperty(PsiModifier.ABSTRACT)) {
                 continue
             }
             collectFromController(controller, routes)
@@ -71,28 +72,16 @@ internal object ArmeriaSpringMvcRouteCollector {
         return routes
     }
 
-    /**
-     * Spring does not instantiate abstract / interface stereotype types, and a superclass that is
-     * itself stereotype-annotated would otherwise emit the same inherited mappings twice.
-     */
-    private fun isConcreteControllerBean(controller: PsiClass, allControllers: Set<PsiClass>): Boolean {
-        if (controller.isInterface || controller.hasModifierProperty(PsiModifier.ABSTRACT)) {
-            return false
-        }
-        return allControllers.none { other ->
-            other != controller && other.isInheritor(controller, true)
-        }
-    }
-
     private fun collectFromController(controller: PsiClass, routes: MutableList<SpringMvcRoute>) {
-        val classPrefixes = extractMergedClassRequestMappingPrefixes(controller)
+        val hierarchy = typesInHierarchy(controller)
+        val classPrefixes = extractMergedClassRequestMappingPrefixes(hierarchy)
         // One most-specific method per visible signature; unannotated overrides resolve via supers.
         for (signature in controller.visibleSignatures) {
             val method = signature.method
             if (method.containingClass?.qualifiedName == JAVA_LANG_OBJECT) {
                 continue
             }
-            val mappedMethod = resolveMappedMethod(method) ?: continue
+            val mappedMethod = resolveMappedMethod(hierarchy, method) ?: continue
             for (annotation in mappedMethod.annotations) {
                 val fqn = annotation.qualifiedName ?: continue
                 val defaultMethod = MAPPING_ANNOTATIONS[fqn] ?: continue
@@ -109,29 +98,17 @@ internal object ArmeriaSpringMvcRouteCollector {
     }
 
     /**
-     * Prefers a mapping on [method] itself; otherwise walks super methods (recursively) until a
-     * Spring MVC mapping annotation is found. Matches Spring's TYPE_HIERARCHY walk: at each level
-     * interface supers are considered before class supers, and unannotated intermediate overrides
-     * do not stop the search.
+     * Walks [hierarchy] (Spring TYPE_HIERARCHY order) and returns the first same-signature method
+     * that declares a Spring MVC mapping. Unannotated intermediate overrides do not stop the search.
      */
-    private fun resolveMappedMethod(method: PsiMethod): PsiMethod? {
-        if (hasMappingAnnotation(method)) {
-            return method
-        }
-        for (superMethod in orderedSuperMethods(method)) {
-            resolveMappedMethod(superMethod)?.let { return it }
+    private fun resolveMappedMethod(hierarchy: List<PsiClass>, method: PsiMethod): PsiMethod? {
+        for (type in hierarchy) {
+            val candidate = type.findMethodBySignature(method, false) ?: continue
+            if (hasMappingAnnotation(candidate)) {
+                return candidate
+            }
         }
         return null
-    }
-
-    /**
-     * [PsiMethod.findSuperMethods] returns only immediate supers; sort them so interface methods
-     * precede class methods (Spring AnnotationsScanner TYPE_HIERARCHY order).
-     */
-    private fun orderedSuperMethods(method: PsiMethod): List<PsiMethod> {
-        return method.findSuperMethods().sortedBy { superMethod ->
-            if (superMethod.containingClass?.isInterface == true) 0 else 1
-        }
     }
 
     private fun addRoutesFromMethod(
@@ -164,37 +141,29 @@ internal object ArmeriaSpringMvcRouteCollector {
     }
 
     /**
-     * Walks [controller] then supers/interfaces (Spring TYPE_HIERARCHY DFS: interfaces before
-     * superclass). The first type that declares `@RequestMapping` supplies prefixes (most specific
-     * wins; parent applies when the child has none).
+     * Walks [hierarchy] (Spring TYPE_HIERARCHY DFS: interfaces before superclass). The first type
+     * that declares `@RequestMapping` supplies prefixes (most specific wins; parent applies when
+     * the child has none).
      */
-    private fun extractMergedClassRequestMappingPrefixes(controller: PsiClass): List<String> {
-        for (type in typesInHierarchy(controller)) {
-            if (type.annotations.none { it.qualifiedName == REQUEST_MAPPING }) {
+    private fun extractMergedClassRequestMappingPrefixes(hierarchy: List<PsiClass>): List<String> {
+        for (type in hierarchy) {
+            val requestMappings = type.annotations.filter { it.qualifiedName == REQUEST_MAPPING }
+            if (requestMappings.isEmpty()) {
                 continue
             }
-            return extractClassRequestMappingPrefixes(type)
+            val prefixes = requestMappings.flatMap { mapping ->
+                ArmeriaRouteSupport.extractPaths(mapping).ifEmpty { listOf("") }
+            }
+            return prefixes.ifEmpty { listOf("") }
         }
         return listOf("")
-    }
-
-    private fun extractClassRequestMappingPrefixes(psiClass: PsiClass): List<String> {
-        // @RequestMapping is @Repeatable — collect every class-level mapping, not only the first.
-        val requestMappings = psiClass.annotations.filter { it.qualifiedName == REQUEST_MAPPING }
-        if (requestMappings.isEmpty()) {
-            return listOf("")
-        }
-        val prefixes = requestMappings.flatMap { mapping ->
-            ArmeriaRouteSupport.extractPaths(mapping).ifEmpty { listOf("") }
-        }
-        return prefixes.ifEmpty { listOf("") }
     }
 
     /**
      * Depth-first hierarchy walk matching Spring's AnnotationsScanner TYPE_HIERARCHY:
      * current type, then each interface (recursively), then superclass (recursively).
      */
-    private fun typesInHierarchy(psiClass: PsiClass): Sequence<PsiClass> {
+    private fun typesInHierarchy(psiClass: PsiClass): List<PsiClass> {
         val visited = mutableSetOf<PsiClass>()
         val result = ArrayList<PsiClass>()
         fun walk(current: PsiClass) {
@@ -211,7 +180,7 @@ internal object ArmeriaSpringMvcRouteCollector {
             current.superClass?.let { walk(it) }
         }
         walk(psiClass)
-        return result.asSequence()
+        return result
     }
 
     private fun hasMappingAnnotation(method: PsiMethod): Boolean {

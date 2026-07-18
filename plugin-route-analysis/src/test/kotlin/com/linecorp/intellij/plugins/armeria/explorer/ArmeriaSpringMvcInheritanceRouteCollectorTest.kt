@@ -275,6 +275,85 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertEquals(listOf("/spring/hello"), delegated.map { it.path })
     }
 
+    fun testAbstractStereotypeSubclassDoesNotSuppressConcreteParent() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import org.springframework.stereotype.Controller;
+            import org.springframework.web.bind.annotation.GetMapping;
+
+            @Controller
+            public class ParentController {
+                @GetMapping("/parent")
+                public String parent() {
+                    return "parent";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "MidController.java",
+            """
+            package example;
+
+            import org.springframework.stereotype.Controller;
+
+            @Controller
+            public abstract class MidController extends ParentController {
+            }
+            """.trimIndent(),
+        )
+
+        val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.projectScope(project))
+        assertEquals(listOf("/parent"), springMvcRoutes.map { it.path })
+        assertEquals(listOf("example.ParentController#parent()"), springMvcRoutes.map { it.target })
+        assertEquals("example.ParentController", springMvcRoutes.single().controller.qualifiedName)
+    }
+
+    fun testConcreteStereotypeParentAndChildBothRegisterWithDistinctPrefixes() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import org.springframework.stereotype.Controller;
+            import org.springframework.web.bind.annotation.GetMapping;
+            import org.springframework.web.bind.annotation.RequestMapping;
+
+            @Controller
+            @RequestMapping("/admin")
+            public class ParentController {
+                @GetMapping("/hello")
+                public String hello() {
+                    return "parent";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "ChildController.java",
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.RestController;
+            import org.springframework.web.bind.annotation.RequestMapping;
+
+            @RestController
+            @RequestMapping("/api")
+            public class ChildController extends ParentController {
+            }
+            """.trimIndent(),
+        )
+
+        val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.projectScope(project))
+            .sortedBy { it.path }
+        assertEquals(listOf("/admin/hello", "/api/hello"), springMvcRoutes.map { it.path })
+        assertEquals(
+            listOf("example.ChildController#hello()", "example.ParentController#hello()"),
+            springMvcRoutes.map { it.target }.sorted(),
+        )
+    }
+
     fun testMountFilterUsesControllerModuleNotMappingElement() {
         myFixture.addClass(
             """

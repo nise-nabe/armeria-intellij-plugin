@@ -43,7 +43,8 @@ internal object ArmeriaDelegatedRouteCollector {
                     routeMatch = RouteMatch.DELEGATED_SPRING_MVC,
                     virtualHostName = mountRoute.virtualHostName,
                     delegationMountPath = mountRoute.path,
-                ).copy(moduleName = ArmeriaRouteMetadata.moduleName(springMvcRoute.controller))
+                    moduleName = ArmeriaRouteMetadata.moduleName(springMvcRoute.controller),
+                )
             }
         }
 
