@@ -1,0 +1,17 @@
+<templateSet group="Armeria">
+  <template name="armroute-kotlin" key="live.template.annotated.route.method.kotlin.description" resource-bundle="messages.ArmeriaBundle" value="@com.linecorp.armeria.server.annotation.Get(&quot;$PATH$&quot;)&#10;fun $NAME$($PARAMS$): String {&#10;    return &quot;$END$&quot;&#10;}" description="Annotated Armeria route method (Kotlin)" toReformat="true" toShortenFQNames="true">
+    <variable name="PATH" expression="" defaultValue="/" alwaysStopAt="true"/>
+    <variable name="NAME" expression="" defaultValue="handler" alwaysStopAt="true"/>
+    <variable name="PARAMS" expression="" defaultValue="" alwaysStopAt="true"/>
+    <context><option name="KOTLIN_CLASS" value="true"/></context>
+  </template>
+  <template name="armsrv-kotlin" key="live.template.server.builder.kotlin.description" resource-bundle="messages.ArmeriaBundle" value="com.linecorp.armeria.server.Server.builder()&#10;    .http($PORT$)&#10;    .annotatedService($SERVICE$())&#10;    .build()&#10;    .start()&#10;    .join()" description="Armeria Server.builder skeleton (Kotlin)" toReformat="true" toShortenFQNames="true">
+    <variable name="PORT" expression="" defaultValue="8080" alwaysStopAt="true"/>
+    <variable name="SERVICE" expression="completeSmart()" defaultValue="MyService" alwaysStopAt="true"/>
+    <context><option name="KOTLIN_STATEMENT" value="true"/></context>
+  </template>
+  <template name="armwc-kotlin" key="live.template.webclient.decorator.kotlin.description" resource-bundle="messages.ArmeriaBundle" value="com.linecorp.armeria.client.WebClient.builder(&quot;$URI$&quot;)&#10;    .decorator(com.linecorp.armeria.client.logging.LoggingClient.newDecorator())&#10;    .build()" description="Armeria WebClient with LoggingClient decorator (Kotlin)" toReformat="true" toShortenFQNames="true">
+    <variable name="URI" expression="" defaultValue="http://localhost:8080" alwaysStopAt="true"/>
+    <context><option name="KOTLIN_STATEMENT" value="true"/></context>
+  </template>
+</templateSet>

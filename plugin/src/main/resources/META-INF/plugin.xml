@@ -59,6 +59,13 @@
         <!-- Run configuration -->
         <configurationType implementation="com.linecorp.intellij.plugins.armeria.run.ArmeriaRunConfigurationType" />
         <runConfigurationProducer implementation="com.linecorp.intellij.plugins.armeria.run.ArmeriaRunConfigurationProducer" />
+
+        <defaultLiveTemplates file="liveTemplates/Armeria.xml"/>
+        <intentionAction>
+            <className>com.linecorp.intellij.plugins.armeria.intention.ArmeriaGenerateRouteMethodIntention</className>
+            <category>Armeria</category>
+            <language>JAVA</language>
+        </intentionAction>
     </extensions>
 
     <actions>
