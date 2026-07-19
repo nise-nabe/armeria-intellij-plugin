@@ -27,8 +27,11 @@ class ArmeriaGrpcRouteCollectorGateTest : ArmeriaFixtureTestBase() {
         assertFalse(ArmeriaGrpcRouteCollector.isGrpcOnClasspath(project, GlobalSearchScope.projectScope(project)))
         assertTrue(
             ArmeriaRouteCollector
-                .collect(project, includeProtoRoutes = true, contributors = listOf(ArmeriaProtocolRouteContributor))
-                .none { it.path == "/com.example.Greeter/SayHello" },
+                .collect(
+                    project,
+                    includeProtoRoutes = true,
+                    contributors = listOf(ArmeriaProtocolRouteContributor),
+                ).none { it.path == "/com.example.Greeter/SayHello" },
         )
     }
 }

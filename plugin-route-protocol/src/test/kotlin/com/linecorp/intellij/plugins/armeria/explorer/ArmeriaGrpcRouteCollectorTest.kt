@@ -52,7 +52,12 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, includeProtoRoutes = true, contributors = listOf(ArmeriaProtocolRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
 
         assertEquals(listOf("/com.example.Greeter/SayHello"), routes.map { it.path })
     }
@@ -71,7 +76,12 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, includeProtoRoutes = true, contributors = listOf(ArmeriaProtocolRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
         val protoRoutes = routes.filter { it.path.startsWith("/com.example.Greeter/") }.sortedBy { it.path }
 
         assertEquals(2, protoRoutes.size)
@@ -95,7 +105,12 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, includeProtoRoutes = true, contributors = listOf(ArmeriaProtocolRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
         val protoRoute = routes.single { it.path == "/Greeter/Ping" }
 
         assertEquals("Greeter.Ping", protoRoute.target)
@@ -120,7 +135,12 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, includeProtoRoutes = true, contributors = listOf(ArmeriaProtocolRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
         val protoRoute = routes.firstOrNull { it.path == "/com.example.Greeter/SayHello" }
 
         assertNotNull(protoRoute)
@@ -144,7 +164,14 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, includeProtoRoutes = true, contributors = listOf(ArmeriaProtocolRouteContributor)).map { it.path }.sorted()
+        val routes =
+            ArmeriaRouteCollector
+                .collect(
+                    project,
+                    includeProtoRoutes = true,
+                    contributors = listOf(ArmeriaProtocolRouteContributor),
+                ).map { it.path }
+                .sorted()
 
         assertEquals(
             listOf("/com.example.Admin/Ping", "/com.example.Greeter/SayHello"),
@@ -165,7 +192,12 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, includeProtoRoutes = true, contributors = listOf(ArmeriaProtocolRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
 
         assertEquals(listOf("/com.example.Greeter/SayHello"), routes.map { it.path })
     }
@@ -183,7 +215,12 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, includeProtoRoutes = true, contributors = listOf(ArmeriaProtocolRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
 
         assertEquals(listOf("/com.example.Greeter/SayHello"), routes.map { it.path })
     }
@@ -202,7 +239,12 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, includeProtoRoutes = true, contributors = listOf(ArmeriaProtocolRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
 
         assertEquals(listOf("/com.example.Greeter/SayHello"), routes.map { it.path })
     }
@@ -291,7 +333,12 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, includeProtoRoutes = true, contributors = listOf(ArmeriaProtocolRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
 
         assertNotNull(routes.firstOrNull { it.path == "/grpc" })
         assertNotNull(routes.firstOrNull { it.path == "/com.example.Greeter/SayHello" })

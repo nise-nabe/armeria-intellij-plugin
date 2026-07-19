@@ -19,7 +19,6 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
         registerSpringWebMvcStubs()
     }
 
-
     fun testBaseClassMappingIsDiscoveredUnderConcreteController() {
         configureTomcatMount("/spring/")
         myFixture.addClass(
@@ -66,7 +65,11 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
                 ?.qualifiedName,
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
 
         val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
         assertEquals("GET", delegatedRoute.httpMethod)
@@ -116,7 +119,11 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertEquals("example.UserController", springMvcRoute.controller.qualifiedName)
         assertEquals("example.UserApi", springMvcRoute.element.containingClass?.qualifiedName)
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
 
         val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
         assertEquals("GET", delegatedRoute.httpMethod)
@@ -159,7 +166,11 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
 
         val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
         assertEquals("GET", delegatedRoute.httpMethod)
@@ -195,7 +206,11 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
 
         val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
         assertEquals("GET", delegatedRoute.httpMethod)
@@ -249,7 +264,11 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
                 ?.qualifiedName,
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
         val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
         assertEquals("/spring/greet", delegatedRoute.path)
     }
@@ -289,7 +308,11 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertEquals(listOf("/hello"), springMvcRoutes.map { it.path })
         assertEquals(listOf("example.HelloController#hello()"), springMvcRoutes.map { it.target })
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
         val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
         assertEquals(listOf("/spring/hello"), delegated.map { it.path })
     }
@@ -326,7 +349,11 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
         val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.projectScope(project))
         assertTrue(springMvcRoutes.isEmpty())
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
         assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
     }
 

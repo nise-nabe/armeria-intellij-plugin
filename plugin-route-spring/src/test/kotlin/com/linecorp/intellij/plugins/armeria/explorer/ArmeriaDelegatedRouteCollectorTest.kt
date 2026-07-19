@@ -22,7 +22,6 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         registerSpringWebMvcStubs()
     }
 
-
     fun testTomcatServiceUnderMountExposesDelegatedSpringMvcRoutes() {
         configureTomcatMount("/spring/")
         myFixture.configureByText(
@@ -45,7 +44,11 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
 
         val mountRoute = routes.single { it.path == "/spring/" && it.routeMatch == RouteMatch.SERVICE_UNDER }
         assertEquals(
@@ -96,7 +99,11 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
 
         val mountRoute = routes.single { it.path == "/spring" && it.routeMatch == RouteMatch.SERVICE }
         assertEquals(
@@ -142,7 +149,11 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
 
         val mountRoute = routes.single { it.path == "/legacy" && it.routeMatch == RouteMatch.SERVICE_UNDER }
         assertEquals(
@@ -156,7 +167,11 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
     fun testTomcatMountIsBadgedWithoutSpringControllers() {
         configureTomcatMount("/spring/")
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
 
         val mountRoute = routes.single { it.path == "/spring/" && it.routeMatch == RouteMatch.SERVICE_UNDER }
         assertEquals(
@@ -192,7 +207,11 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
         val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
 
         val create = delegated.single { it.path == "/spring/orders" }
@@ -223,7 +242,11 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         )
         configureHelloControllerJava()
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
         val mountRoute = routes.single { it.path == "/spring/" && it.routeMatch == RouteMatch.SERVICE_UNDER }
         val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
 
@@ -270,7 +293,11 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         )
         configureHelloControllerJava()
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
         val delegated =
             routes.filter {
                 it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC && it.path == "/spring/hello"
@@ -304,7 +331,11 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         )
         configureHelloControllerJava()
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
 
         assertNotNull(
             routes.singleOrNull {
@@ -338,7 +369,11 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         )
         configureHelloControllerKotlin()
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
         val springMounts = routes.filter { it.path == "/spring/" }
         assertTrue(
             "expected Spring MVC–badged /spring/ mount; got: " +
@@ -370,7 +405,11 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
         val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
 
         assertEquals(
@@ -401,7 +440,11 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
         val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
 
         assertEquals(
@@ -432,7 +475,11 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
         val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
 
         assertEquals(
@@ -464,7 +511,11 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
         val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
 
         assertEquals(
@@ -496,7 +547,11 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         )
         configureHelloControllerKotlin()
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
         assertTrue(
             routes.any {
                 it.path == "/spring/" &&
@@ -549,7 +604,11 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
         val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
         assertTrue(delegated.isNotEmpty())
         assertEquals(setOf("/"), delegated.map { it.delegationMountPath }.toSet())
@@ -598,7 +657,11 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         configureHelloControllerKotlin()
 
         // Cycle must not StackOverflowError during Kotlin target resolution.
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
         assertNotNull(routes)
     }
 
@@ -629,7 +692,11 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         )
         configureHelloControllerJava()
 
-        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
 
         assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
     }

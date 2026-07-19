@@ -21,7 +21,6 @@ class ArmeriaIdlRouteCollectorMultiModuleTest : HeavyPlatformTestCase() {
         registerArmeriaIdlStubs()
     }
 
-
     private fun allowTestSandboxRoots() {
         val sandboxRoot = File(PathManager.getConfigPath()).parentFile
         val pluginsTestDir = sandboxRoot?.resolve("plugins-test")
@@ -49,8 +48,10 @@ class ArmeriaIdlRouteCollectorMultiModuleTest : HeavyPlatformTestCase() {
 
         val routes =
             ArmeriaRouteCollector
-                .collect(project, contributors = listOf(ArmeriaProtocolRouteContributor))
-                .filter { it.protocol == RouteProtocol.GRAPHQL.presentableName() }
+                .collect(
+                    project,
+                    contributors = listOf(ArmeriaProtocolRouteContributor),
+                ).filter { it.protocol == RouteProtocol.GRAPHQL.presentableName() }
 
         assertEquals(2, routes.size)
         assertEquals(setOf("Query.user"), routes.map { it.target }.toSet())
@@ -70,8 +71,10 @@ class ArmeriaIdlRouteCollectorMultiModuleTest : HeavyPlatformTestCase() {
 
         val routes =
             ArmeriaRouteCollector
-                .collect(project, contributors = listOf(ArmeriaProtocolRouteContributor))
-                .filter { it.protocol == RouteProtocol.THRIFT.presentableName() }
+                .collect(
+                    project,
+                    contributors = listOf(ArmeriaProtocolRouteContributor),
+                ).filter { it.protocol == RouteProtocol.THRIFT.presentableName() }
 
         assertEquals(2, routes.size)
         assertEquals(setOf("HelloService.sayHello"), routes.map { it.target }.toSet())
