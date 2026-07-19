@@ -632,10 +632,10 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
 
         val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.allScope(project))
         val helloRoute = springMvcRoutes.single()
-        val controllerModule = ArmeriaRouteMetadata.moduleName(helloRoute.element)
+        val controllerModule = helloRoute.moduleName()
         val matchingMount =
             ArmeriaRoute.create(
-                element = helloRoute.element,
+                element = helloRoute.controller,
                 protocol = RouteProtocol.HTTP.presentableName(),
                 httpMethod = "",
                 path = "/spring/",
@@ -733,26 +733,6 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertEquals(listOf("GET"), routes.map { it.httpMethod })
     }
 
-    private fun configureTomcatMount(path: String) {
-        myFixture.configureByText(
-            "ArmeriaConfig.java",
-            """
-            package example;
-
-            import com.linecorp.armeria.server.Server;
-            import com.linecorp.armeria.server.tomcat.TomcatService;
-
-            public class ArmeriaConfig {
-                public static void main(String[] args) {
-                    Server.builder()
-                        .serviceUnder("$path", TomcatService.of(null))
-                        .build();
-                }
-            }
-            """.trimIndent(),
-        )
-    }
-
     private fun configureHelloControllerJava(path: String = "/hello") {
         myFixture.configureByText(
             "HelloController.java",
@@ -786,100 +766,6 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             class HelloController {
                 @GetMapping("$path")
                 fun hello(): String = "hello"
-            }
-            """.trimIndent(),
-        )
-    }
-
-    private fun registerServletServiceStubs() {
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.tomcat;
-
-            public final class TomcatService {
-                public static TomcatService of(Object connector) {
-                    return null;
-                }
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.jetty;
-
-            public final class JettyService {
-                public static JettyService of(Object server) {
-                    return null;
-                }
-            }
-            """.trimIndent(),
-        )
-    }
-
-    private fun registerSpringWebMvcStubs() {
-        myFixture.addClass(
-            """
-            package org.springframework.stereotype;
-
-            public @interface Controller {
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package org.springframework.web.bind.annotation;
-
-            public @interface RestController {
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package org.springframework.web.bind.annotation;
-
-            public enum RequestMethod {
-                GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS, TRACE
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package org.springframework.web.bind.annotation;
-
-            public @interface RequestMappings {
-                RequestMapping[] value();
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package org.springframework.web.bind.annotation;
-
-            @java.lang.annotation.Repeatable(RequestMappings.class)
-            public @interface RequestMapping {
-                String[] value() default {};
-                String[] path() default {};
-                RequestMethod[] method() default {};
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package org.springframework.web.bind.annotation;
-
-            public @interface GetMapping {
-                String[] value() default {};
-                String[] path() default {};
-            }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
-            """
-            package org.springframework.web.bind.annotation;
-
-            public @interface PostMapping {
-                String[] value() default {};
-                String[] path() default {};
             }
             """.trimIndent(),
         )

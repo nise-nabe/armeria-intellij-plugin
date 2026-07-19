@@ -35,6 +35,12 @@ abstract class ArmeriaFixtureTestBase : ArmeriaLightJavaCodeInsightFixtureTestCa
 
     protected fun registerArmeriaSpringStubs() = myFixture.registerArmeriaSpringStubs()
 
+    protected fun registerServletServiceStubs() = myFixture.registerServletServiceStubs()
+
+    protected fun registerSpringWebMvcStubs() = myFixture.registerSpringWebMvcStubs()
+
+    protected fun configureTomcatMount(path: String) = myFixture.configureTomcatMount(path)
+
     protected fun registerRouteDetailFormatterStubs() = myFixture.registerRouteDetailFormatterStubs()
 
     protected fun registerRouteDuplicateIndexStubs() = myFixture.registerRouteDuplicateIndexStubs()

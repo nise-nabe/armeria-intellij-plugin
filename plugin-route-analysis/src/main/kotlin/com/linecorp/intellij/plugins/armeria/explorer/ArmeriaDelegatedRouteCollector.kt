@@ -36,6 +36,8 @@ internal object ArmeriaDelegatedRouteCollector {
                 if (!seenDelegatedKeys.add(dedupeKey)) {
                     continue
                 }
+                // Navigate to the mapping-owning method; attribute the tree module to the concrete
+                // controller so inherited mappings from other modules still expand under the mount.
                 delegatedRoutes +=
                     ArmeriaRoute.create(
                         element = springMvcRoute.element,
@@ -46,6 +48,7 @@ internal object ArmeriaDelegatedRouteCollector {
                         routeMatch = RouteMatch.DELEGATED_SPRING_MVC,
                         virtualHostName = mountRoute.virtualHostName,
                         delegationMountPath = mountRoute.path,
+                        moduleName = springMvcRoute.moduleName(),
                     )
             }
         }
@@ -63,7 +66,7 @@ internal object ArmeriaDelegatedRouteCollector {
             return springMvcRoutes
         }
         return springMvcRoutes.filter { route ->
-            ArmeriaRouteMetadata.moduleName(route.element) == mountModule
+            route.moduleName() == mountModule
         }
     }
 }

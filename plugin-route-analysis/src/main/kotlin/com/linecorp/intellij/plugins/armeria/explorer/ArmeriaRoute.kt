@@ -101,6 +101,8 @@ data class ArmeriaRoute(
             timeoutHints: List<String> = emptyList(),
             contentHints: List<String> = emptyList(),
             delegationMountPath: String = "",
+            /** When set, overrides module attribution derived from [element] (e.g. concrete controller). */
+            moduleName: String? = null,
         ): ArmeriaRoute =
             ArmeriaRoute(
                 protocol = protocol,
@@ -108,7 +110,7 @@ data class ArmeriaRoute(
                 path = path,
                 target = target,
                 routeMatch = routeMatch,
-                moduleName = ArmeriaRouteMetadata.moduleName(element),
+                moduleName = moduleName ?: ArmeriaRouteMetadata.moduleName(element),
                 targetUnresolved = targetUnresolved,
                 isDocService = isDocService,
                 annotatedServiceHasPathPrefix = annotatedServiceHasPathPrefix,
