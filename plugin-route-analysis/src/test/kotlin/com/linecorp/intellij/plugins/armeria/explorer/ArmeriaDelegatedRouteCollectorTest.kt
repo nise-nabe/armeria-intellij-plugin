@@ -496,7 +496,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
     }
 
-    fun testDistinctMountsKeepSeparateChildrenForSameCombinedPath() {
+    fun testAmbiguousSameModuleMountsExpandOnlyUnderShortestPath() {
         myFixture.configureByText(
             "ArmeriaConfig.java",
             """
@@ -540,14 +540,27 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         )
 
         val routes = ArmeriaRouteCollector.collect(project)
-        val delegatedAtApi =
-            routes.filter {
-                it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC && it.path == "/api"
-            }
-        assertEquals(
-            setOf("/", "/api"),
-            delegatedAtApi.map { it.delegationMountPath }.toSet(),
+        val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+        assertTrue(delegated.isNotEmpty())
+        assertEquals(setOf("/"), delegated.map { it.delegationMountPath }.toSet())
+        assertNotNull(
+            delegated.singleOrNull {
+                it.path == "/api" &&
+                    it.httpMethod == "GET" &&
+                    it.target.contains("fromRootMount") &&
+                    it.delegationMountPath == "/"
+            },
         )
+        // Root mapping "" under preferred "/" becomes "/".
+        assertNotNull(
+            delegated.singleOrNull {
+                it.path == "/" &&
+                    it.httpMethod == "GET" &&
+                    it.target.contains("fromApiMount") &&
+                    it.delegationMountPath == "/"
+            },
+        )
+        assertTrue(delegated.none { it.delegationMountPath == "/api" })
     }
 
     fun testKotlinCyclicPropertyAliasesDoNotCrashCollection() {
@@ -609,6 +622,54 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         val routes = ArmeriaRouteCollector.collect(project)
 
         assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
+    }
+
+    fun testPreferredSpringMvcMountsPicksShortestPathPerModuleAndVirtualHost() {
+        val probe = myFixture.addClass("public class PreferredMountProbe {}")
+
+        fun mount(
+            path: String,
+            moduleName: String = "app",
+            virtualHostName: String = "",
+        ): ArmeriaRoute =
+            ArmeriaRoute.create(
+                element = probe,
+                protocol = RouteProtocol.HTTP.presentableName(),
+                httpMethod = "",
+                path = path,
+                target = "TomcatService",
+                routeMatch = RouteMatch.SERVICE_UNDER,
+                virtualHostName = virtualHostName,
+                moduleName = moduleName,
+            )
+
+        val single = mount("/spring/")
+        assertEquals(listOf(single), ArmeriaDelegatedRouteCollector.preferredSpringMvcMounts(listOf(single)))
+
+        val root = mount("/")
+        val api = mount("/api")
+        assertEquals(
+            listOf(root),
+            ArmeriaDelegatedRouteCollector.preferredSpringMvcMounts(listOf(api, root)),
+        )
+
+        val alpha = mount("/aaa")
+        val beta = mount("/bbb")
+        assertEquals(
+            listOf(alpha),
+            ArmeriaDelegatedRouteCollector.preferredSpringMvcMounts(listOf(beta, alpha)),
+        )
+
+        val hostARoot = mount("/", virtualHostName = "a.example.com")
+        val hostAApi = mount("/api", virtualHostName = "a.example.com")
+        val hostBRoot = mount("/", virtualHostName = "b.example.com")
+        val hostBApi = mount("/api", virtualHostName = "b.example.com")
+        assertEquals(
+            setOf(hostARoot, hostBRoot),
+            ArmeriaDelegatedRouteCollector
+                .preferredSpringMvcMounts(listOf(hostAApi, hostARoot, hostBApi, hostBRoot))
+                .toSet(),
+        )
     }
 
     fun testSpringMvcRoutesForMountFiltersControllersByModule() {

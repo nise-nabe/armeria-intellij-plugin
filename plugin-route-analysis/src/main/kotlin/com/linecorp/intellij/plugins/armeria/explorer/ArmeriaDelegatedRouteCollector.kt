@@ -21,17 +21,20 @@ internal object ArmeriaDelegatedRouteCollector {
             return
         }
 
+        // Same-module multi-mount has no ownership signal; expand under one preferred mount
+        // per (module, virtualHost) to avoid Cartesian fan-out across every Spring-capable prefix.
+        val preferredMounts = preferredSpringMvcMounts(springCapableMounts)
         val unassignedModule = message("route.explorer.module.unassigned")
         val seenDelegatedKeys = mutableSetOf<String>()
         val delegatedRoutes = mutableListOf<ArmeriaRoute>()
 
-        for (mountRoute in springCapableMounts) {
+        for (mountRoute in preferredMounts) {
             val scopedSpringMvcRoutes = springMvcRoutesForMount(mountRoute, springMvcRoutes, unassignedModule)
             for (springMvcRoute in scopedSpringMvcRoutes) {
                 val combinedPath = ArmeriaRouteSupport.combinePaths(mountRoute.path, springMvcRoute.path)
-                // Include mount path so distinct mounts that combine to the same path keep separate children.
+                // One preferred mount per (module, vhost); dedupe only within that expansion.
                 val dedupeKey =
-                    "${mountRoute.moduleName}:${mountRoute.virtualHostName}:${mountRoute.path}:$combinedPath:" +
+                    "${mountRoute.moduleName}:${mountRoute.virtualHostName}:$combinedPath:" +
                         "${springMvcRoute.httpMethod}:${springMvcRoute.target}"
                 if (!seenDelegatedKeys.add(dedupeKey)) {
                     continue
@@ -55,6 +58,23 @@ internal object ArmeriaDelegatedRouteCollector {
 
         routes += delegatedRoutes
     }
+
+    /**
+     * Picks one expandable Spring MVC mount per `(moduleName, virtualHostName)` group.
+     * Prefers the shortest path (broadest prefix); ties break lexicographically.
+     */
+    internal fun preferredSpringMvcMounts(mounts: List<ArmeriaRoute>): List<ArmeriaRoute> =
+        mounts
+            .groupBy { it.moduleName to it.virtualHostName }
+            .values
+            .map { group ->
+                group.minWith(
+                    compareBy(
+                        { ArmeriaRouteSupport.normalizePath(it.path).length },
+                        { ArmeriaRouteSupport.normalizePath(it.path) },
+                    ),
+                )
+            }
 
     internal fun springMvcRoutesForMount(
         mountRoute: ArmeriaRoute,
