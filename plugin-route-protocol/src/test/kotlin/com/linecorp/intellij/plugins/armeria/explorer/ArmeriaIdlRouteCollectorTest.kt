@@ -9,26 +9,11 @@ import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaProtocolRo
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaThriftRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.GraphqlOperation
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ThriftOperation
-import com.linecorp.intellij.plugins.armeria.explorer.support.RouteContributorRegistry
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
         registerMinimalArmeriaServerStubs()
-    }
-
-    override fun setUp() {
-        super.setUp()
-        RouteContributorRegistry.clearForTests()
-        RouteContributorRegistry.register(ArmeriaProtocolRouteContributor)
-    }
-
-    override fun tearDown() {
-        try {
-            RouteContributorRegistry.clearForTests()
-        } finally {
-            super.tearDown()
-        }
     }
 
     fun testParseGraphqlQueryFields() {

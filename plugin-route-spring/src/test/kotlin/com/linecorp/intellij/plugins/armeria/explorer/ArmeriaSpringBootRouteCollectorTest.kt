@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringRouteContributor
-import com.linecorp.intellij.plugins.armeria.explorer.support.RouteContributorRegistry
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
@@ -14,16 +13,6 @@ class ArmeriaSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
     override fun setUp() {
         super.setUp()
         registerSpringAnnotationStubs()
-        RouteContributorRegistry.clearForTests()
-        RouteContributorRegistry.register(ArmeriaSpringRouteContributor)
-    }
-
-    override fun tearDown() {
-        try {
-            RouteContributorRegistry.clearForTests()
-        } finally {
-            super.tearDown()
-        }
     }
 
     private fun registerSpringBootRouteStubs() {
@@ -60,7 +49,7 @@ class ArmeriaSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
+        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
 
         val apiRoutes = routes.filter { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
         assertEquals(1, apiRoutes.size)
@@ -98,7 +87,7 @@ class ArmeriaSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
+        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
 
         val apiRoutes = routes.filter { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
         assertEquals(1, apiRoutes.size)
@@ -135,7 +124,7 @@ class ArmeriaSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
+        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
 
         val healthRoutes = routes.filter { it.path == "/health" && it.routeMatch == RouteMatch.SERVICE }
         assertEquals(1, healthRoutes.size)
@@ -184,7 +173,7 @@ class ArmeriaSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
+        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
 
         val apiRoutes = routes.filter { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
         assertEquals(1, apiRoutes.size)
@@ -212,7 +201,7 @@ class ArmeriaSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
+        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
 
         assertTrue(routes.isEmpty())
     }
@@ -248,7 +237,7 @@ class ArmeriaSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
+        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
 
         val builderRoutes = routes.filter { it.path == "/builder" && it.routeMatch == RouteMatch.SERVICE }
         assertEquals(1, builderRoutes.size)
@@ -295,7 +284,7 @@ class ArmeriaSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
+        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
 
         val serviceUnderRoutes = routes.filter { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE_UNDER }
         assertEquals(1, serviceUnderRoutes.size)
@@ -346,7 +335,7 @@ class ArmeriaSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
+        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
 
         val subtypeRoutes = routes.filter { it.path == "/subtype" && it.routeMatch == RouteMatch.SERVICE }
         assertEquals(1, subtypeRoutes.size)
@@ -371,7 +360,7 @@ class ArmeriaSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
+        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
 
         assertTrue(routes.isEmpty())
     }

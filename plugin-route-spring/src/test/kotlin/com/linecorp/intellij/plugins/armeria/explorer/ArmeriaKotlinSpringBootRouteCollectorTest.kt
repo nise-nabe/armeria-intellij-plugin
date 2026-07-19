@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringRouteContributor
-import com.linecorp.intellij.plugins.armeria.explorer.support.RouteContributorRegistry
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
@@ -14,16 +13,6 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
     override fun setUp() {
         super.setUp()
         registerSpringAnnotationStubs()
-        RouteContributorRegistry.clearForTests()
-        RouteContributorRegistry.register(ArmeriaSpringRouteContributor)
-    }
-
-    override fun tearDown() {
-        try {
-            RouteContributorRegistry.clearForTests()
-        } finally {
-            super.tearDown()
-        }
     }
 
     private fun registerSpringBootRouteStubs() {
@@ -61,7 +50,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
+        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
 
         val apiRoutes = routes.filter { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
         assertEquals(1, apiRoutes.size)
@@ -100,7 +89,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
+        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
 
         val apiRoutes = routes.filter { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
         assertEquals(1, apiRoutes.size)
@@ -136,7 +125,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
+        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
 
         val healthRoutes = routes.filter { it.path == "/health" && it.routeMatch == RouteMatch.SERVICE }
         assertEquals(1, healthRoutes.size)
@@ -184,7 +173,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
+        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
 
         val apiRoutes = routes.filter { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
         assertEquals(1, apiRoutes.size)
@@ -210,7 +199,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
+        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
 
         assertTrue(routes.isEmpty())
     }
@@ -245,7 +234,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
+        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
 
         val directRoutes = routes.filter { it.path == "/direct" && it.routeMatch == RouteMatch.SERVICE }
         assertEquals(1, directRoutes.size)
@@ -282,7 +271,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
+        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
 
         val serverImportRoutes = routes.filter { it.path == "/server-import" && it.routeMatch == RouteMatch.SERVICE }
         assertEquals(1, serverImportRoutes.size)
@@ -319,7 +308,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
+        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
 
         val builderRoutes = routes.filter { it.path == "/builder" && it.routeMatch == RouteMatch.SERVICE }
         assertEquals(1, builderRoutes.size)
@@ -356,7 +345,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
+        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
 
         val inferredRoutes = routes.filter { it.path == "/inferred" && it.routeMatch == RouteMatch.SERVICE }
         assertEquals(1, inferredRoutes.size)
@@ -402,7 +391,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
+        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
 
         val serviceUnderRoutes = routes.filter { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE_UNDER }
         assertEquals(1, serviceUnderRoutes.size)
@@ -451,7 +440,7 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routes = ArmeriaRouteCollector.collect(project)
+        val routes = ArmeriaRouteCollector.collect(project, contributors = listOf(ArmeriaSpringRouteContributor))
 
         val subtypeRoutes = routes.filter { it.path == "/subtype" && it.routeMatch == RouteMatch.SERVICE }
         assertEquals(1, subtypeRoutes.size)

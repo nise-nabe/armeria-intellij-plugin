@@ -20,8 +20,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
-import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
-import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteContributorBootstrap
+import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnalysisCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaRouteNavigation
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteTreeBuilder
@@ -42,10 +41,6 @@ class ArmeriaRouteExplorerPanel(
 ) : SimpleToolWindowPanel(true, true),
     Disposable,
     UiDataProvider {
-    init {
-        ArmeriaRouteContributorBootstrap.ensureRegistered()
-    }
-
     private val routeState = ArmeriaRouteExplorerRouteState()
     private var refreshGeneration = 0
     private var selectedRoute: ArmeriaRoute? = null
@@ -185,7 +180,7 @@ class ArmeriaRouteExplorerPanel(
         statusLabel.text = message("route.explorer.summary.refreshing")
         ReadAction
             .nonBlocking<List<ArmeriaRoute>> {
-                ArmeriaRouteCollector.collect(project, includeProtoRoutes = true)
+                ArmeriaRouteAnalysisCollector.collect(project, includeProtoRoutes = true)
             }.inSmartMode(project)
             .expireWith(this)
             .coalesceBy(this)

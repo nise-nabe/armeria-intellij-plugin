@@ -2,13 +2,16 @@ package com.linecorp.intellij.plugins.armeria.explorer.collector
 
 import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.JavaPsiFacade
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.util.CachedValue
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
@@ -19,35 +22,37 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinPluginSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.CoreServiceRegistrationSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.RouteCollectContext
-import com.linecorp.intellij.plugins.armeria.explorer.support.RouteContributorRegistry
-import com.linecorp.intellij.plugins.armeria.explorer.support.RouteRegistrationCallbacks
+import com.linecorp.intellij.plugins.armeria.explorer.support.RouteContributor
 import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.psi.KtFile
+import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Public route-collection façade. Aggregates core annotated/service-registration collectors
- * with Spring MVC/Boot contributors and GraphQL/gRPC/Thrift contributors registered via
- * [RouteContributorRegistry]. In production, call
- * `ArmeriaRouteContributorBootstrap.ensureRegistered()` before the first [collect]
- * (see Route Explorer, duplicate index, and run configuration). In tests, contributors
- * can be registered explicitly after [RouteContributorRegistry.clearForTests].
+ * Public route-collection façade for core annotated/service-registration collectors.
+ *
+ * Spring MVC/Boot and GraphQL/gRPC/Thrift contributors are supplied explicitly via [contributors]
+ * (production callers use `ArmeriaRouteAnalysisCollector` in `plugin-route-analysis`).
  */
 object ArmeriaRouteCollector {
+    private val cacheKeys = ConcurrentHashMap<String, Key<CachedValue<List<ArmeriaRoute>>>>()
+
     fun collect(
         project: Project,
         includeProtoRoutes: Boolean = false,
+        contributors: List<RouteContributor> = emptyList(),
     ): List<ArmeriaRoute> {
         val metrics = ArmeriaRouteCollectionMetrics()
         val startedAt = System.nanoTime()
         val routes =
             ArmeriaRouteCollectionMetrics.runWith(metrics) {
                 val cachedRoutes =
-                    CachedValuesManager.getManager(project).getCachedValue(project) {
-                        computeProjectRoutes(project)
+                    CachedValuesManager.getManager(project).getCachedValue(project, cacheKey(contributors)) {
+                        computeProjectRoutes(project, contributors)
                     }
                 if (includeProtoRoutes) {
-                    mergeProtoRoutesIfEnabled(project, cachedRoutes)
+                    mergeProtoRoutesIfEnabled(project, cachedRoutes, contributors)
                 } else {
                     cachedRoutes
                 }
@@ -57,7 +62,20 @@ object ArmeriaRouteCollector {
         return routes
     }
 
-    private fun computeProjectRoutes(project: Project): CachedValueProvider.Result<List<ArmeriaRoute>> {
+    private fun cacheKey(contributors: List<RouteContributor>): Key<CachedValue<List<ArmeriaRoute>>> {
+        val id =
+            contributors
+                .map { it.javaClass.name }
+                .sorted()
+                .joinToString(",")
+                .ifEmpty { "core-only" }
+        return cacheKeys.getOrPut(id) { Key.create("armeria.route.collector.$id") }
+    }
+
+    private fun computeProjectRoutes(
+        project: Project,
+        contributors: List<RouteContributor>,
+    ): CachedValueProvider.Result<List<ArmeriaRoute>> {
         val scope = collectionScope(project)
         val routes = mutableListOf<ArmeriaRoute>()
         val fallbackScannedFiles = linkedSetOf<VirtualFile>()
@@ -105,7 +123,7 @@ object ArmeriaRouteCollector {
 
         collectExtendedRegistrations(project, scope, routes, seenServiceRegistrations, fallbackScannedFiles)
 
-        for (contributor in RouteContributorRegistry.all()) {
+        for (contributor in contributors) {
             contributor.collect(context)
         }
 
@@ -124,49 +142,25 @@ object ArmeriaRouteCollector {
         seenServiceRegistrations: MutableSet<String>,
         seenConfigRoutes: MutableSet<String>,
         fallbackScannedFiles: MutableSet<VirtualFile>,
-        includeProtoRoutes: Boolean = false,
-    ): RouteCollectContext {
-        val callbacks =
-            RouteRegistrationCallbacks(
-                collectServiceRegistrationsInScope = { element, routeList, seen ->
-                    if (ArmeriaKotlinPluginSupport.isKotlinPluginAvailable()) {
-                        ArmeriaKotlinRouteCollector.collectServiceRegistrationsInScope(element, routeList, seen)
-                    }
-                },
-                collectServiceRegistrationFromMethodCall = { expression, routeList, seen ->
-                    ArmeriaRouteCollectorServiceRegistration.collectServiceRegistrationFromMethodCall(
-                        expression,
-                        routeList,
-                        seen,
-                    )
-                },
-                referencesArmeriaKotlinContent = { file ->
-                    ArmeriaKotlinPluginSupport.isKotlinPluginAvailable() &&
-                        (file as? KtFile)?.let {
-                            ArmeriaKotlinRouteCollector.referencesArmeriaKotlinContent(it)
-                        } == true
-                },
-            )
-        return RouteCollectContext(
+    ): RouteCollectContext =
+        RouteCollectContext(
             project = project,
             scope = scope,
             routes = routes,
             seenServiceRegistrations = seenServiceRegistrations,
             seenConfigRoutes = seenConfigRoutes,
             fallbackScannedFiles = fallbackScannedFiles,
-            registration = callbacks,
-            includeProtoRoutes = includeProtoRoutes,
+            registration = CoreRegistration,
         )
-    }
 
     /**
-     * Overlays proto (gRPC) routes on top of already-cached base routes. Contributors with
-     * [RouteCollectContext.includeProtoRoutes]=true are responsible for skipping non-proto
-     * collection and adding only gRPC routes.
+     * Overlays proto (gRPC) routes on top of already-cached base routes by invoking
+     * [RouteContributor.collectProtoOverlay] on each contributor.
      */
     private fun mergeProtoRoutesIfEnabled(
         project: Project,
         baseRoutes: List<ArmeriaRoute>,
+        contributors: List<RouteContributor>,
     ): List<ArmeriaRoute> {
         val scope = collectionScope(project)
         val routes = baseRoutes.toMutableList()
@@ -178,10 +172,9 @@ object ArmeriaRouteCollector {
                 seenServiceRegistrations = mutableSetOf(),
                 seenConfigRoutes = mutableSetOf(),
                 fallbackScannedFiles = mutableSetOf(),
-                includeProtoRoutes = true,
             )
-        for (contributor in RouteContributorRegistry.all()) {
-            contributor.collect(context)
+        for (contributor in contributors) {
+            contributor.collectProtoOverlay(context)
         }
         return routes.sortedWith(
             compareBy(ArmeriaRoute::moduleName, ArmeriaRoute::path, ArmeriaRoute::httpMethod, ArmeriaRoute::target),
@@ -225,4 +218,32 @@ object ArmeriaRouteCollector {
 
     fun looksLikeArmeriaBuilderCall(expression: PsiMethodCallExpression): Boolean =
         ArmeriaBuilderCallHeuristics.looksLikeJavaBuilderCall(expression)
+
+    private object CoreRegistration : CoreServiceRegistrationSupport {
+        override fun collectServiceRegistrationsInScope(
+            element: PsiElement,
+            routes: MutableList<ArmeriaRoute>,
+            seen: MutableSet<String>,
+        ) {
+            if (ArmeriaKotlinPluginSupport.isKotlinPluginAvailable()) {
+                ArmeriaKotlinRouteCollector.collectServiceRegistrationsInScope(element, routes, seen)
+            }
+        }
+
+        override fun collectServiceRegistrationFromMethodCall(
+            expression: PsiMethodCallExpression,
+            routes: MutableList<ArmeriaRoute>,
+            seen: MutableSet<String>,
+        ) {
+            ArmeriaRouteCollectorServiceRegistration.collectServiceRegistrationFromMethodCall(
+                expression,
+                routes,
+                seen,
+            )
+        }
+
+        override fun referencesArmeriaKotlinContent(file: KtFile): Boolean =
+            ArmeriaKotlinPluginSupport.isKotlinPluginAvailable() &&
+                ArmeriaKotlinRouteCollector.referencesArmeriaKotlinContent(file)
+    }
 }

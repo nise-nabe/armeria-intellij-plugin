@@ -7,14 +7,11 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.RouteCollectContex
 import com.linecorp.intellij.plugins.armeria.explorer.support.RouteContributor
 
 /**
- * Collects Spring Boot and delegated Spring MVC routes. Registered in production via
- * `ArmeriaRouteContributorBootstrap` in `plugin-route-analysis`.
- *
- * Skips when [RouteCollectContext.includeProtoRoutes] is true (proto-only overlay pass).
+ * Collects Spring Boot and delegated Spring MVC routes. Wired in production via
+ * `ArmeriaRouteAnalysisCollector` in `plugin-route-analysis`.
  */
 object ArmeriaSpringRouteContributor : RouteContributor {
     override fun collect(context: RouteCollectContext) {
-        if (context.includeProtoRoutes) return
         val psiFacade = JavaPsiFacade.getInstance(context.project)
         val springBootArmeriaAvailable = ArmeriaRouteSupport.isSpringBootArmeriaAvailable(psiFacade, context.scope)
         if (ArmeriaKotlinPluginSupport.isKotlinPluginAvailable() && springBootArmeriaAvailable) {

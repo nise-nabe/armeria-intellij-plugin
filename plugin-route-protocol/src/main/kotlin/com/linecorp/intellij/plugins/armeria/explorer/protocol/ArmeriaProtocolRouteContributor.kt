@@ -4,21 +4,16 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.RouteCollectContex
 import com.linecorp.intellij.plugins.armeria.explorer.support.RouteContributor
 
 /**
- * Collects GraphQL, Thrift, and gRPC-proto routes. Registered in production via
- * `ArmeriaRouteContributorBootstrap` in `plugin-route-analysis`.
- *
- * - When [RouteCollectContext.includeProtoRoutes] is false: collects GraphQL and Thrift routes
- *   (the normal cached-collection pass).
- * - When [RouteCollectContext.includeProtoRoutes] is true: collects gRPC-proto routes only
- *   (the proto-overlay pass that runs on top of already-cached routes).
+ * Collects GraphQL, Thrift, and gRPC-proto routes. Wired in production via
+ * `ArmeriaRouteAnalysisCollector` in `plugin-route-analysis`.
  */
 object ArmeriaProtocolRouteContributor : RouteContributor {
     override fun collect(context: RouteCollectContext) {
-        if (context.includeProtoRoutes) {
-            ArmeriaGrpcRouteCollector.collect(context.project, context.scope, context.routes)
-        } else {
-            ArmeriaGraphqlRouteCollector.collect(context.project, context.scope, context.routes)
-            ArmeriaThriftRouteCollector.collect(context.project, context.scope, context.routes)
-        }
+        ArmeriaGraphqlRouteCollector.collect(context.project, context.scope, context.routes)
+        ArmeriaThriftRouteCollector.collect(context.project, context.scope, context.routes)
+    }
+
+    override fun collectProtoOverlay(context: RouteCollectContext) {
+        ArmeriaGrpcRouteCollector.collect(context.project, context.scope, context.routes)
     }
 }

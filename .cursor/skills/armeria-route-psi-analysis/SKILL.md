@@ -18,10 +18,10 @@ collectors. Apply it when changing code under any of:
 - `plugin-route-spring/` — Spring MVC / Boot / config collectors, `ArmeriaDelegatedRouteCollector`
 - `plugin-route-protocol/` — GraphQL / gRPC / Thrift / IDL / proto-text collectors
 - `plugin-route-analysis/` — UI helpers, DocService, navigation, duplicate index, and
-  `ArmeriaRouteContributorBootstrap` (registers spring/protocol contributors into the SPI registry)
+  `ArmeriaRouteAnalysisCollector` (production façade that always passes Spring/protocol contributors)
 
-`ArmeriaRouteCollector` (public façade) and the `RouteContributor` / `RouteCollectContext` SPI
-live in `plugin-route-collectors/`.
+`ArmeriaRouteCollector` (core façade) and the `RouteContributor` / `RouteCollectContext` SPI
+live in `plugin-route-collectors/`. Production callers use `ArmeriaRouteAnalysisCollector`.
 
 - `ArmeriaRouteCollector`, `ArmeriaKotlinRouteCollector`, extended-registration collectors
 - `ArmeriaRouteSupport`, decorator/annotated metadata helpers

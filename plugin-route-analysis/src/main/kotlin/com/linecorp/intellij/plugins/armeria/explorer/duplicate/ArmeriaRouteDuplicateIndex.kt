@@ -10,8 +10,7 @@ import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
-import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
-import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteContributorBootstrap
+import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnalysisCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
@@ -30,10 +29,6 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSuppor
  * [com.linecorp.intellij.plugins.armeria.inspection.ArmeriaDuplicateRouteKotlinInspection] cover them.
  */
 object ArmeriaRouteDuplicateIndex {
-    init {
-        ArmeriaRouteContributorBootstrap.ensureRegistered()
-    }
-
     private val CHECKED_MATCHES =
         setOf(
             RouteMatch.ANNOTATED_HTTP,
@@ -76,7 +71,7 @@ object ArmeriaRouteDuplicateIndex {
 
     private fun getIndex(project: Project): DuplicateRegistrationIndex =
         CachedValuesManager.getManager(project).getCachedValue(project) {
-            val groups = findDuplicateGroups(ArmeriaRouteCollector.collect(project))
+            val groups = findDuplicateGroups(ArmeriaRouteAnalysisCollector.collect(project))
             CachedValueProvider.Result.create(
                 DuplicateRegistrationIndex(
                     groups = groups,
