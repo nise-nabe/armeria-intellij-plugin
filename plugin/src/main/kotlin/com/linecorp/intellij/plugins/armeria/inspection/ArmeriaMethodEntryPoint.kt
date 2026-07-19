@@ -13,7 +13,9 @@ import org.jdom.Element
 class ArmeriaMethodEntryPoint(
     @JvmField var wasSelected: Boolean = true,
 ) : EntryPoint() {
-    override fun getDisplayName() = message("inspection.entrypoint.armeria")
+    override fun getDisplayName(): String =
+        runCatching { message("inspection.entrypoint.armeria") }
+            .getOrDefault(ENTRY_POINT_DISPLAY_NAME)
 
     override fun isEntryPoint(
         refElement: RefElement,
@@ -42,5 +44,9 @@ class ArmeriaMethodEntryPoint(
         if (!wasSelected) {
             XmlSerializer.serializeInto(this, element)
         }
+    }
+
+    private companion object {
+        private const val ENTRY_POINT_DISPLAY_NAME = "Armeria Methods"
     }
 }
