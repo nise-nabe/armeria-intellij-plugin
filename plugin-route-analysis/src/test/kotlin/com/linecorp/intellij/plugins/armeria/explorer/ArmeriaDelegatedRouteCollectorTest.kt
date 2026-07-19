@@ -652,8 +652,8 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             ArmeriaDelegatedRouteCollector.preferredSpringMvcMounts(listOf(api, root)),
         )
 
-        val alpha = mount("/alpha")
-        val beta = mount("/beta")
+        val alpha = mount("/aaa")
+        val beta = mount("/bbb")
         assertEquals(
             listOf(alpha),
             ArmeriaDelegatedRouteCollector.preferredSpringMvcMounts(listOf(beta, alpha)),
