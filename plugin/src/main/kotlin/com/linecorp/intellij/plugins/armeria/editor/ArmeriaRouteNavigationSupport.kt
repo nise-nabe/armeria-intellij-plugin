@@ -23,10 +23,10 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.PsiShortNamesCache
 import com.intellij.psi.search.searches.ReferencesSearch
 import com.intellij.psi.util.PsiTreeUtil
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteCollector
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
-import com.linecorp.intellij.plugins.armeria.explorer.ServiceRegistrationMethod
-import com.linecorp.intellij.plugins.armeria.explorer.extractArmeriaRouteTarget
+import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.model.ServiceRegistrationMethod
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.extractArmeriaRouteTarget
 import com.linecorp.intellij.plugins.armeria.message
 
 internal object ArmeriaRouteNavigationSupport {

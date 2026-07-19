@@ -6,6 +6,8 @@ import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
+import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteDetailFormatter
 import com.linecorp.intellij.plugins.armeria.message
 import java.awt.BorderLayout
 import javax.swing.JComponent

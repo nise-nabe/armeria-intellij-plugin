@@ -6,6 +6,7 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
+import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceEndpointValidator
 import com.linecorp.intellij.plugins.armeria.message
 import java.awt.Dimension
 import javax.swing.JComponent

@@ -4,6 +4,14 @@ import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.search.GlobalSearchScope
+import com.linecorp.intellij.plugins.armeria.explorer.duplicate.ArmeriaRouteDuplicateIndex
+import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringConfigRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaYamlSpringConfigReader
+import com.linecorp.intellij.plugins.armeria.explorer.spring.SpringArmeriaPortBinding
+import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpRequestGenerator
+import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteDetailFormatter
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 import org.jetbrains.yaml.psi.YAMLFile

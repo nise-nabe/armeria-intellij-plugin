@@ -5,8 +5,8 @@ import com.intellij.codeInspection.ProblemDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.SmartPsiElementPointer
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteNavigation
-import com.linecorp.intellij.plugins.armeria.explorer.ConflictingRouteRegistration
+import com.linecorp.intellij.plugins.armeria.explorer.duplicate.ConflictingRouteRegistration
+import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaRouteNavigation
 import com.linecorp.intellij.plugins.armeria.message
 
 internal class NavigateToConflictingRouteQuickFix(

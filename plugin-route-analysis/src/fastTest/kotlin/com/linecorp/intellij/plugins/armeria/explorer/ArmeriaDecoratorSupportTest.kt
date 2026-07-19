@@ -1,5 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.linecorp.intellij.plugins.armeria.explorer.collector.decorator.ArmeriaDecoratorSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import junit.framework.TestCase
 
 class ArmeriaDecoratorSupportTest : TestCase() {

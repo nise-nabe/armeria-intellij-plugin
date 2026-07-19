@@ -1,7 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.client
 
 import com.intellij.psi.PsiVariable
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression

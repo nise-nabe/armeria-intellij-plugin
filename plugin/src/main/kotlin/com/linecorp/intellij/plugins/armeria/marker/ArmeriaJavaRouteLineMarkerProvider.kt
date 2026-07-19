@@ -11,8 +11,8 @@ import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.editor.ArmeriaRouteNavigationSupport
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteCollector
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
+import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.message
 
 internal class ArmeriaJavaRouteLineMarkerProvider : LineMarkerProvider {

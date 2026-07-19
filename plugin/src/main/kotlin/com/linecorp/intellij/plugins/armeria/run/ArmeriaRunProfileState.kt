@@ -17,9 +17,9 @@ import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.openapi.roots.ModuleRootManager
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaDocServiceSupport
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRoute
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceSupport
+import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.message
 
 class ArmeriaRunProfileState(

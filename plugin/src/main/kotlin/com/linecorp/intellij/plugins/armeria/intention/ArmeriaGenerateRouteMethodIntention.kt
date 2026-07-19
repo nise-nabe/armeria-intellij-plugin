@@ -16,7 +16,7 @@ import com.intellij.psi.PsiMethod
 import com.intellij.psi.codeStyle.CodeStyleManager
 import com.intellij.psi.codeStyle.JavaCodeStyleManager
 import com.intellij.psi.util.PsiTreeUtil
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.message
 
 class ArmeriaGenerateRouteMethodIntention : PsiElementBaseIntentionAction() {

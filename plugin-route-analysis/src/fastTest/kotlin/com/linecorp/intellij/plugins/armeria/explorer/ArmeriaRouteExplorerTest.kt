@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

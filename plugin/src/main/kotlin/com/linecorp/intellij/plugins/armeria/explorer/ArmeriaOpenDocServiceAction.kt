@@ -4,6 +4,8 @@ import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAwareAction
+import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceSupport
+import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.message
 
 internal class ArmeriaOpenDocServiceAction(

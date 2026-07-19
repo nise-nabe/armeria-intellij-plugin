@@ -6,7 +6,7 @@ import com.intellij.psi.JavaElementVisitor
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiMethod
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.message
 
 class ArmeriaDuplicateRouteInspection : AbstractBaseJavaLocalInspectionTool() {

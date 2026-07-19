@@ -6,6 +6,9 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.SmartPsiElementPointer
+import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceMountResolver
+import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

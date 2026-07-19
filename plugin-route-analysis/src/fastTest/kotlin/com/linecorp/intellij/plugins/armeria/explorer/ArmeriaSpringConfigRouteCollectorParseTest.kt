@@ -1,5 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringConfigRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.spring.SpringArmeriaConfigSemantics
+import com.linecorp.intellij.plugins.armeria.explorer.spring.SpringArmeriaPortBinding
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

@@ -1,6 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.intellij.psi.search.GlobalSearchScope
+import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaGrpcRouteCollector
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaGrpcRouteCollectorGateTest : ArmeriaFixtureTestBase() {

@@ -7,9 +7,9 @@ import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.editor.ArmeriaRouteNavigationSupport
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaKotlinExpressionSupport
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaKotlinRouteCollector
-import com.linecorp.intellij.plugins.armeria.explorer.ServiceRegistrationMethod
+import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaKotlinRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.model.ServiceRegistrationMethod
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
 import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression

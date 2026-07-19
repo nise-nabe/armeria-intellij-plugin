@@ -6,6 +6,8 @@ import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
+import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpRequestGenerator
 import com.linecorp.intellij.plugins.armeria.message
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path

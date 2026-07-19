@@ -1,4 +1,5 @@
 package com.linecorp.intellij.plugins.armeria.explorer
+import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 
 /**
  * Static and DocService runtime routes shown in Route Explorer.

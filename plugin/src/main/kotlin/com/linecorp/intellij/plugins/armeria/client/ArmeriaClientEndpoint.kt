@@ -3,7 +3,7 @@ package com.linecorp.intellij.plugins.armeria.client
 import com.intellij.psi.PsiElement
 import com.intellij.psi.SmartPointerManager
 import com.intellij.psi.SmartPsiElementPointer
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteMetadata
+import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRouteMetadata
 
 data class ArmeriaClientEndpoint(
     val clientType: String,
