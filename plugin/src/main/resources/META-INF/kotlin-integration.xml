@@ -1,5 +1,7 @@
 <idea-plugin>
-    <supportsKotlinPluginMode supportsK2="true"/>
+    <extensions defaultExtensionNs="org.jetbrains.kotlin">
+        <supportsKotlinPluginMode supportsK2="true"/>
+    </extensions>
     <extensions defaultExtensionNs="com.intellij">
         <localInspection language="kotlin"
                          bundle="messages.ArmeriaBundle"
