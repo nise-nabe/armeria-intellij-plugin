@@ -18,6 +18,7 @@ import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.openapi.roots.ModuleRootManager
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteContributorBootstrap
 import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceSupport
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.message
@@ -71,6 +72,7 @@ class ArmeriaRunProfileState(
             return null
         }
         return try {
+            ArmeriaRouteContributorBootstrap.ensureRegistered()
             val routes =
                 ReadAction.compute<List<ArmeriaRoute>, RuntimeException> {
                     ArmeriaRouteCollector.collect(project)

@@ -43,9 +43,7 @@ class ArmeriaRouteExplorerPanel(
     Disposable,
     UiDataProvider {
     init {
-        // Ensure spring and protocol contributors are registered before route collection.
-        @Suppress("UNUSED_EXPRESSION")
-        ArmeriaRouteContributorBootstrap
+        ArmeriaRouteContributorBootstrap.ensureRegistered()
     }
 
     private val routeState = ArmeriaRouteExplorerRouteState()

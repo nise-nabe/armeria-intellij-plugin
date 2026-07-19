@@ -31,9 +31,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSuppor
  */
 object ArmeriaRouteDuplicateIndex {
     init {
-        // Force contributor bootstrap before the first route collection via this index.
-        @Suppress("UNUSED_EXPRESSION")
-        ArmeriaRouteContributorBootstrap
+        ArmeriaRouteContributorBootstrap.ensureRegistered()
     }
 
     private val CHECKED_MATCHES =

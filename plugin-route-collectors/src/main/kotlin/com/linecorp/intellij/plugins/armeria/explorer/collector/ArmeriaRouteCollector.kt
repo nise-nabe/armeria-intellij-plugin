@@ -28,8 +28,9 @@ import org.jetbrains.kotlin.psi.KtFile
 /**
  * Public route-collection façade. Aggregates core annotated/service-registration collectors
  * with Spring MVC/Boot contributors and GraphQL/gRPC/Thrift contributors registered via
- * [RouteContributorRegistry]. In production, contributors are registered by
- * `ArmeriaRouteContributorBootstrap` (in `plugin-route-analysis`). In tests, contributors
+ * [RouteContributorRegistry]. In production, call
+ * `ArmeriaRouteContributorBootstrap.ensureRegistered()` before the first [collect]
+ * (see Route Explorer, duplicate index, and run configuration). In tests, contributors
  * can be registered explicitly after [RouteContributorRegistry.clearForTests].
  */
 object ArmeriaRouteCollector {

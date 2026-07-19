@@ -11,7 +11,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSuppor
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteTargetExtractor
 import com.linecorp.intellij.plugins.armeria.message
 
-internal object ArmeriaDecoratorSupport {
+object ArmeriaDecoratorSupport {
     internal data class DecoratorCandidate(
         val label: String,
         val pathPattern: String?,

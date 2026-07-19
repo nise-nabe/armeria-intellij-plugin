@@ -9,25 +9,41 @@ import java.util.concurrent.CopyOnWriteArrayList
  * explicitly with [register] after calling [clearForTests].
  */
 object RouteContributorRegistry {
+    private val lock = Any()
     private val contributors = CopyOnWriteArrayList<RouteContributor>()
 
-    /** Set once by analysis bootstrap; called on every [all] invocation (no-op after first use). */
+    @Volatile
+    private var bootstrapped = false
+
+    /** Set once by analysis bootstrap; invoked at most once on the first [all] call. */
     @Volatile
     var bootstrap: () -> Unit = {}
 
     fun register(contributor: RouteContributor) {
-        if (contributors.none { it === contributor }) {
-            contributors += contributor
+        synchronized(lock) {
+            if (contributors.none { it === contributor }) {
+                contributors += contributor
+            }
         }
     }
 
     fun all(): List<RouteContributor> {
-        bootstrap()
+        if (!bootstrapped) {
+            synchronized(lock) {
+                if (!bootstrapped) {
+                    bootstrap()
+                    bootstrapped = true
+                }
+            }
+        }
         return contributors.toList()
     }
 
     /** Test-only: clear registered contributors so each test starts from a known state. */
     fun clearForTests() {
-        contributors.clear()
+        synchronized(lock) {
+            contributors.clear()
+            bootstrapped = false
+        }
     }
 }

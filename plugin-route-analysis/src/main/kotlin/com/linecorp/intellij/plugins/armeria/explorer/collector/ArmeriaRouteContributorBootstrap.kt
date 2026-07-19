@@ -6,10 +6,9 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.RouteContributorRe
 
 /**
  * Sets up [RouteContributorRegistry.bootstrap] so that Spring and protocol contributors are
- * registered on the first call to [RouteContributorRegistry.all]. This object must be
- * referenced before [ArmeriaRouteCollector.collect] is first called — see
- * [com.linecorp.intellij.plugins.armeria.explorer.duplicate.ArmeriaRouteDuplicateIndex] and
- * [com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteExplorerPanel].
+ * registered on the first call to [RouteContributorRegistry.all]. Every production caller of
+ * [ArmeriaRouteCollector.collect] must invoke [ensureRegistered] first (or otherwise load this
+ * object) so the bootstrap lambda is installed before collection.
  */
 object ArmeriaRouteContributorBootstrap {
     init {
@@ -17,5 +16,10 @@ object ArmeriaRouteContributorBootstrap {
             RouteContributorRegistry.register(ArmeriaSpringRouteContributor)
             RouteContributorRegistry.register(ArmeriaProtocolRouteContributor)
         }
+    }
+
+    /** Installs the bootstrap lambda (via class init) so the next [RouteContributorRegistry.all] registers contributors. */
+    fun ensureRegistered() {
+        // Intentionally empty: referencing this object runs [init] above.
     }
 }
