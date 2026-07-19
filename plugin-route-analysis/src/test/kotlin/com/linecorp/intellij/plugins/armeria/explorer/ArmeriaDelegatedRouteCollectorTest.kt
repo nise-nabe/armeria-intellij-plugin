@@ -626,6 +626,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
 
     fun testPreferredSpringMvcMountsPicksShortestPathPerModuleAndVirtualHost() {
         val probe = myFixture.addClass("public class PreferredMountProbe {}")
+
         fun mount(
             path: String,
             moduleName: String = "app",
