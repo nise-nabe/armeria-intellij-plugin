@@ -48,9 +48,12 @@ object ArmeriaRouteCollector {
         val routes =
             ArmeriaRouteCollectionMetrics.runWith(metrics) {
                 val cachedRoutes =
-                    CachedValuesManager.getManager(project).getCachedValue(project, cacheKey(contributors)) {
-                        computeProjectRoutes(project, contributors)
-                    }
+                    CachedValuesManager.getManager(project).getCachedValue(
+                        project,
+                        cacheKey(contributors),
+                        CachedValueProvider { computeProjectRoutes(project, contributors) },
+                        false,
+                    )
                 if (includeProtoRoutes) {
                     mergeProtoRoutesIfEnabled(project, cachedRoutes, contributors)
                 } else {

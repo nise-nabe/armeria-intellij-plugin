@@ -49,7 +49,7 @@ class ArmeriaIdlRouteCollectorMultiModuleTest : HeavyPlatformTestCase() {
 
         val routes =
             ArmeriaRouteCollector
-                .collect(project)
+                .collect(project, contributors = listOf(ArmeriaProtocolRouteContributor))
                 .filter { it.protocol == RouteProtocol.GRAPHQL.presentableName() }
 
         assertEquals(2, routes.size)
@@ -70,7 +70,7 @@ class ArmeriaIdlRouteCollectorMultiModuleTest : HeavyPlatformTestCase() {
 
         val routes =
             ArmeriaRouteCollector
-                .collect(project)
+                .collect(project, contributors = listOf(ArmeriaProtocolRouteContributor))
                 .filter { it.protocol == RouteProtocol.THRIFT.presentableName() }
 
         assertEquals(2, routes.size)

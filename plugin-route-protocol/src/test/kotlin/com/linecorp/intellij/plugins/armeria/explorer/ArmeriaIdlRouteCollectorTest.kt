@@ -162,7 +162,7 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
 
         val routes =
             ArmeriaRouteCollector
-                .collect(project)
+                .collect(project, contributors = listOf(ArmeriaProtocolRouteContributor))
                 .filter { it.protocol == RouteProtocol.GRAPHQL.presentableName() }
 
         assertEquals(2, routes.size)
@@ -186,7 +186,7 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
 
         val routes =
             ArmeriaRouteCollector
-                .collect(project)
+                .collect(project, contributors = listOf(ArmeriaProtocolRouteContributor))
                 .filter { it.protocol == RouteProtocol.GRAPHQL.presentableName() }
 
         assertEquals(1, routes.size)
@@ -206,7 +206,7 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
 
         val routes =
             ArmeriaRouteCollector
-                .collect(project)
+                .collect(project, contributors = listOf(ArmeriaProtocolRouteContributor))
                 .filter { it.protocol == RouteProtocol.THRIFT.presentableName() }
 
         assertEquals(1, routes.size)
@@ -230,7 +230,7 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
 
         val routes =
             ArmeriaRouteCollector
-                .collect(project)
+                .collect(project, contributors = listOf(ArmeriaProtocolRouteContributor))
                 .filter { it.protocol == RouteProtocol.GRAPHQL.presentableName() }
 
         assertEquals(1, routes.size)
@@ -257,7 +257,7 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
 
         val routes =
             ArmeriaRouteCollector
-                .collect(project)
+                .collect(project, contributors = listOf(ArmeriaProtocolRouteContributor))
                 .filter { it.protocol == RouteProtocol.THRIFT.presentableName() }
 
         assertEquals(1, routes.size)
@@ -291,7 +291,7 @@ class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
 
         val routesWithoutIdlStubs =
             ArmeriaRouteCollector
-                .collect(project)
+                .collect(project, contributors = listOf(ArmeriaProtocolRouteContributor))
                 .filter { it.routeMatch == RouteMatch.NON_HTTP }
 
         assertTrue(routesWithoutIdlStubs.isEmpty())
