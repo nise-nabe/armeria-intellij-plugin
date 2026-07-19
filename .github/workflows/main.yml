@@ -19,9 +19,21 @@ jobs:
         include:
           - name: Wizard tests
             task: :plugin-wizard:test
-          - name: Route fast tests
+          - name: Route model + collectors fast tests
+            task: :plugin-route-collectors:fastTest
+          - name: Route spring fast tests
+            task: :plugin-route-spring:fastTest
+          - name: Route protocol fast tests
+            task: :plugin-route-protocol:fastTest
+          - name: Route analysis fast tests
             task: :plugin-route-analysis:fastTest
-          - name: Route platform tests
+          - name: Route collectors platform tests
+            task: :plugin-route-collectors:test
+          - name: Route spring platform tests
+            task: :plugin-route-spring:test
+          - name: Route protocol platform tests
+            task: :plugin-route-protocol:test
+          - name: Route analysis platform tests
             task: :plugin-route-analysis:test
           - name: Plugin client tests
             task: :plugin:test

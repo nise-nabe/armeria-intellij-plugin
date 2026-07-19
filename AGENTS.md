@@ -2,7 +2,7 @@
 
 ## Cursor Cloud specific instructions
 
-IntelliJ Platform plugin for Armeria. Gradle multi-project build (`build-logic`, `plugin-shared`, `plugin-route-analysis`, `plugin-wizard`, `plugin`). No web UI or Docker services.
+IntelliJ Platform plugin for Armeria. Gradle multi-project build (`build-logic`, `plugin-shared`, `plugin-route-model`, `plugin-route-collectors`, `plugin-route-spring`, `plugin-route-protocol`, `plugin-route-analysis`, `plugin-wizard`, `plugin`). No web UI or Docker services.
 
 ### Prerequisites
 
@@ -62,28 +62,37 @@ Prefer **Gradle MCP** for the tasks below. Use `background: true` and poll `grad
 | Format Kotlin | `gradle_run_tasks` `["ktlintFormat"]` + background/poll | `./gradlew ktlintFormat` |
 | Compile plugin | `gradle_run_tasks` `[":plugin:compileKotlin"]` | `./gradlew :plugin:compileKotlin` |
 | Plugin fixture tests | `gradle_run_tasks` `[":plugin:test"]` or `gradle_run_tests` per class + background/poll | `./gradlew :plugin:test` |
-| Route-analysis fixture tests | `gradle_run_tasks` `[":plugin-route-analysis:test"]` + background/poll | `./gradlew :plugin-route-analysis:test` |
-| Pure unit tests (`plugin-route-analysis/src/fastTest`) | `gradle_run_tasks` `[":plugin-route-analysis:fastTest"]` + background/poll | `./gradlew :plugin-route-analysis:fastTest` |
-| All route-analysis tests (fixture + fast) | `gradle_run_tasks` `[":plugin-route-analysis:check"]` + background/poll | `./gradlew :plugin-route-analysis:check` |
+| Route collectors fixture tests | `gradle_run_tasks` `[":plugin-route-collectors:test"]` + background/poll | `./gradlew :plugin-route-collectors:test` |
+| Route spring fixture tests | `gradle_run_tasks` `[":plugin-route-spring:test"]` + background/poll | `./gradlew :plugin-route-spring:test` |
+| Route protocol fixture tests | `gradle_run_tasks` `[":plugin-route-protocol:test"]` + background/poll | `./gradlew :plugin-route-protocol:test` |
+| Route analysis fixture tests | `gradle_run_tasks` `[":plugin-route-analysis:test"]` + background/poll | `./gradlew :plugin-route-analysis:test` |
+| Pure unit tests per module | `gradle_run_tasks` `[":plugin-route-<sub>:fastTest"]` + background/poll | `./gradlew :plugin-route-<sub>:fastTest` |
+| All route tests (fixture + fast, every route module) | `gradle_run_tasks` `[":plugin-route-model:check", ":plugin-route-collectors:check", ":plugin-route-spring:check", ":plugin-route-protocol:check", ":plugin-route-analysis:check"]` + background/poll | `./gradlew :plugin-route-model:check :plugin-route-collectors:check :plugin-route-spring:check :plugin-route-protocol:check :plugin-route-analysis:check` |
 | Run IDE sandbox | `gradle_run_tasks` `[":plugin:runIde"]` | `./gradlew :plugin:runIde` |
 | Fix stale test sandbox | — | `.cursor/clean-test-sandbox.sh` |
 
-`:plugin:test` and `:plugin-route-analysis:test` run platform PSI fixture tests under each module's `src/test`. `:plugin-route-analysis:fastTest` runs pure unit tests under `plugin-route-analysis/src/fastTest` (still on the IntelliJ Platform test runtime, but without PSI fixtures). Use `build` to run the full suite across modules.
+`:plugin:test` and each `:plugin-route-*:test` run platform PSI fixture tests under their module's `src/test`. Each route submodule (collectors, spring, protocol, analysis) also has a `fastTest` suite under `src/fastTest` for pure unit tests that run on the IntelliJ Platform test runtime without PSI fixtures. Use `build` to run the full suite across all modules.
 
 Kotlin style is enforced by ktlint (`com.linecorp.intellij.ktlint` convention, `ktlint_official`). `ktlintCheck` is part of `check` / `build`.
+
+**Isolated Projects status**: all production modules (`plugin-route-model`, `plugin-route-collectors`, `plugin-route-spring`, `plugin-route-protocol`, `plugin-route-analysis`, `plugin`) compile cleanly under `-Dorg.gradle.unsafe.isolated-projects=true` (verified via `./gradlew compileKotlin -Dorg.gradle.unsafe.isolated-projects=true`). Enabling it as a CI default (e.g. in `gradle.properties`) is a follow-up once test-task configuration-time access is also confirmed; see the commented line in `gradle.properties`.
 
 ### Project layout
 
 | Path | Role |
 |------|------|
 | `plugin-shared/` | Shared bundle, icons, and starters used by other modules |
-| `plugin-route-analysis/` | Route Explorer, inspections, and related analysis (`src/test`, `src/fastTest`) |
+| `plugin-route-model/` | Leaf module with `ArmeriaRoute`, `RouteMatch`, `RouteProtocol`, `DelegationKind`, etc. (no collector code) |
+| `plugin-route-collectors/` | Core annotated + service-registration collectors, decorator/timeout/annotation helpers, support utilities, PSI traversal, `RouteContributor`/`RouteCollectContext` SPI, `ArmeriaKotlinRouteCollector`, and shared test fixtures |
+| `plugin-route-spring/` | Spring MVC / Spring Boot / Spring config collectors and `ArmeriaDelegatedRouteCollector` |
+| `plugin-route-protocol/` | GraphQL / gRPC / Thrift / IDL / proto-text collectors |
+| `plugin-route-analysis/` | Route Explorer UI helpers, DocService support, navigation, duplicate index, and `ArmeriaRouteAnalysisCollector` (production façade that always supplies Spring/protocol contributors) |
 | `plugin-wizard/` | New Project Wizard templates and verification |
 | `plugin/` | Aggregating plugin module, run config, Clients explorer, resources, `CHANGELOG.md` |
 | `build-logic/` | Shared IntelliJ Platform Gradle conventions |
 | `gradle/libs.versions.toml` | Version pins (Kotlin, IPGP, IDEA platform) |
 
-Main Kotlin packages live under each module's `src/main/kotlin/com/linecorp/intellij/plugins/armeria/`. User-visible strings go through `message(...)` and `ArmeriaBundle.properties`. CI (`.github/workflows/main.yml`) runs per-module test tasks (`:plugin-wizard:test`, `:plugin-route-analysis:fastTest`, `:plugin-route-analysis:test`, `:plugin:test`) then `./gradlew build -x test` on Java 25.
+Main Kotlin packages live under each module's `src/main/kotlin/com/linecorp/intellij/plugins/armeria/`. User-visible strings go through `message(...)` and `ArmeriaBundle.properties`. CI (`.github/workflows/main.yml`) runs per-module test tasks (`:plugin-wizard:test`, `:plugin-route-collectors:fastTest`/`test`, `:plugin-route-spring:fastTest`/`test`, `:plugin-route-protocol:fastTest`/`test`, `:plugin-route-analysis:fastTest`/`test`, `:plugin:test`) then `./gradlew build -x test` on Java 25.
 
 ### Running the plugin (headless cloud caveat)
 

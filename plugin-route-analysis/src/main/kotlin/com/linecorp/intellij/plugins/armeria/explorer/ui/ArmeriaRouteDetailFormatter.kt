@@ -1,9 +1,9 @@
 package com.linecorp.intellij.plugins.armeria.explorer.ui
+
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
-import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaServletMountSupport
 import com.linecorp.intellij.plugins.armeria.message
 
 object ArmeriaRouteDetailFormatter {
@@ -19,7 +19,7 @@ object ArmeriaRouteDetailFormatter {
                 if (route.routeMatch == RouteMatch.RUNTIME) {
                     add(message("route.explorer.badge.runtime"))
                 }
-                ArmeriaServletMountSupport.delegationKindOf(route)?.let { kind ->
+                route.delegationKind?.let { kind ->
                     add(delegationBadge(kind))
                 }
                 if (route.routeMatch != RouteMatch.RUNTIME) {
@@ -125,7 +125,7 @@ object ArmeriaRouteDetailFormatter {
         if (route.delegationMountPath.isNotEmpty()) {
             return message("route.explorer.secondary.delegatedVia", route.delegationMountPath)
         }
-        val kind = ArmeriaServletMountSupport.delegationKindOf(route) ?: return null
+        val kind = route.delegationKind ?: return null
         return message("route.explorer.secondary.separator") + delegationBadge(kind)
     }
 

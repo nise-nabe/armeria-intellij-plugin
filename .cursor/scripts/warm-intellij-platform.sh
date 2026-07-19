@@ -11,6 +11,10 @@ if ! (
   cd "${repo_root}"
   ./gradlew \
     :plugin:compileTestKotlin \
+    :plugin-route-model:compileKotlin \
+    :plugin-route-collectors:compileTestKotlin \
+    :plugin-route-spring:compileTestKotlin \
+    :plugin-route-protocol:compileTestKotlin \
     :plugin-route-analysis:compileTestKotlin \
     :plugin-wizard:compileTestKotlin
 ); then

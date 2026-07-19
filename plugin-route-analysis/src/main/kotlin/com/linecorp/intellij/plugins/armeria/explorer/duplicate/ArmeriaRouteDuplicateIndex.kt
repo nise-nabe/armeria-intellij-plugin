@@ -10,7 +10,7 @@ import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
-import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnalysisCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
@@ -53,7 +53,7 @@ object ArmeriaRouteDuplicateIndex {
     internal fun duplicateHitsForGroups(groups: List<DuplicateRegistrationGroup>): Map<VirtualFile, List<DuplicateRegistrationHit>> =
         buildHitsByVirtualFile(groups)
 
-    internal fun findDuplicateGroups(routes: List<ArmeriaRoute>): List<DuplicateRegistrationGroup> {
+    fun findDuplicateGroups(routes: List<ArmeriaRoute>): List<DuplicateRegistrationGroup> {
         val groups = mutableListOf<DuplicateRegistrationGroup>()
         for ((_, moduleRoutes) in routes.filter { it.routeMatch in CHECKED_MATCHES }.groupBy { it.moduleName }) {
             if (moduleRoutes.size < 2) {
@@ -71,7 +71,7 @@ object ArmeriaRouteDuplicateIndex {
 
     private fun getIndex(project: Project): DuplicateRegistrationIndex =
         CachedValuesManager.getManager(project).getCachedValue(project) {
-            val groups = findDuplicateGroups(ArmeriaRouteCollector.collect(project))
+            val groups = findDuplicateGroups(ArmeriaRouteAnalysisCollector.collect(project))
             CachedValueProvider.Result.create(
                 DuplicateRegistrationIndex(
                     groups = groups,

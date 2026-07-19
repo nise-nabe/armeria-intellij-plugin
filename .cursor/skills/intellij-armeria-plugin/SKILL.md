@@ -22,14 +22,29 @@ in this repository. Apply it **during implementation**, not only before opening 
 
 | Module | Owns |
 |--------|------|
-| `plugin-route-analysis/` | Route/Client collectors, PSI analysis, route-related unit/fixture tests |
+| `plugin-route-model/` | Leaf domain types (`ArmeriaRoute`, `RouteMatch`, `RouteProtocol`, `PathType`, `DelegationKind`, `CoreServiceRegistrationMethod`, `ArmeriaRouteMetadata`) |
+| `plugin-route-collectors/` | Annotated/service-registration collectors, decorator/timeout/annotation helpers, `ArmeriaKotlinRouteCollector`, `psi` traversal, `ArmeriaRouteSupport`, `RouteContributor`/`RouteCollectContext` SPI, shared test fixtures (`ArmeriaFixtureTestBase`, stubs) |
+| `plugin-route-spring/` | `ArmeriaSpringBootRouteCollector`, `ArmeriaKotlinSpringBootRouteCollector`, `ArmeriaSpringMvcRouteCollector`, `ArmeriaSpringConfigRouteCollector`, `ArmeriaYamlSpringConfigReader`, `SpringArmeriaConfig*`, `ArmeriaServletMountSupport`, `ArmeriaDelegatedRouteCollector` |
+| `plugin-route-protocol/` | `ArmeriaGraphqlRouteCollector`, `ArmeriaGrpcRouteCollector`, `ArmeriaThriftRouteCollector`, `ArmeriaIdlRouteSupport`, `ArmeriaProtoTextSupport` |
+| `plugin-route-analysis/` | Route Explorer UI helpers (`ui/`), DocService support (`docservice/`), navigation (`navigation/`), duplicate index (`duplicate/`), and `ArmeriaRouteAnalysisCollector` (production façade that always supplies Spring/protocol contributors) |
 | `plugin-shared/` | Shared bundle helpers, cross-cutting PSI utilities, test fixtures |
 | `plugin-wizard/` | New-project/module wizard, file templates, starter resources |
 | `plugin/` | `plugin.xml` wiring, UI panels/actions, run configs, inspection registration |
 
-Do not put collector logic in `plugin/` when it belongs in `plugin-route-analysis/`.
-Do not add route-analysis tests under `plugin/src/test` when the class under test lives
-in `plugin-route-analysis/`.
+Do not put collector logic in `plugin/` when it belongs in one of the `plugin-route-*` modules.
+Do not add route-analysis tests under `plugin/src/test` when the class under test lives in a
+`plugin-route-*` module.
+
+Cross-module rules to keep the dependency graph acyclic:
+
+- `plugin-route-model` may only depend on `plugin-shared`.
+- `plugin-route-collectors` may depend on `plugin-route-model` and `plugin-shared`.
+- `plugin-route-spring` and `plugin-route-protocol` may depend on `plugin-route-collectors`
+  (transitively `plugin-route-model` + `plugin-shared`). Neither may depend on the other or on
+  `plugin-route-analysis`.
+- `plugin-route-analysis` `api`s the four modules above so `plugin/` can consume them transitively.
+- `plugin/` only depends on `plugin-route-analysis` for production wiring; test-side it consumes
+  `testFixtures(project(":plugin-route-collectors"))`.
 
 ## Internationalization (i18n)
 
@@ -197,13 +212,19 @@ Match the Gradle task to the module that contains the test class:
 
 | Test location | Gradle task |
 |---------------|-------------|
+| `plugin-route-collectors/src/test` | `:plugin-route-collectors:test` |
+| `plugin-route-collectors/src/fastTest` | `:plugin-route-collectors:fastTest` |
+| `plugin-route-spring/src/test` | `:plugin-route-spring:test` |
+| `plugin-route-spring/src/fastTest` | `:plugin-route-spring:fastTest` |
+| `plugin-route-protocol/src/test` | `:plugin-route-protocol:test` |
+| `plugin-route-protocol/src/fastTest` | `:plugin-route-protocol:fastTest` |
 | `plugin-route-analysis/src/test` | `:plugin-route-analysis:test` |
 | `plugin-route-analysis/src/fastTest` | `:plugin-route-analysis:fastTest` |
 | `plugin/src/test` | `:plugin:test` |
 | `plugin-wizard/src/test` | `:plugin-wizard:test` |
 
 When documenting a test plan in a PR, use the module-qualified task. With Gradle MCP,
-set `taskPath` accordingly (e.g. `":plugin-route-analysis:test"`).
+set `taskPath` accordingly (e.g. `":plugin-route-collectors:test"`).
 
 ## Related skills
 

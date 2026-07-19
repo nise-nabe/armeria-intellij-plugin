@@ -1,15 +1,17 @@
 package com.linecorp.intellij.plugins.armeria.explorer.docservice
+
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
-import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpRequestGenerator
 
 object ArmeriaDocServiceSupport {
+    private const val DEFAULT_BASE_URL = "http://localhost:8080"
+
     fun docServiceRoutes(routes: List<ArmeriaRoute>): List<ArmeriaRoute> = routes.filter { it.isDocService }
 
     fun hasDocService(routes: List<ArmeriaRoute>): Boolean = routes.any { it.isDocService }
 
     fun url(
         route: ArmeriaRoute,
-        baseUrl: String = ArmeriaHttpRequestGenerator.DEFAULT_BASE_URL,
+        baseUrl: String = DEFAULT_BASE_URL,
     ): String {
         val normalizedBase = baseUrl.trimEnd('/')
         val path = route.path.takeIf { it.startsWith("/") } ?: "/${route.path}"
@@ -18,6 +20,6 @@ object ArmeriaDocServiceSupport {
 
     fun primaryUrl(
         routes: List<ArmeriaRoute>,
-        baseUrl: String = ArmeriaHttpRequestGenerator.DEFAULT_BASE_URL,
+        baseUrl: String = DEFAULT_BASE_URL,
     ): String? = docServiceRoutes(routes).firstOrNull()?.let { url(it, baseUrl) }
 }
