@@ -32,8 +32,9 @@ internal object ArmeriaDelegatedRouteCollector {
             val scopedSpringMvcRoutes = springMvcRoutesForMount(mountRoute, springMvcRoutes, unassignedModule)
             for (springMvcRoute in scopedSpringMvcRoutes) {
                 val combinedPath = ArmeriaRouteSupport.combinePaths(mountRoute.path, springMvcRoute.path)
+                // One preferred mount per (module, vhost); dedupe only within that expansion.
                 val dedupeKey =
-                    "${mountRoute.moduleName}:${mountRoute.virtualHostName}:${mountRoute.path}:$combinedPath:" +
+                    "${mountRoute.moduleName}:${mountRoute.virtualHostName}:$combinedPath:" +
                         "${springMvcRoute.httpMethod}:${springMvcRoute.target}"
                 if (!seenDelegatedKeys.add(dedupeKey)) {
                     continue
@@ -67,12 +68,10 @@ internal object ArmeriaDelegatedRouteCollector {
             .groupBy { it.moduleName to it.virtualHostName }
             .values
             .map { group ->
-                group.minWith(
-                    compareBy(
-                        { ArmeriaRouteSupport.normalizePath(it.path).length },
-                        { ArmeriaRouteSupport.normalizePath(it.path) },
-                    ),
-                )
+                group.minBy { route ->
+                    val normalized = ArmeriaRouteSupport.normalizePath(route.path)
+                    normalized.length to normalized
+                }
             }
 
     internal fun springMvcRoutesForMount(
