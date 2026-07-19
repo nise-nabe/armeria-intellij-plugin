@@ -26,7 +26,7 @@ in this repository. Apply it **during implementation**, not only before opening 
 | `plugin-route-collectors/` | Annotated/service-registration collectors, decorator/timeout/annotation helpers, `ArmeriaKotlinRouteCollector`, `psi` traversal, `ArmeriaRouteSupport`, `RouteContributor`/`RouteCollectContext` SPI, shared test fixtures (`ArmeriaFixtureTestBase`, stubs) |
 | `plugin-route-spring/` | `ArmeriaSpringBootRouteCollector`, `ArmeriaKotlinSpringBootRouteCollector`, `ArmeriaSpringMvcRouteCollector`, `ArmeriaSpringConfigRouteCollector`, `ArmeriaYamlSpringConfigReader`, `SpringArmeriaConfig*`, `ArmeriaServletMountSupport`, `ArmeriaDelegatedRouteCollector` |
 | `plugin-route-protocol/` | `ArmeriaGraphqlRouteCollector`, `ArmeriaGrpcRouteCollector`, `ArmeriaThriftRouteCollector`, `ArmeriaIdlRouteSupport`, `ArmeriaProtoTextSupport` |
-| `plugin-route-analysis/` | Route Explorer UI helpers (`ui/`), DocService support (`docservice/`), navigation (`navigation/`), duplicate index (`duplicate/`), and the public `ArmeriaRouteCollector` façade that wires all contributors |
+| `plugin-route-analysis/` | Route Explorer UI helpers (`ui/`), DocService support (`docservice/`), navigation (`navigation/`), duplicate index (`duplicate/`), and `ArmeriaRouteContributorBootstrap` (registers spring/protocol contributors) |
 | `plugin-shared/` | Shared bundle helpers, cross-cutting PSI utilities, test fixtures |
 | `plugin-wizard/` | New-project/module wizard, file templates, starter resources |
 | `plugin/` | `plugin.xml` wiring, UI panels/actions, run configs, inspection registration |
