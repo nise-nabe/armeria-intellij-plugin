@@ -68,10 +68,12 @@ internal object ArmeriaDelegatedRouteCollector {
             .groupBy { it.moduleName to it.virtualHostName }
             .values
             .map { group ->
-                group.minBy { route ->
-                    val normalized = ArmeriaRouteSupport.normalizePath(route.path)
-                    normalized.length to normalized
-                }
+                group.minWith(
+                    compareBy(
+                        { ArmeriaRouteSupport.normalizePath(it.path).length },
+                        { ArmeriaRouteSupport.normalizePath(it.path) },
+                    ),
+                )
             }
 
     internal fun springMvcRoutesForMount(
