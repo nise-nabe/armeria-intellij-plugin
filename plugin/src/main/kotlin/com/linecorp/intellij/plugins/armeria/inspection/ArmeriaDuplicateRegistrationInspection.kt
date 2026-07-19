@@ -6,7 +6,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiMethod
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteDuplicateIndex
+import com.linecorp.intellij.plugins.armeria.explorer.duplicate.ArmeriaRouteDuplicateIndex
 import com.linecorp.intellij.plugins.armeria.message
 
 open class ArmeriaDuplicateRegistrationInspection : LocalInspectionTool() {

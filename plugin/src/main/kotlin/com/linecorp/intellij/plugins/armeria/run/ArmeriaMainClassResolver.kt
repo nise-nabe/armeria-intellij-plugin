@@ -9,7 +9,7 @@ import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiTypes
 import com.intellij.psi.util.PsiMethodUtil
 import com.intellij.psi.util.PsiTreeUtil
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 
 internal object ArmeriaMainClassResolver {
     private val KOTLIN_PLUGIN_ID = PluginId.getId("org.jetbrains.kotlin")

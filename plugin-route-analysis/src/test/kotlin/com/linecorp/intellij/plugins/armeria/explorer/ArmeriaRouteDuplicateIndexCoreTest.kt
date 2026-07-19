@@ -1,5 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.linecorp.intellij.plugins.armeria.explorer.duplicate.ArmeriaRouteDuplicateIndex
+import com.linecorp.intellij.plugins.armeria.explorer.duplicate.DuplicateRegistrationGroup
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaRouteDuplicateIndexCoreTest : ArmeriaFixtureTestBase() {

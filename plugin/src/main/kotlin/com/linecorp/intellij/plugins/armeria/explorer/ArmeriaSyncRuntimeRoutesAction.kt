@@ -9,6 +9,8 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.ui.Messages
+import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceEndpointValidator
+import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceMountResolver
 import com.linecorp.intellij.plugins.armeria.message
 
 class ArmeriaSyncRuntimeRoutesAction :
