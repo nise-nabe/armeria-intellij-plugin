@@ -10,10 +10,10 @@ group = "com.linecorp.intellij"
 version = providers.gradleProperty("pluginVersion").get()
 
 dependencies {
-    implementation(project(":plugin-shared"))
     implementation(project(":plugin-route-analysis"))
     implementation(project(":plugin-wizard"))
     intellijPlatform {
+        pluginComposedModule(implementation(project(":plugin-shared")))
         intellijIdeaUltimate(
             libs.versions.idea.platform
                 .get(),
