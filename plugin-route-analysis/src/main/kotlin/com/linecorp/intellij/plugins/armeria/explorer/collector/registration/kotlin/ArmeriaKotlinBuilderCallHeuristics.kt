@@ -2,8 +2,8 @@ package com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ko
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiVariable
-import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.model.ServiceRegistrationMethod
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClassOrObject

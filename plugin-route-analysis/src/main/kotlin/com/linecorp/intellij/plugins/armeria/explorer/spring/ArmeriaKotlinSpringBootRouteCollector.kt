@@ -1,13 +1,11 @@
 package com.linecorp.intellij.plugins.armeria.explorer.spring
-import com.intellij.openapi.project.Project
+
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.search.FileTypeIndex
-import com.intellij.psi.search.GlobalSearchScope
-import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaKotlinRouteCollector
-import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollectionMetrics
-import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.RouteCollectContext
 import org.jetbrains.kotlin.asJava.toLightMethods
 import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.psi.KtFile
@@ -16,15 +14,9 @@ import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
 import java.io.IOException
 
 internal object ArmeriaKotlinSpringBootRouteCollector {
-    fun collect(
-        project: Project,
-        scope: GlobalSearchScope,
-        routes: MutableList<ArmeriaRoute>,
-        fallbackScannedFiles: MutableSet<VirtualFile>,
-        seenServiceRegistrations: MutableSet<String>,
-    ) {
-        for (virtualFile in FileTypeIndex.getFiles(KotlinFileType.INSTANCE, scope)) {
-            if (virtualFile in fallbackScannedFiles) {
+    fun collect(context: RouteCollectContext) {
+        for (virtualFile in FileTypeIndex.getFiles(KotlinFileType.INSTANCE, context.scope)) {
+            if (virtualFile in context.fallbackScannedFiles) {
                 continue
             }
             ArmeriaRouteCollectionMetrics.current()?.filesScanned?.incrementAndGet()
@@ -32,18 +24,21 @@ internal object ArmeriaKotlinSpringBootRouteCollector {
             if (!ArmeriaRouteSupport.mayReferenceSpringBootArmeriaInText(contents)) {
                 continue
             }
-            val file = PsiManager.getInstance(project).findFile(virtualFile) as? KtFile ?: continue
-            if (!referencesSpringBootArmeria(file)) {
+            val file = PsiManager.getInstance(context.project).findFile(virtualFile) as? KtFile ?: continue
+            if (!referencesSpringBootArmeria(file, context)) {
                 continue
             }
-            fallbackScannedFiles += virtualFile
+            context.fallbackScannedFiles += virtualFile
             ArmeriaRouteCollectionMetrics.current()?.armeriaFiles?.incrementAndGet()
-            collectBeanServerRegistrations(file, scope, routes, seenServiceRegistrations)
+            collectBeanServerRegistrations(file, context)
         }
     }
 
-    private fun referencesSpringBootArmeria(file: KtFile): Boolean {
-        if (ArmeriaKotlinRouteCollector.referencesArmeriaKotlinContent(file)) {
+    private fun referencesSpringBootArmeria(
+        file: KtFile,
+        context: RouteCollectContext,
+    ): Boolean {
+        if (context.registration.referencesArmeriaKotlinContent(file)) {
             return true
         }
         return hasSpringBootArmeriaFileIndicators(file.viewProvider.contents)
@@ -77,9 +72,7 @@ internal object ArmeriaKotlinSpringBootRouteCollector {
 
     private fun collectBeanServerRegistrations(
         file: KtFile,
-        scope: GlobalSearchScope,
-        routes: MutableList<ArmeriaRoute>,
-        seenServiceRegistrations: MutableSet<String>,
+        context: RouteCollectContext,
     ) {
         for (function in file.collectDescendantsOfType<KtNamedFunction>()) {
             if (!mayHaveSpringBeanAnnotation(function)) {
@@ -89,13 +82,13 @@ internal object ArmeriaKotlinSpringBootRouteCollector {
             if (!lightMethods.any { it.hasAnnotation(ArmeriaRouteSupport.SPRING_BEAN_ANNOTATION) }) {
                 continue
             }
-            if (!lightMethods.any { ArmeriaRouteSupport.isArmeriaServerBeanReturnType(it, scope) }) {
+            if (!lightMethods.any { ArmeriaRouteSupport.isArmeriaServerBeanReturnType(it, context.scope) }) {
                 continue
             }
-            ArmeriaKotlinRouteCollector.collectServiceRegistrationsInScope(
+            context.registration.collectServiceRegistrationsInScope(
                 function,
-                routes,
-                seenServiceRegistrations,
+                context.routes,
+                context.seenServiceRegistrations,
             )
         }
     }

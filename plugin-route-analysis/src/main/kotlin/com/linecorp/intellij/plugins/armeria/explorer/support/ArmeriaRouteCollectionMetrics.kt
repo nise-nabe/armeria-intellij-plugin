@@ -1,4 +1,4 @@
-package com.linecorp.intellij.plugins.armeria.explorer.collector
+package com.linecorp.intellij.plugins.armeria.explorer.support
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.util.registry.Registry

@@ -6,6 +6,7 @@ import com.intellij.openapi.project.Project
 import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceEndpointValidator
 import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceSpecificationParser
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaRuntimeRouteFactory
 import com.linecorp.intellij.plugins.armeria.message
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -98,7 +99,7 @@ object ArmeriaRuntimeRouteFetcher {
         project: Project? = null,
     ): List<ArmeriaRoute> =
         routes.map { parsed ->
-            ArmeriaRoute.createRuntime(
+            ArmeriaRuntimeRouteFactory.createRuntime(
                 httpMethod = parsed.httpMethod,
                 path = parsed.path,
                 target = parsed.serviceName + if (parsed.methodName.isBlank()) "" else "/${parsed.methodName}",

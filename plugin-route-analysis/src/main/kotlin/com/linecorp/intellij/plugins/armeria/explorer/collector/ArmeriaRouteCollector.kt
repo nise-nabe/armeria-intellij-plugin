@@ -1,4 +1,5 @@
 package com.linecorp.intellij.plugins.armeria.explorer.collector
+
 import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.extensions.PluginId
@@ -28,7 +29,10 @@ import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaThriftRout
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaKotlinSpringBootRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringBootRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringConfigRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.RouteCollectContext
+import com.linecorp.intellij.plugins.armeria.explorer.support.RouteRegistrationCallbacks
 import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.psi.KtFile
 
@@ -84,6 +88,17 @@ object ArmeriaRouteCollector {
                 seenServiceRegistrations,
             )
         }
+
+        val context =
+            buildCollectContext(
+                project = project,
+                scope = scope,
+                routes = routes,
+                seenServiceRegistrations = seenServiceRegistrations,
+                seenConfigRoutes = seenConfigRoutes,
+                fallbackScannedFiles = fallbackScannedFiles,
+            )
+
         if (isKotlinPluginAvailable()) {
             ArmeriaKotlinRouteCollector.collectServiceRegistrationsFallback(
                 project,
@@ -93,22 +108,11 @@ object ArmeriaRouteCollector {
                 seenServiceRegistrations,
             )
             if (springBootArmeriaAvailable) {
-                ArmeriaKotlinSpringBootRouteCollector.collect(
-                    project,
-                    scope,
-                    routes,
-                    fallbackScannedFiles,
-                    seenServiceRegistrations,
-                )
+                ArmeriaKotlinSpringBootRouteCollector.collect(context)
             }
         }
         if (springBootArmeriaAvailable) {
-            ArmeriaSpringBootRouteCollector.collect(
-                project,
-                scope,
-                routes,
-                seenServiceRegistrations,
-            )
+            ArmeriaSpringBootRouteCollector.collect(context)
             ArmeriaSpringConfigRouteCollector.collect(
                 project,
                 scope,
@@ -126,6 +130,46 @@ object ArmeriaRouteCollector {
                 compareBy(ArmeriaRoute::moduleName, ArmeriaRoute::path, ArmeriaRoute::httpMethod, ArmeriaRoute::target),
             ),
             PsiModificationTracker.MODIFICATION_COUNT,
+        )
+    }
+
+    private fun buildCollectContext(
+        project: Project,
+        scope: GlobalSearchScope,
+        routes: MutableList<ArmeriaRoute>,
+        seenServiceRegistrations: MutableSet<String>,
+        seenConfigRoutes: MutableSet<String>,
+        fallbackScannedFiles: MutableSet<VirtualFile>,
+    ): RouteCollectContext {
+        val callbacks =
+            RouteRegistrationCallbacks(
+                collectServiceRegistrationsInScope = { element, routeList, seen ->
+                    if (isKotlinPluginAvailable()) {
+                        ArmeriaKotlinRouteCollector.collectServiceRegistrationsInScope(element, routeList, seen)
+                    }
+                },
+                collectServiceRegistrationFromMethodCall = { expression, routeList, seen ->
+                    ArmeriaRouteCollectorServiceRegistration.collectServiceRegistrationFromMethodCall(
+                        expression,
+                        routeList,
+                        seen,
+                    )
+                },
+                referencesArmeriaKotlinContent = { file ->
+                    isKotlinPluginAvailable() &&
+                        (file as? KtFile)?.let {
+                            ArmeriaKotlinRouteCollector.referencesArmeriaKotlinContent(it)
+                        } == true
+                },
+            )
+        return RouteCollectContext(
+            project = project,
+            scope = scope,
+            routes = routes,
+            seenServiceRegistrations = seenServiceRegistrations,
+            seenConfigRoutes = seenConfigRoutes,
+            fallbackScannedFiles = fallbackScannedFiles,
+            registration = callbacks,
         )
     }
 

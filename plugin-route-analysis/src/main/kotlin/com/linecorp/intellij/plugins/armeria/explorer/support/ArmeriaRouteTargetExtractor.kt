@@ -7,7 +7,6 @@ import com.intellij.psi.PsiParenthesizedExpression
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiTypeCastExpression
 import com.intellij.psi.PsiVariable
-import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 
 internal object ArmeriaRouteTargetExtractor {

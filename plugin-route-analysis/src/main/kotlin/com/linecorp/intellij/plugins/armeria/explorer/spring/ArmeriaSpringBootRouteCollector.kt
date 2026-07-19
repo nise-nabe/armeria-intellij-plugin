@@ -1,18 +1,16 @@
 package com.linecorp.intellij.plugins.armeria.explorer.spring
+
 import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.extensions.PluginId
-import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.JavaRecursiveElementWalkingVisitor
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
-import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.searches.AnnotatedElementsSearch
-import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaKotlinRouteCollector
-import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollectorServiceRegistration
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.RouteCollectContext
 
 internal object ArmeriaSpringBootRouteCollector {
     private val KOTLIN_PLUGIN_ID = PluginId.getId("org.jetbrains.kotlin")
@@ -33,23 +31,18 @@ internal object ArmeriaSpringBootRouteCollector {
         ktLightMethodClass?.getMethod("getKotlinOrigin")
     }
 
-    fun collect(
-        project: Project,
-        scope: GlobalSearchScope,
-        routes: MutableList<ArmeriaRoute>,
-        seenServiceRegistrations: MutableSet<String>,
-    ) {
-        val psiFacade = JavaPsiFacade.getInstance(project)
-        val beanAnnotation = psiFacade.findClass(ArmeriaRouteSupport.SPRING_BEAN_ANNOTATION, scope) ?: return
+    fun collect(context: RouteCollectContext) {
+        val psiFacade = JavaPsiFacade.getInstance(context.project)
+        val beanAnnotation = psiFacade.findClass(ArmeriaRouteSupport.SPRING_BEAN_ANNOTATION, context.scope) ?: return
         val seenBeanMethods = mutableSetOf<PsiMethod>()
-        AnnotatedElementsSearch.searchPsiMethods(beanAnnotation, scope).forEach { method ->
+        AnnotatedElementsSearch.searchPsiMethods(beanAnnotation, context.scope).forEach { method ->
             if (!seenBeanMethods.add(method)) {
                 return@forEach
             }
-            if (!ArmeriaRouteSupport.isArmeriaServerBeanReturnType(method, scope)) {
+            if (!ArmeriaRouteSupport.isArmeriaServerBeanReturnType(method, context.scope)) {
                 return@forEach
             }
-            collectServiceRegistrationsFromBeanMethod(method, routes, seenServiceRegistrations)
+            collectServiceRegistrationsFromBeanMethod(method, context.routes, context.seenServiceRegistrations, context)
         }
     }
 
@@ -57,11 +50,12 @@ internal object ArmeriaSpringBootRouteCollector {
         method: PsiMethod,
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
+        context: RouteCollectContext,
     ) {
         if (isKotlinPluginAvailable()) {
             val kotlinMethod = resolveKotlinOrigin(method)
             if (kotlinMethod != null) {
-                ArmeriaKotlinRouteCollector.collectServiceRegistrationsInScope(
+                context.registration.collectServiceRegistrationsInScope(
                     kotlinMethod,
                     routes,
                     seenServiceRegistrations,
@@ -72,7 +66,7 @@ internal object ArmeriaSpringBootRouteCollector {
         method.body?.accept(
             object : JavaRecursiveElementWalkingVisitor() {
                 override fun visitMethodCallExpression(expression: PsiMethodCallExpression) {
-                    ArmeriaRouteCollectorServiceRegistration.collectServiceRegistrationFromMethodCall(
+                    context.registration.collectServiceRegistrationFromMethodCall(
                         expression,
                         routes,
                         seenServiceRegistrations,

@@ -18,8 +18,11 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.Arm
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.java.ArmeriaExtendedRegistrationCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.CoreServiceRegistrationMethod
+import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
+import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaServletMountSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteTargetExtractor
 
@@ -159,6 +162,12 @@ internal object ArmeriaRouteCollectorServiceRegistration {
         val normalizedPath = ArmeriaRouteSupport.normalizePath(path)
         val programmaticDecorators = decorators ?: ArmeriaRouteCollector.collectProgrammaticDecorators(element, normalizedPath)
         val timeoutHints = ArmeriaRouteCollector.collectBuilderTimeoutHints(element)
+        val delegationKind: DelegationKind? =
+            if (protocol == RouteProtocol.HTTP) {
+                ArmeriaServletMountSupport.detectDelegation(target, routeMatch)
+            } else {
+                null
+            }
         routes +=
             ArmeriaRoute.create(
                 element = element,
@@ -172,6 +181,7 @@ internal object ArmeriaRouteCollectorServiceRegistration {
                 annotatedServiceHasPathPrefix = annotatedServiceHasPathPrefix,
                 decorators = programmaticDecorators,
                 timeoutHints = timeoutHints,
+                delegationKind = delegationKind,
             )
         return true
     }

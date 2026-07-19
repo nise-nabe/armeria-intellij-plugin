@@ -1,10 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.explorer.model
-import com.intellij.openapi.project.Project
+
 import com.intellij.psi.PsiElement
 import com.intellij.psi.SmartPointerManager
 import com.intellij.psi.SmartPsiElementPointer
-import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaRuntimeRoutePointer
-import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteDetailFormatter
 import com.linecorp.intellij.plugins.armeria.message
 
 data class ArmeriaRoute(
@@ -25,6 +23,7 @@ data class ArmeriaRoute(
     val timeoutHints: List<String> = emptyList(),
     val contentHints: List<String> = emptyList(),
     val delegationMountPath: String = "",
+    val delegationKind: DelegationKind? = null,
     val pointer: SmartPsiElementPointer<PsiElement>,
 ) {
     fun resolveSourceHint(): String {
@@ -36,8 +35,6 @@ data class ArmeriaRoute(
         val element = pointer.element ?: return ""
         return ArmeriaRouteMetadata.registeredInHint(element)
     }
-
-    fun resolveRegistrationSummary(): String = ArmeriaRouteDetailFormatter.registrationSummary(this)
 
     val methodLabel: String
         get() =
@@ -102,6 +99,7 @@ data class ArmeriaRoute(
             timeoutHints: List<String> = emptyList(),
             contentHints: List<String> = emptyList(),
             delegationMountPath: String = "",
+            delegationKind: DelegationKind? = null,
             /** When set, overrides module attribution derived from [element] (e.g. concrete controller). */
             moduleName: String? = null,
         ): ArmeriaRoute =
@@ -123,6 +121,7 @@ data class ArmeriaRoute(
                 timeoutHints = timeoutHints,
                 contentHints = contentHints,
                 delegationMountPath = delegationMountPath,
+                delegationKind = delegationKind,
                 pointer = SmartPointerManager.createPointer(element),
             )
 
@@ -132,7 +131,8 @@ data class ArmeriaRoute(
             target: String,
             moduleName: String,
             protocol: String,
-            project: Project? = null,
+            pointer: SmartPsiElementPointer<PsiElement>,
+            delegationKind: DelegationKind? = null,
         ): ArmeriaRoute =
             ArmeriaRoute(
                 protocol = protocol,
@@ -145,7 +145,8 @@ data class ArmeriaRoute(
                 isDocService = false,
                 decorators = emptyList(),
                 exceptionHandlers = emptyList(),
-                pointer = project?.let(::ArmeriaRuntimeRoutePointer) ?: ArmeriaRuntimeRoutePointer.withoutProject(),
+                delegationKind = delegationKind,
+                pointer = pointer,
             )
 
         fun truncateTarget(

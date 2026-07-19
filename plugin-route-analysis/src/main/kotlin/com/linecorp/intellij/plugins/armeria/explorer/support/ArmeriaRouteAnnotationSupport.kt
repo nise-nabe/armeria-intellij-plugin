@@ -1,4 +1,4 @@
-package com.linecorp.intellij.plugins.armeria.explorer.collector.annotation
+package com.linecorp.intellij.plugins.armeria.explorer.support
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiAnnotationMemberValue
@@ -6,7 +6,6 @@ import com.intellij.psi.PsiArrayInitializerMemberValue
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethod
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
-import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 
 internal object ArmeriaRouteAnnotationSupport {
     const val PATH_ANNOTATION = "com.linecorp.armeria.server.annotation.Path"

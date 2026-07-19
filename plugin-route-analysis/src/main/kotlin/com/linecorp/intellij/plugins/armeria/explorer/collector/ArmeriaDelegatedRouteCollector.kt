@@ -2,6 +2,7 @@ package com.linecorp.intellij.plugins.armeria.explorer.collector
 import com.intellij.openapi.project.Project
 import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaServletMountSupport
@@ -57,6 +58,7 @@ internal object ArmeriaDelegatedRouteCollector {
                         routeMatch = RouteMatch.DELEGATED_SPRING_MVC,
                         virtualHostName = mountRoute.virtualHostName,
                         delegationMountPath = mountRoute.path,
+                        delegationKind = DelegationKind.SPRING_MVC,
                         moduleName = springMvcRoute.moduleName(),
                     )
             }

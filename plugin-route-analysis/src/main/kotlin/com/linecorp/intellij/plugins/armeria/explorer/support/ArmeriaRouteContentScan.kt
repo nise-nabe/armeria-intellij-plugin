@@ -1,5 +1,4 @@
-package com.linecorp.intellij.plugins.armeria.explorer.collector
-import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
+package com.linecorp.intellij.plugins.armeria.explorer.support
 
 internal object ArmeriaRouteContentScan {
     private const val FQCN_SERVER_BUILDER_CALL_PATTERN =

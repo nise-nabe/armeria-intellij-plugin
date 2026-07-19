@@ -90,7 +90,7 @@ class ArmeriaRouteDetailPanel : JPanel(BorderLayout()) {
         setWrappingText(detailHandler, route.target, route.target)
         setWrappingText(detailStatus, ArmeriaRouteDetailFormatter.statusLine(route))
         WriteIntentReadAction.run {
-            setWrappingText(detailRegistration, route.resolveRegistrationSummary())
+            setWrappingText(detailRegistration, ArmeriaRouteDetailFormatter.registrationSummary(route))
             val registeredInHint = route.resolveRegisteredInHint()
             setWrappingText(detailRegisteredIn, registeredInHint)
             registeredInRow.isVisible = registeredInHint.isNotEmpty()

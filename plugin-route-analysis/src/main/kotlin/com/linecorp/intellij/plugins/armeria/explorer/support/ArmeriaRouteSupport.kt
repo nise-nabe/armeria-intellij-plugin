@@ -7,10 +7,7 @@ import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiVariable
 import com.intellij.psi.search.GlobalSearchScope
-import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteContentScan
-import com.linecorp.intellij.plugins.armeria.explorer.collector.annotation.ArmeriaRouteAnnotationSupport
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
-import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaServerBuilderSupport
 
 object ArmeriaRouteSupport {
     const val ARMERIA_PACKAGE_PREFIX = "com.linecorp.armeria"

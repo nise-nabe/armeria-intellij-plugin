@@ -268,7 +268,7 @@ class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixture
         assertEquals("HTTP, HTTPS", portRoute.methodLabel)
         assertEquals(
             message("route.explorer.registration.nonHttp", "HTTP, HTTPS", ":8080"),
-            portRoute.resolveRegistrationSummary(),
+            ArmeriaRouteDetailFormatter.registrationSummary(portRoute),
         )
     }
 

@@ -12,6 +12,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.kot
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.CoreServiceRegistrationMethod
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
 import org.jetbrains.kotlin.idea.KotlinFileType
