@@ -11,6 +11,7 @@ import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteContributorBootstrap
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
@@ -29,6 +30,12 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSuppor
  * [com.linecorp.intellij.plugins.armeria.inspection.ArmeriaDuplicateRouteKotlinInspection] cover them.
  */
 object ArmeriaRouteDuplicateIndex {
+    init {
+        // Force contributor bootstrap before the first route collection via this index.
+        @Suppress("UNUSED_EXPRESSION")
+        ArmeriaRouteContributorBootstrap
+    }
+
     private val CHECKED_MATCHES =
         setOf(
             RouteMatch.ANNOTATED_HTTP,

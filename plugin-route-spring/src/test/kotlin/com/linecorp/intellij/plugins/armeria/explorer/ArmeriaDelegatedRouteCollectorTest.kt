@@ -9,6 +9,8 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaDelegatedRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaServletMountSupport
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringMvcRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringRouteContributor
+import com.linecorp.intellij.plugins.armeria.explorer.support.RouteContributorRegistry
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
@@ -19,6 +21,16 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         registerArmeriaSpringStubs()
         registerServletServiceStubs()
         registerSpringWebMvcStubs()
+        RouteContributorRegistry.clearForTests()
+        RouteContributorRegistry.register(ArmeriaSpringRouteContributor)
+    }
+
+    override fun tearDown() {
+        try {
+            RouteContributorRegistry.clearForTests()
+        } finally {
+            super.tearDown()
+        }
     }
 
     fun testTomcatServiceUnderMountExposesDelegatedSpringMvcRoutes() {

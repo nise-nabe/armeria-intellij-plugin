@@ -13,4 +13,6 @@ data class RouteCollectContext(
     val seenConfigRoutes: MutableSet<String>,
     val fallbackScannedFiles: MutableSet<VirtualFile>,
     val registration: RouteRegistrationCallbacks,
+    /** When true, this is a proto-only overlay pass; non-proto contributors must skip. */
+    val includeProtoRoutes: Boolean = false,
 )

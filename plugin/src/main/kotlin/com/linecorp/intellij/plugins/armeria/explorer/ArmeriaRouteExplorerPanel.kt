@@ -21,6 +21,7 @@ import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteContributorBootstrap
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaRouteNavigation
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteTreeBuilder
@@ -41,6 +42,12 @@ class ArmeriaRouteExplorerPanel(
 ) : SimpleToolWindowPanel(true, true),
     Disposable,
     UiDataProvider {
+    init {
+        // Ensure spring and protocol contributors are registered before route collection.
+        @Suppress("UNUSED_EXPRESSION")
+        ArmeriaRouteContributorBootstrap
+    }
+
     private val routeState = ArmeriaRouteExplorerRouteState()
     private var refreshGeneration = 0
     private var selectedRoute: ArmeriaRoute? = null

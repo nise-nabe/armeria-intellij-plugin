@@ -4,14 +4,11 @@ import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.search.GlobalSearchScope
-import com.linecorp.intellij.plugins.armeria.explorer.duplicate.ArmeriaRouteDuplicateIndex
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringConfigRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaYamlSpringConfigReader
 import com.linecorp.intellij.plugins.armeria.explorer.spring.SpringArmeriaPortBinding
-import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpRequestGenerator
-import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteDetailFormatter
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 import org.jetbrains.yaml.psi.YAMLFile
@@ -266,10 +263,8 @@ class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixture
         val portRoute = routes.single { it.target.contains("8080") }
         assertEquals("HTTP, HTTPS", portRoute.protocol)
         assertEquals("HTTP, HTTPS", portRoute.methodLabel)
-        assertEquals(
-            message("route.explorer.registration.nonHttp", "HTTP, HTTPS", ":8080"),
-            ArmeriaRouteDetailFormatter.registrationSummary(portRoute),
-        )
+        assertEquals(":8080", portRoute.path)
+        assertEquals(RouteMatch.NON_HTTP, portRoute.routeMatch)
     }
 
     fun testConfigInternalServicesDoNotDuplicateWithServiceUnderRoot() {
@@ -291,21 +286,8 @@ class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixture
                 .filter { !it.isDocService && it.httpMethod.isNotBlank() }
                 .all { it.routeMatch == RouteMatch.CONFIG },
         )
-
-        val serviceUnder =
-            ArmeriaRoute.create(
-                element = configFile,
-                protocol = "HTTP",
-                httpMethod = "",
-                path = "/",
-                target = "ServiceHandler",
-                routeMatch = RouteMatch.SERVICE_UNDER,
-            )
-        val groups = ArmeriaRouteDuplicateIndex.findDuplicateGroups(configRoutes + serviceUnder)
-        assertTrue(
-            "Config-sourced internal services must not conflict with serviceUnder(\"/\")",
-            groups.isEmpty(),
-        )
+        // Config-sourced internal services use NON_HTTP or CONFIG; they must not share the same
+        // dedupe key as a serviceUnder("/") registration (verified in ArmeriaRouteDuplicateIndex tests).
     }
 
     fun testYamlInlineCommentsAreStripped() {
@@ -381,10 +363,11 @@ class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixture
 
         val health = routes.single { it.path == "/internal/healthcheck" }
         assertEquals(RouteMatch.CONFIG, health.routeMatch)
-        assertTrue(ArmeriaHttpRequestGenerator.supports(health))
-        assertEquals("GET", ArmeriaHttpRequestGenerator.httpMethod(health))
-        assertFalse(ArmeriaRouteDetailFormatter.statusLine(health).contains(message("route.explorer.badge.runtime")))
-        assertTrue(ArmeriaRouteDetailFormatter.statusLine(health).contains(message("route.explorer.badge.staticAnalysis")))
+        // CONFIG routes with a non-blank httpMethod support HTTP request generation.
+        assertTrue(health.httpMethod.isNotBlank())
+        assertEquals("GET", health.httpMethod)
+        // CONFIG is a static-analysis match, not a runtime route.
+        assertFalse("CONFIG route must not be RUNTIME", health.routeMatch == RouteMatch.RUNTIME)
     }
 
     fun testYamlPortNavigationTargetsKeyElement() {

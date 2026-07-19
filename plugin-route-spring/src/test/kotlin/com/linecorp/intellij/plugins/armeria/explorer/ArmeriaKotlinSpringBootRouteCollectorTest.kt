@@ -2,6 +2,8 @@ package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringRouteContributor
+import com.linecorp.intellij.plugins.armeria.explorer.support.RouteContributorRegistry
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
@@ -12,6 +14,16 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
     override fun setUp() {
         super.setUp()
         registerSpringAnnotationStubs()
+        RouteContributorRegistry.clearForTests()
+        RouteContributorRegistry.register(ArmeriaSpringRouteContributor)
+    }
+
+    override fun tearDown() {
+        try {
+            RouteContributorRegistry.clearForTests()
+        } finally {
+            super.tearDown()
+        }
     }
 
     private fun registerSpringBootRouteStubs() {

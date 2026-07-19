@@ -4,9 +4,25 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteColl
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaGrpcRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaProtocolRouteContributor
+import com.linecorp.intellij.plugins.armeria.explorer.support.RouteContributorRegistry
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
+    override fun setUp() {
+        super.setUp()
+        RouteContributorRegistry.clearForTests()
+        RouteContributorRegistry.register(ArmeriaProtocolRouteContributor)
+    }
+
+    override fun tearDown() {
+        try {
+            RouteContributorRegistry.clearForTests()
+        } finally {
+            super.tearDown()
+        }
+    }
+
     override fun registerArmeriaStubs() {
         registerResolvableArmeriaServerStubs()
         myFixture.addClass(

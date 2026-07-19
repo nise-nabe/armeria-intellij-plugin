@@ -10,6 +10,8 @@ import com.intellij.testFramework.HeavyPlatformTestCase
 import com.intellij.testFramework.PsiTestUtil
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
+import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaProtocolRouteContributor
+import com.linecorp.intellij.plugins.armeria.explorer.support.RouteContributorRegistry
 import java.io.File
 
 class ArmeriaIdlRouteCollectorMultiModuleTest : HeavyPlatformTestCase() {
@@ -18,6 +20,16 @@ class ArmeriaIdlRouteCollectorMultiModuleTest : HeavyPlatformTestCase() {
         allowTestSandboxRoots()
         createTestProjectStructure()
         registerArmeriaIdlStubs()
+        RouteContributorRegistry.clearForTests()
+        RouteContributorRegistry.register(ArmeriaProtocolRouteContributor)
+    }
+
+    override fun tearDown() {
+        try {
+            RouteContributorRegistry.clearForTests()
+        } finally {
+            super.tearDown()
+        }
     }
 
     private fun allowTestSandboxRoots() {

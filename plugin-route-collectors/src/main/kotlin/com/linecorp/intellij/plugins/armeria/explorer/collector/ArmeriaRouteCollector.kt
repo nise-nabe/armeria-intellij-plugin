@@ -16,26 +16,21 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.Arm
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.java.ArmeriaExtendedRegistrationCollector
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.kotlin.ArmeriaKotlinExtendedRegistrationCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
-import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaGraphqlRouteCollector
-import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaGrpcRouteCollector
-import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaThriftRouteCollector
-import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaDelegatedRouteCollector
-import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaKotlinSpringBootRouteCollector
-import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringBootRouteCollector
-import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringConfigRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinPluginSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.RouteCollectContext
+import com.linecorp.intellij.plugins.armeria.explorer.support.RouteContributorRegistry
 import com.linecorp.intellij.plugins.armeria.explorer.support.RouteRegistrationCallbacks
 import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.psi.KtFile
 
 /**
- * Public route-collection façade wired by `plugin-route-analysis`. Aggregates the core
- * annotated/service-registration collectors from `plugin-route-collectors` together with
- * Spring MVC/Spring Boot contributors from `plugin-route-spring` and GraphQL/gRPC/Thrift
- * contributors from `plugin-route-protocol`.
+ * Public route-collection façade. Aggregates core annotated/service-registration collectors
+ * with Spring MVC/Boot contributors and GraphQL/gRPC/Thrift contributors registered via
+ * [RouteContributorRegistry]. In production, contributors are registered by
+ * `ArmeriaRouteContributorBootstrap` (in `plugin-route-analysis`). In tests, contributors
+ * can be registered explicitly after [RouteContributorRegistry.clearForTests].
  */
 object ArmeriaRouteCollector {
     fun collect(
@@ -69,7 +64,6 @@ object ArmeriaRouteCollector {
         val seenConfigRoutes = mutableSetOf<String>()
         val psiFacade = JavaPsiFacade.getInstance(project)
         val serverBuilderOnClasspath = psiFacade.findClass(ArmeriaRouteSupport.SERVER_BUILDER_CLASS, scope) != null
-        val springBootArmeriaAvailable = ArmeriaRouteSupport.isSpringBootArmeriaAvailable(psiFacade, scope)
 
         ArmeriaRouteCollectorAnnotatedRoutes.collectAnnotatedRoutesIndexed(project, scope, routes)
         ArmeriaRouteCollectorServiceRegistration.collectServiceRegistrationsIndexed(
@@ -106,23 +100,13 @@ object ArmeriaRouteCollector {
                 fallbackScannedFiles,
                 seenServiceRegistrations,
             )
-            if (springBootArmeriaAvailable) {
-                ArmeriaKotlinSpringBootRouteCollector.collect(context)
-            }
         }
-        if (springBootArmeriaAvailable) {
-            ArmeriaSpringBootRouteCollector.collect(context)
-            ArmeriaSpringConfigRouteCollector.collect(
-                project,
-                scope,
-                routes,
-                seenConfigRoutes,
-            )
-        }
-        ArmeriaGraphqlRouteCollector.collect(project, scope, routes)
-        ArmeriaThriftRouteCollector.collect(project, scope, routes)
+
         collectExtendedRegistrations(project, scope, routes, seenServiceRegistrations, fallbackScannedFiles)
-        ArmeriaDelegatedRouteCollector.collect(project, scope, routes)
+
+        for (contributor in RouteContributorRegistry.all()) {
+            contributor.collect(context)
+        }
 
         return CachedValueProvider.Result.create(
             routes.sortedWith(
@@ -139,6 +123,7 @@ object ArmeriaRouteCollector {
         seenServiceRegistrations: MutableSet<String>,
         seenConfigRoutes: MutableSet<String>,
         fallbackScannedFiles: MutableSet<VirtualFile>,
+        includeProtoRoutes: Boolean = false,
     ): RouteCollectContext {
         val callbacks =
             RouteRegistrationCallbacks(
@@ -169,19 +154,34 @@ object ArmeriaRouteCollector {
             seenConfigRoutes = seenConfigRoutes,
             fallbackScannedFiles = fallbackScannedFiles,
             registration = callbacks,
+            includeProtoRoutes = includeProtoRoutes,
         )
     }
 
+    /**
+     * Overlays proto (gRPC) routes on top of already-cached base routes. Contributors with
+     * [RouteCollectContext.includeProtoRoutes]=true are responsible for skipping non-proto
+     * collection and adding only gRPC routes.
+     */
     private fun mergeProtoRoutesIfEnabled(
         project: Project,
         baseRoutes: List<ArmeriaRoute>,
     ): List<ArmeriaRoute> {
-        if (!ArmeriaGrpcRouteCollector.isProtoRouteDiscoveryEnabled()) {
-            return baseRoutes
-        }
         val scope = collectionScope(project)
         val routes = baseRoutes.toMutableList()
-        ArmeriaGrpcRouteCollector.collect(project, scope, routes)
+        val context =
+            buildCollectContext(
+                project = project,
+                scope = scope,
+                routes = routes,
+                seenServiceRegistrations = mutableSetOf(),
+                seenConfigRoutes = mutableSetOf(),
+                fallbackScannedFiles = mutableSetOf(),
+                includeProtoRoutes = true,
+            )
+        for (contributor in RouteContributorRegistry.all()) {
+            contributor.collect(context)
+        }
         return routes.sortedWith(
             compareBy(ArmeriaRoute::moduleName, ArmeriaRoute::path, ArmeriaRoute::httpMethod, ArmeriaRoute::target),
         )
