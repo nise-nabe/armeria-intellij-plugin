@@ -53,7 +53,7 @@ object ArmeriaRouteDuplicateIndex {
     internal fun duplicateHitsForGroups(groups: List<DuplicateRegistrationGroup>): Map<VirtualFile, List<DuplicateRegistrationHit>> =
         buildHitsByVirtualFile(groups)
 
-    internal fun findDuplicateGroups(routes: List<ArmeriaRoute>): List<DuplicateRegistrationGroup> {
+    fun findDuplicateGroups(routes: List<ArmeriaRoute>): List<DuplicateRegistrationGroup> {
         val groups = mutableListOf<DuplicateRegistrationGroup>()
         for ((_, moduleRoutes) in routes.filter { it.routeMatch in CHECKED_MATCHES }.groupBy { it.moduleName }) {
             if (moduleRoutes.size < 2) {

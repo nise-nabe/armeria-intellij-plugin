@@ -1,12 +1,9 @@
 package com.linecorp.intellij.plugins.armeria.explorer.collector
 
 import com.intellij.ide.highlighter.JavaFileType
-import com.intellij.ide.plugins.PluginManagerCore
-import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.JavaPsiFacade
-import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMethodCallExpression
@@ -15,10 +12,6 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
-import com.linecorp.intellij.plugins.armeria.explorer.collector.annotation.ArmeriaKotlinTimeoutSupport
-import com.linecorp.intellij.plugins.armeria.explorer.collector.annotation.ArmeriaTimeoutSupport
-import com.linecorp.intellij.plugins.armeria.explorer.collector.decorator.ArmeriaDecoratorSupport
-import com.linecorp.intellij.plugins.armeria.explorer.collector.decorator.ArmeriaKotlinDecoratorSupport
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaBuilderCallHeuristics
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.java.ArmeriaExtendedRegistrationCollector
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.kotlin.ArmeriaKotlinExtendedRegistrationCollector
@@ -26,9 +19,11 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaGraphqlRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaGrpcRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaThriftRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaDelegatedRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaKotlinSpringBootRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringBootRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringConfigRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinPluginSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.RouteCollectContext
@@ -36,9 +31,13 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.RouteRegistrationC
 import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.psi.KtFile
 
+/**
+ * Public route-collection façade wired by `plugin-route-analysis`. Aggregates the core
+ * annotated/service-registration collectors from `plugin-route-collectors` together with
+ * Spring MVC/Spring Boot contributors from `plugin-route-spring` and GraphQL/gRPC/Thrift
+ * contributors from `plugin-route-protocol`.
+ */
 object ArmeriaRouteCollector {
-    private val KOTLIN_PLUGIN_ID = PluginId.getId("org.jetbrains.kotlin")
-
     fun collect(
         project: Project,
         includeProtoRoutes: Boolean = false,
@@ -99,7 +98,7 @@ object ArmeriaRouteCollector {
                 fallbackScannedFiles = fallbackScannedFiles,
             )
 
-        if (isKotlinPluginAvailable()) {
+        if (ArmeriaKotlinPluginSupport.isKotlinPluginAvailable()) {
             ArmeriaKotlinRouteCollector.collectServiceRegistrationsFallback(
                 project,
                 scope,
@@ -144,7 +143,7 @@ object ArmeriaRouteCollector {
         val callbacks =
             RouteRegistrationCallbacks(
                 collectServiceRegistrationsInScope = { element, routeList, seen ->
-                    if (isKotlinPluginAvailable()) {
+                    if (ArmeriaKotlinPluginSupport.isKotlinPluginAvailable()) {
                         ArmeriaKotlinRouteCollector.collectServiceRegistrationsInScope(element, routeList, seen)
                     }
                 },
@@ -156,7 +155,7 @@ object ArmeriaRouteCollector {
                     )
                 },
                 referencesArmeriaKotlinContent = { file ->
-                    isKotlinPluginAvailable() &&
+                    ArmeriaKotlinPluginSupport.isKotlinPluginAvailable() &&
                         (file as? KtFile)?.let {
                             ArmeriaKotlinRouteCollector.referencesArmeriaKotlinContent(it)
                         } == true
@@ -205,7 +204,7 @@ object ArmeriaRouteCollector {
             }
             ArmeriaExtendedRegistrationCollector.collectFromJavaFile(psiFile, routes, seenRegistrations)
         }
-        if (isKotlinPluginAvailable()) {
+        if (ArmeriaKotlinPluginSupport.isKotlinPluginAvailable()) {
             for (virtualFile in FileTypeIndex.getFiles(KotlinFileType.INSTANCE, scope)) {
                 if (virtualFile in alreadyScannedFiles) {
                     continue
@@ -221,44 +220,8 @@ object ArmeriaRouteCollector {
 
     private fun collectionScope(project: Project): GlobalSearchScope = GlobalSearchScope.projectScope(project)
 
-    fun referencesArmeriaJavaContent(file: PsiJavaFile): Boolean {
-        val hasArmeriaImports =
-            file.importList
-                ?.allImportStatements
-                ?.any { statement ->
-                    statement.importReference?.qualifiedName?.startsWith(ArmeriaRouteSupport.ARMERIA_PACKAGE_PREFIX) == true
-                } ?: false
-        if (hasArmeriaImports) {
-            return true
-        }
-        return ArmeriaRouteSupport.referencesArmeriaInText(file.viewProvider.contents)
-    }
+    fun referencesArmeriaJavaContent(file: PsiJavaFile): Boolean = ArmeriaRouteSupport.referencesArmeriaJavaContent(file)
 
     fun looksLikeArmeriaBuilderCall(expression: PsiMethodCallExpression): Boolean =
         ArmeriaBuilderCallHeuristics.looksLikeJavaBuilderCall(expression)
-
-    internal fun collectProgrammaticDecorators(
-        element: PsiElement,
-        registrationPath: String,
-    ): List<String> {
-        if (element is PsiMethodCallExpression) {
-            return ArmeriaDecoratorSupport.collectProgrammaticDecorators(element, registrationPath)
-        }
-        if (isKotlinPluginAvailable()) {
-            return ArmeriaKotlinDecoratorSupport.collectProgrammaticDecorators(element, registrationPath)
-        }
-        return emptyList()
-    }
-
-    internal fun collectBuilderTimeoutHints(element: PsiElement): List<String> {
-        if (element is PsiMethodCallExpression) {
-            return ArmeriaTimeoutSupport.collectBuilderTimeoutHints(element)
-        }
-        if (isKotlinPluginAvailable()) {
-            return ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(element)
-        }
-        return emptyList()
-    }
-
-    private fun isKotlinPluginAvailable(): Boolean = PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
 }

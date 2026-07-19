@@ -7,6 +7,10 @@ plugins {
 }
 
 dependencies {
+    api(project(":plugin-route-model"))
+    api(project(":plugin-route-collectors"))
+    api(project(":plugin-route-spring"))
+    api(project(":plugin-route-protocol"))
     implementation(project(":plugin-shared"))
     intellijPlatform {
         intellijIdeaUltimate(
@@ -15,11 +19,8 @@ dependencies {
         )
         bundledPlugin("com.intellij.java")
         bundledPlugin("org.jetbrains.kotlin")
-        bundledPlugin("org.jetbrains.plugins.yaml")
         testFramework(TestFrameworkType.Plugin.Java)
-        testFramework(TestFrameworkType.Plugin.Java, configurationName = "testFixturesImplementation")
     }
-    testFixturesImplementation(libs.junit4)
 }
 
 testing {
@@ -27,7 +28,7 @@ testing {
         getByName<JvmTestSuite>("test") {
             useJUnit(libs.versions.junit4.get())
             dependencies {
-                implementation(testFixtures(project()))
+                implementation(testFixtures(project(":plugin-route-collectors")))
                 implementation(libs.junit4)
             }
         }
@@ -36,7 +37,7 @@ testing {
             useJUnit(libs.versions.junit4.get())
             dependencies {
                 implementation(project())
-                implementation(testFixtures(project()))
+                implementation(testFixtures(project(":plugin-route-collectors")))
                 implementation(libs.junit4)
             }
             sources {

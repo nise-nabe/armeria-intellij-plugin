@@ -10,6 +10,7 @@
 
 - Route Explorer reads Spring Boot `application.yml` / `.yaml` via IntelliJ YAML PSI (key-level navigation); `.properties` parsing is unchanged. YAML config is skipped when the YAML plugin is unavailable.
 - Split `plugin-route-analysis` `explorer` sources into focused packages (`model`, `collector`, `spring`, `protocol`, `docservice`, `support`, `duplicate`, `navigation`, `ui`).
+- Split the route-analysis codebase into five acyclic Gradle modules: `plugin-route-model` (leaf domain types), `plugin-route-collectors` (annotated / service-registration collectors, decorator/timeout support, `RouteContributor` SPI, shared test fixtures), `plugin-route-spring` (Spring MVC / Boot / config collectors), `plugin-route-protocol` (GraphQL / gRPC / Thrift), and `plugin-route-analysis` (UI helpers, DocService, navigation, duplicate index, and the public `ArmeriaRouteCollector` façade). `plugin` depends only on `plugin-route-analysis` (transitively `api`-exported to the rest); test fixtures are consumed from `plugin-route-collectors`. `ArmeriaRouteDuplicateIndex` intentionally stays in `plugin-route-analysis` because it calls `ArmeriaRouteCollector.collect`, avoiding a collectors→analysis cycle.
 
 ### Deprecated
 
