@@ -659,13 +659,14 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             ArmeriaDelegatedRouteCollector.preferredSpringMvcMounts(listOf(beta, alpha)),
         )
 
-        val hostA = mount("/spring/", virtualHostName = "a.example.com")
-        val hostB = mount("/spring/", virtualHostName = "b.example.com")
+        val hostARoot = mount("/", virtualHostName = "a.example.com")
         val hostAApi = mount("/api", virtualHostName = "a.example.com")
+        val hostBRoot = mount("/", virtualHostName = "b.example.com")
+        val hostBApi = mount("/api", virtualHostName = "b.example.com")
         assertEquals(
-            setOf(hostA, hostB),
+            setOf(hostARoot, hostBRoot),
             ArmeriaDelegatedRouteCollector
-                .preferredSpringMvcMounts(listOf(hostAApi, hostA, hostB))
+                .preferredSpringMvcMounts(listOf(hostAApi, hostARoot, hostBApi, hostBRoot))
                 .toSet(),
         )
     }
