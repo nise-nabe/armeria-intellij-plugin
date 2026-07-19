@@ -7,8 +7,7 @@ import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
     override fun setUp() {
         super.setUp()
-        registerSpringAnnotationStubs()
-        registerArmeriaSpringStubs()
+        // Tomcat mount + Spring MVC mapping stubs only — no @Bean / ArmeriaServerConfigurator.
         registerServletServiceStubs()
         registerSpringWebMvcStubs()
     }
