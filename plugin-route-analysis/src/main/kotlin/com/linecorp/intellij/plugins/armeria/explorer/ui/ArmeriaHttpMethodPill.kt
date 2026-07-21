@@ -2,7 +2,6 @@ package com.linecorp.intellij.plugins.armeria.explorer.ui
 import com.intellij.ui.JBColor
 import com.intellij.ui.SimpleTextAttributes
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
-import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import java.awt.Color
@@ -25,13 +24,8 @@ object ArmeriaHttpMethodPill {
             RouteMatch.ROUTE_DECORATOR -> "DEC"
             RouteMatch.ROUTE_FLUENT -> route.httpMethod.ifBlank { "ALL" }
             RouteMatch.DECORATOR_UNDER -> "UND"
-            RouteMatch.DELEGATED ->
-                route.httpMethod.ifBlank {
-                    when (route.delegationKind) {
-                        DelegationKind.SPRING_MVC -> "MVC"
-                        DelegationKind.SERVLET, null -> "ALL"
-                    }
-                }
+            // Kind lives on the delegation badge; blank methods match methodLabel ("ALL").
+            RouteMatch.DELEGATED -> route.httpMethod.ifBlank { "ALL" }
             RouteMatch.NON_HTTP -> route.protocol.uppercase()
             RouteMatch.RUNTIME, RouteMatch.CONFIG -> route.httpMethod
         }

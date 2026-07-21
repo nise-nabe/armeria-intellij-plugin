@@ -48,7 +48,7 @@ class ArmeriaHttpMethodPillTest {
     }
 
     @Test
-    fun pillLabel_usesHttpMethodOrDelegationKindFallbackForDelegatedRoutes() {
+    fun pillLabel_usesHttpMethodOrAllFallbackForDelegatedRoutes() {
         assertEquals(
             "POST",
             ArmeriaHttpMethodPill.pillLabel(
@@ -60,7 +60,7 @@ class ArmeriaHttpMethodPillTest {
             ),
         )
         assertEquals(
-            "MVC",
+            "ALL",
             ArmeriaHttpMethodPill.pillLabel(
                 route(
                     httpMethod = "",
@@ -73,16 +73,6 @@ class ArmeriaHttpMethodPillTest {
             "ALL",
             ArmeriaHttpMethodPill.pillLabel(
                 route(httpMethod = "", routeMatch = RouteMatch.DELEGATED),
-            ),
-        )
-        assertEquals(
-            "ALL",
-            ArmeriaHttpMethodPill.pillLabel(
-                route(
-                    httpMethod = "",
-                    routeMatch = RouteMatch.DELEGATED,
-                    delegationKind = DelegationKind.SERVLET,
-                ),
             ),
         )
     }
