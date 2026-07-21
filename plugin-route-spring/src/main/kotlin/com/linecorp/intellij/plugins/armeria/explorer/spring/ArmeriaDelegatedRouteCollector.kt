@@ -15,7 +15,7 @@ object ArmeriaDelegatedRouteCollector {
         routes: MutableList<ArmeriaRoute>,
     ) {
         // Prefix mounts only: .service() is exact-match and must not invent child paths.
-        val springCapableMounts = routes.filter(ArmeriaServletMountSupport::isExpandableSpringMvcMount)
+        val springCapableMounts = routes.filter(::isExpandableSpringMvcMount)
         if (springCapableMounts.isEmpty()) {
             return
         }
@@ -63,6 +63,14 @@ object ArmeriaDelegatedRouteCollector {
 
         routes += delegatedRoutes
     }
+
+    /**
+     * Prefix mounts that should fan Spring MVC controller mappings as delegated children.
+     * Exact `.service()` Tomcat mounts stay badge-only. Reads stored [ArmeriaRoute.delegationKind].
+     */
+    internal fun isExpandableSpringMvcMount(route: ArmeriaRoute): Boolean =
+        route.routeMatch == RouteMatch.SERVICE_UNDER &&
+            route.delegationKind == DelegationKind.SPRING_MVC
 
     /**
      * Picks one expandable Spring MVC mount per `(moduleName, virtualHostName)` group.

@@ -7,7 +7,6 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaDelegatedRouteCollector
-import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaServletMountSupport
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringMvcRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringRouteContributor
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaDelegationSupport
@@ -843,15 +842,15 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
                 delegationKind = DelegationKind.SPRING_MVC,
             )
         val exactMount = expandable.copy(routeMatch = RouteMatch.SERVICE, path = "/spring")
-        assertTrue(ArmeriaServletMountSupport.isExpandableSpringMvcMount(expandable))
-        assertFalse(ArmeriaServletMountSupport.isExpandableSpringMvcMount(exactMount))
+        assertTrue(ArmeriaDelegatedRouteCollector.isExpandableSpringMvcMount(expandable))
+        assertFalse(ArmeriaDelegatedRouteCollector.isExpandableSpringMvcMount(exactMount))
         assertFalse(
-            ArmeriaServletMountSupport.isExpandableSpringMvcMount(
+            ArmeriaDelegatedRouteCollector.isExpandableSpringMvcMount(
                 expandable.copy(delegationKind = null),
             ),
         )
         assertFalse(
-            ArmeriaServletMountSupport.isExpandableSpringMvcMount(
+            ArmeriaDelegatedRouteCollector.isExpandableSpringMvcMount(
                 expandable.copy(delegationKind = DelegationKind.SERVLET),
             ),
         )
