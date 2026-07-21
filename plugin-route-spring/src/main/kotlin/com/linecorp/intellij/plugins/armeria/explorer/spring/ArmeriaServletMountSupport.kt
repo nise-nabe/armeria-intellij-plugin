@@ -8,6 +8,9 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaDelegationS
  * Spring/servlet-specific mount helpers. Pure target/routeMatch delegation detection
  * lives in [ArmeriaDelegationSupport] so non-Spring collectors can populate
  * `delegationKind` without depending on this module.
+ *
+ * Stored [ArmeriaRoute.delegationKind] is the source of truth for badges and expansion;
+ * collectors set it at emit time.
  */
 object ArmeriaServletMountSupport {
     /**
@@ -16,18 +19,10 @@ object ArmeriaServletMountSupport {
      */
     fun isExpandableSpringMvcMount(route: ArmeriaRoute): Boolean =
         route.routeMatch == RouteMatch.SERVICE_UNDER &&
-            ArmeriaDelegationSupport.detectDelegation(route.target, route.routeMatch) == DelegationKind.SPRING_MVC
+            route.delegationKind == DelegationKind.SPRING_MVC
 
     fun detectDelegation(
         target: String,
         routeMatch: RouteMatch,
     ): DelegationKind? = ArmeriaDelegationSupport.detectDelegation(target, routeMatch)
-
-    /**
-     * Resolved delegation badge for mounts and delegated children.
-     * Prefers the route's stored [ArmeriaRoute.delegationKind]; falls back to target detection.
-     */
-    fun delegationKindOf(route: ArmeriaRoute): DelegationKind? =
-        route.delegationKind
-            ?: ArmeriaDelegationSupport.detectDelegation(route.target, route.routeMatch)
 }

@@ -7,7 +7,6 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.SmartPsiElementPointer
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
-import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpMethodPill
 import org.junit.Assert.assertEquals
@@ -48,39 +47,15 @@ class ArmeriaHttpMethodPillTest {
     }
 
     @Test
-    fun pillLabel_usesHttpMethodOrKindAwareFallbackForDelegatedRoutes() {
+    fun pillLabel_usesHttpMethodOrMvcFallbackForDelegatedRoutes() {
         assertEquals(
             "POST",
             ArmeriaHttpMethodPill.pillLabel(
-                route(
-                    httpMethod = "POST",
-                    routeMatch = RouteMatch.DELEGATED,
-                    delegationKind = DelegationKind.SPRING_MVC,
-                ),
+                route(httpMethod = "POST", routeMatch = RouteMatch.DELEGATED),
             ),
         )
         assertEquals(
             "MVC",
-            ArmeriaHttpMethodPill.pillLabel(
-                route(
-                    httpMethod = "",
-                    routeMatch = RouteMatch.DELEGATED,
-                    delegationKind = DelegationKind.SPRING_MVC,
-                ),
-            ),
-        )
-        assertEquals(
-            "SVL",
-            ArmeriaHttpMethodPill.pillLabel(
-                route(
-                    httpMethod = "",
-                    routeMatch = RouteMatch.DELEGATED,
-                    delegationKind = DelegationKind.SERVLET,
-                ),
-            ),
-        )
-        assertEquals(
-            "DEL",
             ArmeriaHttpMethodPill.pillLabel(
                 route(httpMethod = "", routeMatch = RouteMatch.DELEGATED),
             ),
@@ -103,7 +78,6 @@ class ArmeriaHttpMethodPillTest {
         httpMethod: String = "GET",
         protocol: String = "HTTP",
         routeMatch: RouteMatch = RouteMatch.ANNOTATED_HTTP,
-        delegationKind: DelegationKind? = null,
     ): ArmeriaRoute =
         ArmeriaRoute(
             protocol = protocol,
@@ -116,7 +90,6 @@ class ArmeriaHttpMethodPillTest {
             isDocService = false,
             decorators = emptyList(),
             exceptionHandlers = emptyList(),
-            delegationKind = delegationKind,
             pointer = TestPsiPointer,
         )
 

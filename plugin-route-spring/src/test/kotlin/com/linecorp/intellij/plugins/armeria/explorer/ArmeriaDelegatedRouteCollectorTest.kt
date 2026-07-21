@@ -53,7 +53,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         val mountRoute = routes.single { it.path == "/spring/" && it.routeMatch == RouteMatch.SERVICE_UNDER }
         assertEquals(
             DelegationKind.SPRING_MVC,
-            ArmeriaServletMountSupport.delegationKindOf(mountRoute),
+            mountRoute.delegationKind,
         )
 
         val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED }
@@ -62,10 +62,6 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertEquals("/spring/", delegatedRoute.delegationMountPath)
         assertEquals("example.UserController#getUser()", delegatedRoute.target)
         assertEquals(DelegationKind.SPRING_MVC, delegatedRoute.delegationKind)
-        assertEquals(
-            DelegationKind.SPRING_MVC,
-            ArmeriaServletMountSupport.delegationKindOf(delegatedRoute),
-        )
     }
 
     fun testExactServiceMountIsBadgedWithoutSpringMvcChildren() {
@@ -113,7 +109,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         val mountRoute = routes.single { it.path == "/spring" && it.routeMatch == RouteMatch.SERVICE }
         assertEquals(
             DelegationKind.SPRING_MVC,
-            ArmeriaServletMountSupport.delegationKindOf(mountRoute),
+            mountRoute.delegationKind,
         )
         assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED })
     }
@@ -163,7 +159,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         val mountRoute = routes.single { it.path == "/legacy" && it.routeMatch == RouteMatch.SERVICE_UNDER }
         assertEquals(
             DelegationKind.SERVLET,
-            ArmeriaServletMountSupport.delegationKindOf(mountRoute),
+            mountRoute.delegationKind,
         )
         // Jetty is a servlet container mount; do not invent Spring MVC children under it.
         assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED })
@@ -181,7 +177,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         val mountRoute = routes.single { it.path == "/spring/" && it.routeMatch == RouteMatch.SERVICE_UNDER }
         assertEquals(
             DelegationKind.SPRING_MVC,
-            ArmeriaServletMountSupport.delegationKindOf(mountRoute),
+            mountRoute.delegationKind,
         )
         assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED })
     }
@@ -345,7 +341,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertNotNull(
             routes.singleOrNull {
                 it.path == "/spring/" &&
-                    ArmeriaServletMountSupport.delegationKindOf(it) == DelegationKind.SPRING_MVC
+                    it.delegationKind == DelegationKind.SPRING_MVC
             },
         )
         assertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED })
@@ -382,8 +378,8 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         val springMounts = routes.filter { it.path == "/spring/" }
         assertTrue(
             "expected Spring MVC–badged /spring/ mount; got: " +
-                springMounts.map { "${it.target}/${it.routeMatch}/${ArmeriaServletMountSupport.delegationKindOf(it)}" },
-            springMounts.any { ArmeriaServletMountSupport.delegationKindOf(it) == DelegationKind.SPRING_MVC },
+                springMounts.map { "${it.target}/${it.routeMatch}/${it.delegationKind}" },
+            springMounts.any { it.delegationKind == DelegationKind.SPRING_MVC },
         )
         assertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED })
     }
@@ -560,7 +556,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertTrue(
             routes.any {
                 it.path == "/spring/" &&
-                    ArmeriaServletMountSupport.delegationKindOf(it) == DelegationKind.SPRING_MVC
+                    it.delegationKind == DelegationKind.SPRING_MVC
             },
         )
         assertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED })
@@ -843,31 +839,19 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
                 path = "/spring/",
                 target = "TomcatService",
                 routeMatch = RouteMatch.SERVICE_UNDER,
+                delegationKind = DelegationKind.SPRING_MVC,
             )
         val exactMount = expandable.copy(routeMatch = RouteMatch.SERVICE, path = "/spring")
         assertTrue(ArmeriaServletMountSupport.isExpandableSpringMvcMount(expandable))
         assertFalse(ArmeriaServletMountSupport.isExpandableSpringMvcMount(exactMount))
-
-        // Stored delegationKind wins over target detection (no RouteMatch→kind sync).
-        val delegatedChild =
-            ArmeriaRoute.create(
-                element = myFixture.addClass("public class DelegatedKindProbe {}"),
-                protocol = RouteProtocol.HTTP.presentableName(),
-                httpMethod = "GET",
-                path = "/spring/hello",
-                target = "example.HelloController#hello()",
-                routeMatch = RouteMatch.DELEGATED,
-                delegationMountPath = "/spring/",
-                delegationKind = DelegationKind.SPRING_MVC,
-            )
-        assertEquals(
-            DelegationKind.SPRING_MVC,
-            ArmeriaServletMountSupport.delegationKindOf(delegatedChild),
+        assertFalse(
+            ArmeriaServletMountSupport.isExpandableSpringMvcMount(
+                expandable.copy(delegationKind = null),
+            ),
         )
-        assertEquals(
-            DelegationKind.SPRING_MVC,
-            ArmeriaServletMountSupport.delegationKindOf(
-                delegatedChild.copy(target = "NotAKnownService"),
+        assertFalse(
+            ArmeriaServletMountSupport.isExpandableSpringMvcMount(
+                expandable.copy(delegationKind = DelegationKind.SERVLET),
             ),
         )
     }
