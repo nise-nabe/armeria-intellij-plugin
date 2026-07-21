@@ -10,6 +10,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaDelegatedRou
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaServletMountSupport
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringMvcRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringRouteContributor
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaDelegationSupport
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
@@ -801,34 +802,34 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertTrue(filteredRoutes.isEmpty())
     }
 
-    fun testServletMountSupportDetectsKnownServices() {
+    fun testDelegationSupportDetectsKnownServicesAndExpandableMounts() {
         assertEquals(
             DelegationKind.SPRING_MVC,
-            ArmeriaServletMountSupport.detectDelegation("TomcatService", RouteMatch.SERVICE_UNDER),
+            ArmeriaDelegationSupport.detectDelegation("TomcatService", RouteMatch.SERVICE_UNDER),
         )
         assertEquals(
             DelegationKind.SPRING_MVC,
-            ArmeriaServletMountSupport.detectDelegation("TomcatService", RouteMatch.SERVICE),
+            ArmeriaDelegationSupport.detectDelegation("TomcatService", RouteMatch.SERVICE),
         )
         assertEquals(
             DelegationKind.SERVLET,
-            ArmeriaServletMountSupport.detectDelegation("JettyService", RouteMatch.SERVICE_UNDER),
+            ArmeriaDelegationSupport.detectDelegation("JettyService", RouteMatch.SERVICE_UNDER),
         )
-        assertNull(ArmeriaServletMountSupport.detectDelegation("HelloService", RouteMatch.SERVICE))
-        assertNull(ArmeriaServletMountSupport.detectDelegation("SpringBootService", RouteMatch.SERVICE))
+        assertNull(ArmeriaDelegationSupport.detectDelegation("HelloService", RouteMatch.SERVICE))
+        assertNull(ArmeriaDelegationSupport.detectDelegation("SpringBootService", RouteMatch.SERVICE))
         assertNull(
-            ArmeriaServletMountSupport.detectDelegation("FooTomcatService", RouteMatch.SERVICE_UNDER),
+            ArmeriaDelegationSupport.detectDelegation("FooTomcatService", RouteMatch.SERVICE_UNDER),
         )
         assertEquals(
             DelegationKind.SPRING_MVC,
-            ArmeriaServletMountSupport.detectDelegation(
+            ArmeriaDelegationSupport.detectDelegation(
                 "com.linecorp.armeria.server.tomcat.TomcatService",
                 RouteMatch.SERVICE_UNDER,
             ),
         )
         assertEquals(
             DelegationKind.SPRING_MVC,
-            ArmeriaServletMountSupport.detectDelegation("TomcatService?", RouteMatch.SERVICE_UNDER),
+            ArmeriaDelegationSupport.detectDelegation("TomcatService?", RouteMatch.SERVICE_UNDER),
         )
 
         val expandable =
