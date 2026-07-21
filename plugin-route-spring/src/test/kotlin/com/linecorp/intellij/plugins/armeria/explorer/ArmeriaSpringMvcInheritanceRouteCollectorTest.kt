@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaDelegatedRouteCollector
@@ -71,10 +72,11 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
                 contributors = listOf(ArmeriaSpringRouteContributor),
             )
 
-        val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+        val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED }
         assertEquals("GET", delegatedRoute.httpMethod)
         assertEquals("/spring/users/{id}", delegatedRoute.path)
         assertEquals("example.UserController#getUser()", delegatedRoute.target)
+        assertEquals(DelegationKind.SPRING_MVC, delegatedRoute.delegationKind)
         assertEquals(
             springMvcRoutes.single().moduleName(),
             delegatedRoute.moduleName,
@@ -125,7 +127,7 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
                 contributors = listOf(ArmeriaSpringRouteContributor),
             )
 
-        val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+        val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED }
         assertEquals("GET", delegatedRoute.httpMethod)
         assertEquals("/spring/users/{id}", delegatedRoute.path)
         assertEquals("example.UserController#getUser()", delegatedRoute.target)
@@ -172,7 +174,7 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
                 contributors = listOf(ArmeriaSpringRouteContributor),
             )
 
-        val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+        val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED }
         assertEquals("GET", delegatedRoute.httpMethod)
         assertEquals("/spring/api/hello", delegatedRoute.path)
         assertEquals("example.HelloController#hello()", delegatedRoute.target)
@@ -212,7 +214,7 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
                 contributors = listOf(ArmeriaSpringRouteContributor),
             )
 
-        val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+        val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED }
         assertEquals("GET", delegatedRoute.httpMethod)
         assertEquals("/spring/hello", delegatedRoute.path)
         assertEquals("example.HelloController#hello()", delegatedRoute.target)
@@ -269,7 +271,7 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
                 project,
                 contributors = listOf(ArmeriaSpringRouteContributor),
             )
-        val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+        val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED }
         assertEquals("/spring/greet", delegatedRoute.path)
     }
 
@@ -313,7 +315,7 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
                 project,
                 contributors = listOf(ArmeriaSpringRouteContributor),
             )
-        val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+        val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED }
         assertEquals(listOf("/spring/hello"), delegated.map { it.path })
     }
 
@@ -354,7 +356,7 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
                 project,
                 contributors = listOf(ArmeriaSpringRouteContributor),
             )
-        assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
+        assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED })
     }
 
     fun testUnannotatedConcreteImplementorOfStereotypeInterfaceIsNotDiscovered() {

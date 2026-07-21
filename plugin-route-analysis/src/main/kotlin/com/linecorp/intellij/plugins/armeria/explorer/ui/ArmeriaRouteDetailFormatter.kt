@@ -99,7 +99,7 @@ object ArmeriaRouteDetailFormatter {
                     route.path,
                 )
             RouteMatch.DECORATOR_UNDER -> message("route.explorer.registration.decoratorUnder", route.path)
-            RouteMatch.DELEGATED_SPRING_MVC -> delegatedRegistrationSummary(route)
+            RouteMatch.DELEGATED -> delegatedRegistrationSummary(route)
             RouteMatch.NON_HTTP -> message("route.explorer.registration.nonHttp", route.protocol, route.path)
             RouteMatch.RUNTIME -> message("route.explorer.registration.runtime", route.httpMethod, route.path)
             RouteMatch.CONFIG -> message("route.explorer.registration.config", route.httpMethod, route.path)

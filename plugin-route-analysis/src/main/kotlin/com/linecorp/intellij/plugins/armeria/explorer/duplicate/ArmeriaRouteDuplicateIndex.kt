@@ -240,9 +240,9 @@ object ArmeriaRouteDuplicateIndex {
         when (route.routeMatch) {
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.ANNOTATED_SERVICE -> true
             RouteMatch.ROUTE_FLUENT -> route.httpMethod.isBlank()
-            // DELEGATED_SPRING_MVC is intentionally outside CHECKED_MATCHES; keep arms unset until then.
+            // DELEGATED is intentionally outside CHECKED_MATCHES; keep arms unset until then.
             RouteMatch.ANNOTATED_HTTP, RouteMatch.NON_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG,
-            RouteMatch.FILE_SERVICE, RouteMatch.HEALTH_CHECK, RouteMatch.DELEGATED_SPRING_MVC,
+            RouteMatch.FILE_SERVICE, RouteMatch.HEALTH_CHECK, RouteMatch.DELEGATED,
             RouteMatch.VIRTUAL_HOST, RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
             -> false
         }

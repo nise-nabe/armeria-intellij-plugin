@@ -52,7 +52,7 @@ object ArmeriaDelegatedRouteCollector {
                         httpMethod = springMvcRoute.httpMethod,
                         path = combinedPath,
                         target = springMvcRoute.target,
-                        routeMatch = RouteMatch.DELEGATED_SPRING_MVC,
+                        routeMatch = RouteMatch.DELEGATED,
                         virtualHostName = mountRoute.virtualHostName,
                         delegationMountPath = mountRoute.path,
                         delegationKind = DelegationKind.SPRING_MVC,

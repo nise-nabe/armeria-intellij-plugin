@@ -64,6 +64,18 @@ class ArmeriaHttpRequestGeneratorTest {
     }
 
     @Test
+    fun supports_delegatedRoute() {
+        val route = route(httpMethod = "GET", routeMatch = RouteMatch.DELEGATED)
+
+        assertTrue(ArmeriaHttpRequestGenerator.supports(route))
+        assertEquals("GET", ArmeriaHttpRequestGenerator.httpMethod(route))
+        assertEquals(
+            "GET",
+            ArmeriaHttpRequestGenerator.httpMethod(route(httpMethod = "", routeMatch = RouteMatch.DELEGATED)),
+        )
+    }
+
+    @Test
     fun supports_rejectsExtendedNonRequestRoutes() {
         assertFalse(ArmeriaHttpRequestGenerator.supports(route(routeMatch = RouteMatch.FILE_SERVICE)))
         assertFalse(ArmeriaHttpRequestGenerator.supports(route(routeMatch = RouteMatch.VIRTUAL_HOST)))

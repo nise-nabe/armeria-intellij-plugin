@@ -49,7 +49,7 @@ data class ArmeriaRoute(
                 RouteMatch.ROUTE_DECORATOR -> message("route.explorer.method.routeDecorator")
                 RouteMatch.ROUTE_FLUENT -> httpMethod.ifBlank { message("route.explorer.method.allHttp") }
                 RouteMatch.DECORATOR_UNDER -> message("route.explorer.method.decoratorUnder")
-                RouteMatch.DELEGATED_SPRING_MVC ->
+                RouteMatch.DELEGATED ->
                     httpMethod.ifBlank { message("route.explorer.method.allHttp") }
                 RouteMatch.NON_HTTP -> protocol
                 RouteMatch.RUNTIME, RouteMatch.CONFIG -> httpMethod

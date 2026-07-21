@@ -56,11 +56,16 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             ArmeriaServletMountSupport.delegationKindOf(mountRoute),
         )
 
-        val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+        val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED }
         assertEquals("GET", delegatedRoute.httpMethod)
         assertEquals("/spring/users/{id}", delegatedRoute.path)
         assertEquals("/spring/", delegatedRoute.delegationMountPath)
         assertEquals("example.UserController#getUser()", delegatedRoute.target)
+        assertEquals(DelegationKind.SPRING_MVC, delegatedRoute.delegationKind)
+        assertEquals(
+            DelegationKind.SPRING_MVC,
+            ArmeriaServletMountSupport.delegationKindOf(delegatedRoute),
+        )
     }
 
     fun testExactServiceMountIsBadgedWithoutSpringMvcChildren() {
@@ -110,7 +115,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             DelegationKind.SPRING_MVC,
             ArmeriaServletMountSupport.delegationKindOf(mountRoute),
         )
-        assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
+        assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED })
     }
 
     fun testJettyServiceMountIsBadgedWithoutSpringMvcChildren() {
@@ -161,7 +166,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             ArmeriaServletMountSupport.delegationKindOf(mountRoute),
         )
         // Jetty is a servlet container mount; do not invent Spring MVC children under it.
-        assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
+        assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED })
     }
 
     fun testTomcatMountIsBadgedWithoutSpringControllers() {
@@ -178,7 +183,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             DelegationKind.SPRING_MVC,
             ArmeriaServletMountSupport.delegationKindOf(mountRoute),
         )
-        assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
+        assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED })
     }
 
     fun testRequestMappingMethodEnumIsResolved() {
@@ -212,7 +217,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
                 project,
                 contributors = listOf(ArmeriaSpringRouteContributor),
             )
-        val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+        val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED }
 
         val create = delegated.single { it.path == "/spring/orders" }
         assertEquals("POST", create.httpMethod)
@@ -248,7 +253,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
                 contributors = listOf(ArmeriaSpringRouteContributor),
             )
         val mountRoute = routes.single { it.path == "/spring/" && it.routeMatch == RouteMatch.SERVICE_UNDER }
-        val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+        val delegatedRoute = routes.single { it.routeMatch == RouteMatch.DELEGATED }
 
         assertEquals("api.example.com", mountRoute.virtualHostName)
         assertEquals("api.example.com", delegatedRoute.virtualHostName)
@@ -300,7 +305,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             )
         val delegated =
             routes.filter {
-                it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC && it.path == "/spring/hello"
+                it.routeMatch == RouteMatch.DELEGATED && it.path == "/spring/hello"
             }
         assertEquals(2, delegated.size)
         assertEquals(
@@ -343,7 +348,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
                     ArmeriaServletMountSupport.delegationKindOf(it) == DelegationKind.SPRING_MVC
             },
         )
-        assertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
+        assertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED })
     }
 
     fun testKotlinTomcatServiceBeanMountIsDetected() {
@@ -380,7 +385,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
                 springMounts.map { "${it.target}/${it.routeMatch}/${ArmeriaServletMountSupport.delegationKindOf(it)}" },
             springMounts.any { ArmeriaServletMountSupport.delegationKindOf(it) == DelegationKind.SPRING_MVC },
         )
-        assertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
+        assertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED })
     }
 
     fun testClassLevelMultiPathRequestMappingEmitsAllPrefixes() {
@@ -410,7 +415,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
                 project,
                 contributors = listOf(ArmeriaSpringRouteContributor),
             )
-        val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+        val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED }
 
         assertEquals(
             setOf("/spring/api/users", "/spring/v1/users"),
@@ -445,7 +450,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
                 project,
                 contributors = listOf(ArmeriaSpringRouteContributor),
             )
-        val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+        val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED }
 
         assertEquals(
             setOf("GET /spring/a", "POST /spring/b"),
@@ -480,7 +485,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
                 project,
                 contributors = listOf(ArmeriaSpringRouteContributor),
             )
-        val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+        val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED }
 
         assertEquals(
             setOf("GET /spring/items", "POST /spring/items"),
@@ -516,7 +521,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
                 project,
                 contributors = listOf(ArmeriaSpringRouteContributor),
             )
-        val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+        val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED }
 
         assertEquals(
             setOf("/spring/api/users", "/spring/v1/users"),
@@ -558,7 +563,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
                     ArmeriaServletMountSupport.delegationKindOf(it) == DelegationKind.SPRING_MVC
             },
         )
-        assertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
+        assertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED })
     }
 
     fun testAmbiguousSameModuleMountsExpandOnlyUnderShortestPath() {
@@ -609,7 +614,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
                 project,
                 contributors = listOf(ArmeriaSpringRouteContributor),
             )
-        val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC }
+        val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED }
         assertTrue(delegated.isNotEmpty())
         assertEquals(setOf("/"), delegated.map { it.delegationMountPath }.toSet())
         assertNotNull(
@@ -698,7 +703,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
                 contributors = listOf(ArmeriaSpringRouteContributor),
             )
 
-        assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED_SPRING_MVC })
+        assertTrue(routes.none { it.routeMatch == RouteMatch.DELEGATED })
     }
 
     fun testPreferredSpringMvcMountsPicksShortestPathPerModuleAndVirtualHost() {
@@ -842,6 +847,29 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         val exactMount = expandable.copy(routeMatch = RouteMatch.SERVICE, path = "/spring")
         assertTrue(ArmeriaServletMountSupport.isExpandableSpringMvcMount(expandable))
         assertFalse(ArmeriaServletMountSupport.isExpandableSpringMvcMount(exactMount))
+
+        // Stored delegationKind wins over target detection (no RouteMatch→kind sync).
+        val delegatedChild =
+            ArmeriaRoute.create(
+                element = myFixture.addClass("public class DelegatedKindProbe {}"),
+                protocol = RouteProtocol.HTTP.presentableName(),
+                httpMethod = "GET",
+                path = "/spring/hello",
+                target = "example.HelloController#hello()",
+                routeMatch = RouteMatch.DELEGATED,
+                delegationMountPath = "/spring/",
+                delegationKind = DelegationKind.SPRING_MVC,
+            )
+        assertEquals(
+            DelegationKind.SPRING_MVC,
+            ArmeriaServletMountSupport.delegationKindOf(delegatedChild),
+        )
+        assertEquals(
+            DelegationKind.SPRING_MVC,
+            ArmeriaServletMountSupport.delegationKindOf(
+                delegatedChild.copy(target = "NotAKnownService"),
+            ),
+        )
     }
 
     fun testSpringMvcCollectorResolvesStereotypesOutsideSearchScope() {

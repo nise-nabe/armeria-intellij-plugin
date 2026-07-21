@@ -24,11 +24,10 @@ object ArmeriaServletMountSupport {
     ): DelegationKind? = ArmeriaDelegationSupport.detectDelegation(target, routeMatch)
 
     /**
-     * Resolved delegation badge for mounts (from target) and delegated Spring MVC children.
+     * Resolved delegation badge for mounts and delegated children.
+     * Prefers the route's stored [ArmeriaRoute.delegationKind]; falls back to target detection.
      */
     fun delegationKindOf(route: ArmeriaRoute): DelegationKind? =
-        when (route.routeMatch) {
-            RouteMatch.DELEGATED_SPRING_MVC -> DelegationKind.SPRING_MVC
-            else -> ArmeriaDelegationSupport.detectDelegation(route.target, route.routeMatch)
-        }
+        route.delegationKind
+            ?: ArmeriaDelegationSupport.detectDelegation(route.target, route.routeMatch)
 }
