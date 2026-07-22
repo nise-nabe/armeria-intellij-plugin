@@ -22,15 +22,7 @@ object ArmeriaRouteNavigation {
     fun navigateToPointer(
         project: Project,
         pointer: SmartPsiElementPointer<PsiElement>,
-        parentDisposable: Disposable? = null,
-    ) {
-        navigateToPointer(project, pointer, sourceOffset = null, parentDisposable)
-    }
-
-    fun navigateToPointer(
-        project: Project,
-        pointer: SmartPsiElementPointer<PsiElement>,
-        sourceOffset: Int?,
+        sourceOffset: Int? = null,
         parentDisposable: Disposable? = null,
     ) {
         ReadAction
@@ -45,7 +37,7 @@ object ArmeriaRouteNavigation {
             }.submit(AppExecutorUtil.getAppExecutorService())
     }
 
-    fun resolveNavigatable(
+    private fun resolveNavigatable(
         pointer: SmartPsiElementPointer<PsiElement>,
         sourceOffset: Int?,
     ): Navigatable? {

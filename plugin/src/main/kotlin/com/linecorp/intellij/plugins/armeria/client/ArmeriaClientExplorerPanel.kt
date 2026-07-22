@@ -9,7 +9,6 @@ import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
-import com.intellij.pom.Navigatable
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
@@ -179,14 +178,12 @@ class ArmeriaClientExplorerPanel(
 
     private fun navigateToSelection() {
         val endpoint = endpointList.selectedValue ?: return
-        ReadAction
-            .nonBlocking<Navigatable?> {
-                ArmeriaRouteNavigation.resolveNavigatable(endpoint.pointer, endpoint.sourceOffset)
-            }.inSmartMode(project)
-            .expireWith(this)
-            .finishOnUiThread(ModalityState.any()) { navigatable ->
-                navigatable?.navigate(true)
-            }.submit(AppExecutorUtil.getAppExecutorService())
+        ArmeriaRouteNavigation.navigateToPointer(
+            project,
+            endpoint.pointer,
+            endpoint.sourceOffset,
+            parentDisposable = this,
+        )
     }
 
     private fun formatListLabel(endpoint: ArmeriaClientEndpoint): String {

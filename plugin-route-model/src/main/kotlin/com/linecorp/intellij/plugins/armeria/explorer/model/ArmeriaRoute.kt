@@ -33,11 +33,7 @@ data class ArmeriaRoute(
 ) {
     fun resolveSourceHint(): String {
         val element = pointer.element ?: return ""
-        val offset = sourceOffset
-        if (offset != null) {
-            return ArmeriaRouteMetadata.sourceHintAtOffset(element, offset)
-        }
-        return ArmeriaRouteMetadata.sourceHint(element)
+        return ArmeriaRouteMetadata.sourceHintAtOffset(element, sourceOffset ?: element.textRange.startOffset)
     }
 
     fun resolveRegisteredInHint(): String {
