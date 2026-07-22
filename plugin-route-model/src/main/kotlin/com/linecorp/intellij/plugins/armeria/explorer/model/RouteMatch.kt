@@ -11,7 +11,7 @@ enum class RouteMatch {
     ROUTE_DECORATOR,
     ROUTE_FLUENT,
     DECORATOR_UNDER,
-    DELEGATED_SPRING_MVC,
+    DELEGATED,
     NON_HTTP,
     RUNTIME,
 

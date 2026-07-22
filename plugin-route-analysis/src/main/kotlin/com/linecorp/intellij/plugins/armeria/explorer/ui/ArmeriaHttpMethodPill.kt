@@ -24,7 +24,8 @@ object ArmeriaHttpMethodPill {
             RouteMatch.ROUTE_DECORATOR -> "DEC"
             RouteMatch.ROUTE_FLUENT -> route.httpMethod.ifBlank { "ALL" }
             RouteMatch.DECORATOR_UNDER -> "UND"
-            RouteMatch.DELEGATED_SPRING_MVC -> route.httpMethod.ifBlank { "MVC" }
+            // Kind lives on the delegation badge; blank methods match methodLabel ("ALL").
+            RouteMatch.DELEGATED -> route.httpMethod.ifBlank { "ALL" }
             RouteMatch.NON_HTTP -> route.protocol.uppercase()
             RouteMatch.RUNTIME, RouteMatch.CONFIG -> route.httpMethod
         }

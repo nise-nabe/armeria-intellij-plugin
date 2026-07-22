@@ -7,9 +7,8 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
  *
  * Lives in `support` (no Spring/servlet PSI dependencies) so that
  * [plugin-route-collectors] can set `delegationKind` on service registrations
- * without depending on [plugin-route-spring]. Spring-specific helpers such as
- * `isExpandableSpringMvcMount` remain in `explorer.spring.ArmeriaServletMountSupport`
- * and delegate to this object.
+ * without depending on [plugin-route-spring]. Spring-specific expansion reads
+ * the stored kind in `ArmeriaDelegatedRouteCollector`.
  */
 object ArmeriaDelegationSupport {
     private val SPRING_MVC_SERVICE_NAMES =

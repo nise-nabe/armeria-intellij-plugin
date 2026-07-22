@@ -7,6 +7,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.SmartPsiElementPointer
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpMethodPill
 import org.junit.Assert.assertEquals
@@ -47,6 +48,36 @@ class ArmeriaHttpMethodPillTest {
     }
 
     @Test
+    fun pillLabel_usesHttpMethodOrAllFallbackForDelegatedRoutes() {
+        assertEquals(
+            "POST",
+            ArmeriaHttpMethodPill.pillLabel(
+                route(
+                    httpMethod = "POST",
+                    routeMatch = RouteMatch.DELEGATED,
+                    delegationKind = DelegationKind.SPRING_MVC,
+                ),
+            ),
+        )
+        assertEquals(
+            "ALL",
+            ArmeriaHttpMethodPill.pillLabel(
+                route(
+                    httpMethod = "",
+                    routeMatch = RouteMatch.DELEGATED,
+                    delegationKind = DelegationKind.SPRING_MVC,
+                ),
+            ),
+        )
+        assertEquals(
+            "ALL",
+            ArmeriaHttpMethodPill.pillLabel(
+                route(httpMethod = "", routeMatch = RouteMatch.DELEGATED),
+            ),
+        )
+    }
+
+    @Test
     fun pillText_wrapsLabelWithSpaces() {
         assertEquals(" GET ", ArmeriaHttpMethodPill.pillText("GET"))
     }
@@ -62,6 +93,7 @@ class ArmeriaHttpMethodPillTest {
         httpMethod: String = "GET",
         protocol: String = "HTTP",
         routeMatch: RouteMatch = RouteMatch.ANNOTATED_HTTP,
+        delegationKind: DelegationKind? = null,
     ): ArmeriaRoute =
         ArmeriaRoute(
             protocol = protocol,
@@ -75,6 +107,7 @@ class ArmeriaHttpMethodPillTest {
             decorators = emptyList(),
             exceptionHandlers = emptyList(),
             pointer = TestPsiPointer,
+            delegationKind = delegationKind,
         )
 
     private object TestPsiPointer : SmartPsiElementPointer<PsiElement> {

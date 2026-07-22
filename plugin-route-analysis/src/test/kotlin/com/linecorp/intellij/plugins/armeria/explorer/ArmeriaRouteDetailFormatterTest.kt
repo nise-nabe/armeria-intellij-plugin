@@ -8,6 +8,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.SmartPsiElementPointer
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteDetailFormatter
@@ -348,6 +349,32 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
                     decorators = emptyList(),
                     exceptionHandlers = emptyList(),
                     virtualHostName = "api.example.com",
+                    pointer = TestPsiPointer,
+                ),
+            ),
+        )
+        assertEquals(
+            message(
+                "route.explorer.registration.delegated",
+                "GET",
+                "/spring/hello",
+                "/spring/",
+            ),
+            ArmeriaRouteDetailFormatter.registrationSummary(
+                ArmeriaRoute(
+                    protocol = "HTTP",
+                    httpMethod = "GET",
+                    path = "/spring/hello",
+                    target = "example.HelloController#hello()",
+                    routeMatch = RouteMatch.DELEGATED,
+                    moduleName = "app",
+                    targetUnresolved = false,
+                    isDocService = false,
+                    annotatedServiceHasPathPrefix = false,
+                    decorators = emptyList(),
+                    exceptionHandlers = emptyList(),
+                    delegationMountPath = "/spring/",
+                    delegationKind = DelegationKind.SPRING_MVC,
                     pointer = TestPsiPointer,
                 ),
             ),
