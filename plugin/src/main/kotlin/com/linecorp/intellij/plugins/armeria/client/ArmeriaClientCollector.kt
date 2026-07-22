@@ -40,6 +40,7 @@ object ArmeriaClientCollector {
         if (isKotlinPluginAvailable()) {
             ArmeriaKotlinClientCollector.collect(project, scope, endpoints, seenEndpoints)
         }
+        ArmeriaScalaClientCollector.collect(project, scope, endpoints, seenEndpoints)
         val sorted = endpoints.sortedWith(compareBy({ it.clientType }, { it.uri }, { it.target }))
         return CachedValueProvider.Result.create(
             sorted,
