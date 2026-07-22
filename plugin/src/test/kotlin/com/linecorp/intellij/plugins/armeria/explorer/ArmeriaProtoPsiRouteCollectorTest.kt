@@ -4,13 +4,14 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.extensions.ExtensionPoint
 import com.intellij.protobuf.lang.psi.PbFile
 import com.intellij.protobuf.lang.psi.PbServiceMethod
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
-import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnalysisCollector
+import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaProtoRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaProtocolRouteContributor
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 
-class ArmeriaProtoPsiRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() {
+class ArmeriaProtoPsiRouteCollectorTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     override fun setUp() {
         super.setUp()
         registerArmeriaStubs()
@@ -140,7 +141,12 @@ class ArmeriaProtoPsiRouteCollectorTest : LightJavaCodeInsightFixtureTestCase() 
         )
         registerProtoRouteCollectorExtension()
 
-        val routes = ArmeriaRouteAnalysisCollector.collect(project, includeProtoRoutes = true)
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
 
         assertEquals(listOf("/com.example.Greeter/SayHello"), routes.map { it.path })
         assertTrue(routes.single().pointer.element is PbServiceMethod)
