@@ -30,8 +30,7 @@ object ArmeriaScalaTextSupport {
         val argumentCount: Int,
     )
 
-    private fun pathFirst(method: String): Regex =
-        Regex("""\.$method\s*\(\s*"([^"]+)"\s*,\s*($TARGET)\s*\)""")
+    private fun pathFirst(method: String): Regex = Regex("""\.$method\s*\(\s*"([^"]+)"\s*,\s*($TARGET)\s*\)""")
 
     private val RULES =
         listOf(
@@ -85,8 +84,7 @@ object ArmeriaScalaTextSupport {
             ),
         )
 
-    fun referencesArmeriaScalaContent(contents: CharSequence): Boolean =
-        ArmeriaRouteSupport.referencesArmeriaSourceContent(contents)
+    fun referencesArmeriaScalaContent(contents: CharSequence): Boolean = ArmeriaRouteSupport.referencesArmeriaSourceContent(contents)
 
     fun findServiceRegistrations(text: String): List<ScalaServiceRegistrationMatch> {
         val scanText = stripScalaComments(text)

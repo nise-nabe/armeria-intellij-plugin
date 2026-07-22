@@ -213,8 +213,7 @@ object ArmeriaRouteSupport {
         return referencesArmeriaInText(file.viewProvider.contents)
     }
 
-    fun referencesArmeriaSourceContent(contents: CharSequence): Boolean =
-        ArmeriaRouteContentScan.referencesArmeriaSourceContent(contents)
+    fun referencesArmeriaSourceContent(contents: CharSequence): Boolean = ArmeriaRouteContentScan.referencesArmeriaSourceContent(contents)
 
     fun referencesArmeriaKotlinContentInText(contents: CharSequence): Boolean = referencesArmeriaSourceContent(contents)
 
