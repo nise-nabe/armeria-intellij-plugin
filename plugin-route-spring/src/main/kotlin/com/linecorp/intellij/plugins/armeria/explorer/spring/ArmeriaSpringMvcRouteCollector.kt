@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer.spring
 import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaPsiFacade
+import com.intellij.psi.HierarchicalMethodSignature
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiAnnotationMemberValue
 import com.intellij.psi.PsiArrayInitializerMemberValue
@@ -105,7 +106,7 @@ internal object ArmeriaSpringMvcRouteCollector {
             if (method.containingClass?.qualifiedName == JAVA_LANG_OBJECT) {
                 continue
             }
-            val mappedMethod = resolveMappedMethod(hierarchy, method) ?: continue
+            val mappedMethod = resolveMappedMethod(hierarchy, signature) ?: continue
             for (annotation in mappedMethod.annotations) {
                 val fqn = annotation.qualifiedName ?: continue
                 val defaultMethod = MAPPING_ANNOTATIONS[fqn] ?: continue
@@ -126,15 +127,17 @@ internal object ArmeriaSpringMvcRouteCollector {
      * override chain that declares a Spring MVC mapping. Unannotated intermediate overrides
      * do not stop the search.
      *
-     * Indexes [method] and its supers via [methodsByContainingClass] so generic type-parameter
-     * substitution (e.g. `handle(T)` vs `handle(String)`) still resolves across the hierarchy
-     * (see #289), including multi-level unannotated intermediates.
+     * Indexes [signature] and its [HierarchicalMethodSignature.superSignatures] so:
+     * - generic type-parameter substitution (e.g. `handle(T)` vs `handle(String)`) still
+     *   resolves across the hierarchy (see #289), including multi-level unannotated intermediates
+     * - interface mappings stay visible when a superclass supplies the implementation without
+     *   declaring the interface itself (controller `extends Base implements Api`)
      */
     private fun resolveMappedMethod(
         hierarchy: List<PsiClass>,
-        method: PsiMethod,
+        signature: HierarchicalMethodSignature,
     ): PsiMethod? {
-        val byContainingClass = methodsByContainingClass(method)
+        val byContainingClass = methodsByContainingClass(signature)
         for (type in hierarchy) {
             val candidate = byContainingClass[type] ?: continue
             if (hasMappingAnnotation(candidate)) {
@@ -145,20 +148,23 @@ internal object ArmeriaSpringMvcRouteCollector {
     }
 
     /**
-     * Maps each declaring type to the method on that type in [method]'s override chain.
-     * Walks [PsiMethod.findSuperMethods] transitively because each call returns only immediate
-     * supers (a super that itself overrides another does not expose the grandparent).
+     * Maps each declaring type to the method on that type in [signature]'s override chain.
+     * Walks [HierarchicalMethodSignature.superSignatures] transitively (each node exposes only
+     * immediate supers) from the controller's [PsiClass.visibleSignatures] entry so the index
+     * includes every interface/superclass reachable from that controller, not only
+     * [PsiMethod.findSuperMethods] of the declaring class.
      */
-    private fun methodsByContainingClass(method: PsiMethod): Map<PsiClass, PsiMethod> {
-        val result = linkedMapOf<PsiClass, PsiMethod>()
-        val queue = ArrayDeque<PsiMethod>().apply { add(method) }
+    private fun methodsByContainingClass(signature: HierarchicalMethodSignature): Map<PsiClass, PsiMethod> {
+        val result = HashMap<PsiClass, PsiMethod>()
+        val queue = ArrayDeque<HierarchicalMethodSignature>().apply { add(signature) }
         while (queue.isNotEmpty()) {
             val current = queue.removeFirst()
-            val containingClass = current.containingClass ?: continue
-            if (result.putIfAbsent(containingClass, current) != null) {
+            val method = current.method
+            val containingClass = method.containingClass ?: continue
+            if (result.putIfAbsent(containingClass, method) != null) {
                 continue
             }
-            queue.addAll(current.findSuperMethods())
+            queue.addAll(current.superSignatures)
         }
         return result
     }

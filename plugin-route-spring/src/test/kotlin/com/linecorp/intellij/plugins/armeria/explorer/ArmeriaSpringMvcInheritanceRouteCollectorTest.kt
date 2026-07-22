@@ -266,6 +266,52 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertEquals("example.BaseHandler", springMvcRoute.element.containingClass?.qualifiedName)
     }
 
+    fun testInheritedBaseMethodSatisfyingInterfaceMappingIsDiscovered() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.GetMapping;
+
+            public interface GreetingApi {
+                @GetMapping("/api")
+                String hello();
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public abstract class BaseController {
+                public String hello() {
+                    return "base";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "HelloController.java",
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.RestController;
+
+            @RestController
+            public class HelloController extends BaseController implements GreetingApi {
+            }
+            """.trimIndent(),
+        )
+
+        val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.projectScope(project))
+        val springMvcRoute = springMvcRoutes.single()
+        assertEquals("GET", springMvcRoute.httpMethod)
+        assertEquals("/api", springMvcRoute.path)
+        assertEquals("example.HelloController#hello()", springMvcRoute.target)
+        assertEquals("example.HelloController", springMvcRoute.controller.qualifiedName)
+        assertEquals("example.GreetingApi", springMvcRoute.element.containingClass?.qualifiedName)
+    }
+
     fun testBaseClassRequestMappingPrefixAppliesToInheritedMethod() {
         configureTomcatMount("/spring/")
         myFixture.addClass(
