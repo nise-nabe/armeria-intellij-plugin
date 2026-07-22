@@ -5,6 +5,7 @@
 ### Added
 
 - ktlint via `com.linecorp.intellij.ktlint` convention (`ktlint_official` style); `ktlintCheck` runs as part of `check` / `build`.
+- gRPC Route Explorer discovery uses Proto Editor PSI when `idea.plugin.protoeditor` is available (RPC-level navigation), with fallback to the existing `.proto` text parser.
 
 ### Changed
 
