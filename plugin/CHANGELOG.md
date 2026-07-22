@@ -18,6 +18,7 @@
 
 ### Fixed
 
+- Spring MVC Route Explorer discovery finds mappings declared on generic base types/interfaces when the concrete controller substitutes type parameters (e.g. `Handler<T>` → `StringHandler`).
 - Bundle `plugin-shared` (including `ArmeriaBundle`) into the main plugin JAR so installing only `plugin-*.jar` no longer fails inspection-profile saves with `ClassNotFoundException: ArmeriaBundleKt`.
 - Route Explorer deduplicates GraphQL and Thrift IDL routes per module when the same operation appears in multiple schema or `.thrift` files.
 - DocService runtime route sync activates the Armeria Services tool window when needed so routes apply even if it was closed before the fetch completed.

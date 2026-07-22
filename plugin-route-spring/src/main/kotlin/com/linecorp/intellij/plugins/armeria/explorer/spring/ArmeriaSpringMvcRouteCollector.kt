@@ -122,15 +122,26 @@ internal object ArmeriaSpringMvcRouteCollector {
     }
 
     /**
-     * Walks [hierarchy] (Spring TYPE_HIERARCHY order) and returns the first same-signature method
-     * that declares a Spring MVC mapping. Unannotated intermediate overrides do not stop the search.
+     * Walks [hierarchy] (Spring TYPE_HIERARCHY order) and returns the first matching method that
+     * declares a Spring MVC mapping. Unannotated intermediate overrides do not stop the search.
+     *
+     * Prefers [PsiClass.findMethodBySignature]; when that fails across generic type-parameter
+     * substitution (e.g. `handle(T)` vs concrete `handle(String)`), falls back to a method
+     * declared on that type that appears in [PsiMethod.findSuperMethods] (see #289).
      */
     private fun resolveMappedMethod(
         hierarchy: List<PsiClass>,
         method: PsiMethod,
     ): PsiMethod? {
+        val superByContainingClass =
+            method
+                .findSuperMethods(/* checkBases = */ false)
+                .associateBy { it.containingClass }
         for (type in hierarchy) {
-            val candidate = type.findMethodBySignature(method, false) ?: continue
+            val candidate =
+                type.findMethodBySignature(method, false)
+                    ?: superByContainingClass[type]
+                    ?: continue
             if (hasMappingAnnotation(candidate)) {
                 return candidate
             }

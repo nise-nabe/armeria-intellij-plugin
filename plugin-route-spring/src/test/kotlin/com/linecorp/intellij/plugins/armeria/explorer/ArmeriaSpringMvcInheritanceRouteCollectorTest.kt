@@ -137,6 +137,45 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
         )
     }
 
+    fun testGenericInterfaceMappingIsDiscoveredUnderConcreteController() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.GetMapping;
+
+            public interface Handler<T> {
+                @GetMapping("/handle")
+                T handle(T t);
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "StringHandler.java",
+            """
+            package example;
+
+            import org.springframework.web.bind.annotation.RestController;
+
+            @RestController
+            public class StringHandler implements Handler<String> {
+                @Override
+                public String handle(String t) {
+                    return t;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val springMvcRoutes = ArmeriaSpringMvcRouteCollector.collect(project, GlobalSearchScope.projectScope(project))
+        val springMvcRoute = springMvcRoutes.single()
+        assertEquals("GET", springMvcRoute.httpMethod)
+        assertEquals("/handle", springMvcRoute.path)
+        assertEquals("example.StringHandler#handle()", springMvcRoute.target)
+        assertEquals("example.StringHandler", springMvcRoute.controller.qualifiedName)
+        assertEquals("example.Handler", springMvcRoute.element.containingClass?.qualifiedName)
+    }
+
     fun testBaseClassRequestMappingPrefixAppliesToInheritedMethod() {
         configureTomcatMount("/spring/")
         myFixture.addClass(
