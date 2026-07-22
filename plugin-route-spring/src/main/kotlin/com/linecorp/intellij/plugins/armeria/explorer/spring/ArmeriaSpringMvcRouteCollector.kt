@@ -1,7 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer.spring
 import com.intellij.openapi.project.Project
-import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.HierarchicalMethodSignature
+import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiAnnotationMemberValue
 import com.intellij.psi.PsiArrayInitializerMemberValue
