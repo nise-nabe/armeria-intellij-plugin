@@ -37,6 +37,14 @@ internal object ArmeriaClientSupport {
 
     fun protocolForClass(qualifiedName: String?): ClientProtocol? = qualifiedName?.let { CLIENT_CLASS_PROTOCOLS[it] }
 
+    fun protocolForSimpleName(simpleName: String): ClientProtocol? =
+        CLIENT_CLASS_PROTOCOLS.entries
+            .firstOrNull { (fqcn, _) -> fqcn.substringAfterLast('.') == simpleName }
+            ?.value
+
+    /** Simple class names used by text-based Scala client scanning. */
+    fun clientSimpleNames(): Set<String> = CLIENT_CLASS_PROTOCOLS.keys.mapTo(linkedSetOf()) { it.substringAfterLast('.') }
+
     fun isWebClientClass(qualifiedName: String?): Boolean =
         qualifiedName != null &&
             (qualifiedName in WEB_CLIENT_CLASS_NAMES || qualifiedName.endsWith(".WebClient"))

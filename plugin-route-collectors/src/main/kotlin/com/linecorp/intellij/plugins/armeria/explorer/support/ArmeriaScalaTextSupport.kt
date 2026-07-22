@@ -5,127 +5,107 @@ data class ScalaServiceRegistrationMatch(
     val path: String,
     val targetText: String,
     val startOffset: Int,
+    val argumentCount: Int,
 )
 
-data class ScalaClientEndpointMatch(
-    val clientSimpleName: String,
-    val uri: String,
-    val startOffset: Int,
-)
-
+/**
+ * Text-based Scala route scanning uses regex over source text (no Scala PSI).
+ *
+ * Supported shapes:
+ * - `.service("/path", new Handler())` / `.service("/path", Handler())`
+ * - `.serviceUnder("/prefix", …)` and named `pathPrefix` / `service` argument orders
+ * - `.annotatedService(…)` with optional path prefix
+ *
+ * Non-literal path expressions and dynamic prefixes are not matched.
+ * Line/block comments are blanked before matching to avoid phantom routes.
+ */
 object ArmeriaScalaTextSupport {
-    /**
-     * Text-based Scala route scanning uses regex over source text (no Scala PSI).
-     *
-     * Supported `serviceUnder` shapes:
-     * - `.serviceUnder("/prefix", new Handler())` and `.serviceUnder("/prefix", Handler())`
-     * - `.serviceUnder(pathPrefix = "/prefix", service = new Handler())`
-     *
-     * Non-literal path expressions, multiline argument lists, and dynamic prefixes are not matched.
-     */
-    private val SERVICE_PATTERN =
-        Regex("""\.service\s*\(\s*"([^"]+)"\s*,\s*((?:new\s+)?[\w.]+(?:\([^)]*\))?)\s*\)""")
-    private val SERVICE_UNDER_PATTERN =
-        Regex("""\.serviceUnder\s*\(\s*"([^"]+)"\s*,\s*((?:new\s+)?[\w.]+(?:\([^)]*\))?)\s*\)""")
-    private val SERVICE_UNDER_NAMED_PREFIX_FIRST_PATTERN =
-        Regex(
-            """\.serviceUnder\s*\(\s*pathPrefix\s*=\s*"([^"]+)"\s*,\s*service\s*=\s*((?:new\s+)?[\w.]+(?:\([^)]*\))?)\s*\)""",
-        )
-    private val SERVICE_UNDER_NAMED_SERVICE_FIRST_PATTERN =
-        Regex(
-            """\.serviceUnder\s*\(\s*service\s*=\s*((?:new\s+)?[\w.]+(?:\([^)]*\))?)\s*,\s*pathPrefix\s*=\s*"([^"]+)"\s*\)""",
-        )
-    private val ANNOTATED_SERVICE_WITH_PREFIX_PATTERN =
-        Regex("""\.annotatedService\s*\(\s*"([^"]+)"\s*,\s*((?:new\s+)?[\w.]+(?:\([^)]*\))?)\s*\)""")
-    private val ANNOTATED_SERVICE_PATTERN =
-        Regex("""\.annotatedService\s*\(\s*((?:new\s+)?[\w.]+(?:\([^)]*\))?)\s*\)""")
-    private val CLIENT_ENDPOINT_PATTERN =
-        Regex(
-            """\b(WebClient|GrpcClient|GrpcClients|ThriftClient|ThriftClients)\s*\.\s*(?:of|builder|newClient)\s*\(\s*"([^"]+)"\s*\)""",
+    private const val TARGET = """(?:new\s+)?[\w.]+(?:\([^)]*\))?"""
+
+    private data class RegistrationRule(
+        val methodName: String,
+        val pattern: Regex,
+        val path: (MatchResult) -> String,
+        val target: (MatchResult) -> String,
+        val argumentCount: Int,
+    )
+
+    private fun pathFirst(method: String): Regex =
+        Regex("""\.$method\s*\(\s*"([^"]+)"\s*,\s*($TARGET)\s*\)""")
+
+    private val RULES =
+        listOf(
+            RegistrationRule(
+                methodName = "service",
+                pattern = pathFirst("service"),
+                path = { it.groupValues[1] },
+                target = { it.groupValues[2] },
+                argumentCount = 2,
+            ),
+            RegistrationRule(
+                methodName = "serviceUnder",
+                pattern = pathFirst("serviceUnder"),
+                path = { it.groupValues[1] },
+                target = { it.groupValues[2] },
+                argumentCount = 2,
+            ),
+            RegistrationRule(
+                methodName = "serviceUnder",
+                pattern =
+                    Regex(
+                        """\.serviceUnder\s*\(\s*pathPrefix\s*=\s*"([^"]+)"\s*,\s*service\s*=\s*($TARGET)\s*\)""",
+                    ),
+                path = { it.groupValues[1] },
+                target = { it.groupValues[2] },
+                argumentCount = 2,
+            ),
+            RegistrationRule(
+                methodName = "serviceUnder",
+                pattern =
+                    Regex(
+                        """\.serviceUnder\s*\(\s*service\s*=\s*($TARGET)\s*,\s*pathPrefix\s*=\s*"([^"]+)"\s*\)""",
+                    ),
+                path = { it.groupValues[2] },
+                target = { it.groupValues[1] },
+                argumentCount = 2,
+            ),
+            RegistrationRule(
+                methodName = "annotatedService",
+                pattern = pathFirst("annotatedService"),
+                path = { it.groupValues[1] },
+                target = { it.groupValues[2] },
+                argumentCount = 2,
+            ),
+            RegistrationRule(
+                methodName = "annotatedService",
+                pattern = Regex("""\.annotatedService\s*\(\s*($TARGET)\s*\)"""),
+                path = { "/" },
+                target = { it.groupValues[1] },
+                argumentCount = 1,
+            ),
         )
 
-    fun referencesArmeriaScalaContent(contents: CharSequence): Boolean {
-        val header = contents.subSequence(0, minOf(contents.length, ArmeriaRouteSupport.ARMERIA_HEADER_SCAN_LIMIT))
-        if (header.contains("import com.linecorp.armeria")) {
-            return true
-        }
-        return ArmeriaRouteSupport.referencesArmeriaInText(contents)
-    }
-
-    fun looksLikeServerBuilderScalaFile(contents: CharSequence): Boolean {
-        val text = contents.toString()
-        return ArmeriaRouteSupport.referencesArmeriaApplicationInSource(contents) ||
-            ArmeriaRouteSupport.looksLikeServerBuilderReceiverText(text)
-    }
+    fun referencesArmeriaScalaContent(contents: CharSequence): Boolean =
+        ArmeriaRouteSupport.referencesArmeriaSourceContent(contents)
 
     fun findServiceRegistrations(text: String): List<ScalaServiceRegistrationMatch> {
-        if (!looksLikeServerBuilderScalaFile(text)) {
+        val scanText = stripScalaComments(text)
+        if (!looksLikeServerBuilderScalaFile(scanText)) {
             return emptyList()
         }
-        val matches = mutableListOf<ScalaServiceRegistrationMatch>()
-        collectPatternMatches(text, SERVICE_PATTERN, "service", matches) { groups ->
-            groups[1] to groups[2]
-        }
-        collectPatternMatches(text, SERVICE_UNDER_PATTERN, "serviceUnder", matches) { groups ->
-            groups[1] to groups[2]
-        }
-        collectPatternMatches(text, SERVICE_UNDER_NAMED_PREFIX_FIRST_PATTERN, "serviceUnder", matches) { groups ->
-            groups[1] to groups[2]
-        }
-        for (match in SERVICE_UNDER_NAMED_SERVICE_FIRST_PATTERN.findAll(text)) {
-            val target = match.groupValues[1].trim()
-            val path = match.groupValues[2]
-            val overlapping =
-                matches.any { existing ->
-                    existing.startOffset in match.range.first..match.range.last
+        return RULES
+            .flatMap { rule ->
+                rule.pattern.findAll(scanText).map { match ->
+                    ScalaServiceRegistrationMatch(
+                        methodName = rule.methodName,
+                        path = rule.path(match),
+                        targetText = rule.target(match).trim(),
+                        startOffset = match.range.first,
+                        argumentCount = rule.argumentCount,
+                    )
                 }
-            if (overlapping) {
-                continue
-            }
-            matches +=
-                ScalaServiceRegistrationMatch(
-                    methodName = "serviceUnder",
-                    path = path,
-                    targetText = target,
-                    startOffset = match.range.first,
-                )
-        }
-        collectPatternMatches(text, ANNOTATED_SERVICE_WITH_PREFIX_PATTERN, "annotatedService", matches) { groups ->
-            groups[1] to groups[2]
-        }
-        for (match in ANNOTATED_SERVICE_PATTERN.findAll(text)) {
-            val serviceText = match.groupValues[1].trim()
-            if (serviceText.startsWith("\"")) {
-                continue
-            }
-            val overlapping =
-                matches.any { existing ->
-                    existing.startOffset in match.range.first..match.range.last
-                }
-            if (overlapping) {
-                continue
-            }
-            matches +=
-                ScalaServiceRegistrationMatch(
-                    methodName = "annotatedService",
-                    path = "/",
-                    targetText = serviceText,
-                    startOffset = match.range.first,
-                )
-        }
-        return matches.sortedBy { it.startOffset }
+            }.sortedBy { it.startOffset }
     }
-
-    fun findClientEndpoints(text: String): List<ScalaClientEndpointMatch> =
-        CLIENT_ENDPOINT_PATTERN
-            .findAll(text)
-            .map { match ->
-                ScalaClientEndpointMatch(
-                    clientSimpleName = match.groupValues[1],
-                    uri = match.groupValues[2],
-                    startOffset = match.range.first,
-                )
-            }.toList()
 
     fun renderScalaTarget(targetText: String): String {
         val trimmed = targetText.trim()
@@ -134,31 +114,57 @@ object ArmeriaScalaTextSupport {
         return withoutParens.substringAfterLast('.').ifBlank { withoutParens }
     }
 
+    /**
+     * Without Scala PSI resolution, a target is unresolved only when rendering could not
+     * improve past the raw expression text (e.g. a bare identifier `handler`).
+     * Constructor forms like `new HelloService()` successfully yield a class simple name
+     * and are treated as resolved best-effort.
+     */
     fun isUnresolvedScalaTarget(
         targetText: String,
         renderedTarget: String,
-    ): Boolean {
-        val trimmed = targetText.trim()
-        return renderedTarget == trimmed ||
-            renderedTarget == trimmed.removePrefix("new ").substringBefore('(').trim()
-    }
+    ): Boolean = renderedTarget == targetText.trim()
 
-    private inline fun collectPatternMatches(
-        text: String,
-        pattern: Regex,
-        methodName: String,
-        matches: MutableList<ScalaServiceRegistrationMatch>,
-        pathAndTarget: (List<String>) -> Pair<String, String>,
-    ) {
-        for (match in pattern.findAll(text)) {
-            val (path, target) = pathAndTarget(match.groupValues)
-            matches +=
-                ScalaServiceRegistrationMatch(
-                    methodName = methodName,
-                    path = path,
-                    targetText = target.trim(),
-                    startOffset = match.range.first,
-                )
+    private fun looksLikeServerBuilderScalaFile(contents: CharSequence): Boolean =
+        ArmeriaRouteSupport.referencesArmeriaApplicationInSource(contents) ||
+            ArmeriaRouteSupport.looksLikeServerBuilderReceiverText(contents.toString())
+
+    /**
+     * Best-effort comment blanking for text scanning. Replaces comment text with spaces so
+     * match offsets stay aligned with the original source for PSI navigation.
+     * Strings that contain comment-like sequences may be altered; that only affects discovery
+     * accuracy, not compilation.
+     */
+    fun stripScalaComments(text: String): String {
+        val chars = text.toCharArray()
+        var i = 0
+        while (i < chars.size) {
+            if (i + 1 < chars.size && chars[i] == '/' && chars[i + 1] == '*') {
+                chars[i] = ' '
+                chars[i + 1] = ' '
+                i += 2
+                while (i + 1 < chars.size && !(chars[i] == '*' && chars[i + 1] == '/')) {
+                    if (chars[i] != '\n') {
+                        chars[i] = ' '
+                    }
+                    i++
+                }
+                if (i + 1 < chars.size) {
+                    chars[i] = ' '
+                    chars[i + 1] = ' '
+                    i += 2
+                }
+                continue
+            }
+            if (i + 1 < chars.size && chars[i] == '/' && chars[i + 1] == '/') {
+                while (i < chars.size && chars[i] != '\n') {
+                    chars[i] = ' '
+                    i++
+                }
+                continue
+            }
+            i++
         }
+        return String(chars)
     }
 }

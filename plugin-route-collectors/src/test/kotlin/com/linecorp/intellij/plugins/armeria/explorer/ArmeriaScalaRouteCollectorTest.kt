@@ -34,6 +34,7 @@ class ArmeriaScalaRouteCollectorTest : ArmeriaFixtureTestBase() {
         val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
         assertNotNull(serviceRoute)
         assertEquals("HelloService", serviceRoute!!.target)
+        assertFalse(serviceRoute.targetUnresolved)
     }
 
     fun testCollectAnnotatedServiceRegistrationFromScala() {

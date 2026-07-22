@@ -52,7 +52,7 @@ internal object ArmeriaScalaRouteCollector {
                 target = target,
                 targetUnresolved = targetUnresolved,
                 implementationText = match.targetText,
-                argumentCount = if (match.methodName == "annotatedService" && match.path == "/") 1 else 2,
+                argumentCount = match.argumentCount,
                 routes = routes,
                 seenServiceRegistrations = seenServiceRegistrations,
             )
