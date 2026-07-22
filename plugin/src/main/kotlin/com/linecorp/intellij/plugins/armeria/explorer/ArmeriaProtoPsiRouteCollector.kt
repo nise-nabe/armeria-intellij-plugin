@@ -5,8 +5,8 @@ import com.intellij.protobuf.lang.psi.PbServiceDefinition
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaGrpcRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaProtoRouteCollector
-import com.linecorp.intellij.plugins.armeria.explorer.protocol.registerArmeriaGrpcProtoRoute
 
 /**
  * Proto Editor PSI-backed gRPC route collector. Loaded only when
@@ -23,19 +23,14 @@ class ArmeriaProtoPsiRouteCollector : ArmeriaProtoRouteCollector {
         if (services.isEmpty()) {
             return false
         }
-        var collected = false
         for (service in services) {
-            val fqService = service.qualifiedName?.toString().orEmpty()
-            if (fqService.isBlank()) {
-                return false
-            }
-            val methods = service.body?.serviceMethodList.orEmpty()
-            for (method in methods) {
+            val fqService = service.qualifiedName?.toString()?.takeIf { it.isNotBlank() } ?: continue
+            for (method in service.body?.serviceMethodList.orEmpty()) {
                 val methodName = method.name ?: continue
-                registerArmeriaGrpcProtoRoute(method, fqService, methodName, routes, seenProtoRoutes)
-                collected = true
+                ArmeriaGrpcRouteCollector.addProtoRoute(method, fqService, methodName, routes, seenProtoRoutes)
             }
         }
-        return collected
+        // Services were present: PSI owns this file even when every method was skipped/deduped.
+        return true
     }
 }

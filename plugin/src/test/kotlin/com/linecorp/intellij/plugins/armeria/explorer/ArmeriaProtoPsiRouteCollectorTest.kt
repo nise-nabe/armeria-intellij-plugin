@@ -126,6 +126,77 @@ class ArmeriaProtoPsiRouteCollectorTest : ArmeriaLightJavaCodeInsightFixtureTest
         assertTrue(routes.isEmpty())
     }
 
+    fun testEmptyServiceBodyIsHandledWithoutTextFallback() {
+        val file =
+            myFixture.configureByText(
+                "empty-service.proto",
+                """
+                syntax = "proto3";
+                package com.example;
+
+                service Greeter {
+                }
+                """.trimIndent(),
+            )
+        assertTrue(file is PbFile)
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        assertTrue(ArmeriaProtoPsiRouteCollector().collectFromFile(file, routes, mutableSetOf()))
+        assertTrue(routes.isEmpty())
+    }
+
+    fun testCollectGrpcRoutesFromMultipleServicesInOneProto() {
+        val file =
+            myFixture.configureByText(
+                "multi.proto",
+                """
+                syntax = "proto3";
+                package com.example;
+
+                service Greeter {
+                  rpc SayHello(HelloRequest) returns (HelloResponse);
+                }
+
+                service Echo {
+                  rpc Ping(PingRequest) returns (PingResponse);
+                }
+                """.trimIndent(),
+            )
+        assertTrue(file is PbFile)
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        assertTrue(ArmeriaProtoPsiRouteCollector().collectFromFile(file, routes, mutableSetOf()))
+
+        assertEquals(
+            listOf("/com.example.Echo/Ping", "/com.example.Greeter/SayHello"),
+            routes.map { it.path }.sorted(),
+        )
+    }
+
+    fun testJavaPackageOptionDoesNotChangeGrpcPath() {
+        val file =
+            myFixture.configureByText(
+                "greeter.proto",
+                """
+                syntax = "proto3";
+                package com.example;
+                option java_package = "com.example.java";
+
+                service Greeter {
+                  rpc SayHello(HelloRequest) returns (HelloResponse);
+                }
+                """.trimIndent(),
+            )
+        assertTrue(file is PbFile)
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        assertTrue(ArmeriaProtoPsiRouteCollector().collectFromFile(file, routes, mutableSetOf()))
+
+        val route = routes.single()
+        assertEquals("/com.example.Greeter/SayHello", route.path)
+        assertEquals("com.example.Greeter.SayHello", route.target)
+    }
+
     fun testCollectFromProtoFilePrefersPsiCollectorOverTextParsing() {
         myFixture.configureByText(
             "greeter.proto",
@@ -153,15 +224,12 @@ class ArmeriaProtoPsiRouteCollectorTest : ArmeriaLightJavaCodeInsightFixtureTest
     }
 
     private fun registerProtoRouteCollectorExtensionPoint() {
-        try {
-            ArmeriaProtoRouteCollector.EP.extensionList
+        val area = ApplicationManager.getApplication().extensionArea
+        if (area.hasExtensionPoint(ArmeriaProtoRouteCollector.EP.name)) {
             return
-        } catch (_: IllegalArgumentException) {
-            // Extension point is not registered in this test container yet.
         }
-        val extensionArea = ApplicationManager.getApplication().extensionArea
-        extensionArea.registerExtensionPoint(
-            "com.linecorp.intellij.armeria.protoRouteCollector",
+        area.registerExtensionPoint(
+            ArmeriaProtoRouteCollector.EP.name,
             ArmeriaProtoRouteCollector::class.java.name,
             ExtensionPoint.Kind.INTERFACE,
             true,

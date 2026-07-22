@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer.protocol
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.psi.JavaPsiFacade
@@ -50,12 +51,13 @@ object ArmeriaGrpcRouteCollector {
         collectFromProtoText(psiFile.text, psiFile, routes, seenProtoRoutes)
     }
 
-    private fun protoRouteCollectors(): List<ArmeriaProtoRouteCollector> =
-        try {
-            ArmeriaProtoRouteCollector.EP.extensionList
-        } catch (_: IllegalArgumentException) {
-            emptyList()
+    private fun protoRouteCollectors(): List<ArmeriaProtoRouteCollector> {
+        val area = ApplicationManager.getApplication().extensionArea
+        if (!area.hasExtensionPoint(ArmeriaProtoRouteCollector.EP.name)) {
+            return emptyList()
         }
+        return ArmeriaProtoRouteCollector.EP.extensionList
+    }
 
     internal fun collectFromProtoText(
         text: String,
@@ -79,7 +81,7 @@ object ArmeriaGrpcRouteCollector {
         }
     }
 
-    internal fun addProtoRoute(
+    fun addProtoRoute(
         element: PsiElement,
         fqService: String,
         methodName: String,
@@ -132,14 +134,4 @@ object ArmeriaGrpcRouteCollector {
         }
         return results
     }
-}
-
-fun registerArmeriaGrpcProtoRoute(
-    element: PsiElement,
-    fqService: String,
-    methodName: String,
-    routes: MutableList<ArmeriaRoute>,
-    seenProtoRoutes: MutableSet<String>,
-) {
-    ArmeriaGrpcRouteCollector.addProtoRoute(element, fqService, methodName, routes, seenProtoRoutes)
 }
