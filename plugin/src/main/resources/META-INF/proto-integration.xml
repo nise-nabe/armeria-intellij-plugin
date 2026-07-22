@@ -1,2 +1,5 @@
 <idea-plugin>
+    <extensions defaultExtensionNs="com.linecorp.intellij.armeria">
+        <protoRouteCollector implementation="com.linecorp.intellij.plugins.armeria.explorer.ArmeriaProtoPsiRouteCollector"/>
+    </extensions>
 </idea-plugin>

@@ -1,8 +1,11 @@
 package com.linecorp.intellij.plugins.armeria.explorer.protocol
+
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
@@ -31,8 +34,29 @@ object ArmeriaGrpcRouteCollector {
         for (virtualFile in FilenameIndex.getAllFilesByExt(project, "proto", scope)) {
             ArmeriaRouteCollectionMetrics.current()?.filesScanned?.incrementAndGet()
             val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: continue
-            collectFromProtoText(psiFile.text, psiFile, routes, seenProtoRoutes)
+            collectFromProtoFile(psiFile, routes, seenProtoRoutes)
         }
+    }
+
+    private fun collectFromProtoFile(
+        psiFile: PsiFile,
+        routes: MutableList<ArmeriaRoute>,
+        seenProtoRoutes: MutableSet<String>,
+    ) {
+        for (collector in protoRouteCollectors()) {
+            if (collector.collectFromFile(psiFile, routes, seenProtoRoutes)) {
+                return
+            }
+        }
+        collectFromProtoText(psiFile.text, psiFile, routes, seenProtoRoutes)
+    }
+
+    private fun protoRouteCollectors(): List<ArmeriaProtoRouteCollector> {
+        val area = ApplicationManager.getApplication().extensionArea
+        if (!area.hasExtensionPoint(ArmeriaProtoRouteCollector.EP.name)) {
+            return emptyList()
+        }
+        return ArmeriaProtoRouteCollector.EP.extensionList
     }
 
     internal fun collectFromProtoText(
@@ -52,22 +76,32 @@ object ArmeriaGrpcRouteCollector {
             val fqService = if (packageName.isBlank()) serviceName else "$packageName.$serviceName"
             for (rpc in RPC_PATTERN.findAll(body)) {
                 val methodName = rpc.groupValues[1]
-                val path = "/$fqService/$methodName"
-                val dedupeKey = "${ArmeriaRouteMetadata.moduleName(element)}:$path"
-                if (!seenProtoRoutes.add(dedupeKey)) {
-                    continue
-                }
-                routes +=
-                    ArmeriaRoute.create(
-                        element = element,
-                        protocol = message("route.explorer.protocol.grpc"),
-                        httpMethod = "",
-                        path = path,
-                        target = "$fqService.$methodName",
-                        routeMatch = RouteMatch.NON_HTTP,
-                    )
+                addProtoRoute(element, fqService, methodName, routes, seenProtoRoutes)
             }
         }
+    }
+
+    fun addProtoRoute(
+        element: PsiElement,
+        fqService: String,
+        methodName: String,
+        routes: MutableList<ArmeriaRoute>,
+        seenProtoRoutes: MutableSet<String>,
+    ) {
+        val path = "/$fqService/$methodName"
+        val dedupeKey = "${ArmeriaRouteMetadata.moduleName(element)}:$path"
+        if (!seenProtoRoutes.add(dedupeKey)) {
+            return
+        }
+        routes +=
+            ArmeriaRoute.create(
+                element = element,
+                protocol = message("route.explorer.protocol.grpc"),
+                httpMethod = "",
+                path = path,
+                target = "$fqService.$methodName",
+                routeMatch = RouteMatch.NON_HTTP,
+            )
     }
 
     fun isProtoRouteDiscoveryEnabled(): Boolean =
