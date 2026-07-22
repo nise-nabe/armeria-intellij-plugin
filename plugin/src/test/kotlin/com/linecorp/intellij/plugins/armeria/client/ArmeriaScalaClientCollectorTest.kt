@@ -74,9 +74,9 @@ class ArmeriaScalaClientCollectorTest : ArmeriaLightJavaCodeInsightFixtureTestCa
         val byUri = endpoints.associateBy { it.uri }
         assertEquals("WebClient", byUri.getValue("https://example.com").target)
         assertEquals("GrpcClients", byUri.getValue("https://grpc.example.com").target)
-        assertNotEquals(
-            byUri.getValue("https://example.com").sourceOffset,
-            byUri.getValue("https://grpc.example.com").sourceOffset,
+        assertFalse(
+            byUri.getValue("https://example.com").sourceOffset ==
+                byUri.getValue("https://grpc.example.com").sourceOffset,
         )
     }
 }

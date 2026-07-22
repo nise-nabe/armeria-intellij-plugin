@@ -79,7 +79,7 @@ class ArmeriaScalaRouteCollectorTest : ArmeriaFixtureTestBase() {
         val byPath = serviceRoutes.associateBy { it.path }
         assertEquals("HelloService", byPath.getValue("/api").target)
         assertEquals("AdminService", byPath.getValue("/admin").target)
-        assertNotEquals(byPath.getValue("/api").sourceOffset, byPath.getValue("/admin").sourceOffset)
+        assertFalse(byPath.getValue("/api").sourceOffset == byPath.getValue("/admin").sourceOffset)
     }
 
     fun testCollectAnnotatedServiceRegistrationFromScala() {
