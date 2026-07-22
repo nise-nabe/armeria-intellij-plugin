@@ -122,31 +122,45 @@ internal object ArmeriaSpringMvcRouteCollector {
     }
 
     /**
-     * Walks [hierarchy] (Spring TYPE_HIERARCHY order) and returns the first matching method that
-     * declares a Spring MVC mapping. Unannotated intermediate overrides do not stop the search.
+     * Walks [hierarchy] (Spring TYPE_HIERARCHY order) and returns the first method in the
+     * override chain that declares a Spring MVC mapping. Unannotated intermediate overrides
+     * do not stop the search.
      *
-     * Prefers [PsiClass.findMethodBySignature]; when that fails across generic type-parameter
-     * substitution (e.g. `handle(T)` vs concrete `handle(String)`), falls back to a method
-     * declared on that type that appears in [PsiMethod.findSuperMethods] (see #289).
+     * Indexes [method] and its supers via [methodsByContainingClass] so generic type-parameter
+     * substitution (e.g. `handle(T)` vs `handle(String)`) still resolves across the hierarchy
+     * (see #289), including multi-level unannotated intermediates.
      */
     private fun resolveMappedMethod(
         hierarchy: List<PsiClass>,
         method: PsiMethod,
     ): PsiMethod? {
-        val superByContainingClass =
-            method
-                .findSuperMethods(/* checkBases = */ false)
-                .associateBy { it.containingClass }
+        val byContainingClass = methodsByContainingClass(method)
         for (type in hierarchy) {
-            val candidate =
-                type.findMethodBySignature(method, false)
-                    ?: superByContainingClass[type]
-                    ?: continue
+            val candidate = byContainingClass[type] ?: continue
             if (hasMappingAnnotation(candidate)) {
                 return candidate
             }
         }
         return null
+    }
+
+    /**
+     * Maps each declaring type to the method on that type in [method]'s override chain.
+     * Walks [PsiMethod.findSuperMethods] transitively because each call returns only immediate
+     * supers (a super that itself overrides another does not expose the grandparent).
+     */
+    private fun methodsByContainingClass(method: PsiMethod): Map<PsiClass, PsiMethod> {
+        val result = linkedMapOf<PsiClass, PsiMethod>()
+        val queue = ArrayDeque<PsiMethod>().apply { add(method) }
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            val containingClass = current.containingClass ?: continue
+            if (result.putIfAbsent(containingClass, current) != null) {
+                continue
+            }
+            queue.addAll(current.findSuperMethods())
+        }
+        return result
     }
 
     private fun addRoutesFromMethod(
