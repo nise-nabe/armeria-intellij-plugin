@@ -16,6 +16,7 @@ import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
+import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaRouteNavigation
 import com.linecorp.intellij.plugins.armeria.message
 import java.awt.BorderLayout
 import java.awt.Component
@@ -180,8 +181,7 @@ class ArmeriaClientExplorerPanel(
         val endpoint = endpointList.selectedValue ?: return
         ReadAction
             .nonBlocking<Navigatable?> {
-                val element = endpoint.pointer.element as? Navigatable
-                element?.takeIf { it.canNavigate() }
+                ArmeriaRouteNavigation.resolveNavigatable(endpoint.pointer, endpoint.sourceOffset)
             }.inSmartMode(project)
             .expireWith(this)
             .finishOnUiThread(ModalityState.any()) { navigatable ->

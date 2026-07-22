@@ -27,6 +27,9 @@ internal object ArmeriaClientSupport {
             "com.linecorp.armeria.client.retrofit2.ArmeriaRetrofit" to ClientProtocol.RETROFIT,
         )
 
+    private val CLIENT_SIMPLE_NAME_PROTOCOLS =
+        CLIENT_CLASS_PROTOCOLS.mapKeys { (fqcn, _) -> fqcn.substringAfterLast('.') }
+
     val FACTORY_METHOD_NAMES = setOf("builder", "of", "newClient")
 
     private val WEB_CLIENT_CLASS_NAMES =
@@ -37,13 +40,10 @@ internal object ArmeriaClientSupport {
 
     fun protocolForClass(qualifiedName: String?): ClientProtocol? = qualifiedName?.let { CLIENT_CLASS_PROTOCOLS[it] }
 
-    fun protocolForSimpleName(simpleName: String): ClientProtocol? =
-        CLIENT_CLASS_PROTOCOLS.entries
-            .firstOrNull { (fqcn, _) -> fqcn.substringAfterLast('.') == simpleName }
-            ?.value
+    fun protocolForSimpleName(simpleName: String): ClientProtocol? = CLIENT_SIMPLE_NAME_PROTOCOLS[simpleName]
 
     /** Simple class names used by text-based Scala client scanning. */
-    fun clientSimpleNames(): Set<String> = CLIENT_CLASS_PROTOCOLS.keys.mapTo(linkedSetOf()) { it.substringAfterLast('.') }
+    fun clientSimpleNames(): Set<String> = CLIENT_SIMPLE_NAME_PROTOCOLS.keys
 
     fun isWebClientClass(qualifiedName: String?): Boolean =
         qualifiedName != null &&

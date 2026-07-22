@@ -215,8 +215,6 @@ object ArmeriaRouteSupport {
 
     fun referencesArmeriaSourceContent(contents: CharSequence): Boolean = ArmeriaRouteContentScan.referencesArmeriaSourceContent(contents)
 
-    fun referencesArmeriaKotlinContentInText(contents: CharSequence): Boolean = referencesArmeriaSourceContent(contents)
-
     fun mayReferenceSpringBootArmeriaInText(contents: CharSequence): Boolean =
         ArmeriaRouteContentScan.mayReferenceSpringBootArmeriaInText(contents)
 

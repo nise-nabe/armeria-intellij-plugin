@@ -259,7 +259,7 @@ class ArmeriaRouteExplorerPanel(
 
     private fun navigateToSelection() {
         val route = selectedRouteFromTree() ?: return
-        ArmeriaRouteNavigation.navigateToPointer(project, route.pointer, parentDisposable = this)
+        ArmeriaRouteNavigation.navigateToRoute(project, route, parentDisposable = this)
     }
 
     private fun selectedRouteFromTree(): ArmeriaRoute? = ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent)

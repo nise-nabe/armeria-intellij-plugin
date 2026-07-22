@@ -31,8 +31,6 @@ internal object ArmeriaRouteContentScan {
         return referencesArmeriaInText(contents)
     }
 
-    fun referencesArmeriaKotlinContentInText(contents: CharSequence): Boolean = referencesArmeriaSourceContent(contents)
-
     fun mayReferenceSpringBootArmeriaInText(contents: CharSequence): Boolean {
         if (referencesArmeriaSourceContent(contents)) {
             return true

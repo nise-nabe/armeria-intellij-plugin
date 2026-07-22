@@ -39,17 +39,21 @@ internal object ArmeriaScalaClientCollector {
         seenEndpoints: MutableSet<String>,
     ) {
         val scanText = ArmeriaScalaTextSupport.stripScalaComments(contents)
+        val filePath = file.virtualFile?.path ?: return
         for (match in CLIENT_ENDPOINT_PATTERN.findAll(scanText)) {
             val clientSimpleName = match.groupValues[1]
             val protocol = ArmeriaClientSupport.protocolForSimpleName(clientSimpleName) ?: continue
-            val element = file.findElementAt(match.range.first) ?: file
+            val offset = match.range.first
+            val element = file.findElementAt(offset) ?: file
             ArmeriaClientCollector.addEndpoint(
-                element,
-                protocol,
-                clientSimpleName,
-                match.groupValues[2],
-                endpoints,
-                seenEndpoints,
+                element = element,
+                protocol = protocol,
+                target = clientSimpleName,
+                uri = match.groupValues[2],
+                endpoints = endpoints,
+                seenEndpoints = seenEndpoints,
+                dedupeKey = "$filePath:$offset",
+                sourceOffset = offset,
             )
         }
     }

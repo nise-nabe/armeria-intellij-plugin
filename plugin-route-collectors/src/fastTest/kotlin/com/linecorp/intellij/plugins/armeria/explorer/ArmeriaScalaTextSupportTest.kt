@@ -177,6 +177,50 @@ class ArmeriaScalaTextSupportTest {
     }
 
     @Test
+    fun keepsRegistrationWhenCommentMarkersAppearInsideStrings() {
+        val matches =
+            ArmeriaScalaTextSupport.findServiceRegistrations(
+                """
+                import com.linecorp.armeria.server.Server
+
+                object Main {
+                  val marker = "/*"
+                  Server.builder()
+                    .service("/api", new HelloService())
+                    .build()
+                  val end = "*/"
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(1, matches.size)
+        assertEquals("/api", matches.single().path)
+    }
+
+    @Test
+    fun keepsRegistrationWhenCommentMarkersAppearInsideTripleQuotedStrings() {
+        val matches =
+            ArmeriaScalaTextSupport.findServiceRegistrations(
+                """
+                import com.linecorp.armeria.server.Server
+
+                object Main {
+                  val docs = ${"\"\"\""}
+                    // not a real comment
+                    /* also not */
+                  ${"\"\"\""}
+                  Server.builder()
+                    .service("/api", new HelloService())
+                    .build()
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(1, matches.size)
+        assertEquals("/api", matches.single().path)
+    }
+
+    @Test
     fun bareIdentifierTargetIsUnresolved() {
         assertTrue(ArmeriaScalaTextSupport.isUnresolvedScalaTarget("handler", "handler"))
         assertFalse(ArmeriaScalaTextSupport.isUnresolvedScalaTarget("new HelloService()", "HelloService"))

@@ -8,6 +8,7 @@ import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaScalaTextSupport
 
 internal object ArmeriaScalaRouteCollector {
@@ -25,7 +26,7 @@ internal object ArmeriaScalaRouteCollector {
             ArmeriaRouteCollectionMetrics.current()?.filesScanned?.incrementAndGet()
             val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: continue
             val contents = psiFile.text
-            if (!ArmeriaScalaTextSupport.referencesArmeriaScalaContent(contents)) {
+            if (!ArmeriaRouteSupport.referencesArmeriaSourceContent(contents)) {
                 continue
             }
             fallbackScannedFiles += virtualFile
@@ -55,6 +56,7 @@ internal object ArmeriaScalaRouteCollector {
                 argumentCount = match.argumentCount,
                 routes = routes,
                 seenServiceRegistrations = seenServiceRegistrations,
+                sourceOffset = match.startOffset,
             )
         }
     }

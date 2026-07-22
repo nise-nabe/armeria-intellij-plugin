@@ -16,8 +16,11 @@ data class ScalaServiceRegistrationMatch(
  * - `.serviceUnder("/prefix", …)` and named `pathPrefix` / `service` argument orders
  * - `.annotatedService(…)` with optional path prefix
  *
- * Non-literal path expressions and dynamic prefixes are not matched.
- * Line/block comments are blanked before matching to avoid phantom routes.
+ * Paths must be string literals; non-literal / dynamic path expressions are not matched.
+ * Targets may be constructor forms or bare identifiers (the latter are marked unresolved).
+ * Line/block comments are blanked before matching to avoid phantom routes; string literals
+ * (including Scala triple-quoted strings) are preserved so comment markers inside them do
+ * not blank following code.
  */
 object ArmeriaScalaTextSupport {
     private const val TARGET = """(?:new\s+)?[\w.]+(?:\([^)]*\))?"""
@@ -84,8 +87,6 @@ object ArmeriaScalaTextSupport {
             ),
         )
 
-    fun referencesArmeriaScalaContent(contents: CharSequence): Boolean = ArmeriaRouteSupport.referencesArmeriaSourceContent(contents)
-
     fun findServiceRegistrations(text: String): List<ScalaServiceRegistrationMatch> {
         val scanText = stripScalaComments(text)
         if (!looksLikeServerBuilderScalaFile(scanText)) {
@@ -129,14 +130,38 @@ object ArmeriaScalaTextSupport {
 
     /**
      * Best-effort comment blanking for text scanning. Replaces comment text with spaces so
-     * match offsets stay aligned with the original source for PSI navigation.
-     * Strings that contain comment-like sequences may be altered; that only affects discovery
-     * accuracy, not compilation.
+     * match offsets stay aligned with the original source for navigation.
+     * Skips contents of `"…"` and `"""…"""` string literals (including escaped quotes in
+     * single-quoted strings). Nested block comments are not supported.
      */
     fun stripScalaComments(text: String): String {
         val chars = text.toCharArray()
         var i = 0
         while (i < chars.size) {
+            if (i + 2 < chars.size && chars[i] == '"' && chars[i + 1] == '"' && chars[i + 2] == '"') {
+                i += 3
+                while (i + 2 < chars.size && !(chars[i] == '"' && chars[i + 1] == '"' && chars[i + 2] == '"')) {
+                    i++
+                }
+                if (i + 2 < chars.size) {
+                    i += 3
+                }
+                continue
+            }
+            if (chars[i] == '"') {
+                i++
+                while (i < chars.size && chars[i] != '"') {
+                    if (chars[i] == '\\' && i + 1 < chars.size) {
+                        i += 2
+                    } else {
+                        i++
+                    }
+                }
+                if (i < chars.size) {
+                    i++
+                }
+                continue
+            }
             if (i + 1 < chars.size && chars[i] == '/' && chars[i + 1] == '*') {
                 chars[i] = ' '
                 chars[i + 1] = ' '

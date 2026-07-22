@@ -261,10 +261,12 @@ object ArmeriaClientCollector {
         decorators: List<String> = emptyList(),
         endpointGroup: String? = null,
         transport: String? = null,
+        dedupeKey: String? = null,
+        sourceOffset: Int? = null,
     ) {
         val virtualFile = element.containingFile?.virtualFile ?: return
-        val dedupeKey = "${virtualFile.path}:${element.textRange.startOffset}"
-        if (!seenEndpoints.add(dedupeKey)) {
+        val key = dedupeKey ?: "${virtualFile.path}:${element.textRange.startOffset}"
+        if (!seenEndpoints.add(key)) {
             return
         }
         endpoints +=
@@ -276,6 +278,7 @@ object ArmeriaClientCollector {
                 decorators = decorators,
                 endpointGroup = endpointGroup,
                 transport = transport,
+                sourceOffset = sourceOffset,
             )
     }
 

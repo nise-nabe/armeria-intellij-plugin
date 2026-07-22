@@ -12,11 +12,17 @@ object ArmeriaRouteMetadata {
         ModuleUtilCore.findModuleForPsiElement(element)?.name
             ?: message("route.explorer.module.unassigned")
 
-    fun sourceHint(element: PsiElement): String {
+    fun sourceHint(element: PsiElement): String = sourceHintAtOffset(element, element.textRange.startOffset)
+
+    fun sourceHintAtOffset(
+        element: PsiElement,
+        offset: Int,
+    ): String {
         val containingFile = element.containingFile ?: return ""
         val virtualFile = containingFile.virtualFile ?: return ""
         val document = PsiDocumentManager.getInstance(element.project).getDocument(containingFile) ?: return virtualFile.presentableUrl
-        val line = document.getLineNumber(element.textRange.startOffset) + 1
+        val safeOffset = offset.coerceIn(0, document.textLength)
+        val line = document.getLineNumber(safeOffset) + 1
         return "${virtualFile.presentableUrl}:$line"
     }
 
