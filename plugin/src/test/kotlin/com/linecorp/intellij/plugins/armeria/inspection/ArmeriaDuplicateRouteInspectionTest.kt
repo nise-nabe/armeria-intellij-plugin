@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.inspection
 
+import com.intellij.psi.PsiJavaFile
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
@@ -35,13 +36,7 @@ class ArmeriaDuplicateRouteInspectionTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val expectedDescription = message("inspection.duplicate.route.problem")
-        val duplicateHighlights =
-            myFixture.doHighlighting().filter {
-                it.description == expectedDescription
-            }
-
-        assertEquals(2, duplicateHighlights.size)
+        assertDuplicateRouteHighlightsOnMethods("BadService", "first", "BadService", "second")
     }
 
     fun testAllowsDistinctPaths() {
@@ -66,12 +61,7 @@ class ArmeriaDuplicateRouteInspectionTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        val routeDuplicateHighlights =
-            myFixture.doHighlighting().filter {
-                it.description == message("inspection.duplicate.route.problem")
-            }
-
-        assertTrue(routeDuplicateHighlights.isEmpty())
+        assertNoDuplicateRouteHighlights()
     }
 
     fun testAllowsDifferentHttpMethodsOnSamePath() {
@@ -97,11 +87,41 @@ class ArmeriaDuplicateRouteInspectionTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
+        assertNoDuplicateRouteHighlights()
+    }
+
+    private fun assertNoDuplicateRouteHighlights() {
         val routeDuplicateHighlights =
             myFixture.doHighlighting().filter {
                 it.description == message("inspection.duplicate.route.problem")
             }
 
         assertTrue(routeDuplicateHighlights.isEmpty())
+    }
+
+    private fun assertDuplicateRouteHighlightsOnMethods(vararg classAndMethodNames: String) {
+        require(classAndMethodNames.size % 2 == 0) { "Expected class/method pairs" }
+
+        val expectedDescription = message("inspection.duplicate.route.problem")
+        val duplicateHighlights =
+            myFixture.doHighlighting().filter {
+                it.description == expectedDescription
+            }
+
+        assertEquals(classAndMethodNames.size / 2, duplicateHighlights.size)
+
+        val file = myFixture.file as PsiJavaFile
+        val highlightedOffsets = duplicateHighlights.map { it.startOffset }.toSet()
+        classAndMethodNames.toList().chunked(2).forEach { (className, methodName) ->
+            val clazz =
+                file.classes.singleOrNull { it.name == className }
+                    ?: error("Class $className not found in ${file.name}")
+            val method = clazz.findMethodsByName(methodName, false).single()
+            val methodOffset = method.nameIdentifier!!.textRange.startOffset
+            assertTrue(
+                "Expected duplicate route highlight on $className.$methodName",
+                methodOffset in highlightedOffsets,
+            )
+        }
     }
 }

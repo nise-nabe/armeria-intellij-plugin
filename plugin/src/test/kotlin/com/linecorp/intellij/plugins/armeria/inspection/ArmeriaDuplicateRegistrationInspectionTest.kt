@@ -28,7 +28,7 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
         val pattern =
             Regex.escape(template)
                 .replace(Regex.escape(labelPlaceholder), "(.+?)")
-                .replace(Regex.escape(countPlaceholder), "(\\d+)")
+                .replace(Regex.escape(countPlaceholder), "(\\p{N}+)")
         return Regex("^$pattern$").matches(description)
     }
 
@@ -74,8 +74,7 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
     }
 
     fun testJavaCrossFileAnnotatedRoutesAreHighlighted() {
-        myFixture.configureByText(
-            "First.java",
+        val firstContent =
             """
             package example;
 
@@ -87,9 +86,8 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
                     return "first";
                 }
             }
-            """.trimIndent(),
-        )
-        myFixture.addClass(
+            """.trimIndent()
+        val secondContent =
             """
             package example;
 
@@ -101,17 +99,24 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
                     return "second";
                 }
             }
-            """.trimIndent(),
-        )
+            """.trimIndent()
+
+        myFixture.configureByText("First.java", firstContent)
+        val secondClass = myFixture.addClass(secondContent)
 
         myFixture.enableInspections(ArmeriaDuplicateRegistrationInspection())
         val expectedDescription = message("inspection.duplicate.registration.problem", "GET /shared", 2)
-        val duplicateHighlights =
-            myFixture.doHighlighting().filter {
-                it.description == expectedDescription
-            }
 
-        assertEquals(1, duplicateHighlights.size)
+        assertEquals(
+            1,
+            myFixture.doHighlighting().count { it.description == expectedDescription },
+        )
+
+        myFixture.openFileInEditor(secondClass.containingFile.virtualFile)
+        assertEquals(
+            1,
+            myFixture.doHighlighting().count { it.description == expectedDescription },
+        )
     }
 
     fun testInClassJavaAnnotatedDuplicatesAreNotRegistrationProblems() {
