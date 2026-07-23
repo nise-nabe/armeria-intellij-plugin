@@ -11,6 +11,26 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
         registerRouteDuplicateIndexStubs()
     }
 
+    private fun registrationDuplicateHighlights() =
+        myFixture.doHighlighting().filter {
+            it.description?.let(::matchesRegistrationDuplicateProblem) == true
+        }
+
+    private fun matchesRegistrationDuplicateProblem(description: String): Boolean {
+        val labelPlaceholder = "\uE000"
+        val template =
+            message(
+                "inspection.duplicate.registration.problem",
+                labelPlaceholder,
+                0,
+            )
+        val pattern =
+            Regex.escape(template)
+                .replace(Regex.escape(labelPlaceholder), "(.+?)")
+                .replace(Regex.escape("0"), "(\\d+)")
+        return Regex("^$pattern$").matches(description)
+    }
+
     fun testInspectionHighlightsDuplicateAndOffersNavigateQuickFix() {
         configureDuplicateServiceRegistrationFixture()
 
@@ -116,12 +136,7 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
         )
 
         myFixture.enableInspections(ArmeriaDuplicateRegistrationInspection())
-        val registrationHighlights =
-            myFixture.doHighlighting().filter {
-                it.description?.contains("conflicting registrations in this module") == true
-            }
-
-        assertTrue(registrationHighlights.isEmpty())
+        assertTrue(registrationDuplicateHighlights().isEmpty())
     }
 
     fun testKotlinInClassAnnotatedDuplicatesAreNotRegistrationProblems() {
@@ -143,12 +158,7 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
         )
 
         myFixture.enableInspections(ArmeriaDuplicateRegistrationKotlinInspection())
-        val registrationHighlights =
-            myFixture.doHighlighting().filter {
-                it.description?.contains("conflicting registrations in this module") == true
-            }
-
-        assertTrue(registrationHighlights.isEmpty())
+        assertTrue(registrationDuplicateHighlights().isEmpty())
     }
 
     fun testKotlinDistinctPathsAreNotRegistrationProblems() {
@@ -170,12 +180,7 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
         )
 
         myFixture.enableInspections(ArmeriaDuplicateRegistrationKotlinInspection())
-        val registrationHighlights =
-            myFixture.doHighlighting().filter {
-                it.description?.contains("conflicting registrations in this module") == true
-            }
-
-        assertTrue(registrationHighlights.isEmpty())
+        assertTrue(registrationDuplicateHighlights().isEmpty())
     }
 
     fun testKotlinInspectionHighlightsDuplicateAndOffersNavigateQuickFix() {
