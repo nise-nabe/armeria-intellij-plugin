@@ -88,22 +88,27 @@ object ArmeriaScalaTextSupport {
         )
 
     fun findServiceRegistrations(text: String): List<ScalaServiceRegistrationMatch> {
-        val scanText = stripScalaComments(text)
-        if (!looksLikeServerBuilderScalaFile(scanText)) {
+        val scan = scanScalaSource(text)
+        if (!looksLikeServerBuilderScalaFile(scan.textWithoutComments)) {
             return emptyList()
         }
         return RULES
             .flatMap { rule ->
-                rule.pattern.findAll(scanText).map { match ->
+                rule.pattern.findAll(scan.textWithoutComments).mapNotNull { match ->
+                    val startOffset = match.range.first
+                    if (scan.isInsideStringLiteral(startOffset)) {
+                        return@mapNotNull null
+                    }
                     ScalaServiceRegistrationMatch(
                         methodName = rule.methodName,
                         path = rule.path(match),
                         targetText = rule.target(match).trim(),
-                        startOffset = match.range.first,
+                        startOffset = startOffset,
                         argumentCount = rule.argumentCount,
                     )
                 }
-            }.sortedBy { it.startOffset }
+            }.distinctBy { it.startOffset }
+            .sortedBy { it.startOffset }
     }
 
     fun renderScalaTarget(targetText: String): String {
@@ -134,11 +139,27 @@ object ArmeriaScalaTextSupport {
      * Skips contents of `"…"` and `"""…"""` string literals (including escaped quotes in
      * single-quoted strings). Nested block comments are not supported.
      */
-    fun stripScalaComments(text: String): String {
+    fun stripScalaComments(text: String): String = scanScalaSource(text).textWithoutComments
+
+    fun isOffsetInsideStringLiteral(
+        text: String,
+        offset: Int,
+    ): Boolean = scanScalaSource(text).isInsideStringLiteral(offset)
+
+    private data class ScalaSourceScan(
+        val textWithoutComments: String,
+        private val stringLiteralRanges: List<IntRange>,
+    ) {
+        fun isInsideStringLiteral(offset: Int): Boolean = stringLiteralRanges.any { offset in it }
+    }
+
+    private fun scanScalaSource(text: String): ScalaSourceScan {
         val chars = text.toCharArray()
+        val stringLiteralRanges = mutableListOf<IntRange>()
         var i = 0
         while (i < chars.size) {
             if (i + 2 < chars.size && chars[i] == '"' && chars[i + 1] == '"' && chars[i + 2] == '"') {
+                val start = i
                 i += 3
                 while (i + 2 < chars.size && !(chars[i] == '"' && chars[i + 1] == '"' && chars[i + 2] == '"')) {
                     i++
@@ -146,9 +167,11 @@ object ArmeriaScalaTextSupport {
                 if (i + 2 < chars.size) {
                     i += 3
                 }
+                stringLiteralRanges += start until i
                 continue
             }
             if (chars[i] == '"') {
+                val start = i
                 i++
                 while (i < chars.size && chars[i] != '"') {
                     if (chars[i] == '\\' && i + 1 < chars.size) {
@@ -160,6 +183,7 @@ object ArmeriaScalaTextSupport {
                 if (i < chars.size) {
                     i++
                 }
+                stringLiteralRanges += start until i
                 continue
             }
             if (i + 1 < chars.size && chars[i] == '/' && chars[i + 1] == '*') {
@@ -188,6 +212,6 @@ object ArmeriaScalaTextSupport {
             }
             i++
         }
-        return String(chars)
+        return ScalaSourceScan(String(chars), stringLiteralRanges)
     }
 }

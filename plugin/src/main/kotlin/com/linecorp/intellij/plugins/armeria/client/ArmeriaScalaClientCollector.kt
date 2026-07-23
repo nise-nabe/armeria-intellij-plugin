@@ -41,9 +41,12 @@ internal object ArmeriaScalaClientCollector {
         val scanText = ArmeriaScalaTextSupport.stripScalaComments(contents)
         val filePath = file.virtualFile?.path ?: return
         for (match in CLIENT_ENDPOINT_PATTERN.findAll(scanText)) {
+            val offset = match.range.first
+            if (ArmeriaScalaTextSupport.isOffsetInsideStringLiteral(contents, offset)) {
+                continue
+            }
             val clientSimpleName = match.groupValues[1]
             val protocol = ArmeriaClientSupport.protocolForSimpleName(clientSimpleName) ?: continue
-            val offset = match.range.first
             val element = file.findElementAt(offset) ?: file
             ArmeriaClientCollector.addEndpoint(
                 element = element,

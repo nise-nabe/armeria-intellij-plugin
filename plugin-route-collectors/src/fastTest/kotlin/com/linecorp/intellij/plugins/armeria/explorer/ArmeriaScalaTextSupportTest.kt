@@ -221,6 +221,26 @@ class ArmeriaScalaTextSupportTest {
     }
 
     @Test
+    fun ignoresServiceRegistrationInsideStringLiteral() {
+        val matches =
+            ArmeriaScalaTextSupport.findServiceRegistrations(
+                """
+                import com.linecorp.armeria.server.Server
+
+                object Main {
+                  val example = ".service(\"/fake\", new FakeService())"
+                  Server.builder()
+                    .service("/api", new HelloService())
+                    .build()
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(1, matches.size)
+        assertEquals("/api", matches.single().path)
+    }
+
+    @Test
     fun bareIdentifierTargetIsUnresolved() {
         assertTrue(ArmeriaScalaTextSupport.isUnresolvedScalaTarget("handler", "handler"))
         assertFalse(ArmeriaScalaTextSupport.isUnresolvedScalaTarget("new HelloService()", "HelloService"))
