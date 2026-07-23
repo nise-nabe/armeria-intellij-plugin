@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.inspection
 
+import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaDuplicateRouteInspectionTest : ArmeriaFixtureTestBase() {
@@ -22,19 +23,25 @@ class ArmeriaDuplicateRouteInspectionTest : ArmeriaFixtureTestBase() {
 
             public class BadService {
                 @Get("/dup")
-                public String <warning descr="This annotated Armeria route duplicates another HTTP method/path combination in the same service class.">first</warning>() {
+                public String first() {
                     return "first";
                 }
 
                 @Get("/dup")
-                public String <warning descr="This annotated Armeria route duplicates another HTTP method/path combination in the same service class.">second</warning>() {
+                public String second() {
                     return "second";
                 }
             }
             """.trimIndent(),
         )
 
-        myFixture.testHighlighting(true, false, true)
+        val expectedDescription = message("inspection.duplicate.route.problem")
+        val duplicateHighlights =
+            myFixture.doHighlighting().filter {
+                it.description == expectedDescription
+            }
+
+        assertEquals(2, duplicateHighlights.size)
     }
 
     fun testAllowsDistinctPaths() {
@@ -59,7 +66,12 @@ class ArmeriaDuplicateRouteInspectionTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        myFixture.testHighlighting(true, false, true)
+        val routeDuplicateHighlights =
+            myFixture.doHighlighting().filter {
+                it.description == message("inspection.duplicate.route.problem")
+            }
+
+        assertTrue(routeDuplicateHighlights.isEmpty())
     }
 
     fun testAllowsDifferentHttpMethodsOnSamePath() {
@@ -85,6 +97,11 @@ class ArmeriaDuplicateRouteInspectionTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        myFixture.testHighlighting(true, false, true)
+        val routeDuplicateHighlights =
+            myFixture.doHighlighting().filter {
+                it.description == message("inspection.duplicate.route.problem")
+            }
+
+        assertTrue(routeDuplicateHighlights.isEmpty())
     }
 }

@@ -118,7 +118,7 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
         myFixture.enableInspections(ArmeriaDuplicateRegistrationInspection())
         val registrationHighlights =
             myFixture.doHighlighting().filter {
-                it.description.startsWith("This Armeria route")
+                it.description?.contains("conflicting registrations in this module") == true
             }
 
         assertTrue(registrationHighlights.isEmpty())
@@ -145,7 +145,7 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
         myFixture.enableInspections(ArmeriaDuplicateRegistrationKotlinInspection())
         val registrationHighlights =
             myFixture.doHighlighting().filter {
-                it.description.startsWith("This Armeria route")
+                it.description?.contains("conflicting registrations in this module") == true
             }
 
         assertTrue(registrationHighlights.isEmpty())
@@ -172,7 +172,7 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
         myFixture.enableInspections(ArmeriaDuplicateRegistrationKotlinInspection())
         val registrationHighlights =
             myFixture.doHighlighting().filter {
-                it.description.startsWith("This Armeria route")
+                it.description?.contains("conflicting registrations in this module") == true
             }
 
         assertTrue(registrationHighlights.isEmpty())
