@@ -1,4 +1,5 @@
-package com.linecorp.intellij.plugins.armeria.explorer.navigation
+package com.linecorp.intellij.plugins.armeria.explorer.model.runtime
+
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.TextRange
