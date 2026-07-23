@@ -221,6 +221,27 @@ class ArmeriaScalaTextSupportTest {
     }
 
     @Test
+    fun keepsRegistrationWhenSlashAndStarAppearInCharLiterals() {
+        val matches =
+            ArmeriaScalaTextSupport.findServiceRegistrations(
+                """
+                import com.linecorp.armeria.server.Server
+
+                object Main {
+                  val slash = '/'
+                  val star = '*'
+                  Server.builder()
+                    .service("/api", new HelloService())
+                    .build()
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(1, matches.size)
+        assertEquals("/api", matches.single().path)
+    }
+
+    @Test
     fun ignoresServiceRegistrationInsideStringLiteral() {
         val matches =
             ArmeriaScalaTextSupport.findServiceRegistrations(

@@ -38,11 +38,11 @@ internal object ArmeriaScalaClientCollector {
         endpoints: MutableList<ArmeriaClientEndpoint>,
         seenEndpoints: MutableSet<String>,
     ) {
-        val scanText = ArmeriaScalaTextSupport.stripScalaComments(contents)
+        val scan = ArmeriaScalaTextSupport.scanScalaText(contents)
         val filePath = file.virtualFile?.path ?: return
-        for (match in CLIENT_ENDPOINT_PATTERN.findAll(scanText)) {
+        for (match in CLIENT_ENDPOINT_PATTERN.findAll(scan.textWithoutComments)) {
             val offset = match.range.first
-            if (ArmeriaScalaTextSupport.isOffsetInsideStringLiteral(contents, offset)) {
+            if (scan.isInsideStringLiteral(offset)) {
                 continue
             }
             val clientSimpleName = match.groupValues[1]

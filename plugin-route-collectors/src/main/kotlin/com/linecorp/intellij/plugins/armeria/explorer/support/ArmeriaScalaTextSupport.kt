@@ -136,24 +136,26 @@ object ArmeriaScalaTextSupport {
     /**
      * Best-effort comment blanking for text scanning. Replaces comment text with spaces so
      * match offsets stay aligned with the original source for navigation.
-     * Skips contents of `"…"` and `"""…"""` string literals (including escaped quotes in
-     * single-quoted strings). Nested block comments are not supported.
+     * Skips contents of `"…"`, `"""…"""`, and `'…'` char literals (including escapes).
+     * Nested block comments are not supported.
      */
-    fun stripScalaComments(text: String): String = scanScalaSource(text).textWithoutComments
+    fun stripScalaComments(text: String): String = scanScalaText(text).textWithoutComments
 
     fun isOffsetInsideStringLiteral(
         text: String,
         offset: Int,
-    ): Boolean = scanScalaSource(text).isInsideStringLiteral(offset)
+    ): Boolean = scanScalaText(text).isInsideStringLiteral(offset)
 
-    private data class ScalaSourceScan(
+    fun scanScalaText(text: String): ScalaTextScan = scanScalaSource(text)
+
+    class ScalaTextScan internal constructor(
         val textWithoutComments: String,
         private val stringLiteralRanges: List<IntRange>,
     ) {
         fun isInsideStringLiteral(offset: Int): Boolean = stringLiteralRanges.any { offset in it }
     }
 
-    private fun scanScalaSource(text: String): ScalaSourceScan {
+    private fun scanScalaSource(text: String): ScalaTextScan {
         val chars = text.toCharArray()
         val stringLiteralRanges = mutableListOf<IntRange>()
         var i = 0
@@ -186,6 +188,21 @@ object ArmeriaScalaTextSupport {
                 stringLiteralRanges += start until i
                 continue
             }
+            if (chars[i] == '\'') {
+                i++
+                while (i < chars.size) {
+                    if (chars[i] == '\\' && i + 1 < chars.size) {
+                        i += 2
+                        continue
+                    }
+                    if (chars[i] == '\'') {
+                        i++
+                        break
+                    }
+                    i++
+                }
+                continue
+            }
             if (i + 1 < chars.size && chars[i] == '/' && chars[i + 1] == '*') {
                 chars[i] = ' '
                 chars[i + 1] = ' '
@@ -212,6 +229,6 @@ object ArmeriaScalaTextSupport {
             }
             i++
         }
-        return ScalaSourceScan(String(chars), stringLiteralRanges)
+        return ScalaTextScan(String(chars), stringLiteralRanges)
     }
 }
