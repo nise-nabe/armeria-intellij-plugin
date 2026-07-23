@@ -23,7 +23,7 @@ internal object ArmeriaRouteContentScan {
         return ARMERIA_REFERENCE_PATTERN.containsMatchIn(searchWindow)
     }
 
-    fun referencesArmeriaKotlinContentInText(contents: CharSequence): Boolean {
+    fun referencesArmeriaSourceContent(contents: CharSequence): Boolean {
         val header = contents.subSequence(0, minOf(contents.length, ArmeriaRouteSupport.ARMERIA_HEADER_SCAN_LIMIT))
         if (header.contains("import ${ArmeriaRouteSupport.ARMERIA_PACKAGE_PREFIX}")) {
             return true
@@ -32,7 +32,7 @@ internal object ArmeriaRouteContentScan {
     }
 
     fun mayReferenceSpringBootArmeriaInText(contents: CharSequence): Boolean {
-        if (referencesArmeriaKotlinContentInText(contents)) {
+        if (referencesArmeriaSourceContent(contents)) {
             return true
         }
         val header = contents.subSequence(0, minOf(contents.length, ArmeriaRouteSupport.ARMERIA_HEADER_SCAN_LIMIT))

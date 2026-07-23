@@ -151,6 +151,7 @@ object ArmeriaRouteCollectorServiceRegistration {
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
         decorators: List<String>? = null,
+        sourceOffset: Int? = null,
     ): Boolean {
         if (!seenServiceRegistrations.add(registrationKey)) {
             return false
@@ -183,6 +184,7 @@ object ArmeriaRouteCollectorServiceRegistration {
                 decorators = programmaticDecorators,
                 timeoutHints = timeoutHints,
                 delegationKind = delegationKind,
+                sourceOffset = sourceOffset,
             )
         return true
     }

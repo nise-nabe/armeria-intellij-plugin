@@ -124,6 +124,14 @@ object ArmeriaRouteCollector {
             )
         }
 
+        ArmeriaScalaRouteCollector.collectServiceRegistrationsFallback(
+            project,
+            scope,
+            routes,
+            fallbackScannedFiles,
+            seenServiceRegistrations,
+        )
+
         collectExtendedRegistrations(project, scope, routes, seenServiceRegistrations, fallbackScannedFiles)
 
         for (contributor in contributors) {

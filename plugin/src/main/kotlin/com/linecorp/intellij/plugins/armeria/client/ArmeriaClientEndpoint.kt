@@ -14,6 +14,8 @@ data class ArmeriaClientEndpoint(
     val decorators: List<String> = emptyList(),
     val endpointGroup: String? = null,
     val transport: String? = null,
+    /** Text offset for plain-text sources (e.g. Scala); preferred for Explorer navigation. */
+    val sourceOffset: Int? = null,
 ) {
     companion object {
         fun create(
@@ -24,6 +26,7 @@ data class ArmeriaClientEndpoint(
             decorators: List<String> = emptyList(),
             endpointGroup: String? = null,
             transport: String? = null,
+            sourceOffset: Int? = null,
         ): ArmeriaClientEndpoint =
             ArmeriaClientEndpoint(
                 clientType = clientType,
@@ -34,6 +37,7 @@ data class ArmeriaClientEndpoint(
                 decorators = decorators,
                 endpointGroup = endpointGroup,
                 transport = transport,
+                sourceOffset = sourceOffset,
             )
     }
 }

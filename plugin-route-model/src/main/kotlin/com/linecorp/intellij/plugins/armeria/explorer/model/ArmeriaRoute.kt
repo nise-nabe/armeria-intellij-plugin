@@ -25,10 +25,15 @@ data class ArmeriaRoute(
     val delegationMountPath: String = "",
     val delegationKind: DelegationKind? = null,
     val pointer: SmartPsiElementPointer<PsiElement>,
+    /**
+     * Optional text offset for language-agnostic / plain-text sources (e.g. Scala without PSI).
+     * When set, Explorer navigation and [resolveSourceHint] prefer this offset over the pointer element range.
+     */
+    val sourceOffset: Int? = null,
 ) {
     fun resolveSourceHint(): String {
         val element = pointer.element ?: return ""
-        return ArmeriaRouteMetadata.sourceHint(element)
+        return ArmeriaRouteMetadata.sourceHintAtOffset(element, sourceOffset ?: element.textRange.startOffset)
     }
 
     fun resolveRegisteredInHint(): String {
@@ -102,6 +107,7 @@ data class ArmeriaRoute(
             delegationKind: DelegationKind? = null,
             /** When set, overrides module attribution derived from [element] (e.g. concrete controller). */
             moduleName: String? = null,
+            sourceOffset: Int? = null,
         ): ArmeriaRoute =
             ArmeriaRoute(
                 protocol = protocol,
@@ -123,6 +129,7 @@ data class ArmeriaRoute(
                 delegationMountPath = delegationMountPath,
                 delegationKind = delegationKind,
                 pointer = SmartPointerManager.createPointer(element),
+                sourceOffset = sourceOffset,
             )
 
         fun createRuntime(

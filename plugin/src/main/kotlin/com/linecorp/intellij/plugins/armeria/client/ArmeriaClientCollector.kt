@@ -40,6 +40,7 @@ object ArmeriaClientCollector {
         if (isKotlinPluginAvailable()) {
             ArmeriaKotlinClientCollector.collect(project, scope, endpoints, seenEndpoints)
         }
+        ArmeriaScalaClientCollector.collect(project, scope, endpoints, seenEndpoints)
         val sorted = endpoints.sortedWith(compareBy({ it.clientType }, { it.uri }, { it.target }))
         return CachedValueProvider.Result.create(
             sorted,
@@ -260,10 +261,12 @@ object ArmeriaClientCollector {
         decorators: List<String> = emptyList(),
         endpointGroup: String? = null,
         transport: String? = null,
+        dedupeKey: String? = null,
+        sourceOffset: Int? = null,
     ) {
         val virtualFile = element.containingFile?.virtualFile ?: return
-        val dedupeKey = "${virtualFile.path}:${element.textRange.startOffset}"
-        if (!seenEndpoints.add(dedupeKey)) {
+        val key = dedupeKey ?: "${virtualFile.path}:${element.textRange.startOffset}"
+        if (!seenEndpoints.add(key)) {
             return
         }
         endpoints +=
@@ -275,6 +278,7 @@ object ArmeriaClientCollector {
                 decorators = decorators,
                 endpointGroup = endpointGroup,
                 transport = transport,
+                sourceOffset = sourceOffset,
             )
     }
 
