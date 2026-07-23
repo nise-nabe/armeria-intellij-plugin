@@ -1,4 +1,4 @@
-package com.linecorp.intellij.plugins.armeria.explorer.navigation
+package com.linecorp.intellij.plugins.armeria.explorer.model.runtime
 
 import com.intellij.openapi.project.Project
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute

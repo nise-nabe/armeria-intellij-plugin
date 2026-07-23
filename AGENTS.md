@@ -82,11 +82,11 @@ Kotlin style is enforced by ktlint (`com.linecorp.intellij.ktlint` convention, `
 | Path | Role |
 |------|------|
 | `plugin-shared/` | Shared bundle, icons, and starters used by other modules |
-| `plugin-route-model/` | Leaf module with `ArmeriaRoute`, `RouteMatch`, `RouteProtocol`, `DelegationKind`, etc. (no collector code) |
+| `plugin-route-model/` | Leaf module with `ArmeriaRoute`, `RouteMatch`, `RouteProtocol`, `DelegationKind`, etc., plus runtime route helpers (`ArmeriaRuntimeRoutePointer`, `ArmeriaRuntimeRouteFactory` in `explorer.model.runtime`; no collector code) |
 | `plugin-route-collectors/` | Core annotated + service-registration collectors, decorator/timeout/annotation helpers, support utilities, PSI traversal, `RouteContributor`/`RouteCollectContext` SPI, `ArmeriaKotlinRouteCollector`, and shared test fixtures |
 | `plugin-route-spring/` | Spring MVC / Spring Boot / Spring config collectors and `ArmeriaDelegatedRouteCollector` |
 | `plugin-route-protocol/` | GraphQL / gRPC / Thrift / IDL / proto-text collectors |
-| `plugin-route-analysis/` | Route Explorer UI helpers, DocService support, navigation, duplicate index, and `ArmeriaRouteAnalysisCollector` (production façade that always supplies Spring/protocol contributors) |
+| `plugin-route-analysis/` | Route Explorer UI helpers, DocService support, jump-to-source navigation (`navigation/ArmeriaRouteNavigation` only), duplicate index, and `ArmeriaRouteAnalysisCollector` (production façade that always supplies Spring/protocol contributors) |
 | `plugin-wizard/` | New Project Wizard templates and verification |
 | `plugin/` | Aggregating plugin module, run config, Clients explorer, resources, `CHANGELOG.md` |
 | `build-logic/` | Shared IntelliJ Platform Gradle conventions |

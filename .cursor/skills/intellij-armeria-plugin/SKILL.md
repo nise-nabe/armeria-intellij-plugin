@@ -22,11 +22,11 @@ in this repository. Apply it **during implementation**, not only before opening 
 
 | Module | Owns |
 |--------|------|
-| `plugin-route-model/` | Leaf domain types (`ArmeriaRoute`, `RouteMatch`, `RouteProtocol`, `PathType`, `DelegationKind`, `CoreServiceRegistrationMethod`, `ArmeriaRouteMetadata`) |
+| `plugin-route-model/` | Leaf domain types (`ArmeriaRoute`, `RouteMatch`, `RouteProtocol`, `PathType`, `DelegationKind`, `CoreServiceRegistrationMethod`, `ArmeriaRouteMetadata`) and runtime route helpers (`ArmeriaRuntimeRoutePointer`, `ArmeriaRuntimeRouteFactory` in `explorer.model.runtime`) |
 | `plugin-route-collectors/` | Annotated/service-registration collectors, decorator/timeout/annotation helpers, `ArmeriaKotlinRouteCollector`, `psi` traversal, `ArmeriaRouteSupport`, `RouteContributor`/`RouteCollectContext` SPI, shared test fixtures (`ArmeriaFixtureTestBase`, stubs) |
 | `plugin-route-spring/` | `ArmeriaSpringBootRouteCollector`, `ArmeriaKotlinSpringBootRouteCollector`, `ArmeriaSpringMvcRouteCollector`, `ArmeriaSpringConfigRouteCollector`, `ArmeriaYamlSpringConfigReader`, `SpringArmeriaConfig*`, `ArmeriaDelegatedRouteCollector` |
 | `plugin-route-protocol/` | `ArmeriaGraphqlRouteCollector`, `ArmeriaGrpcRouteCollector`, `ArmeriaThriftRouteCollector`, `ArmeriaIdlRouteSupport`, `ArmeriaProtoTextSupport` |
-| `plugin-route-analysis/` | Route Explorer UI helpers (`ui/`), DocService support (`docservice/`), navigation (`navigation/`), duplicate index (`duplicate/`), and `ArmeriaRouteAnalysisCollector` (production façade that always supplies Spring/protocol contributors) |
+| `plugin-route-analysis/` | Route Explorer UI helpers (`ui/`), DocService support (`docservice/`), jump-to-source navigation (`navigation/ArmeriaRouteNavigation` only), duplicate index (`duplicate/`), and `ArmeriaRouteAnalysisCollector` (production façade that always supplies Spring/protocol contributors) |
 | `plugin-shared/` | Shared bundle helpers, cross-cutting PSI utilities, test fixtures |
 | `plugin-wizard/` | New-project/module wizard, file templates, starter resources |
 | `plugin/` | `plugin.xml` wiring, UI panels/actions, run configs, inspection registration |
