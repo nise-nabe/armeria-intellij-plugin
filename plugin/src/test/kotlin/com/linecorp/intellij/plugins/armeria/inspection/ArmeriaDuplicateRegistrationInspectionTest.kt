@@ -52,6 +52,132 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
         assertTrue("Expected Extra.java among open files but found $openFileNames", "Extra.java" in openFileNames)
     }
 
+    fun testJavaCrossFileAnnotatedRoutesAreHighlighted() {
+        myFixture.configureByText(
+            "First.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class First {
+                @Get("/shared")
+                public String first() {
+                    return "first";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class Second {
+                @Get("/shared")
+                public String second() {
+                    return "second";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.enableInspections(ArmeriaDuplicateRegistrationInspection())
+        val expectedDescription = message("inspection.duplicate.registration.problem", "GET /shared", 2)
+        val duplicateHighlights =
+            myFixture.doHighlighting().filter {
+                it.description == expectedDescription
+            }
+
+        assertEquals(1, duplicateHighlights.size)
+    }
+
+    fun testInClassJavaAnnotatedDuplicatesAreNotRegistrationProblems() {
+        myFixture.configureByText(
+            "BadService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class BadService {
+                @Get("/dup")
+                public String first() {
+                    return "first";
+                }
+
+                @Get("/dup")
+                public String second() {
+                    return "second";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.enableInspections(ArmeriaDuplicateRegistrationInspection())
+        val registrationHighlights =
+            myFixture.doHighlighting().filter {
+                it.description.startsWith("This Armeria route")
+            }
+
+        assertTrue(registrationHighlights.isEmpty())
+    }
+
+    fun testKotlinInClassAnnotatedDuplicatesAreNotRegistrationProblems() {
+        myFixture.configureByText(
+            "BadService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+
+            class BadService {
+                @Get("/dup")
+                fun first(): String = "first"
+
+                @Get("/dup")
+                fun second(): String = "second"
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.enableInspections(ArmeriaDuplicateRegistrationKotlinInspection())
+        val registrationHighlights =
+            myFixture.doHighlighting().filter {
+                it.description.startsWith("This Armeria route")
+            }
+
+        assertTrue(registrationHighlights.isEmpty())
+    }
+
+    fun testKotlinDistinctPathsAreNotRegistrationProblems() {
+        myFixture.configureByText(
+            "HelloService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+
+            class HelloService {
+                @Get("/hello")
+                fun hello(): String = "hello"
+
+                @Get("/goodbye")
+                fun goodbye(): String = "goodbye"
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.enableInspections(ArmeriaDuplicateRegistrationKotlinInspection())
+        val registrationHighlights =
+            myFixture.doHighlighting().filter {
+                it.description.startsWith("This Armeria route")
+            }
+
+        assertTrue(registrationHighlights.isEmpty())
+    }
+
     fun testKotlinInspectionHighlightsDuplicateAndOffersNavigateQuickFix() {
         myFixture.configureByText(
             "First.kt",
