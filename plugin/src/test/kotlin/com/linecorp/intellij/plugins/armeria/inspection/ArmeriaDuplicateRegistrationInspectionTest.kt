@@ -18,16 +18,17 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
 
     private fun matchesRegistrationDuplicateProblem(description: String): Boolean {
         val labelPlaceholder = "\uE000"
+        val countPlaceholder = "\uE001"
         val template =
             message(
                 "inspection.duplicate.registration.problem",
                 labelPlaceholder,
-                0,
+                countPlaceholder,
             )
         val pattern =
             Regex.escape(template)
                 .replace(Regex.escape(labelPlaceholder), "(.+?)")
-                .replace(Regex.escape("0"), "(\\d+)")
+                .replace(Regex.escape(countPlaceholder), "(\\d+)")
         return Regex("^$pattern$").matches(description)
     }
 
