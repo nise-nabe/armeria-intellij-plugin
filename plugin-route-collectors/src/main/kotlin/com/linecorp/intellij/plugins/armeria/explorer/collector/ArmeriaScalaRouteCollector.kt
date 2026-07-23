@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer.collector
 
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
@@ -41,13 +42,20 @@ internal object ArmeriaScalaRouteCollector {
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
     ) {
+        val virtualFilePath = file.virtualFile?.path ?: return
         for (match in ArmeriaScalaTextSupport.findServiceRegistrations(contents)) {
             val element = file.findElementAt(match.startOffset) ?: file
             val target = ArmeriaScalaTextSupport.renderScalaTarget(match.targetText)
             val targetUnresolved = ArmeriaScalaTextSupport.isUnresolvedScalaTarget(match.targetText, target)
+            val registrationKey =
+                ArmeriaRouteSupport.registrationKey(
+                    virtualFilePath,
+                    TextRange(match.startOffset, match.endOffset),
+                    match.methodName,
+                )
             ArmeriaRouteCollectorServiceRegistration.addServiceRegistrationRoute(
                 element = element,
-                registrationKey = "${file.virtualFile?.path}:${match.startOffset}",
+                registrationKey = registrationKey,
                 methodName = match.methodName,
                 path = match.path,
                 target = target,

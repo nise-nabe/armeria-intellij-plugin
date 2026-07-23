@@ -267,4 +267,91 @@ class ArmeriaScalaTextSupportTest {
         assertFalse(ArmeriaScalaTextSupport.isUnresolvedScalaTarget("new HelloService()", "HelloService"))
         assertFalse(ArmeriaScalaTextSupport.isUnresolvedScalaTarget("HelloService()", "HelloService"))
     }
+
+    @Test
+    fun findServiceRegistrationWithNestedParenthesesTarget() {
+        val matches =
+            ArmeriaScalaTextSupport.findServiceRegistrations(
+                """
+                import com.linecorp.armeria.server.Server
+
+                Server.builder()
+                  .service("/api", new Foo(bar()))
+                  .build()
+                """.trimIndent(),
+            )
+
+        assertEquals(1, matches.size)
+        assertEquals("new Foo(bar())", matches.single().targetText)
+        assertEquals("Foo", ArmeriaScalaTextSupport.renderScalaTarget(matches.single().targetText))
+    }
+
+    @Test
+    fun findServiceRegistrationFromFixtureStyleScalaSource() {
+        val matches =
+            ArmeriaScalaTextSupport.findServiceRegistrations(
+                """
+                package example
+
+                import com.linecorp.armeria.server.Server
+
+                object Main {
+                  Server.builder()
+                    .service("/api", new HelloService())
+                    .build()
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(1, matches.size)
+    }
+
+    @Test
+    fun ignoresUnrelatedServiceCallOutsideBuilderChain() {
+        val matches =
+            ArmeriaScalaTextSupport.findServiceRegistrations(
+                """
+                import com.linecorp.armeria.server.Server
+
+                object Main {
+                  Server.builder().build()
+                  Client.service("/oops", new Handler())
+                }
+
+                object Client {
+                  def service(path: String, handler: Any): Unit = {}
+                }
+                """.trimIndent(),
+            )
+
+        assertTrue(matches.isEmpty())
+    }
+
+    @Test
+    fun ignoresMyServerBuilderServiceCall() {
+        val matches =
+            ArmeriaScalaTextSupport.findServiceRegistrations(
+                """
+                import com.linecorp.armeria.server.Server
+
+                object Main {
+                  Server.builder().build()
+                  MyServer.builder()
+                    .service("/oops", new Handler())
+                    .build()
+                }
+
+                object MyServer {
+                  def builder(): FakeBuilder = new FakeBuilder()
+                }
+
+                class FakeBuilder {
+                  def service(path: String, handler: Any): FakeBuilder = this
+                  def build(): Unit = {}
+                }
+                """.trimIndent(),
+            )
+
+        assertTrue(matches.isEmpty())
+    }
 }

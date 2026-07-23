@@ -108,4 +108,31 @@ class ArmeriaScalaClientCollectorTest : ArmeriaLightJavaCodeInsightFixtureTestCa
                 byUri.getValue("https://grpc.example.com").sourceOffset,
         )
     }
+
+    fun testIgnoresQualifiedWebClientWithoutArmeriaImport() {
+        myFixture.addClass(
+            """
+            package com.example;
+
+            public final class WebClient {
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Main.scala",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            object Main {
+              val client = com.example.WebClient.of("https://fake.example.com")
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+
+        assertTrue(endpoints.isEmpty())
+    }
 }

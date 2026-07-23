@@ -9,11 +9,17 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSuppor
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaScalaTextSupport
 
 internal object ArmeriaScalaClientCollector {
-    private val CLIENT_ENDPOINT_PATTERN =
+    private val CLIENT_SIMPLE_NAMES_PATTERN =
+        ArmeriaClientSupport.clientSimpleNames().joinToString("|") { Regex.escape(it) }
+    private val FACTORY_METHODS_PATTERN =
+        ArmeriaClientSupport.FACTORY_METHOD_NAMES.joinToString("|") { Regex.escape(it) }
+    private val QUALIFIED_CLIENT_ENDPOINT_PATTERN =
         Regex(
-            """\b(${ArmeriaClientSupport.clientSimpleNames().joinToString("|")})\s*\.\s*(?:${
-                ArmeriaClientSupport.FACTORY_METHOD_NAMES.joinToString("|")
-            })\s*\(\s*"([^"]+)"\s*\)""",
+            """\b(com\.linecorp\.armeria(?:\.[A-Za-z_][\w]*)*)\.($CLIENT_SIMPLE_NAMES_PATTERN)\s*\.\s*($FACTORY_METHODS_PATTERN)\s*\(\s*"([^"]+)"\s*\)""",
+        )
+    private val SIMPLE_CLIENT_ENDPOINT_PATTERN =
+        Regex(
+            """\b($CLIENT_SIMPLE_NAMES_PATTERN)\s*\.\s*($FACTORY_METHODS_PATTERN)\s*\(\s*"([^"]+)"\s*\)""",
         )
 
     fun collect(
@@ -40,24 +46,121 @@ internal object ArmeriaScalaClientCollector {
     ) {
         val scan = ArmeriaScalaTextSupport.scanScalaText(contents)
         val filePath = file.virtualFile?.path ?: return
-        for (match in CLIENT_ENDPOINT_PATTERN.findAll(scan.textWithoutComments)) {
+        val importedClientClasses = parseScalaArmeriaClientImports(contents)
+        val matches = mutableListOf<ClientEndpointMatch>()
+        for (match in QUALIFIED_CLIENT_ENDPOINT_PATTERN.findAll(scan.textWithoutComments)) {
             val offset = match.range.first
-            if (scan.isInsideStringLiteral(offset)) {
+            if (scan.isInsideLiteral(offset)) {
                 continue
             }
-            val clientSimpleName = match.groupValues[1]
-            val protocol = ArmeriaClientSupport.protocolForSimpleName(clientSimpleName) ?: continue
-            val element = file.findElementAt(offset) ?: file
+            val fqcn = "${match.groupValues[1]}.${match.groupValues[2]}"
+            val protocol = ArmeriaClientSupport.protocolForClass(fqcn) ?: continue
+            matches +=
+                ClientEndpointMatch(
+                    offset = offset,
+                    protocol = protocol,
+                    target = match.groupValues[2],
+                    uri = match.groupValues[4],
+                )
+        }
+        for (match in SIMPLE_CLIENT_ENDPOINT_PATTERN.findAll(scan.textWithoutComments)) {
+            val offset = match.range.first
+            if (scan.isInsideLiteral(offset)) {
+                continue
+            }
+            val simpleName = match.groupValues[1]
+            val fqcn = importedClientClasses[simpleName] ?: continue
+            val protocol = ArmeriaClientSupport.protocolForClass(fqcn) ?: continue
+            matches +=
+                ClientEndpointMatch(
+                    offset = offset,
+                    protocol = protocol,
+                    target = simpleName,
+                    uri = match.groupValues[3],
+                )
+        }
+        for (match in matches.sortedBy { it.offset }) {
+            if (isNestedInsideScalaClientFactoryArgument(scan.textWithoutComments, match.offset, matches)) {
+                continue
+            }
+            val element = file.findElementAt(match.offset) ?: file
             ArmeriaClientCollector.addEndpoint(
                 element = element,
-                protocol = protocol,
-                target = clientSimpleName,
-                uri = match.groupValues[2],
+                protocol = match.protocol,
+                target = match.target,
+                uri = match.uri,
                 endpoints = endpoints,
                 seenEndpoints = seenEndpoints,
-                dedupeKey = "$filePath:$offset",
-                sourceOffset = offset,
+                dedupeKey = "$filePath:${match.offset}",
+                sourceOffset = match.offset,
             )
         }
+    }
+
+    private data class ClientEndpointMatch(
+        val offset: Int,
+        val protocol: ClientProtocol,
+        val target: String,
+        val uri: String,
+    )
+
+    private fun parseScalaArmeriaClientImports(contents: String): Map<String, String> {
+        val imports = mutableMapOf<String, String>()
+        val importPattern = Regex("""import\s+([\w.]+)""")
+        for (match in importPattern.findAll(contents)) {
+            val fqcn = match.groupValues[1]
+            if (fqcn.startsWith(ArmeriaClientSupport.ARMERIA_CLIENT_PACKAGE_PREFIX) &&
+                ArmeriaClientSupport.protocolForClass(fqcn) != null
+            ) {
+                imports[fqcn.substringAfterLast('.')] = fqcn
+            }
+        }
+        return imports
+    }
+
+    private fun isNestedInsideScalaClientFactoryArgument(
+        text: String,
+        matchOffset: Int,
+        allMatches: List<ClientEndpointMatch>,
+    ): Boolean {
+        val ourOpenParen = text.indexOf('(', matchOffset)
+        if (ourOpenParen < 0) {
+            return false
+        }
+        for (outer in allMatches) {
+            if (outer.offset >= matchOffset) {
+                break
+            }
+            val outerOpenParen = text.indexOf('(', outer.offset)
+            if (outerOpenParen < 0 || outerOpenParen >= ourOpenParen) {
+                continue
+            }
+            val outerCloseParen = findMatchingCloseParen(text, outerOpenParen) ?: continue
+            if (matchOffset > outerOpenParen && matchOffset < outerCloseParen && ourOpenParen < outerCloseParen) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun findMatchingCloseParen(
+        text: String,
+        openParenOffset: Int,
+    ): Int? {
+        var depth = 0
+        var index = openParenOffset
+        while (index < text.length) {
+            when (text[index]) {
+                '(' -> depth++
+                ')' -> {
+                    depth--
+                    if (depth == 0) {
+                        return index
+                    }
+                }
+            }
+            index++
+        }
+        return null
     }
 }
