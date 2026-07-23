@@ -135,4 +135,32 @@ class ArmeriaScalaClientCollectorTest : ArmeriaLightJavaCodeInsightFixtureTestCa
 
         assertTrue(endpoints.isEmpty())
     }
+
+    fun testDeduplicatesQualifiedAndImportedWebClientFactoryCall() {
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client;
+
+            public final class WebClient {
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Main.scala",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+
+            object Main {
+              val client = com.linecorp.armeria.client.WebClient.of("https://example.com")
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+
+        assertEquals(1, endpoints.size)
+        assertEquals("https://example.com", endpoints.single().uri)
+    }
 }

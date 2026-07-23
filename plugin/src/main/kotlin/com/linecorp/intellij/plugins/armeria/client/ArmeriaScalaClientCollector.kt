@@ -48,6 +48,7 @@ internal object ArmeriaScalaClientCollector {
         val filePath = file.virtualFile?.path ?: return
         val importedClientClasses = parseScalaArmeriaClientImports(contents)
         val matches = mutableListOf<ClientEndpointMatch>()
+        val qualifiedFactoryOpenParens = mutableSetOf<Int>()
         for (match in QUALIFIED_CLIENT_ENDPOINT_PATTERN.findAll(scan.textWithoutComments)) {
             val offset = match.range.first
             if (scan.isInsideLiteral(offset)) {
@@ -55,9 +56,15 @@ internal object ArmeriaScalaClientCollector {
             }
             val fqcn = "${match.groupValues[1]}.${match.groupValues[2]}"
             val protocol = ArmeriaClientSupport.protocolForClass(fqcn) ?: continue
+            val factoryOpenParen = scan.textWithoutComments.indexOf('(', offset)
+            if (factoryOpenParen < 0) {
+                continue
+            }
+            qualifiedFactoryOpenParens += factoryOpenParen
             matches +=
                 ClientEndpointMatch(
                     offset = offset,
+                    factoryOpenParenOffset = factoryOpenParen,
                     protocol = protocol,
                     target = match.groupValues[2],
                     uri = match.groupValues[4],
@@ -68,19 +75,24 @@ internal object ArmeriaScalaClientCollector {
             if (scan.isInsideLiteral(offset)) {
                 continue
             }
+            val factoryOpenParen = scan.textWithoutComments.indexOf('(', offset)
+            if (factoryOpenParen < 0 || factoryOpenParen in qualifiedFactoryOpenParens) {
+                continue
+            }
             val simpleName = match.groupValues[1]
             val fqcn = importedClientClasses[simpleName] ?: continue
             val protocol = ArmeriaClientSupport.protocolForClass(fqcn) ?: continue
             matches +=
                 ClientEndpointMatch(
                     offset = offset,
+                    factoryOpenParenOffset = factoryOpenParen,
                     protocol = protocol,
                     target = simpleName,
                     uri = match.groupValues[3],
                 )
         }
         for (match in matches.sortedBy { it.offset }) {
-            if (isNestedInsideScalaClientFactoryArgument(scan.textWithoutComments, match.offset, matches)) {
+            if (isNestedInsideScalaClientFactoryArgument(scan.textWithoutComments, match.factoryOpenParenOffset, matches)) {
                 continue
             }
             val element = file.findElementAt(match.offset) ?: file
@@ -91,7 +103,7 @@ internal object ArmeriaScalaClientCollector {
                 uri = match.uri,
                 endpoints = endpoints,
                 seenEndpoints = seenEndpoints,
-                dedupeKey = "$filePath:${match.offset}",
+                dedupeKey = "$filePath:${match.factoryOpenParenOffset}",
                 sourceOffset = match.offset,
             )
         }
@@ -99,6 +111,7 @@ internal object ArmeriaScalaClientCollector {
 
     private data class ClientEndpointMatch(
         val offset: Int,
+        val factoryOpenParenOffset: Int,
         val protocol: ClientProtocol,
         val target: String,
         val uri: String,
@@ -120,23 +133,15 @@ internal object ArmeriaScalaClientCollector {
 
     private fun isNestedInsideScalaClientFactoryArgument(
         text: String,
-        matchOffset: Int,
+        factoryOpenParenOffset: Int,
         allMatches: List<ClientEndpointMatch>,
     ): Boolean {
-        val ourOpenParen = text.indexOf('(', matchOffset)
-        if (ourOpenParen < 0) {
-            return false
-        }
         for (outer in allMatches) {
-            if (outer.offset >= matchOffset) {
+            if (outer.factoryOpenParenOffset >= factoryOpenParenOffset) {
                 break
             }
-            val outerOpenParen = text.indexOf('(', outer.offset)
-            if (outerOpenParen < 0 || outerOpenParen >= ourOpenParen) {
-                continue
-            }
-            val outerCloseParen = findMatchingCloseParen(text, outerOpenParen) ?: continue
-            if (matchOffset > outerOpenParen && matchOffset < outerCloseParen && ourOpenParen < outerCloseParen) {
+            val outerCloseParen = findMatchingCloseParen(text, outer.factoryOpenParenOffset) ?: continue
+            if (factoryOpenParenOffset > outer.factoryOpenParenOffset && factoryOpenParenOffset < outerCloseParen) {
                 return true
             }
         }
