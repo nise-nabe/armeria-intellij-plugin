@@ -153,7 +153,7 @@ When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-em
 ```bash
 git add <paths>
 if [ -n "$(git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig')" ]; then
-  # Gradle MCP: gradle_run_tasks ["ktlintCheck"], background: true + poll; or: ./gradlew ktlintCheck
+  ./gradlew ktlintCheck || { ./gradlew ktlintFormat && git add -u -- '*.kt' '*.kts' && ./gradlew ktlintCheck; }
 fi
 git commit -m "fix: address PR <N> review comments"
 ```

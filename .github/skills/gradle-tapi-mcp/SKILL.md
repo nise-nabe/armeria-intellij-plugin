@@ -43,16 +43,16 @@ Do **not** run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` concurr
 | Plugin fixture tests | `gradle_run_tasks` `{ "tasks": [":plugin:test"], "background": true }` |
 | Route-analysis fixture tests | `gradle_run_tasks` `{ "tasks": [":plugin-route-analysis:test"], "background": true }` |
 | Fast unit tests | `gradle_run_tasks` `{ "tasks": [":plugin-route-analysis:fastTest"], "background": true }` |
-| Lint Kotlin (when Kotlin is staged) | `gradle_run_tasks` `{ "tasks": ["ktlintCheck"], "background": true }` — fix with `ktlintFormat` or manual edits, then re-check; shell fallback: `./gradlew ktlintCheck` |
+| Lint Kotlin (when Kotlin is staged) | `gradle_run_tasks` `{ "tasks": ["ktlintCheck"], "background": true }` — fix with `gradle_run_tasks` `["ktlintFormat"]` or manual edits, `git add`, then re-check; shell fallback: `./gradlew ktlintCheck` |
 | Full verify | `gradle_run_tasks` `{ "tasks": ["build"], "background": true }` |
 
-When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-empty, coding agents must pass `ktlintCheck` before `git commit` (`gradle_run_tasks` `["ktlintCheck"]`, `background: true` + poll `gradle_get_build_status` until terminal success; fix with `ktlintFormat` or manual edits and re-check). Wait for any in-flight MCP build to finish or cancel it first. Omit ktlint when the staged index contains none of those paths.
+When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-empty, coding agents must pass `ktlintCheck` before `git commit` (`gradle_run_tasks` `["ktlintCheck"]`, `background: true` + poll `gradle_get_build_status` until terminal success; fix with `gradle_run_tasks` `["ktlintFormat"]` or manual edits, `git add` the changed files, and re-check). Wait for any in-flight MCP build to finish or cancel it first. Omit ktlint when the staged index contains none of those paths. Root `ktlintCheck` does not cover the `includeBuild("build-logic")` composite; neither root `build` nor `compileKotlin` runs ktlint on `build-logic/` sources.
 
 ### Recommended agent workflow
 
 1. `gradle_connection_status` — confirm MCP is connected.
 2. `gradle_run_tasks` with `[":plugin:compileKotlin", ":plugin:compileTestKotlin"]` (foreground if warm, else `background: true` + poll).
-3. Before each `git commit` when staged Kotlin or `.editorconfig` is present (see detection command above), run `gradle_run_tasks` with `["ktlintCheck"]` (`background: true` + poll). On failure, apply `ktlintFormat` or manual fixes and re-run until clean.
+3. Before each `git commit` when staged Kotlin or `.editorconfig` is present (see detection command above), run `gradle_run_tasks` with `["ktlintCheck"]` (`background: true` + poll). On failure, apply `gradle_run_tasks` `["ktlintFormat"]` or manual fixes, `git add` the changed files, and re-run until clean.
 4. Verify tests via MCP (`gradle_run_tests` or `gradle_run_tasks` with `background: true` + poll).
 5. Before opening a PR, run `gradle_run_tasks` with `["build"]` and `background: true`, poll to completion.
 

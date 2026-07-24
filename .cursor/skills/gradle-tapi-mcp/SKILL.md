@@ -224,7 +224,7 @@ Prefer MCP for all verification. Use shell only when MCP is unresponsive or for 
 
 1. `gradle_connection_status` — confirm MCP is connected.
 2. `gradle_run_tasks` with `[":plugin:compileKotlin", ":plugin:compileTestKotlin"]` (foreground if warm, else `background: true` + poll).
-3. Before each `git commit` when `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-empty, run `gradle_run_tasks` with `["ktlintCheck"]` (`background: true` + poll). On failure, apply `gradle_run_tasks` `["ktlintFormat"]` or manual fixes and re-run until clean. Wait for any in-flight MCP build to finish or cancel it first.
+3. Before each `git commit` when `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-empty, run `gradle_run_tasks` with `["ktlintCheck"]` (`background: true` + poll). On failure, apply `gradle_run_tasks` `["ktlintFormat"]` or manual fixes, `git add` the changed files, and re-run until clean. Wait for any in-flight MCP build to finish or cancel it first.
 4. Verify tests via MCP (one build at a time on this repo):
    - Batch all changed classes/methods into **one** `gradle_run_tests` when doing a verification pass.
    - When isolating failures, run one class or method per call; wait for terminal status (or `gradle_cancel_build`) before the next.

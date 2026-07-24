@@ -58,7 +58,7 @@ Prefer **Gradle MCP** for the tasks below. Use `background: true` and poll `grad
 | Goal | MCP (preferred) | Shell fallback |
 |------|---------------|----------------|
 | Full verify | `gradle_run_tasks` `["build"]` + background/poll | `./gradlew build` |
-| Lint Kotlin | `gradle_run_tasks` `["ktlintCheck"]` + background/poll | `./gradlew ktlintCheck` |
+| Lint Kotlin (when Kotlin/`.editorconfig` staged) | `gradle_run_tasks` `["ktlintCheck"]` + background/poll — see **Commit workflow** below |
 | Format Kotlin | `gradle_run_tasks` `["ktlintFormat"]` + background/poll | `./gradlew ktlintFormat` |
 | Compile plugin | `gradle_run_tasks` `[":plugin:compileKotlin"]` | `./gradlew :plugin:compileKotlin` |
 | Plugin fixture tests | `gradle_run_tasks` `[":plugin:test"]` or `gradle_run_tests` per class + background/poll | `./gradlew :plugin:test` |
@@ -83,9 +83,9 @@ Detect staged Kotlin or style config:
 git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'
 ```
 
-When that output is non-empty, before `git commit` run `ktlintCheck` via Gradle MCP (`gradle_run_tasks` with `["ktlintCheck"]`, `background: true` + poll `gradle_get_build_status` until terminal success). If it fails, fix violations with `gradle_run_tasks` `["ktlintFormat"]` (same poll pattern) or manual edits, re-run `ktlintCheck`, and only commit once it passes. Wait for any in-flight MCP build to finish or cancel it (`gradle_cancel_build`) before starting commit-time ktlint — the repo allows only one MCP build per project directory. Shell fallback: `./gradlew ktlintCheck` / `./gradlew ktlintFormat`. Omit ktlint when the staged index contains none of `*.kt`, `*.kts`, or `.editorconfig` (e.g. only `.md`, YAML, or properties). Do not skip based on commit message or PR title alone.
+When that output is non-empty, before `git commit` run `ktlintCheck` via Gradle MCP (`gradle_run_tasks` with `["ktlintCheck"]`, `background: true` + poll `gradle_get_build_status` until terminal success). If it fails, fix violations with `gradle_run_tasks` `["ktlintFormat"]` (same poll pattern) or manual edits, `git add` the changed files, re-run `ktlintCheck`, and only commit once it passes. Wait for any in-flight MCP build to finish or cancel it (`gradle_cancel_build`) before starting commit-time ktlint — the repo allows only one MCP build per project directory. Shell fallback: `./gradlew ktlintCheck` / `./gradlew ktlintFormat` (then `git add` formatted files). Omit ktlint when the staged index contains none of `*.kt`, `*.kts`, or `.editorconfig` (e.g. only `.md`, YAML, or properties). Do not skip based on commit message or PR title alone.
 
-Root `ktlintCheck` does not cover the `includeBuild("build-logic")` composite; for `build-logic/` Kotlin edits, rely on `compileKotlin` or full `build` in addition to commit-time ktlint when applicable.
+Root `ktlintCheck` does not cover the `includeBuild("build-logic")` composite; neither root `build` nor `compileKotlin` runs ktlint on `build-logic/` sources. Manually review `build-logic/` style or extend ktlint to that composite in a follow-up.
 
 Commit-time ktlint catches style regressions early; pre-PR `build` remains the final gate (CI runs `build -x test`, which includes ktlint).
 
