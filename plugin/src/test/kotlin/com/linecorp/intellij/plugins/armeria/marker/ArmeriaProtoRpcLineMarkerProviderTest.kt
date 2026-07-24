@@ -7,6 +7,10 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.ArmeriaIcons
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaProtoRpcLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     private val provider = ArmeriaProtoRpcLineMarkerProvider()
@@ -28,8 +32,8 @@ class ArmeriaProtoRpcLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixture
         val rpcKeyword = findRpcKeyword()
         val marker = provider.getLineMarkerInfo(rpcKeyword)
 
-        assertNotNull(marker)
-        assertEquals(ArmeriaIcons.Armeria, marker!!.icon)
+        kotlinAssertNotNull(marker)
+        assertEquals(ArmeriaIcons.Armeria, marker.icon)
         assertEquals(
             message("marker.grpc.rpc", "/com.example.Greeter/SayHello"),
             marker.lineMarkerTooltip,
@@ -52,10 +56,10 @@ class ArmeriaProtoRpcLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixture
         val rpcKeyword = findRpcKeyword()
         val marker = provider.getLineMarkerInfo(rpcKeyword)
 
-        assertNotNull(marker)
+        kotlinAssertNotNull(marker)
         assertEquals(
             message("marker.grpc.rpc", "/Greeter/Ping"),
-            marker!!.lineMarkerTooltip,
+            marker.lineMarkerTooltip,
         )
     }
 
@@ -113,10 +117,10 @@ class ArmeriaProtoRpcLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixture
 
         val marker = provider.getLineMarkerInfo(findRpcKeyword())
 
-        assertNotNull(marker)
+        kotlinAssertNotNull(marker)
         assertEquals(
             message("marker.grpc.rpc", "/com.example.Greeter/SayHello"),
-            marker!!.lineMarkerTooltip,
+            marker.lineMarkerTooltip,
         )
     }
 
@@ -138,7 +142,7 @@ class ArmeriaProtoRpcLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixture
         val commentedRpcKeyword = myFixture.file.findElementAt(commentedRpcIndex + 3)!!
 
         assertNull(provider.getLineMarkerInfo(commentedRpcKeyword))
-        assertNotNull(provider.getLineMarkerInfo(findRpcKeyword()))
+        kotlinAssertNotNull(provider.getLineMarkerInfo(findRpcKeyword()))
     }
 
     fun testMultipleRpcMarkersInOneService() {
@@ -223,10 +227,10 @@ class ArmeriaProtoRpcLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixture
 
         val marker = provider.getLineMarkerInfo(findRpcKeyword())
 
-        assertNotNull(marker)
+        kotlinAssertNotNull(marker)
         assertEquals(
             message("marker.grpc.rpc", "/com.example.Greeter/StreamHello"),
-            marker!!.lineMarkerTooltip,
+            marker.lineMarkerTooltip,
         )
     }
 

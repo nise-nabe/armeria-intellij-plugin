@@ -4,6 +4,8 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteColl
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaExtendedRegistrationCollectorRouteDecoratorTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
@@ -32,8 +34,8 @@ class ArmeriaExtendedRegistrationCollectorRouteDecoratorTest : ArmeriaFixtureTes
 
         val routes = ArmeriaRouteCollector.collect(project)
         val decoratorRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_DECORATOR }
-        assertNotNull(decoratorRoute)
-        assertEquals(PathType.GLOB, decoratorRoute!!.pathType)
+        kotlinAssertNotNull(decoratorRoute)
+        assertEquals(PathType.GLOB, decoratorRoute.pathType)
         assertEquals("/**", decoratorRoute.path)
     }
 
@@ -61,8 +63,8 @@ class ArmeriaExtendedRegistrationCollectorRouteDecoratorTest : ArmeriaFixtureTes
 
         val routes = ArmeriaRouteCollector.collect(project)
         val decoratorRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_DECORATOR }
-        assertNotNull(decoratorRoute)
-        assertEquals("POST, PUT", decoratorRoute!!.httpMethod)
+        kotlinAssertNotNull(decoratorRoute)
+        assertEquals("POST, PUT", decoratorRoute.httpMethod)
     }
 
     fun testCollectRouteDecoratorIgnoresUnrelatedCallsInSameBlock() {
@@ -89,8 +91,8 @@ class ArmeriaExtendedRegistrationCollectorRouteDecoratorTest : ArmeriaFixtureTes
 
         val routes = ArmeriaRouteCollector.collect(project)
         val decoratorRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_DECORATOR }
-        assertNotNull(decoratorRoute)
-        assertEquals("/decorated/**", decoratorRoute!!.path)
+        kotlinAssertNotNull(decoratorRoute)
+        assertEquals("/decorated/**", decoratorRoute.path)
         assertEquals(1, routes.count { it.routeMatch == RouteMatch.ROUTE_DECORATOR })
     }
 
@@ -122,8 +124,8 @@ class ArmeriaExtendedRegistrationCollectorRouteDecoratorTest : ArmeriaFixtureTes
 
         val routes = ArmeriaRouteCollector.collect(project)
         val decoratorRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_DECORATOR }
-        assertNotNull(decoratorRoute)
-        assertEquals("/decorated/**", decoratorRoute!!.path)
+        kotlinAssertNotNull(decoratorRoute)
+        assertEquals("/decorated/**", decoratorRoute.path)
     }
 
     fun testCollectRouteDecoratorRegistration() {
@@ -149,6 +151,6 @@ class ArmeriaExtendedRegistrationCollectorRouteDecoratorTest : ArmeriaFixtureTes
 
         val routes = ArmeriaRouteCollector.collect(project)
         val decoratorRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_DECORATOR }
-        assertNotNull(decoratorRoute)
+        kotlinAssertNotNull(decoratorRoute)
     }
 }

@@ -1,8 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
-import org.junit.Assert.assertEquals
 import org.junit.Test
+import kotlin.test.assertEquals
 
 class ArmeriaRouteSupportPathFormattingTest {
     @Test

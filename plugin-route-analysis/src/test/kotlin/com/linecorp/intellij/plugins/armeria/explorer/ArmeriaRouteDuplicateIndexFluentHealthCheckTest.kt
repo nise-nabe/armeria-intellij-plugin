@@ -3,6 +3,9 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.explorer.duplicate.ArmeriaRouteDuplicateIndex
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaRouteDuplicateIndexFluentHealthCheckTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
@@ -246,7 +249,7 @@ class ArmeriaRouteDuplicateIndexFluentHealthCheckTest : ArmeriaFixtureTestBase()
 
         val hits = ArmeriaRouteDuplicateIndex.duplicateHitsInFile(project, myFixture.file)
         val healthHit = hits.firstOrNull { it.registrationLabel.startsWith("GET ") }
-        assertNotNull(healthHit)
-        assertEquals("GET /internal/healthcheck", healthHit!!.registrationLabel)
+        kotlinAssertNotNull(healthHit)
+        assertEquals("GET /internal/healthcheck", healthHit.registrationLabel)
     }
 }

@@ -1,11 +1,11 @@
 package com.linecorp.intellij.plugins.armeria.springboot.config
 
 import com.linecorp.intellij.plugins.armeria.message
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ArmeriaSpringBootConfigParserTest {
     @Test

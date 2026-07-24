@@ -13,8 +13,8 @@ import com.intellij.testFramework.PsiTestUtil
 import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtFile
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ArmeriaBlockingClientKotlinInspectionTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     override fun setUp() {

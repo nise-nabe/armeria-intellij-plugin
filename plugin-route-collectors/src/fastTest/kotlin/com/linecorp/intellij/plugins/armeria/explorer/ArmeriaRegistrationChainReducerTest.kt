@@ -3,8 +3,8 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaRegistrationChainReducer
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.RegistrationChainStep
 import com.linecorp.intellij.plugins.armeria.message
-import org.junit.Assert.assertEquals
 import org.junit.Test
+import kotlin.test.assertEquals
 
 class ArmeriaRegistrationChainReducerTest {
     @Test

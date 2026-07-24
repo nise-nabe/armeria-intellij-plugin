@@ -3,6 +3,8 @@ package com.linecorp.intellij.plugins.armeria.inspection
 import com.intellij.psi.PsiJavaFile
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ArmeriaDuplicateRouteInspectionTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
@@ -119,8 +121,8 @@ class ArmeriaDuplicateRouteInspectionTest : ArmeriaFixtureTestBase() {
             val method = clazz.findMethodsByName(methodName, false).single()
             val methodOffset = method.nameIdentifier!!.textRange.startOffset
             assertTrue(
-                "Expected duplicate route highlight on $className.$methodName",
                 methodOffset in highlightedOffsets,
+                "Expected duplicate route highlight on $className.$methodName",
             )
         }
     }

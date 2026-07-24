@@ -3,6 +3,8 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaKotlinDecoratorRouteCollectorPathScopedTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
@@ -38,8 +40,8 @@ class ArmeriaKotlinDecoratorRouteCollectorPathScopedTest : ArmeriaFixtureTestBas
         val routes = ArmeriaRouteCollector.collect(project)
 
         val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals(listOf("Logging"), serviceRoute!!.decorators)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals(listOf("Logging"), serviceRoute.decorators)
     }
 
     fun testCollectPathScopedDecoratorFiltersByRoute() {
@@ -73,10 +75,10 @@ class ArmeriaKotlinDecoratorRouteCollectorPathScopedTest : ArmeriaFixtureTestBas
 
         val apiRoute = routes.firstOrNull { it.path == "/api" }
         val otherRoute = routes.firstOrNull { it.path == "/other" }
-        assertNotNull(apiRoute)
-        assertNotNull(otherRoute)
-        assertEquals(listOf("Logging"), apiRoute!!.decorators)
-        assertEquals(emptyList<String>(), otherRoute!!.decorators)
+        kotlinAssertNotNull(apiRoute)
+        kotlinAssertNotNull(otherRoute)
+        assertEquals(listOf("Logging"), apiRoute.decorators)
+        assertEquals(emptyList<String>(), otherRoute.decorators)
     }
 
     fun testCollectPathScopedDecoratorWithConstValPathPattern() {
@@ -110,7 +112,7 @@ class ArmeriaKotlinDecoratorRouteCollectorPathScopedTest : ArmeriaFixtureTestBas
         val routes = ArmeriaRouteCollector.collect(project)
 
         val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals(listOf("Logging"), serviceRoute!!.decorators)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals(listOf("Logging"), serviceRoute.decorators)
     }
 }

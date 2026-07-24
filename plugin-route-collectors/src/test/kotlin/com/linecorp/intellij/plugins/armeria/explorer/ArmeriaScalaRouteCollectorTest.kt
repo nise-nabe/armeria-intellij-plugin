@@ -3,6 +3,10 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaScalaRouteCollectorTest : ArmeriaFixtureTestBase() {
     fun testCollectServiceRegistrationFromScalaBuilderChain() {
@@ -32,11 +36,11 @@ class ArmeriaScalaRouteCollectorTest : ArmeriaFixtureTestBase() {
         val routes = ArmeriaRouteCollector.collect(project)
 
         val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals("HelloService", serviceRoute!!.target)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals("HelloService", serviceRoute.target)
         assertFalse(serviceRoute.targetUnresolved)
-        assertNotNull(serviceRoute.sourceOffset)
-        assertTrue(serviceRoute.sourceOffset!! > 0)
+        val sourceOffset = kotlinAssertNotNull(serviceRoute.sourceOffset)
+        assertTrue(sourceOffset > 0)
         assertFalse(serviceRoute.resolveSourceHint().endsWith(":1"))
     }
 
@@ -109,7 +113,7 @@ class ArmeriaScalaRouteCollectorTest : ArmeriaFixtureTestBase() {
         val routes = ArmeriaRouteCollector.collect(project)
 
         val route = routes.firstOrNull { it.path == "/prefix" && it.routeMatch == RouteMatch.ANNOTATED_SERVICE }
-        assertNotNull(route)
-        assertEquals("AnnotatedService", route!!.target)
+        kotlinAssertNotNull(route)
+        assertEquals("AnnotatedService", route.target)
     }
 }

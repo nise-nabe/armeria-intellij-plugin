@@ -30,6 +30,9 @@ intellijPlatform {
 testing {
     suites {
         getByName<JvmTestSuite>("test") {
+            dependencies {
+                implementation(versionCatalogs.named("libs").findLibrary("kotlin-test").get())
+            }
             targets.all {
                 testTask.configure {
                     failOnNoDiscoveredTests = false

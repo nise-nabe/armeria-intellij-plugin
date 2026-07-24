@@ -4,6 +4,8 @@ import com.linecorp.intellij.plugins.armeria.explorer.duplicate.ArmeriaRouteDupl
 import com.linecorp.intellij.plugins.armeria.explorer.duplicate.DuplicateRegistrationGroup
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ArmeriaRouteDuplicateIndexCoreTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {

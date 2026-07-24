@@ -2,6 +2,9 @@ package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaKotlinRouteCollectorEdgeCaseTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
@@ -177,8 +180,8 @@ class ArmeriaKotlinRouteCollectorEdgeCaseTest : ArmeriaFixtureTestBase() {
         )
 
         val serviceRoute = ArmeriaRouteCollector.collect(project).firstOrNull { it.path == "/api" }
-        assertNotNull(serviceRoute)
-        assertTrue(serviceRoute!!.targetUnresolved)
+        kotlinAssertNotNull(serviceRoute)
+        assertTrue(serviceRoute.targetUnresolved)
     }
 
     fun testCollectUnresolvedFactoryMethodTarget() {
@@ -200,8 +203,8 @@ class ArmeriaKotlinRouteCollectorEdgeCaseTest : ArmeriaFixtureTestBase() {
         )
 
         val serviceRoute = ArmeriaRouteCollector.collect(project).firstOrNull { it.path == "/api" }
-        assertNotNull(serviceRoute)
-        assertTrue(serviceRoute!!.targetUnresolved)
+        kotlinAssertNotNull(serviceRoute)
+        assertTrue(serviceRoute.targetUnresolved)
     }
 
     fun testCollectUnresolvedGrpcServiceBuilderTarget() {
@@ -222,8 +225,8 @@ class ArmeriaKotlinRouteCollectorEdgeCaseTest : ArmeriaFixtureTestBase() {
         )
 
         val serviceRoute = ArmeriaRouteCollector.collect(project).firstOrNull { it.path == "/grpc" }
-        assertNotNull(serviceRoute)
-        assertTrue(serviceRoute!!.targetUnresolved)
+        kotlinAssertNotNull(serviceRoute)
+        assertTrue(serviceRoute.targetUnresolved)
     }
 
     fun testNoFalsePositiveForNonArmeriaQualifiedServerBuilder() {

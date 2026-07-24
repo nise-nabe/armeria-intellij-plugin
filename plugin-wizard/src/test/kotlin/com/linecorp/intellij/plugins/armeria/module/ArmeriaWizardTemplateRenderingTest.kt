@@ -1,8 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.module
 
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * Regression tests for the representative wizard matrix from the New Project Wizard review.

@@ -12,6 +12,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteColl
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaProtocolRouteContributor
 import java.io.File
+import kotlin.test.assertEquals
 
 class ArmeriaIdlRouteCollectorMultiModuleTest : HeavyPlatformTestCase() {
     override fun setUp() {

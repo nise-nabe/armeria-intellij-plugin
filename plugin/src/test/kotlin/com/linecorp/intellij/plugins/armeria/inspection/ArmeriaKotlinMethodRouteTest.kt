@@ -4,6 +4,8 @@ import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFix
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ArmeriaKotlinMethodRouteTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     override fun setUp() {

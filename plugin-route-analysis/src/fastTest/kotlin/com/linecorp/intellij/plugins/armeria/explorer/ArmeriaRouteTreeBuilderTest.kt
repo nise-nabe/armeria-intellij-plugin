@@ -9,10 +9,10 @@ import com.intellij.psi.SmartPsiElementPointer
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteTreeBuilder
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 import javax.swing.tree.DefaultMutableTreeNode
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class ArmeriaRouteTreeBuilderTest {
     @Test

@@ -9,6 +9,8 @@ import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
@@ -39,8 +41,8 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
             clazz.declarations.filterIsInstance<KtNamedFunction>().single { it.name == functionName }
         val functionOffset = function.nameIdentifier!!.textRange.startOffset
         assertTrue(
-            "Expected registration duplicate highlight on $className.$functionName",
             functionOffset in duplicateHighlights.map { it.startOffset }.toSet(),
+            "Expected registration duplicate highlight on $className.$functionName",
         )
     }
 
@@ -62,8 +64,8 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
         val method = clazz.findMethodsByName(methodName, false).single()
         val methodOffset = method.nameIdentifier!!.textRange.startOffset
         assertTrue(
-            "Expected registration duplicate highlight on $className.$methodName",
             methodOffset in duplicateHighlights.map { it.startOffset }.toSet(),
+            "Expected registration duplicate highlight on $className.$methodName",
         )
     }
 
@@ -122,7 +124,7 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
                 .openFiles
                 .map { it.name }
                 .toSet()
-        assertTrue("Expected Extra.java among open files but found $openFileNames", "Extra.java" in openFileNames)
+        assertTrue("Extra.java" in openFileNames, "Expected Extra.java among open files but found $openFileNames")
     }
 
     fun testJavaCrossFileAnnotatedRoutesAreHighlighted() {
@@ -322,8 +324,8 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
         PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
         val openFileNames = FileEditorManager.getInstance(project).openFiles.map { it.name }
         assertTrue(
-            "Timed out waiting for $expectedFileName to open; open files: $openFileNames",
             expectedFileName in openFileNames,
+            "Timed out waiting for $expectedFileName to open; open files: $openFileNames",
         )
     }
 

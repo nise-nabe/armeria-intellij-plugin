@@ -10,6 +10,9 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaProtoRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaProtocolRouteContributor
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ArmeriaProtoPsiRouteCollectorTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     override fun setUp() {
@@ -32,7 +35,7 @@ class ArmeriaProtoPsiRouteCollectorTest : ArmeriaLightJavaCodeInsightFixtureTest
                 }
                 """.trimIndent(),
             )
-        assertTrue("Expected Proto Editor PSI for .proto fixture", file is PbFile)
+        assertTrue(file is PbFile, "Expected Proto Editor PSI for .proto fixture")
 
         val routes = mutableListOf<ArmeriaRoute>()
         assertTrue(ArmeriaProtoPsiRouteCollector().collectFromFile(file, routes, mutableSetOf()))

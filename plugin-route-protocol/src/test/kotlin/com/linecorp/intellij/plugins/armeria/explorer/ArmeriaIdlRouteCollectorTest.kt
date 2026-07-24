@@ -10,6 +10,8 @@ import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaThriftRout
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.GraphqlOperation
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ThriftOperation
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ArmeriaIdlRouteCollectorTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {

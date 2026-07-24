@@ -4,6 +4,8 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteColl
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
@@ -31,8 +33,8 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
 
         val routes = ArmeriaRouteCollector.collect(project)
         val fileRoute = routes.firstOrNull { it.routeMatch == RouteMatch.FILE_SERVICE }
-        assertNotNull(fileRoute)
-        assertEquals("/files/", fileRoute!!.path)
+        kotlinAssertNotNull(fileRoute)
+        assertEquals("/files/", fileRoute.path)
     }
 
     fun testCollectFileServiceWithJavaConstantPath() {
@@ -58,8 +60,8 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
 
         val routes = ArmeriaRouteCollector.collect(project)
         val fileRoute = routes.firstOrNull { it.routeMatch == RouteMatch.FILE_SERVICE }
-        assertNotNull(fileRoute)
-        assertEquals("/files/", fileRoute!!.path)
+        kotlinAssertNotNull(fileRoute)
+        assertEquals("/files/", fileRoute.path)
     }
 
     fun testCollectHealthCheckRegistration() {
@@ -82,8 +84,8 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
 
         val routes = ArmeriaRouteCollector.collect(project)
         val healthRoute = routes.firstOrNull { it.routeMatch == RouteMatch.HEALTH_CHECK }
-        assertNotNull(healthRoute)
-        assertEquals("/internal/healthcheck", healthRoute!!.path)
+        kotlinAssertNotNull(healthRoute)
+        assertEquals("/internal/healthcheck", healthRoute.path)
     }
 
     fun testCollectFluentRouteRegistration() {
@@ -108,8 +110,8 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
 
         val routes = ArmeriaRouteCollector.collect(project)
         val fluentRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_FLUENT }
-        assertNotNull(fluentRoute)
-        assertEquals("POST", fluentRoute!!.httpMethod)
+        kotlinAssertNotNull(fluentRoute)
+        assertEquals("POST", fluentRoute.httpMethod)
         assertEquals("/api/items", fluentRoute.path)
     }
 
@@ -134,8 +136,8 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
 
         val routes = ArmeriaRouteCollector.collect(project)
         val decoratorRoute = routes.firstOrNull { it.routeMatch == RouteMatch.DECORATOR_UNDER }
-        assertNotNull(decoratorRoute)
-        assertEquals("/public", decoratorRoute!!.path)
+        kotlinAssertNotNull(decoratorRoute)
+        assertEquals("/public", decoratorRoute.path)
     }
 
     fun testCollectPathAnnotationAndPathType() {
@@ -236,8 +238,8 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
 
         val routes = ArmeriaRouteCollector.collect(project)
         val fluentRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_FLUENT }
-        assertNotNull(fluentRoute)
-        assertEquals(PathType.EXACT, fluentRoute!!.pathType)
+        kotlinAssertNotNull(fluentRoute)
+        assertEquals(PathType.EXACT, fluentRoute.pathType)
         assertEquals("/api/items", fluentRoute.path)
         assertEquals("GET", fluentRoute.httpMethod)
     }

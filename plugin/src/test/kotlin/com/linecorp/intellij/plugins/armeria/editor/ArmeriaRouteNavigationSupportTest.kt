@@ -7,6 +7,10 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaRouteNavigationSupportTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     override fun setUp() {
@@ -337,8 +341,8 @@ class ArmeriaRouteNavigationSupportTest : ArmeriaLightJavaCodeInsightFixtureTest
 
         val resolved = ArmeriaRouteNavigationSupport.findClassByTarget(project, "HelloService")
 
-        assertNotNull(resolved)
-        assertEquals("services.HelloService", resolved!!.qualifiedName)
+        kotlinAssertNotNull(resolved)
+        assertEquals("services.HelloService", resolved.qualifiedName)
     }
 
     fun testFindClassByTargetReturnsNullWhenAmbiguous() {
@@ -426,10 +430,10 @@ class ArmeriaRouteNavigationSupportTest : ArmeriaLightJavaCodeInsightFixtureTest
                 className,
                 GlobalSearchScope.projectScope(project),
             )
-        assertNotNull(clazz)
-        val method = clazz!!.findMethodsByName(name, false).singleOrNull()
-        assertNotNull(method)
-        return method!!
+        kotlinAssertNotNull(clazz)
+        val method = clazz.findMethodsByName(name, false).singleOrNull()
+        kotlinAssertNotNull(method)
+        return method
     }
 
     private fun findMethod(name: String): PsiMethod = findMethod("example.HelloService", name)

@@ -3,6 +3,8 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaExtendedRegistrationCollectorVirtualHostTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
@@ -29,8 +31,8 @@ class ArmeriaExtendedRegistrationCollectorVirtualHostTest : ArmeriaFixtureTestBa
 
         val routes = ArmeriaRouteCollector.collect(project)
         val virtualHostRoute = routes.firstOrNull { it.routeMatch == RouteMatch.VIRTUAL_HOST }
-        assertNotNull(virtualHostRoute)
-        assertEquals("api.example.com", virtualHostRoute!!.target)
+        kotlinAssertNotNull(virtualHostRoute)
+        assertEquals("api.example.com", virtualHostRoute.target)
         assertEquals("api.example.com", virtualHostRoute.virtualHostName)
     }
 
@@ -56,8 +58,8 @@ class ArmeriaExtendedRegistrationCollectorVirtualHostTest : ArmeriaFixtureTestBa
 
         val routes = ArmeriaRouteCollector.collect(project)
         val serviceRoute = routes.firstOrNull { it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals("/api", serviceRoute!!.path)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals("/api", serviceRoute.path)
         assertEquals("", serviceRoute.virtualHostName)
     }
 
@@ -83,8 +85,8 @@ class ArmeriaExtendedRegistrationCollectorVirtualHostTest : ArmeriaFixtureTestBa
 
         val routes = ArmeriaRouteCollector.collect(project)
         val serviceRoute = routes.firstOrNull { it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals("/api", serviceRoute!!.path)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals("/api", serviceRoute.path)
         assertEquals("api.example.com", serviceRoute.virtualHostName)
     }
 
@@ -112,10 +114,10 @@ class ArmeriaExtendedRegistrationCollectorVirtualHostTest : ArmeriaFixtureTestBa
         val routes = ArmeriaRouteCollector.collect(project)
         val defaultRoute = routes.firstOrNull { it.path == "/default" }
         val hostedRoute = routes.firstOrNull { it.path == "/hosted" }
-        assertNotNull(defaultRoute)
-        assertNotNull(hostedRoute)
-        assertEquals("", defaultRoute!!.virtualHostName)
-        assertEquals("api.example.com", hostedRoute!!.virtualHostName)
+        kotlinAssertNotNull(defaultRoute)
+        kotlinAssertNotNull(hostedRoute)
+        assertEquals("", defaultRoute.virtualHostName)
+        assertEquals("api.example.com", hostedRoute.virtualHostName)
     }
 
     fun testCollectNestedVirtualHostLambdaUsesInnerHostname() {
@@ -141,8 +143,8 @@ class ArmeriaExtendedRegistrationCollectorVirtualHostTest : ArmeriaFixtureTestBa
 
         val routes = ArmeriaRouteCollector.collect(project)
         val serviceRoute = routes.firstOrNull { it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals("/api", serviceRoute!!.path)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals("/api", serviceRoute.path)
         assertEquals("inner.example.com", serviceRoute.virtualHostName)
     }
 
@@ -167,8 +169,8 @@ class ArmeriaExtendedRegistrationCollectorVirtualHostTest : ArmeriaFixtureTestBa
 
         val routes = ArmeriaRouteCollector.collect(project)
         val fileRoute = routes.firstOrNull { it.routeMatch == RouteMatch.FILE_SERVICE }
-        assertNotNull(fileRoute)
-        assertEquals("/files/", fileRoute!!.path)
+        kotlinAssertNotNull(fileRoute)
+        assertEquals("/files/", fileRoute.path)
         assertEquals("api.example.com", fileRoute.virtualHostName)
     }
 }
