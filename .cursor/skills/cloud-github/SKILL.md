@@ -3,7 +3,8 @@ name: cloud-github
 description: >-
   GitHub and pull-request workflows for Cursor Cloud Agents in this repo.
   Prefer built-in ManagePullRequest and EditPullRequestLabels over gh CLI;
-  use gh only for operations with no built-in tool (review-thread fetch, releases).
+  use gh only for operations with no built-in tool (review-thread fetch, PR metadata,
+  releases).
 ---
 
 # Cloud GitHub operations
@@ -33,9 +34,9 @@ built-in tool fails and `gh auth status` succeeds.
 
 Branch naming for agent work: `cursor/<descriptive-name>-<suffix>` (suffix is assigned per agent session).
 
-When a bundled skill (for example `loop-on-ci`, `fix-ci`, `new-branch-and-pr`, `review-and-ship`)
-instructs `gh pr create`, `gh pr checks`, or similar, use the matching built-in tool above instead
-in Cursor Cloud.
+When a bundled skill (for example `loop-on-ci`, `fix-ci`, `get-pr-comments`, `new-branch-and-pr`,
+`review-and-ship`, or any other skill that references `gh pr …`) instructs `gh pr create`,
+`gh pr checks`, or similar, use the matching built-in tool above instead in Cursor Cloud.
 
 ## PR description format
 
@@ -53,6 +54,7 @@ There is **no** built-in tool for these operations today:
 | Task | gh command |
 |------|------------|
 | Fetch review threads / inline comment metadata | `gh api graphql` (see `pr-review-response` skill) |
+| Fetch PR branch metadata (no review threads) | `gh pr view --json headRefName,baseRefName,title` |
 | Create a GitHub Release with assets | `gh release create` (see `release` skill) |
 
 Before calling `gh` for the above:
@@ -75,6 +77,8 @@ For agent-side verification, prefer:
 
 For GitHub-attached check status on a PR, use **ManagePullRequest** `get_ci_status` (not `gh pr checks`).
 Fall back to `gh pr checks` only when `get_ci_status` fails and `gh auth status` succeeds.
+When a check fails and you need log output to fix it, use `gh run view --log-failed` or follow the
+failing check's URL from `get_ci_status` (after `gh auth status` succeeds).
 
 ## Authentication troubleshooting
 

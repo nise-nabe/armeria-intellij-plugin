@@ -39,11 +39,12 @@ Do not rely on bare `gh` commands without checking availability. `.cursor/instal
 | Create or update a PR | Built-in **ManagePullRequest** (`create_pr` / `update_pr`); body format in `.cursor/rules/pr-description-format.mdc` |
 | Post or reply to PR comments | **ManagePullRequest** (`post_comment`; use `in_reply_to` for review-thread replies) |
 | Resolve review threads | **ManagePullRequest** (`resolve_comment`) |
-| PR check status / CI logs | **ManagePullRequest** (`get_ci_status`) |
+| PR check status | **ManagePullRequest** (`get_ci_status`); fallback `gh pr checks` per `cloud-github` |
+| CI failure logs | `gh run view --log-failed` or follow check URLs from `get_ci_status` (after `gh auth status` succeeds) |
 | Open or close a PR | **ManagePullRequest** (`set_pr_status`) |
 | Edit PR labels | **EditPullRequestLabels** |
 | Verify changes locally | **Gradle MCP** (`gradle_run_tasks` / `gradle_run_tests`); shell `./gradlew build` for CI parity fallback — see `gradle-tapi-mcp` skill |
-| Fetch review threads / create GitHub Release | `gh` only after `gh auth status` succeeds — no built-in tool (see `.cursor/skills/cloud-github/SKILL.md`) |
+| Fetch review threads / PR metadata / create GitHub Release | `gh` only after `gh auth status` succeeds — no built-in tool (see `.cursor/skills/cloud-github/SKILL.md`) |
 
 If `gh` is not found or auth fails, use ManagePullRequest and EditPullRequestLabels for PR work
 and Gradle MCP for build verification instead of retrying `gh`. Set `GH_TOKEN` in Cursor Cloud
