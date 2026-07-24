@@ -66,11 +66,39 @@ class ArmeriaBlockingClientInspection : LocalInspectionTool() {
             if (qualifier.methodExpression.referenceName == "of" &&
                 qualifier.resolveMethod()?.containingClass?.qualifiedName == ArmeriaJUnitServerExtensionSupport.WEB_CLIENT_CLASS
             ) {
+                val ofArgument = qualifier.argumentList.expressions.firstOrNull() ?: return false
+                if (!ArmeriaJUnitServerExtensionSupport.referencesServerHttpUri(ofArgument, serverVariableName)) {
+                    return false
+                }
                 return expression.methodExpression.referenceName in HTTP_METHOD_NAMES
             }
         }
-        if (qualifier is PsiReferenceExpression && isWebClientType(qualifier)) {
+        if (qualifier is PsiReferenceExpression && isAsyncWebClientFromServer(qualifier, serverVariableName)) {
             return expression.methodExpression.referenceName in HTTP_METHOD_NAMES
+        }
+        return false
+    }
+
+    private fun isAsyncWebClientFromServer(
+        reference: PsiReferenceExpression,
+        serverVariableName: String,
+    ): Boolean {
+        if (!isWebClientType(reference)) {
+            return false
+        }
+        val resolved = reference.resolve() as? com.intellij.psi.PsiVariable ?: return false
+        val initializer = resolved.initializer ?: return false
+        if (initializer is PsiMethodCallExpression) {
+            when (initializer.methodExpression.referenceName) {
+                "webClient" -> {
+                    val receiver = initializer.methodExpression.qualifierExpression as? PsiReferenceExpression
+                    return receiver?.referenceName == serverVariableName
+                }
+                "of" -> {
+                    val ofArgument = initializer.argumentList.expressions.firstOrNull() ?: return false
+                    return ArmeriaJUnitServerExtensionSupport.referencesServerHttpUri(ofArgument, serverVariableName)
+                }
+            }
         }
         return false
     }

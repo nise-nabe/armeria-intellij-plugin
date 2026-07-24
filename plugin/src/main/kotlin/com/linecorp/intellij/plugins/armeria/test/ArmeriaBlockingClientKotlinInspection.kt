@@ -66,7 +66,7 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
                 if (qualifier.getReferencedName() == serverVariableName) {
                     return methodName in setOf("webClient", "httpUri")
                 }
-                methodName in HTTP_METHOD_NAMES && isAsyncWebClientReference(qualifier)
+                methodName in HTTP_METHOD_NAMES && isAsyncWebClientReference(qualifier, serverVariableName)
             }
             is KtCallExpression -> usesAsyncWebClientOnQualifier(qualifier, serverVariableName, methodName)
             is KtDotQualifiedExpression -> {
@@ -95,34 +95,49 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
                 return methodName in HTTP_METHOD_NAMES
             }
         }
-        if (factoryName == "of" && isWebClientOfCall(qualifier)) {
+        if (factoryName == "of" && isWebClientOfCall(qualifier, serverVariableName)) {
             return methodName in HTTP_METHOD_NAMES
         }
         return false
     }
 
-    private fun isWebClientOfCall(call: KtCallExpression): Boolean {
+    private fun isWebClientOfCall(
+        call: KtCallExpression,
+        serverVariableName: String,
+    ): Boolean {
         val parent = call.parent as? KtDotQualifiedExpression ?: return false
         if (parent.selectorExpression != call) {
             return false
         }
-        return isAsyncWebClientReference(parent.receiverExpression as? KtNameReferenceExpression ?: return false)
+        if (!isWebClientTypeReference(parent.receiverExpression as? KtNameReferenceExpression ?: return false)) {
+            return false
+        }
+        val ofArgument = call.valueArguments.firstOrNull()?.getArgumentExpression() ?: return false
+        return ArmeriaJUnitServerExtensionSupport.referencesServerHttpUri(ofArgument, serverVariableName)
     }
 
-    private fun isAsyncWebClientReference(reference: KtNameReferenceExpression): Boolean {
+    private fun isWebClientTypeReference(reference: KtNameReferenceExpression): Boolean {
         val resolved = reference.reference?.resolve()
         val typeName =
             when (resolved) {
-                is PsiVariable -> resolved.type.canonicalText
                 is PsiClass -> resolved.qualifiedName
-                else -> PsiTreeUtil.getParentOfType(resolved, PsiClass::class.java)?.qualifiedName
+                else -> reference.text
             } ?: reference.text
-        if (isAsyncWebClientTypeName(typeName)) {
-            return true
+        return typeName == ArmeriaJUnitServerExtensionSupport.WEB_CLIENT_CLASS || typeName.endsWith(".WebClient")
+    }
+
+    private fun isAsyncWebClientReference(
+        reference: KtNameReferenceExpression,
+        serverVariableName: String,
+    ): Boolean {
+        val resolved = reference.reference?.resolve()
+        if (resolved is PsiClass) {
+            val qualifiedName = resolved.qualifiedName ?: return false
+            return isAsyncWebClientTypeName(qualifiedName)
         }
         val property = kotlinPropertyFor(reference) ?: return false
         val initializer = property.initializer ?: return false
-        return isAsyncWebClientInitializer(initializer)
+        return isAsyncWebClientInitializer(initializer, serverVariableName)
     }
 
     private fun kotlinPropertyFor(reference: KtNameReferenceExpression): KtProperty? {
@@ -146,7 +161,10 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
         return typeName == ArmeriaJUnitServerExtensionSupport.WEB_CLIENT_CLASS || typeName.endsWith(".WebClient")
     }
 
-    private fun isAsyncWebClientInitializer(expression: KtExpression): Boolean {
+    private fun isAsyncWebClientInitializer(
+        expression: KtExpression,
+        serverVariableName: String,
+    ): Boolean {
         val call =
             when (expression) {
                 is KtCallExpression -> expression
@@ -158,9 +176,17 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
             return false
         }
         if (factoryName == "webClient") {
-            return true
+            val receiver =
+                (call.parent as? KtDotQualifiedExpression)
+                    ?.takeIf { it.selectorExpression == call }
+                    ?.receiverExpression as? KtNameReferenceExpression
+            return receiver?.getReferencedName() == serverVariableName
         }
-        return factoryName == "of" && isWebClientOfCall(call)
+        if (factoryName == "of") {
+            val ofArgument = call.valueArguments.firstOrNull()?.getArgumentExpression() ?: return false
+            return ArmeriaJUnitServerExtensionSupport.referencesServerHttpUri(ofArgument, serverVariableName)
+        }
+        return false
     }
 
     private fun extractRequestPath(call: KtCallExpression): String? {

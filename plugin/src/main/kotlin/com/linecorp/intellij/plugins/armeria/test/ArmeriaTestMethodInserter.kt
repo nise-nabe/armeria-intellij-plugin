@@ -21,6 +21,7 @@ import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtPsiFactory
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 import org.jetbrains.kotlin.resolve.ImportPath
@@ -54,20 +55,30 @@ internal object ArmeriaTestMethodInserter {
                 )
                 return false
             }
+        val methodName = ArmeriaTestMethodGenerator.suggestMethodName(route)
+        if (targetClass.methods.any { it.name == methodName }) {
+            return true
+        }
         val kotlinTargetClass =
             if (language == ArmeriaTestLanguage.KOTLIN) {
-                FileEditorManager
-                    .getInstance(project)
-                    .selectedFiles
-                    .firstOrNull()
-                    ?.let { PsiManager.getInstance(project).findFile(it) as? KtFile }
-                    ?.declarations
-                    ?.filterIsInstance<KtClass>()
-                    ?.firstOrNull { it.fqName?.asString() == targetClass.qualifiedName }
-                    ?: ArmeriaJUnitServerExtensionSupport.toKtClass(targetClass)
+                resolveKotlinTargetClass(project, targetClass)
             } else {
                 null
             }
+        if (language == ArmeriaTestLanguage.KOTLIN) {
+            val ktClass =
+                kotlinTargetClass ?: run {
+                    Messages.showWarningDialog(
+                        project,
+                        message("test.support.insert.noTarget"),
+                        message("test.support.insert.title"),
+                    )
+                    return false
+                }
+            if (ktClass.declarations.filterIsInstance<KtNamedFunction>().any { it.name == methodName }) {
+                return true
+            }
+        }
         val methodText = ArmeriaTestMethodGenerator.generateTestMethod(route, extension.variableName, language)
         ApplicationManager.getApplication().invokeLater(
             {
@@ -161,8 +172,23 @@ internal object ArmeriaTestMethodInserter {
         project: Project,
         route: ArmeriaRoute,
     ): PsiClass? {
-        val selectedFile = FileEditorManager.getInstance(project).selectedFiles.firstOrNull()
+        val fileEditorManager = FileEditorManager.getInstance(project)
+        val selectedFile = fileEditorManager.selectedFiles.firstOrNull()
+        val selectedEditor = fileEditorManager.selectedTextEditor
         val selectedPsiFile = selectedFile?.let { PsiManager.getInstance(project).findFile(it) }
+        if (selectedPsiFile != null && selectedEditor != null) {
+            val elementAtCaret = selectedPsiFile.findElementAt(selectedEditor.caretModel.offset)
+            elementAtCaret?.getParentOfType<KtClass>(true)?.toLightClass()?.let { ktClass ->
+                if (ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, ktClass).isNotEmpty()) {
+                    return ktClass
+                }
+            }
+            elementAtCaret?.let { PsiTreeUtil.getParentOfType(it, PsiClass::class.java) }?.let { javaClass ->
+                if (ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, javaClass).isNotEmpty()) {
+                    return javaClass
+                }
+            }
+        }
         val selectedClass =
             when (selectedPsiFile) {
                 is PsiJavaFile ->
@@ -180,12 +206,29 @@ internal object ArmeriaTestMethodInserter {
             return selectedClass
         }
         val extensions = ArmeriaJUnitServerExtensionCollector.collect(project)
-        val pointer =
-            extensions
-                .firstOrNull {
-                    it.moduleName == route.moduleName ||
-                        route.moduleName == message("route.explorer.module.unassigned")
-                }?.pointer ?: extensions.firstOrNull()?.pointer
-        return pointer?.element?.let { PsiTreeUtil.getParentOfType(it, PsiClass::class.java) }
+        val moduleMatches =
+            extensions.filter {
+                it.moduleName == route.moduleName ||
+                    route.moduleName == message("route.explorer.module.unassigned")
+            }
+        val candidates = moduleMatches.ifEmpty { extensions }
+        if (candidates.size != 1) {
+            return null
+        }
+        return candidates.single().pointer.element?.let { PsiTreeUtil.getParentOfType(it, PsiClass::class.java) }
+    }
+
+    private fun resolveKotlinTargetClass(
+        project: Project,
+        targetClass: PsiClass,
+    ): KtClass? {
+        val selectedFile = FileEditorManager.getInstance(project).selectedFiles.firstOrNull()
+        selectedFile
+            ?.let { PsiManager.getInstance(project).findFile(it) as? KtFile }
+            ?.declarations
+            ?.filterIsInstance<KtClass>()
+            ?.firstOrNull { it.fqName?.asString() == targetClass.qualifiedName }
+            ?.let { return it }
+        return ArmeriaJUnitServerExtensionSupport.toKtClass(targetClass)
     }
 }

@@ -198,6 +198,51 @@ class ArmeriaBlockingClientKotlinInspectionTest : ArmeriaLightJavaCodeInsightFix
         assertEquals(0, holder.results.size)
     }
 
+    fun testNoWarningForUnrelatedWebClientOf() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Blocking
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "SlowServiceTest.kt",
+            """
+            package example
+
+            import org.junit.jupiter.api.extension.RegisterExtension
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+            import com.linecorp.armeria.client.WebClient
+
+            class SlowServiceTest {
+                @RegisterExtension
+                val server: ServerExtension = object : ServerExtension() {}
+
+                fun testSlow() {
+                    WebClient.of("http://localhost:0").get("/slow")
+                }
+            }
+            """.trimIndent(),
+        )
+        val getCall = findGetCall(myFixture.file as KtFile)
+
+        val manager = InspectionManager.getInstance(project)
+        val holder = ProblemsHolder(manager, myFixture.file, false)
+        val visitor = ArmeriaBlockingClientKotlinInspection().buildVisitor(holder, false)
+        getCall.accept(visitor)
+        assertEquals(0, holder.results.size)
+    }
+
     private fun findGetCall(file: KtFile): KtCallExpression =
         PsiTreeUtil
             .collectElementsOfType(file, KtCallExpression::class.java)

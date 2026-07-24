@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
+import org.jetbrains.kotlin.psi.KtObjectLiteralExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
@@ -141,13 +142,61 @@ internal object ArmeriaJUnitServerExtensionSupport {
         project: Project,
         scope: GlobalSearchScope,
     ): Boolean {
-        val typeReference = property.typeReference ?: return false
-        when (val resolved = typeReference.references.firstOrNull()?.resolve()) {
-            is PsiClass -> return isServerExtensionClass(resolved, project, scope)
-            is KtClass ->
-                return resolved.toLightClass()?.let { isServerExtensionClass(it, project, scope) } == true
+        property.typeReference?.let { typeReference ->
+            when (val resolved = typeReference.references.firstOrNull()?.resolve()) {
+                is PsiClass -> return isServerExtensionClass(resolved, project, scope)
+                is KtClass ->
+                    return resolved.toLightClass()?.let { isServerExtensionClass(it, project, scope) } == true
+            }
+            if (typeReference.text.contains("ServerExtension")) {
+                return true
+            }
         }
-        return typeReference.text.contains("ServerExtension")
+        val initializer = property.initializer ?: return false
+        return isKotlinServerExtensionInitializer(initializer, project, scope)
+    }
+
+    private fun isKotlinServerExtensionInitializer(
+        initializer: KtExpression,
+        project: Project,
+        scope: GlobalSearchScope,
+    ): Boolean {
+        val objectDeclaration =
+            when (initializer) {
+                is KtObjectLiteralExpression -> initializer.objectDeclaration
+                else -> null
+            } ?: return false
+        return objectDeclaration.superTypeListEntries.any { entry ->
+            when (val resolved = entry.typeReference?.references?.firstOrNull()?.resolve()) {
+                is PsiClass -> isServerExtensionClass(resolved, project, scope)
+                is KtClass -> resolved.toLightClass()?.let { isServerExtensionClass(it, project, scope) } == true
+                else -> entry.typeReference?.text?.contains("ServerExtension") == true
+            }
+        }
+    }
+
+    fun referencesServerHttpUri(
+        expression: PsiElement,
+        serverVariableName: String,
+    ): Boolean {
+        (expression as? PsiMethodCallExpression)?.let { call ->
+            val receiver = call.methodExpression.qualifierExpression as? PsiReferenceExpression
+            if (receiver?.referenceName == serverVariableName && call.methodExpression.referenceName == "httpUri") {
+                return true
+            }
+        }
+        (expression as? KtCallExpression)?.let { call ->
+            if (call.calleeExpression?.text != "httpUri") {
+                return false
+            }
+            val parent = call.parent as? KtDotQualifiedExpression ?: return false
+            if (parent.selectorExpression != call) {
+                return false
+            }
+            val receiver = parent.receiverExpression as? KtNameReferenceExpression ?: return false
+            return receiver.getReferencedName() == serverVariableName
+        }
+        return false
     }
 
     private fun resolveScopedExtension(
@@ -157,18 +206,8 @@ internal object ArmeriaJUnitServerExtensionSupport {
         if (extensions.size == 1) {
             return extensions.single()
         }
-        val referencedNames = referencedServerVariableNames(element)
-        extensions
-            .filter { it.variableName in referencedNames }
-            .let { matches ->
-                if (matches.size == 1) {
-                    return matches.single()
-                }
-                if (matches.isNotEmpty()) {
-                    return matches.first()
-                }
-            }
-        return extensions.firstOrNull()
+        val matches = extensions.filter { it.variableName in referencedServerVariableNames(element) }
+        return if (matches.size == 1) matches.single() else null
     }
 
     internal fun referencesServerVariable(

@@ -24,10 +24,7 @@ internal object ArmeriaKotlinJUnitServerExtensionCollector {
             }
             collectProperties(file.declarations.filterIsInstance<KtProperty>(), scope, extensions, seen)
             for (ktClass in file.declarations.filterIsInstance<KtClass>()) {
-                collectProperties(ktClass.declarations.filterIsInstance<KtProperty>(), scope, extensions, seen)
-                ktClass.companionObjects.forEach { companion ->
-                    collectProperties(companion.declarations.filterIsInstance<KtProperty>(), scope, extensions, seen)
-                }
+                collectFromKotlinClass(ktClass, scope, extensions, seen)
             }
             for (objectDeclaration in file.declarations.filterIsInstance<KtObjectDeclaration>()) {
                 if (!objectDeclaration.isCompanion()) {
@@ -46,6 +43,21 @@ internal object ArmeriaKotlinJUnitServerExtensionCollector {
     ) {
         for (property in properties) {
             from(property, scope)?.let { ArmeriaJUnitServerExtensionCollector.add(it, extensions, seen) }
+        }
+    }
+
+    private fun collectFromKotlinClass(
+        ktClass: KtClass,
+        scope: GlobalSearchScope,
+        extensions: MutableList<ArmeriaJUnitServerExtension>,
+        seen: MutableSet<String>,
+    ) {
+        collectProperties(ktClass.declarations.filterIsInstance<KtProperty>(), scope, extensions, seen)
+        ktClass.companionObjects.forEach { companion ->
+            collectProperties(companion.declarations.filterIsInstance<KtProperty>(), scope, extensions, seen)
+        }
+        for (nestedClass in ktClass.declarations.filterIsInstance<KtClass>()) {
+            collectFromKotlinClass(nestedClass, scope, extensions, seen)
         }
     }
 

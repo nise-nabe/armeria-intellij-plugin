@@ -84,4 +84,44 @@ class ArmeriaBlockingClientInspectionTest : ArmeriaLightJavaCodeInsightFixtureTe
 
         myFixture.testHighlighting(true, false, true)
     }
+
+    fun testNoWarningForUnrelatedWebClientOf() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Blocking
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "SlowServiceTest.java",
+            """
+            package example;
+
+            import org.junit.jupiter.api.extension.RegisterExtension;
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+            import com.linecorp.armeria.client.WebClient;
+
+            public class SlowServiceTest {
+                @RegisterExtension
+                static ServerExtension server = new ServerExtension() {};
+
+                void testSlow() {
+                    WebClient.of("http://localhost:0").get("/slow");
+                }
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.testHighlighting(true, false, true)
+    }
 }
