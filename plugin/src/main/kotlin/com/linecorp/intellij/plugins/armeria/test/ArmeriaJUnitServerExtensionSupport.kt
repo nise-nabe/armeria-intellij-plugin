@@ -2,10 +2,12 @@ package com.linecorp.intellij.plugins.armeria.test
 
 import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaPsiFacade
+import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiClassType
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiField
+import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiModifierListOwner
 import com.intellij.psi.PsiReferenceExpression
@@ -32,9 +34,35 @@ internal object ArmeriaJUnitServerExtensionSupport {
     const val BLOCKING_WEB_CLIENT_CLASS = "com.linecorp.armeria.client.blocking.BlockingWebClient"
 
     fun hasRegisterExtensionAnnotation(owner: PsiModifierListOwner): Boolean =
-        owner.annotations.any {
-            it.qualifiedName == REGISTER_EXTENSION_ANNOTATION
+        owner.annotations.any(::isRegisterExtensionAnnotation)
+
+    private fun isRegisterExtensionAnnotation(annotation: PsiAnnotation): Boolean {
+        annotation.qualifiedName?.let {
+            if (it == REGISTER_EXTENSION_ANNOTATION) {
+                return true
+            }
         }
+        val shortName = annotation.nameReferenceElement?.referenceName ?: return false
+        if (shortName != REGISTER_EXTENSION_ANNOTATION_SHORT) {
+            return false
+        }
+        when (val resolved = annotation.nameReferenceElement?.resolve()) {
+            is PsiClass ->
+                return resolved.qualifiedName == REGISTER_EXTENSION_ANNOTATION
+        }
+        val javaFile = annotation.containingFile as? PsiJavaFile ?: return false
+        return javaFile.importList?.importStatements?.any { import ->
+            when {
+                import.isOnDemand ->
+                    import.qualifiedName?.let { packageName ->
+                        REGISTER_EXTENSION_ANNOTATION == "$packageName.$REGISTER_EXTENSION_ANNOTATION_SHORT"
+                    } == true
+                else ->
+                    import.qualifiedName == REGISTER_EXTENSION_ANNOTATION ||
+                        import.qualifiedName?.endsWith(".$REGISTER_EXTENSION_ANNOTATION_SHORT") == true
+            }
+        } == true
+    }
 
     fun isServerExtensionType(
         type: PsiType?,
