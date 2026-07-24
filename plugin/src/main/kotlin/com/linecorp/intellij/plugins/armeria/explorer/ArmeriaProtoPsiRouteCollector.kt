@@ -24,10 +24,15 @@ class ArmeriaProtoPsiRouteCollector : ArmeriaProtoRouteCollector {
             return false
         }
         for (service in services) {
-            val fqService = service.qualifiedName?.toString()?.takeIf { it.isNotBlank() } ?: continue
             for (method in service.body?.serviceMethodList.orEmpty()) {
-                val methodName = method.name ?: continue
-                ArmeriaGrpcRouteCollector.addProtoRoute(method, fqService, methodName, routes, seenProtoRoutes)
+                val resolved = resolveProtoGrpcMethod(method) ?: continue
+                ArmeriaGrpcRouteCollector.addProtoRoute(
+                    method,
+                    resolved.fqService,
+                    resolved.methodName,
+                    routes,
+                    seenProtoRoutes,
+                )
             }
         }
         // Services were present: PSI owns this file even when every method was skipped/deduped.
