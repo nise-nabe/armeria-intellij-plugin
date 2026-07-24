@@ -11,6 +11,7 @@ import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRouteMetadata
+import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRoutePath
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.message
@@ -88,7 +89,7 @@ object ArmeriaGrpcRouteCollector {
         routes: MutableList<ArmeriaRoute>,
         seenProtoRoutes: MutableSet<String>,
     ) {
-        val path = "/$fqService/$methodName"
+        val path = GrpcRoutePath.path(fqService, methodName)
         val dedupeKey = "${ArmeriaRouteMetadata.moduleName(element)}:$path"
         if (!seenProtoRoutes.add(dedupeKey)) {
             return

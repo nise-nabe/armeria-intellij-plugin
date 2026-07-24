@@ -13,6 +13,17 @@ internal object ArmeriaRouteLineMarkerSupport {
     fun createMarker(
         element: PsiElement,
         tooltip: String,
+    ): LineMarkerInfo<PsiElement> = createMarker(element, tooltip, "marker.route.title")
+
+    fun createGrpcMarker(
+        element: PsiElement,
+        tooltip: String,
+    ): LineMarkerInfo<PsiElement> = createMarker(element, tooltip, "marker.grpc.title")
+
+    private fun createMarker(
+        element: PsiElement,
+        tooltip: String,
+        titleKey: String,
     ): LineMarkerInfo<PsiElement> =
         LineMarkerInfo(
             element,
@@ -21,6 +32,6 @@ internal object ArmeriaRouteLineMarkerSupport {
             { tooltip },
             null,
             GutterIconRenderer.Alignment.CENTER,
-            { message("marker.route.title") },
+            { message(titleKey) },
         )
 }

@@ -8,6 +8,7 @@
 - ktlint via `com.linecorp.intellij.ktlint` convention (`ktlint_official` style); `ktlintCheck` runs as part of `check` / `build`.
 - gRPC Route Explorer discovery uses Proto Editor PSI when `idea.plugin.protoeditor` is available (RPC-level navigation), with fallback to the existing `.proto` text parser.
 - IDE support for Armeria JUnit 5 integration tests: `@RegisterExtension` `ServerExtension` gutter markers, blocking-route inspection in tests, and Generate Test Method from Route Explorer.
+- gRPC gutter icons on `rpc` keywords in `.proto` files (when Proto Editor is installed), showing the resolved gRPC path in the tooltip.
 
 ### Changed
 
