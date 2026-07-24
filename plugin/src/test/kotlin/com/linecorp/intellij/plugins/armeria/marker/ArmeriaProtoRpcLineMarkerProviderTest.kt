@@ -112,14 +112,14 @@ class ArmeriaProtoRpcLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixture
         )
 
         val commentedRpcIndex = myFixture.file.text.indexOf("// rpc")
-        val commentedRpcKeyword = myFixture.file.findElementAt(commentedRpcIndex + 3)
+        val commentedRpcKeyword = myFixture.file.findElementAt(commentedRpcIndex + 3)!!
 
-        assertNull(provider.getLineMarkerInfo(commentedRpcKeyword!!))
+        assertNull(provider.getLineMarkerInfo(commentedRpcKeyword))
         assertNotNull(provider.getLineMarkerInfo(findRpcKeyword()))
     }
 
     private fun findRpcKeyword(): PsiElement {
-        val method = PsiTreeUtil.findChildOfType(myFixture.file, PbServiceMethod::class.java)!!
-        return method.children.first { it.text == "rpc" }
+        val rpcIndex = myFixture.file.text.indexOf("rpc ")
+        return myFixture.file.findElementAt(rpcIndex)!!
     }
 }
