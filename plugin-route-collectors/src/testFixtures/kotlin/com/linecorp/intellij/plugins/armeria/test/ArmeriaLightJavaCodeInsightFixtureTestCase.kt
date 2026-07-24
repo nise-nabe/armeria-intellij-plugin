@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.test
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import java.io.File
 
 /**
@@ -27,6 +28,14 @@ abstract class ArmeriaLightJavaCodeInsightFixtureTestCase : LightJavaCodeInsight
     override fun setUp() {
         super.setUp()
         allowTestSandboxRoots()
+    }
+
+    override fun tearDown() {
+        try {
+            ArmeriaRouteCollectionMetrics.clearLastSnapshotForTests()
+        } finally {
+            super.tearDown()
+        }
     }
 
     private fun allowTestSandboxRoots() {

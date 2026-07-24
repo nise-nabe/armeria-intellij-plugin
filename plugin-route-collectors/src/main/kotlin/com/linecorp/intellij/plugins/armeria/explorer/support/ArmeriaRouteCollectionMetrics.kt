@@ -59,6 +59,11 @@ class ArmeriaRouteCollectionMetrics {
 
         fun current(): ArmeriaRouteCollectionMetrics? = active.get()
 
+        /** Clears the thread-local [lastSnapshot] after fixture tests to avoid leaking on pooled threads. */
+        fun clearLastSnapshotForTests() {
+            lastSnapshotHolder.remove()
+        }
+
         fun logIfEnabled(snapshot: Snapshot) {
             lastSnapshot = snapshot
             if (ApplicationManager.getApplication().isUnitTestMode) {
