@@ -17,13 +17,6 @@ java {
     }
 }
 
-val kotlinTest =
-    extensions
-        .getByType(org.gradle.api.artifacts.VersionCatalogsExtension::class.java)
-        .named("libs")
-        .findLibrary("kotlin-test")
-        .get()
-
 dependencies {
     intellijPlatform {
         testFramework(TestFrameworkType.Platform)
@@ -38,7 +31,7 @@ testing {
     suites {
         getByName<JvmTestSuite>("test") {
             dependencies {
-                implementation(kotlinTest)
+                implementation(versionCatalogs.named("libs").findLibrary("kotlin-test").get())
             }
             targets.all {
                 testTask.configure {
