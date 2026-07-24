@@ -24,12 +24,17 @@ do not read the full skill unless Gradle MCP fails.
 
 ## Phase 1 — Fetch comments (minimal payload)
 
-Before any `gh` call in Cursor Cloud (see `.cursor/rules/cloud-github.mdc`):
+Read **`cloud-github`** for built-in PR tools. In Cursor Cloud, prefer those tools for
+create/update, replies, resolve, and CI status. **`gh` is still required** for review-thread
+metadata (GraphQL) and, when the branch is unknown, PR branch metadata via `gh pr view` — no
+built-in list/fetch tool for review threads today.
+
+Before any `gh` call:
 
 1. Resolve: `command -v gh` or `/exec-daemon/gh`
 2. Verify: `gh auth status`
 3. If either step fails, stop — do not install `gh` in agent sessions. Use
-   **ManagePullRequest** for PR create/update/resolve; retry GraphQL only after auth works.
+   **ManagePullRequest** for create/update/post/resolve/CI; retry GraphQL only after auth works.
 
 **Do not** call `gh api repos/.../pulls/{n}/comments` — the REST endpoint always
 includes `diff_hunk` per comment (~50 KB for a typical Copilot review) and there is
@@ -80,15 +85,16 @@ Extract:
 
 | Field | Use |
 |-------|-----|
-| `databaseId` | `ManagePullRequest` `resolve_comment` `comment_id` |
+| `databaseId` | `ManagePullRequest` `resolve_comment` `comment_id`; `post_comment` `in_reply_to` |
 | `isResolved` | Skip already resolved |
 | `body` + `path` + line fields | Triage and locate code — prefer `line`; when `line` is null (outdated thread), use `originalLine`; for multi-line comments use `startLine` / `originalStartLine` |
 | `headRefName` | Checkout branch |
 
-### Fallback: PR metadata only (not review threads)
+### Branch metadata without GraphQL
 
-When you need branch names before running GraphQL (or to recover from a GraphQL failure),
-fetch PR metadata separately — **`gh pr view` does not return review threads or comment bodies**:
+When the agent already has `branch_name` or `headRefName` from the task or a prior GraphQL
+call, skip `gh pr view`. Otherwise fetch PR metadata separately — **`gh pr view` does not
+return review threads or comment bodies**:
 
 ```bash
 gh pr view N --json headRefName,baseRefName,title
@@ -126,7 +132,8 @@ For each **unresolved** thread, record:
 | **P2** | Performance, test stability, redundant work, misleading API usage |
 | **P3** | Style, dead code, unused variables |
 
-Skip invalid comments with a brief PR reply; do not implement speculative fixes.
+Skip invalid comments with a brief PR reply via **ManagePullRequest** `post_comment`
+(`in_reply_to` the thread's `databaseId` when replying inline); do not implement speculative fixes.
 
 **Batch by file** — e.g. all `ArmeriaRouteNavigationSupport.kt` comments in one edit pass.
 
@@ -200,6 +207,8 @@ comment_id: <databaseId>
 
 Update PR body via `update_pr` only when behavior changed materially — fold fixes into **Changes**, not a "review fixes" section (see `.cursor/rules/pr-description-format.mdc`).
 
+For thread replies (e.g. explaining a skip), use `post_comment` with `in_reply_to: <databaseId>` instead of `gh pr comment`.
+
 ## Phase 7 — User summary
 
 Report in the user’s language:
@@ -211,7 +220,8 @@ Report in the user’s language:
 
 ## Token budget checklist
 
-- [ ] `gh` preflight (`command -v gh`, `gh auth status`) before GraphQL
+- [ ] Built-in tools used for create/update/post/resolve/CI (`cloud-github` table)
+- [ ] `gh` preflight (`command -v gh`, `gh auth status`) only before GraphQL (or `gh pr view` when branch unknown)
 - [ ] GraphQL used instead of REST review comments API
 - [ ] ≤ 1 branch checkout
 - [ ] Files read with offset/limit or Grep, not full-file unless refactoring
