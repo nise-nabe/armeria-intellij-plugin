@@ -119,7 +119,17 @@ class ArmeriaProtoRpcLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixture
     }
 
     private fun findRpcKeyword(): PsiElement {
-        val rpcIndex = myFixture.file.text.indexOf("rpc ")
-        return myFixture.file.findElementAt(rpcIndex)!!
+        val method = PsiTreeUtil.findChildOfType(myFixture.file, PbServiceMethod::class.java)!!
+        return findRpcLeaf(method) ?: error("rpc keyword not found under ${method.text}")
+    }
+
+    private fun findRpcLeaf(element: PsiElement): PsiElement? {
+        if (element.text == "rpc") {
+            return element
+        }
+        for (child in element.children) {
+            findRpcLeaf(child)?.let { return it }
+        }
+        return null
     }
 }
