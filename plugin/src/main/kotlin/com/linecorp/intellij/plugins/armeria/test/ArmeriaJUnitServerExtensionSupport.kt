@@ -171,12 +171,17 @@ internal object ArmeriaJUnitServerExtensionSupport {
         return extensions.firstOrNull()
     }
 
+    internal fun referencesServerVariable(
+        element: PsiElement,
+        serverVariableName: String,
+    ): Boolean = serverVariableName in referencedServerVariableNames(element)
+
     private fun referencedServerVariableNames(element: PsiElement): Set<String> {
-        PsiTreeUtil.getParentOfType(element, PsiMethodCallExpression::class.java)?.let { call ->
-            return referencedServerVariableNamesFromJavaCall(call)
-        }
-        PsiTreeUtil.getParentOfType(element, KtCallExpression::class.java)?.let { call ->
+        PsiTreeUtil.getParentOfType(element, KtCallExpression::class.java, false)?.let { call ->
             return referencedServerVariableNamesFromKotlinCall(call)
+        }
+        PsiTreeUtil.getParentOfType(element, PsiMethodCallExpression::class.java, false)?.let { call ->
+            return referencedServerVariableNamesFromJavaCall(call)
         }
         return emptySet()
     }
@@ -204,25 +209,35 @@ internal object ArmeriaJUnitServerExtensionSupport {
 
     private fun referencedServerVariableNamesFromKotlinCall(call: KtCallExpression): Set<String> {
         val names = linkedSetOf<String>()
-        var expression: KtExpression? = call
-        while (expression != null) {
-            val parent = expression.parent as? KtDotQualifiedExpression
-            if (parent == null || parent.selectorExpression != expression) {
+        var current: KtExpression = call
+        while (true) {
+            val parent = current.parent as? KtDotQualifiedExpression ?: break
+            if (parent.selectorExpression != current) {
                 break
             }
-            when (val receiver = parent.receiverExpression) {
-                is KtNameReferenceExpression -> {
-                    receiver.getReferencedName()?.let(names::add)
-                    expression = null
-                }
-                is KtCallExpression -> {
-                    (receiver.calleeExpression as? KtNameReferenceExpression)?.getReferencedName()?.let(names::add)
-                    expression = receiver
-                }
-                is KtDotQualifiedExpression -> expression = receiver
-                else -> break
-            }
+            collectKotlinReceiverChainNames(parent.receiverExpression, names)
+            current = parent.receiverExpression
         }
         return names
+    }
+
+    private fun collectKotlinReceiverChainNames(
+        expression: KtExpression,
+        names: MutableSet<String>,
+    ) {
+        when (expression) {
+            is KtNameReferenceExpression -> expression.getReferencedName()?.let(names::add)
+            is KtCallExpression -> {
+                (expression.calleeExpression as? KtNameReferenceExpression)?.getReferencedName()?.let(names::add)
+                (expression.parent as? KtDotQualifiedExpression)
+                    ?.takeIf { it.selectorExpression == expression }
+                    ?.receiverExpression
+                    ?.let { collectKotlinReceiverChainNames(it, names) }
+            }
+            is KtDotQualifiedExpression -> {
+                expression.selectorExpression?.let { collectKotlinReceiverChainNames(it, names) }
+                collectKotlinReceiverChainNames(expression.receiverExpression, names)
+            }
+        }
     }
 }
