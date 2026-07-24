@@ -278,7 +278,7 @@ internal object ArmeriaJUnitServerExtensionSupport {
         var current: PsiClass? = psiClass
         while (current != null) {
             current.qualifiedName?.let(names::add)
-            toKtClass(current)?.fqName?.asString()?.let(names::add)
+            toKtClass(current)?.let { addKotlinSuperTypeNames(it, names) }
             current = current.superClass
         }
         return names
@@ -296,9 +296,51 @@ internal object ArmeriaJUnitServerExtensionSupport {
         if (extensionClassName.isEmpty()) {
             return false
         }
-        val testClass = JavaPsiFacade.getInstance(project).findClass(testClassName, scope) ?: return false
-        val extensionClass = JavaPsiFacade.getInstance(project).findClass(extensionClassName, scope) ?: return false
-        return testClass.isInheritor(extensionClass, true)
+        val testClass = JavaPsiFacade.getInstance(project).findClass(testClassName, scope)
+        val extensionClass = JavaPsiFacade.getInstance(project).findClass(extensionClassName, scope)
+        if (testClass != null && extensionClass != null && testClass.isInheritor(extensionClass, true)) {
+            return true
+        }
+        val kotlinSupertypes = findKtClass(testClassName, project, scope)?.let { collectKotlinSuperTypeNames(it) } ?: emptySet()
+        return extensionClassName in kotlinSupertypes
+    }
+
+    private fun findKtClass(
+        className: String,
+        project: Project,
+        scope: GlobalSearchScope,
+    ): KtClass? {
+        val psiClass = JavaPsiFacade.getInstance(project).findClass(className, scope) ?: return null
+        return toKtClass(psiClass)
+    }
+
+    private fun addKotlinSuperTypeNames(
+        ktClass: KtClass,
+        names: MutableSet<String>,
+    ) {
+        val queue = ArrayDeque<KtClass>()
+        queue.add(ktClass)
+        val visited = mutableSetOf<String>()
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            val name = current.fqName?.asString() ?: continue
+            if (!visited.add(name)) {
+                continue
+            }
+            names.add(name)
+            current.superTypeListEntries.forEach { entry ->
+                when (val resolved = entry.typeReference?.references?.firstOrNull()?.resolve()) {
+                    is KtClass -> queue.add(resolved)
+                    is PsiClass -> toKtClass(resolved)?.let(queue::add)
+                }
+            }
+        }
+    }
+
+    private fun collectKotlinSuperTypeNames(ktClass: KtClass): Set<String> {
+        val names = linkedSetOf<String>()
+        addKotlinSuperTypeNames(ktClass, names)
+        return names
     }
 
     private fun isEnclosingOrNestedTestClass(

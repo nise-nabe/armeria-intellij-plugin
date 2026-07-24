@@ -352,7 +352,7 @@ class ArmeriaBlockingClientKotlinInspectionTest : ArmeriaLightJavaCodeInsightFix
             """.trimIndent(),
         )
         myFixture.configureByText(
-            "BaseIntegrationTest.kt",
+            "UserServiceTest.kt",
             """
             package example
 
@@ -363,12 +363,6 @@ class ArmeriaBlockingClientKotlinInspectionTest : ArmeriaLightJavaCodeInsightFix
                 @RegisterExtension
                 val server: ServerExtension = object : ServerExtension() {}
             }
-            """.trimIndent(),
-        )
-        myFixture.configureByText(
-            "UserServiceTest.kt",
-            """
-            package example
 
             class UserServiceTest : BaseIntegrationTest() {
                 fun testSlow() {

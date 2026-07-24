@@ -145,8 +145,7 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
     }
 
     fun testInsertsIntoSubclassWhenServerExtensionIsInSuperclass() {
-        myFixture.configureByText(
-            "BaseIntegrationTest.java",
+        myFixture.addClass(
             """
             package example;
 

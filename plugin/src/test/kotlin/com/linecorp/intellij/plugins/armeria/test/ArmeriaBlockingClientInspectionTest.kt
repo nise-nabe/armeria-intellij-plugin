@@ -221,8 +221,7 @@ class ArmeriaBlockingClientInspectionTest : ArmeriaLightJavaCodeInsightFixtureTe
             }
             """.trimIndent(),
         )
-        myFixture.configureByText(
-            "BaseIntegrationTest.java",
+        myFixture.addClass(
             """
             package example;
 
