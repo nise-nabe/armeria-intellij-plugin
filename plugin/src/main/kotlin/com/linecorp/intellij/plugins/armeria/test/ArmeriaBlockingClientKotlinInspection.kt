@@ -37,10 +37,12 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
         if (blockingPaths.isEmpty()) {
             return PsiElementVisitor.EMPTY_VISITOR
         }
+        val extensionCache = mutableMapOf<String, List<ArmeriaJUnitServerExtension>>()
         return object : KtVisitorVoid() {
             override fun visitCallExpression(expression: KtCallExpression) {
                 super.visitCallExpression(expression)
-                val extension = ArmeriaJUnitServerExtensionSupport.enclosingServerExtension(expression, scope) ?: return
+                val extension =
+                    ArmeriaJUnitServerExtensionSupport.enclosingServerExtension(expression, scope, extensionCache) ?: return
                 if (!usesAsyncWebClient(expression, extension.variableName)) {
                     return
                 }

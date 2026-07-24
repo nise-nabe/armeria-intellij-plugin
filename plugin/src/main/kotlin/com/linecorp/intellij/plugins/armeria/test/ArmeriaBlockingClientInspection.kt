@@ -36,9 +36,11 @@ class ArmeriaBlockingClientInspection : LocalInspectionTool() {
         if (blockingPaths.isEmpty()) {
             return PsiElementVisitor.EMPTY_VISITOR
         }
+        val extensionCache = mutableMapOf<String, List<ArmeriaJUnitServerExtension>>()
         return object : JavaElementVisitor() {
             override fun visitMethodCallExpression(expression: PsiMethodCallExpression) {
-                val extension = ArmeriaJUnitServerExtensionSupport.enclosingServerExtension(expression, scope) ?: return
+                val extension =
+                    ArmeriaJUnitServerExtensionSupport.enclosingServerExtension(expression, scope, extensionCache) ?: return
                 if (!usesAsyncWebClient(expression, extension.variableName)) {
                     return
                 }
@@ -139,7 +141,7 @@ internal object ArmeriaBlockingClientInspectionPaths {
                 ArmeriaRouteAnalysisCollector
                     .collect(project)
                     .asSequence()
-                    .filter { ArmeriaTestMethodGenerator.supports(it) && ArmeriaTestMethodGenerator.requiresBlockingClient(it) }
+                    .filter { ArmeriaTestMethodGenerator.isBlockingInspectableRoute(it) }
                     .map { ArmeriaRouteSupport.normalizePath(it.path) }
                     .toSet()
             CachedValueProvider.Result.create(paths, PsiModificationTracker.MODIFICATION_COUNT)

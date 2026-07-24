@@ -21,8 +21,8 @@ class ArmeriaTestMethodGeneratorTest {
     }
 
     @Test
-    fun supportsServiceRoute() {
-        assertTrue(ArmeriaTestMethodGenerator.supports(route(routeMatch = RouteMatch.SERVICE, httpMethod = "")))
+    fun rejectsServiceRouteWithoutHttpMethod() {
+        assertFalse(ArmeriaTestMethodGenerator.supports(route(routeMatch = RouteMatch.SERVICE, httpMethod = "")))
     }
 
     @Test

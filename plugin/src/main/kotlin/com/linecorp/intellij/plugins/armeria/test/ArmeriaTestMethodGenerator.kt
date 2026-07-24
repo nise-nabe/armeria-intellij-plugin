@@ -13,13 +13,11 @@ enum class ArmeriaTestLanguage {
 
 internal object ArmeriaTestMethodGenerator {
     fun supports(route: ArmeriaRoute): Boolean =
-        when (route.routeMatch) {
-            RouteMatch.ANNOTATED_HTTP -> route.httpMethod.isNotBlank()
-            RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER -> true
-            else -> false
-        }
+        route.routeMatch == RouteMatch.ANNOTATED_HTTP && route.httpMethod.isNotBlank()
 
     fun requiresBlockingClient(route: ArmeriaRoute): Boolean = route.executionHints.contains(message("route.explorer.execution.blocking"))
+
+    fun isBlockingInspectableRoute(route: ArmeriaRoute): Boolean = supports(route) && requiresBlockingClient(route)
 
     fun suggestMethodName(route: ArmeriaRoute): String {
         val pathPart = pathToCamelCase(route.path)

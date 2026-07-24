@@ -27,18 +27,33 @@ object ArmeriaJUnitServerExtensionCollector {
         psiClass: PsiClass,
     ): List<ArmeriaJUnitServerExtension> {
         val scope = GlobalSearchScope.projectScope(project)
-        ArmeriaJUnitServerExtensionSupport.toKtClass(psiClass)?.fqName?.asString()?.let { className ->
-            val fromCollector = collect(project).filter { it.containingClassName == className }
-            if (fromCollector.isNotEmpty()) {
-                return fromCollector
-            }
-        }
-        val fromFields = ArmeriaJUnitServerExtensionSupport.serverExtensionsInClass(psiClass, scope)
+        val hierarchyNames = ArmeriaJUnitServerExtensionSupport.classHierarchyQualifiedNames(psiClass)
+        val fromFields = extensionsFromClassHierarchy(psiClass, scope)
         if (fromFields.isNotEmpty()) {
             return fromFields
         }
-        val className = psiClass.qualifiedName ?: return emptyList()
-        return collect(project).filter { it.containingClassName == className }
+        return collect(project)
+            .filter { it.containingClassName in hierarchyNames }
+            .distinctBy { "${it.containingClassName}#${it.variableName}" }
+    }
+
+    private fun extensionsFromClassHierarchy(
+        psiClass: PsiClass,
+        scope: GlobalSearchScope,
+    ): List<ArmeriaJUnitServerExtension> {
+        val extensions = mutableListOf<ArmeriaJUnitServerExtension>()
+        val seen = mutableSetOf<String>()
+        var current: PsiClass? = psiClass
+        while (current != null) {
+            for (extension in ArmeriaJUnitServerExtensionSupport.serverExtensionsInClass(current, scope)) {
+                val key = "${extension.containingClassName}#${extension.variableName}"
+                if (seen.add(key)) {
+                    extensions += extension
+                }
+            }
+            current = current.superClass
+        }
+        return extensions
     }
 
     private fun compute(project: Project): CachedValueProvider.Result<List<ArmeriaJUnitServerExtension>> {

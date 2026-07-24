@@ -157,6 +157,10 @@ internal object ArmeriaJUnitServerExtensionSupport {
                 when (character) {
                     '\\' -> append("\\\\")
                     '"' -> append("\\\"")
+                    '\n' -> append("\\n")
+                    '\r' -> append("\\r")
+                    '\t' -> append("\\t")
+                    '$' -> append("\\$")
                     else -> append(character)
                 }
             }
@@ -239,23 +243,62 @@ internal object ArmeriaJUnitServerExtensionSupport {
         return null
     }
 
+    fun enclosingTestClassName(element: PsiElement): String? =
+        element.getParentOfType<KtClass>(true)?.fqName?.asString()
+            ?: PsiTreeUtil.getParentOfType(element, PsiClass::class.java)?.qualifiedName
+
     fun enclosingServerExtension(
         element: PsiElement,
         scope: GlobalSearchScope,
+        cachedExtensions: MutableMap<String, List<ArmeriaJUnitServerExtension>>? = null,
     ): ArmeriaJUnitServerExtension? {
+        val className = enclosingTestClassName(element) ?: return null
         val project = element.project
-        val className =
-            element.getParentOfType<KtClass>(true)?.fqName?.asString()
-                ?: PsiTreeUtil.getParentOfType(element, PsiClass::class.java)?.qualifiedName
-                ?: return null
         val extensions =
-            ArmeriaJUnitServerExtensionCollector
-                .collect(project)
-                .filter { extension -> isEnclosingOrNestedTestClass(className, extension.containingClassName) }
+            cachedExtensions?.getOrPut(className) {
+                serverExtensionsAccessibleFrom(className, project, scope)
+            } ?: serverExtensionsAccessibleFrom(className, project, scope)
         if (extensions.isEmpty()) {
             return null
         }
         return resolveScopedExtension(element, extensions)
+    }
+
+    fun serverExtensionsAccessibleFrom(
+        testClassName: String,
+        project: Project,
+        scope: GlobalSearchScope,
+    ): List<ArmeriaJUnitServerExtension> =
+        ArmeriaJUnitServerExtensionCollector
+            .collect(project)
+            .filter { extension -> canAccessServerExtension(testClassName, extension.containingClassName, project, scope) }
+
+    fun classHierarchyQualifiedNames(psiClass: PsiClass): Set<String> {
+        val names = linkedSetOf<String>()
+        var current: PsiClass? = psiClass
+        while (current != null) {
+            current.qualifiedName?.let(names::add)
+            toKtClass(current)?.fqName?.asString()?.let(names::add)
+            current = current.superClass
+        }
+        return names
+    }
+
+    private fun canAccessServerExtension(
+        testClassName: String,
+        extensionClassName: String,
+        project: Project,
+        scope: GlobalSearchScope,
+    ): Boolean {
+        if (isEnclosingOrNestedTestClass(testClassName, extensionClassName)) {
+            return true
+        }
+        if (extensionClassName.isEmpty()) {
+            return false
+        }
+        val testClass = JavaPsiFacade.getInstance(project).findClass(testClassName, scope) ?: return false
+        val extensionClass = JavaPsiFacade.getInstance(project).findClass(extensionClassName, scope) ?: return false
+        return testClass.isInheritor(extensionClass, true)
     }
 
     private fun isEnclosingOrNestedTestClass(

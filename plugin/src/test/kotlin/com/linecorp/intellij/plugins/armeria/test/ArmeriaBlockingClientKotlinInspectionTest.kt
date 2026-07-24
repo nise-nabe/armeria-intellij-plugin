@@ -334,6 +334,58 @@ class ArmeriaBlockingClientKotlinInspectionTest : ArmeriaLightJavaCodeInsightFix
         assertEquals(1, holder.results.size)
     }
 
+    fun testWarnsWhenSubclassUsesInheritedServerExtension() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Blocking
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "BaseIntegrationTest.kt",
+            """
+            package example
+
+            import org.junit.jupiter.api.extension.RegisterExtension
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+            abstract class BaseIntegrationTest {
+                @RegisterExtension
+                val server: ServerExtension = object : ServerExtension() {}
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "UserServiceTest.kt",
+            """
+            package example
+
+            class UserServiceTest : BaseIntegrationTest() {
+                fun testSlow() {
+                    server.webClient().get("/slow")
+                }
+            }
+            """.trimIndent(),
+        )
+        val getCall = findGetCall(myFixture.file as KtFile)
+
+        val manager = InspectionManager.getInstance(project)
+        val holder = ProblemsHolder(manager, myFixture.file, false)
+        val visitor = ArmeriaBlockingClientKotlinInspection().buildVisitor(holder, false)
+        getCall.accept(visitor)
+        assertEquals(1, holder.results.size)
+    }
+
     fun testWarnsWhenCompanionObjectServerExtensionUsesAsyncWebClient() {
         myFixture.addClass(
             """
