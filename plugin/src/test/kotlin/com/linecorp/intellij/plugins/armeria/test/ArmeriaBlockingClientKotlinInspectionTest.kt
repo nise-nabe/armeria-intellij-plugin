@@ -521,35 +521,39 @@ class ArmeriaBlockingClientKotlinInspectionTest : ArmeriaLightJavaCodeInsightFix
     fun testNoInspectionSetupForMainSourceTestNamedFile() {
         val mainRoot = myFixture.tempDirFixture.findOrCreateDir("main")
         PsiTestUtil.addSourceRoot(module, mainRoot, false)
-        val content =
-            """
-            package example
+        try {
+            val content =
+                """
+                package example
 
-            import org.junit.jupiter.api.extension.RegisterExtension
-            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+                import org.junit.jupiter.api.extension.RegisterExtension
+                import com.linecorp.armeria.testing.junit5.server.ServerExtension
 
-            class MisnamedTest {
-                @RegisterExtension
-                val server: ServerExtension = object : ServerExtension() {}
+                class MisnamedTest {
+                    @RegisterExtension
+                    val server: ServerExtension = object : ServerExtension() {}
 
-                fun run() {
-                    server.webClient().get("/slow")
+                    fun run() {
+                        server.webClient().get("/slow")
+                    }
                 }
-            }
-            """.trimIndent()
-        val virtualFile =
-            ApplicationManager.getApplication().runWriteAction<com.intellij.openapi.vfs.VirtualFile> {
-                val file = mainRoot.createChildData(this, "MisnamedTest.kt")
-                VfsUtil.saveText(file, content)
-                file
-            }
-        PsiDocumentManager.getInstance(project).commitAllDocuments()
-        val psiFile = PsiManager.getInstance(project).findFile(virtualFile)!!
+                """.trimIndent()
+            val virtualFile =
+                ApplicationManager.getApplication().runWriteAction<com.intellij.openapi.vfs.VirtualFile> {
+                    val file = mainRoot.createChildData(this, "MisnamedTest.kt")
+                    VfsUtil.saveText(file, content)
+                    file
+                }
+            PsiDocumentManager.getInstance(project).commitAllDocuments()
+            val psiFile = PsiManager.getInstance(project).findFile(virtualFile)!!
 
-        val manager = InspectionManager.getInstance(project)
-        val holder = ProblemsHolder(manager, psiFile, false)
-        val visitor = ArmeriaBlockingClientKotlinInspection().buildVisitor(holder, false)
-        assertTrue(visitor === PsiElementVisitor.EMPTY_VISITOR)
+            val manager = InspectionManager.getInstance(project)
+            val holder = ProblemsHolder(manager, psiFile, false)
+            val visitor = ArmeriaBlockingClientKotlinInspection().buildVisitor(holder, false)
+            assertTrue(visitor === PsiElementVisitor.EMPTY_VISITOR)
+        } finally {
+            PsiTestUtil.removeSourceRoot(module, mainRoot)
+        }
     }
 
     private fun findGetCall(file: KtFile): KtCallExpression =

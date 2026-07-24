@@ -28,7 +28,7 @@ class ArmeriaBlockingClientInspection : LocalInspectionTool() {
         if (!ArmeriaJUnitServerExtensionSupport.fileMayContainRegisterExtension(holder.file.text)) {
             return PsiElementVisitor.EMPTY_VISITOR
         }
-        if (!ArmeriaJUnitServerExtensionSupport.isLikelyJUnitTestFile(holder.file)) {
+        if (!ArmeriaJUnitServerExtensionSupport.isInTestSourceContent(holder.file)) {
             return PsiElementVisitor.EMPTY_VISITOR
         }
         val scope = GlobalSearchScope.projectScope(holder.project)
