@@ -34,10 +34,11 @@ internal object ArmeriaTestMethodGenerator {
     ): String {
         val methodName = suggestMethodName(route)
         val call = httpMethod(route).lowercase(Locale.ROOT)
-        val path = ArmeriaJUnitServerExtensionSupport.escapeStringLiteral(ArmeriaRouteSupport.normalizePath(route.path))
+        val normalizedPath = ArmeriaRouteSupport.normalizePath(route.path)
         val blocking = requiresBlockingClient(route)
         return when (language) {
-            ArmeriaTestLanguage.JAVA ->
+            ArmeriaTestLanguage.JAVA -> {
+                val path = ArmeriaJUnitServerExtensionSupport.escapeStringLiteral(normalizedPath)
                 if (blocking) {
                     """
                     @org.junit.jupiter.api.Test
@@ -57,7 +58,9 @@ internal object ArmeriaTestMethodGenerator {
                     }
                     """.trimIndent()
                 }
-            ArmeriaTestLanguage.KOTLIN ->
+            }
+            ArmeriaTestLanguage.KOTLIN -> {
+                val path = ArmeriaJUnitServerExtensionSupport.escapeKotlinStringLiteral(normalizedPath)
                 if (blocking) {
                     """
                     @Test
@@ -77,6 +80,7 @@ internal object ArmeriaTestMethodGenerator {
                     }
                     """.trimIndent()
                 }
+            }
         }
     }
 

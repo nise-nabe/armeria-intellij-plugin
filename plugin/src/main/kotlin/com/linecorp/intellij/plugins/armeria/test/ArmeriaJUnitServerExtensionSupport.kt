@@ -166,6 +166,18 @@ internal object ArmeriaJUnitServerExtensionSupport {
             }
         }
 
+    fun escapeKotlinStringLiteral(value: String): String =
+        buildString(value.length) {
+            value.forEach { character ->
+                when (character) {
+                    '\\' -> append("\\\\")
+                    '"' -> append("\\\"")
+                    '$' -> append("\\$")
+                    else -> append(character)
+                }
+            }
+        }
+
     private fun KtAnnotationEntry.isRegisterExtensionAnnotation(): Boolean =
         when (qualifiedName()) {
             REGISTER_EXTENSION_ANNOTATION -> true

@@ -58,6 +58,16 @@ class ArmeriaTestMethodGeneratorTest {
         assertTrue(generated.contains("\"/api\\\"quoted\""))
     }
 
+    fun generateKotlinTestMethodEscapesPathCharacters() {
+        val generated =
+            ArmeriaTestMethodGenerator.generateTestMethod(
+                route = route(path = "/legacy/\$id"),
+                serverVariableName = "server",
+                language = ArmeriaTestLanguage.KOTLIN,
+            )
+        assertTrue(generated.contains("\"/legacy\\\$id\""))
+    }
+
     private fun route(
         httpMethod: String = "GET",
         path: String = "/api",

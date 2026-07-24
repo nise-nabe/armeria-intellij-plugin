@@ -175,8 +175,11 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
 
     private fun kotlinPropertyFor(reference: KtNameReferenceExpression): KtProperty? {
         val resolved = reference.reference?.resolve()
-        (resolved as? KtProperty)?.let { return it }
-        (resolved?.navigationElement as? KtProperty)?.let { return it }
+        if (resolved != null) {
+            (resolved as? KtProperty)?.let { return it }
+            (resolved.navigationElement as? KtProperty)?.let { return it }
+            return null
+        }
         val name = reference.getReferencedName()
         val scope =
             reference.getParentOfType<KtNamedFunction>(true)
