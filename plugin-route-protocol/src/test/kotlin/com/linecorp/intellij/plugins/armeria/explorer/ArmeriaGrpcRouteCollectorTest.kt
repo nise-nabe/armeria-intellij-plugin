@@ -5,6 +5,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaGrpcRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaProtocolRouteContributor
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
@@ -342,5 +343,47 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
 
         assertNotNull(routes.firstOrNull { it.path == "/grpc" })
         assertNotNull(routes.firstOrNull { it.path == "/com.example.Greeter/SayHello" })
+    }
+
+    fun testProtoRouteMergeIsCachedAcrossCollectCalls() {
+        myFixture.configureByText(
+            "greeter.proto",
+            """
+            syntax = "proto3";
+            package com.example;
+
+            service Greeter {
+              rpc SayHello(HelloRequest) returns (HelloResponse);
+            }
+            """.trimIndent(),
+        )
+
+        val first =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
+        val firstScan = ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned
+        assertEquals(listOf("/com.example.Greeter/SayHello"), first.map { it.path })
+        assertTrue(firstScan > 0)
+
+        val second =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
+        val secondScan = ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned
+        assertEquals(first.map { it.path }, second.map { it.path })
+        assertEquals(0, secondScan)
+
+        val withoutProto =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = false,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
+        assertTrue(withoutProto.none { it.path == "/com.example.Greeter/SayHello" })
     }
 }

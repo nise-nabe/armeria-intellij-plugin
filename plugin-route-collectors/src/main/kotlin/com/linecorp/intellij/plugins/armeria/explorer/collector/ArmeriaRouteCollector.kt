@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.explorer.collector
 import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
+import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiElement
@@ -27,6 +28,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.RouteCollectContex
 import com.linecorp.intellij.plugins.armeria.explorer.support.RouteContributor
 import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.psi.KtFile
+import java.util.MissingResourceException
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -47,17 +49,10 @@ object ArmeriaRouteCollector {
         val startedAt = System.nanoTime()
         val routes =
             ArmeriaRouteCollectionMetrics.runWith(metrics) {
-                val cachedRoutes =
-                    CachedValuesManager.getManager(project).getCachedValue(
-                        project,
-                        cacheKey(contributors),
-                        CachedValueProvider { computeProjectRoutes(project, contributors) },
-                        false,
-                    )
-                if (includeProtoRoutes) {
-                    mergeProtoRoutesIfEnabled(project, cachedRoutes, contributors)
+                if (includeProtoRoutes && isProtoRouteDiscoveryEnabled()) {
+                    cachedProjectRoutesWithProto(project, contributors)
                 } else {
-                    cachedRoutes
+                    cachedProjectRoutes(project, contributors)
                 }
             }
         metrics.elapsedMs = (System.nanoTime() - startedAt) / 1_000_000
@@ -65,15 +60,55 @@ object ArmeriaRouteCollector {
         return routes
     }
 
-    private fun cacheKey(contributors: List<RouteContributor>): Key<CachedValue<List<ArmeriaRoute>>> {
-        val id =
-            contributors
-                .map { it.javaClass.name }
-                .sorted()
-                .joinToString(",")
-                .ifEmpty { "core-only" }
-        return cacheKeys.getOrPut(id) { Key.create("armeria.route.collector.$id") }
-    }
+    private fun cachedProjectRoutes(
+        project: Project,
+        contributors: List<RouteContributor>,
+    ): List<ArmeriaRoute> =
+        CachedValuesManager.getManager(project).getCachedValue(
+            project,
+            cacheKey(contributors),
+            CachedValueProvider { computeProjectRoutes(project, contributors) },
+            false,
+        )
+
+    private fun cachedProjectRoutesWithProto(
+        project: Project,
+        contributors: List<RouteContributor>,
+    ): List<ArmeriaRoute> =
+        CachedValuesManager.getManager(project).getCachedValue(
+            project,
+            cacheKeyWithProto(contributors),
+            CachedValueProvider {
+                val baseRoutes = cachedProjectRoutes(project, contributors)
+                CachedValueProvider.Result.create(
+                    mergeProtoRoutesIfEnabled(project, baseRoutes, contributors),
+                    PsiModificationTracker.MODIFICATION_COUNT,
+                )
+            },
+            false,
+        )
+
+    private fun cacheKey(contributors: List<RouteContributor>): Key<CachedValue<List<ArmeriaRoute>>> =
+        cacheKeys.getOrPut(contributorCacheId(contributors)) { Key.create("armeria.route.collector.${contributorCacheId(contributors)}") }
+
+    private fun cacheKeyWithProto(contributors: List<RouteContributor>): Key<CachedValue<List<ArmeriaRoute>>> =
+        cacheKeys.getOrPut("${contributorCacheId(contributors)}.with-proto") {
+            Key.create("armeria.route.collector.${contributorCacheId(contributors)}.with-proto")
+        }
+
+    private fun contributorCacheId(contributors: List<RouteContributor>): String =
+        contributors
+            .map { it.javaClass.name }
+            .sorted()
+            .joinToString(",")
+            .ifEmpty { "core-only" }
+
+    private fun isProtoRouteDiscoveryEnabled(): Boolean =
+        try {
+            Registry.`is`("armeria.grpc.proto.routes.enabled")
+        } catch (_: MissingResourceException) {
+            true
+        }
 
     private fun computeProjectRoutes(
         project: Project,
