@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.test
 
 import com.intellij.openapi.application.PathManager
+import com.intellij.openapi.util.io.PathUtil
 import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 import java.io.File
@@ -9,6 +10,20 @@ import java.io.File
  * [LightJavaCodeInsightFixtureTestCase] with 2026.2+ test sandbox root access for plugin runtime libraries.
  */
 abstract class ArmeriaLightJavaCodeInsightFixtureTestCase : LightJavaCodeInsightFixtureTestCase() {
+    override fun getTestDataPath(): String = resolveModuleTestDataPath()
+
+    protected fun resolveModuleTestDataPath(): String {
+        val fromWorkingDir = File("src/test/testData")
+        if (fromWorkingDir.isDirectory) {
+            return PathUtil.toSystemIndependentName(fromWorkingDir.absolutePath)
+        }
+
+        val codeSource = javaClass.protectionDomain.codeSource
+        val classesDir = File(codeSource.location.toURI())
+        val moduleRoot = classesDir.parentFile.parentFile.parentFile
+        return PathUtil.toSystemIndependentName(File(moduleRoot, "src/test/testData").absolutePath)
+    }
+
     override fun setUp() {
         super.setUp()
         allowTestSandboxRoots()

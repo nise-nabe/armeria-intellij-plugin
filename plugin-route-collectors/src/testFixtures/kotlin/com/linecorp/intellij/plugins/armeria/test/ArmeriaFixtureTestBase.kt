@@ -1,9 +1,17 @@
 package com.linecorp.intellij.plugins.armeria.test
 
+import com.intellij.psi.PsiFile
+import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+
 /**
  * Shared Armeria PSI stubs for [LightJavaCodeInsightFixtureTestCase] subclasses.
  */
 abstract class ArmeriaFixtureTestBase : ArmeriaLightJavaCodeInsightFixtureTestCase() {
+    protected fun configureFixture(relativePath: String): PsiFile = myFixture.configureByFile(relativePath)
+
+    protected fun collectRoutes(): List<ArmeriaRoute> = ArmeriaRouteCollector.collect(project)
+
     override fun setUp() {
         super.setUp()
         registerArmeriaStubs()

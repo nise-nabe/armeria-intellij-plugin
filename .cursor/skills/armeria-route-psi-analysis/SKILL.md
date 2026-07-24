@@ -216,6 +216,22 @@ plugin-route-analysis/src/fastTest/...   — UI helper (`Http*`, `RouteTreeBuild
 
 Name tests after the behavior (`virtualHost_doesNotAnnotateEarlierRegistrations`), not the PR number.
 
+### PSI fixture layout (`testData/`)
+
+For PSI fixture tests that extend `ArmeriaFixtureTestBase` or
+`ArmeriaLightJavaCodeInsightFixtureTestCase`:
+
+- Place fixture sources under `src/test/testData/<suite>/<case>/` in the owning module
+  (e.g. `plugin-route-collectors/src/test/testData/extendedRegistration/basic/fileService/Main.java`).
+- Load fixtures with `configureFixture("relative/path")` — the shared base resolves
+  `getTestDataPath()` to the module's `src/test/testData/`.
+- Assert collected routes with `collectRoutes().assertRoute(...)` from
+  `ArmeriaRouteTestSupport` in `plugin-route-collectors` testFixtures.
+- Keep Armeria/Spring API **stubs** in `ArmeriaFixture*Stubs.kt` via `addClass(...)`; only
+  user source under test belongs in `testData/`.
+
+Reference migration: `ArmeriaExtendedRegistrationCollectorBasicTest`.
+
 ## Related skills
 
 - `intellij-armeria-plugin` — UI/i18n, index readiness, module placement, test task paths
