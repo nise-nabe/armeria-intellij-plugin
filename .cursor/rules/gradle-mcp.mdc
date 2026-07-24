@@ -27,6 +27,10 @@ Read `.cursor/skills/gradle-tapi-mcp/SKILL.md` for the full workflow.
 
 Use `background: true` and poll `gradle_get_build_status` for anything that may exceed ~30s (cold start, `:plugin:test`, `build`).
 
+## Before committing
+
+Coding agents must run `ktlintCheck` (MCP or `./gradlew ktlintCheck`) and fix any violations before `git commit`.
+
 ## Shell fallback only when
 
 - MCP tools time out or the server is unresponsive (poll `gradle_list_builds` / `gradle_get_build_status` first)
