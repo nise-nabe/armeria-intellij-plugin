@@ -42,7 +42,6 @@ fun List<ArmeriaRoute>.assertRoute(
     pathType: PathType? = null,
 ): ArmeriaRoute {
     val route = route(match = match, path = path)
-    path?.let { check(route.path == it) { "Expected path '$it' but was '${route.path}'" } }
     httpMethod?.let { check(route.httpMethod == it) { "Expected httpMethod '$it' but was '${route.httpMethod}'" } }
     pathType?.let { check(route.pathType == it) { "Expected pathType '$it' but was '${route.pathType}'" } }
     return route
