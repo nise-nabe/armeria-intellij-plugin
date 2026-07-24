@@ -77,7 +77,17 @@ Kotlin style is enforced by ktlint (`com.linecorp.intellij.ktlint` convention, `
 
 ### Commit workflow (coding agents)
 
-Before each `git commit`, when staged files include `*.kt`, `*.kts`, or `.editorconfig`, run `ktlintCheck` via Gradle MCP (`gradle_run_tasks` with `["ktlintCheck"]`, `background: true` + poll `gradle_get_build_status`). If it fails, fix violations with `ktlintFormat` or manual edits, re-run `ktlintCheck`, and only commit once it passes. Shell fallback: `./gradlew ktlintCheck`. Skip for docs-only commits. Commit-time ktlint catches style regressions early; pre-PR `build` remains the final gate (CI runs `build -x test`, which includes ktlint).
+Detect staged Kotlin or style config:
+
+```bash
+git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'
+```
+
+When that output is non-empty, before `git commit` run `ktlintCheck` via Gradle MCP (`gradle_run_tasks` with `["ktlintCheck"]`, `background: true` + poll `gradle_get_build_status` until terminal success). If it fails, fix violations with `gradle_run_tasks` `["ktlintFormat"]` (same poll pattern) or manual edits, re-run `ktlintCheck`, and only commit once it passes. Wait for any in-flight MCP build to finish or cancel it (`gradle_cancel_build`) before starting commit-time ktlint — the repo allows only one MCP build per project directory. Shell fallback: `./gradlew ktlintCheck` / `./gradlew ktlintFormat`. Omit ktlint when the staged index contains none of `*.kt`, `*.kts`, or `.editorconfig` (e.g. only `.md`, YAML, or properties). Do not skip based on commit message or PR title alone.
+
+Root `ktlintCheck` does not cover the `includeBuild("build-logic")` composite; for `build-logic/` Kotlin edits, rely on `compileKotlin` or full `build` in addition to commit-time ktlint when applicable.
+
+Commit-time ktlint catches style regressions early; pre-PR `build` remains the final gate (CI runs `build -x test`, which includes ktlint).
 
 **Isolated Projects status**: all production modules (`plugin-route-model`, `plugin-route-collectors`, `plugin-route-spring`, `plugin-route-protocol`, `plugin-route-analysis`, `plugin`) compile cleanly under `-Dorg.gradle.unsafe.isolated-projects=true` (verified via `./gradlew compileKotlin -Dorg.gradle.unsafe.isolated-projects=true`). Enabling it as a CI default (e.g. in `gradle.properties`) is a follow-up once test-task configuration-time access is also confirmed; see the commented line in `gradle.properties`.
 

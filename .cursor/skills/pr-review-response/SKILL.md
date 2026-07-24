@@ -148,11 +148,13 @@ For optional Kotlin plugin issues, follow the **`ArmeriaClientCollector` / `Arme
 3. Add/adjust tests only when the comment is about missing coverage or you fixed a bug.
 4. For test fixtures: **reuse `setUp()` stubs** — do not duplicate Java FQCN annotations as Kotlin `annotation class` in the same fixture.
 
-When staged files include `*.kt`, `*.kts`, or `.editorconfig`, run `ktlintCheck` via Gradle MCP before committing (see `AGENTS.md` **Commit workflow (coding agents)**). Commit once before verification:
+When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-empty, run `gradle_run_tasks` with `["ktlintCheck"]` (`background: true` + poll) before committing (see `AGENTS.md` **Commit workflow (coding agents)**). Commit once before verification:
 
 ```bash
 git add <paths>
-# ktlintCheck when Kotlin is staged (skip for docs-only)
+if [ -n "$(git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig')" ]; then
+  # Gradle MCP: gradle_run_tasks ["ktlintCheck"], background: true + poll; or: ./gradlew ktlintCheck
+fi
 git commit -m "fix: address PR <N> review comments"
 ```
 
