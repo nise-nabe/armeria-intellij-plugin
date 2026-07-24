@@ -1,7 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.test
 
 import com.intellij.openapi.application.PathManager
-import com.intellij.openapi.util.io.PathUtil
 import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 import java.io.File
@@ -15,14 +14,16 @@ abstract class ArmeriaLightJavaCodeInsightFixtureTestCase : LightJavaCodeInsight
     protected fun resolveModuleTestDataPath(): String {
         val fromWorkingDir = File("src/test/testData")
         if (fromWorkingDir.isDirectory) {
-            return PathUtil.toSystemIndependentName(fromWorkingDir.absolutePath)
+            return toSystemIndependentPath(fromWorkingDir.absolutePath)
         }
 
         val codeSource = javaClass.protectionDomain.codeSource
         val classesDir = File(codeSource.location.toURI())
         val moduleRoot = classesDir.parentFile.parentFile.parentFile
-        return PathUtil.toSystemIndependentName(File(moduleRoot, "src/test/testData").absolutePath)
+        return toSystemIndependentPath(File(moduleRoot, "src/test/testData").absolutePath)
     }
+
+    private fun toSystemIndependentPath(path: String): String = path.replace('\\', '/')
 
     override fun setUp() {
         super.setUp()

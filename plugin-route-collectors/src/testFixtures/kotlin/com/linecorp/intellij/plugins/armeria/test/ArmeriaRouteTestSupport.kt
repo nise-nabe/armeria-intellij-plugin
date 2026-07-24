@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.test
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
-import kotlin.test.assertEquals
 
 fun List<ArmeriaRoute>.route(
     match: RouteMatch? = null,
@@ -43,8 +42,8 @@ fun List<ArmeriaRoute>.assertRoute(
     pathType: PathType? = null,
 ): ArmeriaRoute {
     val route = route(match = match, path = path)
-    path?.let { assertEquals(it, route.path) }
-    httpMethod?.let { assertEquals(it, route.httpMethod) }
-    pathType?.let { assertEquals(it, route.pathType) }
+    path?.let { check(route.path == it) { "Expected path '$it' but was '${route.path}'" } }
+    httpMethod?.let { check(route.httpMethod == it) { "Expected httpMethod '$it' but was '${route.httpMethod}'" } }
+    pathType?.let { check(route.pathType == it) { "Expected pathType '$it' but was '${route.pathType}'" } }
     return route
 }
