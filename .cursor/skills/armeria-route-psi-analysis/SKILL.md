@@ -247,12 +247,12 @@ For PSI fixture tests that extend `ArmeriaFixtureTestBase` or
   | Old pattern | New pattern |
   |---|---|
   | `routes.single()` + field asserts | `collectRoutes().also { it.singleRoute() }.assertRoute(...)` |
-  | `routes.firstOrNull { it.routeMatch == X }` + field asserts | `collectRoutes().assertRoute(RouteMatch.X, path = ...)` |
+  | `routes.firstOrNull { it.routeMatch == X }` + field asserts | `collectRoutes().also { it.singleRoute() }.assertRoute(RouteMatch.X, path = ...)` |
   | Uniqueness **and** field match | `collectRoutes().also { it.singleRoute() }.assertRoute(...)` |
 
   `assertRoute()` with no expected fields is rejected — use `singleRoute()` for cardinality-only
-  checks. Registration tests that only matched on `routeMatch` may omit `singleRoute()` (parity
-  with old `firstOrNull`); annotated tests should keep `singleRoute()` so extra routes fail.
+  checks. Prefer `singleRoute()` before `assertRoute()` so extra routes from stubs or fixture
+  leakage fail the test.
 - Keep Armeria/Spring API **stubs** in `ArmeriaFixture*Stubs.kt` via `addClass(...)`; only
   user source under test belongs in `testData/`.
 

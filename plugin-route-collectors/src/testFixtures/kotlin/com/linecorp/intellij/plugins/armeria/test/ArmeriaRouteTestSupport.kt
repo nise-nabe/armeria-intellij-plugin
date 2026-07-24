@@ -52,6 +52,8 @@ fun List<ArmeriaRoute>.assertRoute(
         "assertRoute requires at least one expected field; use singleRoute() for cardinality-only checks"
     }
     val route = route(match = match, path = path, httpMethod = httpMethod, pathType = pathType)
+    match?.let { assertEquals(it, route.routeMatch, message = "routeMatch") }
+    path?.let { assertEquals(it, route.path, message = "path") }
     httpMethod?.let { assertEquals(it, route.httpMethod, message = "httpMethod") }
     pathType?.let { assertEquals(it, route.pathType, message = "pathType") }
     return route

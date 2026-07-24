@@ -13,22 +13,22 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
 
     fun testCollectFileServiceRegistration() {
         configureFixture("extendedRegistration/basic/fileService/Main.java")
-        collectRoutes().assertRoute(RouteMatch.FILE_SERVICE, path = "/files/")
+        collectRoutes().also { it.singleRoute() }.assertRoute(RouteMatch.FILE_SERVICE, path = "/files/")
     }
 
     fun testCollectFileServiceWithJavaConstantPath() {
         configureFixture("extendedRegistration/basic/fileServiceWithConstant/Main.java")
-        collectRoutes().assertRoute(RouteMatch.FILE_SERVICE, path = "/files/")
+        collectRoutes().also { it.singleRoute() }.assertRoute(RouteMatch.FILE_SERVICE, path = "/files/")
     }
 
     fun testCollectHealthCheckRegistration() {
         configureFixture("extendedRegistration/basic/healthCheck/Main.java")
-        collectRoutes().assertRoute(RouteMatch.HEALTH_CHECK, path = "/internal/healthcheck")
+        collectRoutes().also { it.singleRoute() }.assertRoute(RouteMatch.HEALTH_CHECK, path = "/internal/healthcheck")
     }
 
     fun testCollectFluentRouteRegistration() {
         configureFixture("extendedRegistration/basic/fluentRoute/Main.java")
-        collectRoutes().assertRoute(
+        collectRoutes().also { it.singleRoute() }.assertRoute(
             RouteMatch.ROUTE_FLUENT,
             path = "/api/items",
             httpMethod = "POST",
@@ -37,7 +37,7 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
 
     fun testCollectDecoratorUnderRegistration() {
         configureFixture("extendedRegistration/basic/decoratorUnder/Main.java")
-        collectRoutes().assertRoute(RouteMatch.DECORATOR_UNDER, path = "/public")
+        collectRoutes().also { it.singleRoute() }.assertRoute(RouteMatch.DECORATOR_UNDER, path = "/public")
     }
 
     fun testCollectPathAnnotationAndPathType() {
@@ -57,7 +57,7 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
 
     fun testCollectFluentRoutePathPrefix() {
         configureFixture("extendedRegistration/basic/fluentRoutePathPrefix/Main.java")
-        collectRoutes().assertRoute(
+        collectRoutes().also { it.singleRoute() }.assertRoute(
             RouteMatch.ROUTE_FLUENT,
             path = "/api/items",
             httpMethod = "GET",
