@@ -87,6 +87,7 @@ class ArmeriaRouteExplorerPanel(
                     },
                 )
                 add(ArmeriaGenerateHttpRequestAction { selectedRouteFromTree() })
+                add(ArmeriaGenerateTestMethodAction { selectedRouteFromTree() })
                 add(ArmeriaSyncRuntimeRoutesAction())
                 add(ArmeriaOpenDocServiceAction { filterRoutes(allRoutes()) })
             }

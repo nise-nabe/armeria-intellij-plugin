@@ -21,8 +21,19 @@
                          enabledByDefault="true"
                          level="WARNING"
                          implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaDuplicateRegistrationKotlinInspection" />
+        <localInspection language="kotlin"
+                         bundle="messages.ArmeriaBundle"
+                         key="inspection.blocking.client.kotlin.display.name"
+                         groupBundle="messages.ArmeriaBundle"
+                         groupKey="inspection.group.armeria"
+                         shortName="ArmeriaBlockingClientKotlin"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         implementationClass="com.linecorp.intellij.plugins.armeria.test.ArmeriaBlockingClientKotlinInspection" />
         <codeInsight.lineMarkerProvider language="kotlin"
                                         implementationClass="com.linecorp.intellij.plugins.armeria.marker.ArmeriaKotlinRouteLineMarkerProvider"/>
+        <codeInsight.lineMarkerProvider language="kotlin"
+                                        implementationClass="com.linecorp.intellij.plugins.armeria.test.ArmeriaKotlinJUnitServerExtensionLineMarkerProvider" />
         <defaultLiveTemplates file="liveTemplates/ArmeriaKotlin.xml"/>
     </extensions>
 </idea-plugin>

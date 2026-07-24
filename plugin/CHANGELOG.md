@@ -7,6 +7,7 @@
 - PSI fixture regression tests for duplicate annotated route and duplicate route registration inspections (Java route highlighting, Java/Kotlin registration inspection scenarios).
 - ktlint via `com.linecorp.intellij.ktlint` convention (`ktlint_official` style); `ktlintCheck` runs as part of `check` / `build`.
 - gRPC Route Explorer discovery uses Proto Editor PSI when `idea.plugin.protoeditor` is available (RPC-level navigation), with fallback to the existing `.proto` text parser.
+- IDE support for Armeria JUnit 5 integration tests: `@RegisterExtension` `ServerExtension` gutter markers, blocking-route inspection in tests, and Generate Test Method from Route Explorer.
 
 ### Changed
 
