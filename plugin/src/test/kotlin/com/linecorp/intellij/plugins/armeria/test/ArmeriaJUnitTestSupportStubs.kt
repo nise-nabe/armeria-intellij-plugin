@@ -2,8 +2,7 @@ package com.linecorp.intellij.plugins.armeria.test
 
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.roots.ModuleRootManager
-import com.intellij.openapi.roots.ModuleRootModificationUtil
-import com.intellij.testFramework.UsefulTestCase.runWriteAction
+import com.intellij.testFramework.PsiTestUtil
 import com.intellij.testFramework.fixtures.JavaCodeInsightTestFixture
 
 internal fun JavaCodeInsightTestFixture.registerArmeriaJUnitTestSupportStubs() {
@@ -84,13 +83,10 @@ internal fun JavaCodeInsightTestFixture.registerArmeriaJUnitTestSupportStubs() {
 
 private fun markDefaultSourceRootAsTestSource(module: Module) {
     val rootManager = ModuleRootManager.getInstance(module)
-    if (rootManager.sourceFolders.any { it.isTestSource }) {
+    val contentRoot = rootManager.contentRoots.firstOrNull() ?: return
+    if (rootManager.fileIndex.isInTestSourceContent(contentRoot)) {
         return
     }
-    ModuleRootModificationUtil.updateModel(module) { model ->
-        model.contentEntries
-            .flatMap { it.sourceFolders.toList() }
-            .filter { !it.isTestSource }
-            .forEach { it.isTestSource = true }
-    }
+    PsiTestUtil.removeSourceRoot(module, contentRoot)
+    PsiTestUtil.addSourceRoot(module, contentRoot, true)
 }
