@@ -6,6 +6,9 @@ import com.intellij.psi.PsiJavaFile
 import com.intellij.testFramework.PlatformTestUtil
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import org.jetbrains.kotlin.psi.KtClassOrObject
+import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.psi.KtNamedFunction
 
 class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
@@ -16,6 +19,30 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
         myFixture.doHighlighting().filter {
             it.description?.let(::matchesRegistrationDuplicateProblem) == true
         }
+
+    private fun assertRegistrationDuplicateHighlightOnKotlinMethod(
+        className: String,
+        functionName: String,
+        expectedDescription: String,
+    ) {
+        val duplicateHighlights =
+            myFixture.doHighlighting().filter {
+                it.description == expectedDescription
+            }
+        assertEquals(1, duplicateHighlights.size)
+
+        val file = myFixture.file as KtFile
+        val clazz =
+            file.declarations.filterIsInstance<KtClassOrObject>().singleOrNull { it.name == className }
+                ?: error("Class $className not found in ${file.name}")
+        val function =
+            clazz.declarations.filterIsInstance<KtNamedFunction>().single { it.name == functionName }
+        val functionOffset = function.nameIdentifier!!.textRange.startOffset
+        assertTrue(
+            "Expected registration duplicate highlight on $className.$functionName",
+            functionOffset in duplicateHighlights.map { it.startOffset }.toSet(),
+        )
+    }
 
     private fun assertRegistrationDuplicateHighlightOnMethod(
         className: String,
@@ -186,6 +213,32 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
         assertTrue(registrationDuplicateHighlights().isEmpty())
     }
 
+    fun testJavaDistinctPathsAreNotRegistrationProblems() {
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class HelloService {
+                @Get("/hello")
+                public String hello() {
+                    return "hello";
+                }
+
+                @Get("/goodbye")
+                public String goodbye() {
+                    return "goodbye";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.enableInspections(ArmeriaDuplicateRegistrationInspection())
+        assertTrue(registrationDuplicateHighlights().isEmpty())
+    }
+
     fun testKotlinDistinctPathsAreNotRegistrationProblems() {
         myFixture.configureByText(
             "HelloService.kt",
@@ -209,8 +262,7 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
     }
 
     fun testKotlinInspectionHighlightsDuplicateAndOffersNavigateQuickFix() {
-        myFixture.configureByText(
-            "First.kt",
+        val firstContent =
             """
             package example
 
@@ -220,10 +272,8 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
                 @Get("/shared")
                 fun first(): String = "first"
             }
-            """.trimIndent(),
-        )
-        myFixture.configureByText(
-            "Second.kt",
+            """.trimIndent()
+        val secondContent =
             """
             package example
 
@@ -233,17 +283,20 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
                 @Get("/shared")
                 fun second(): String = "second"
             }
-            """.trimIndent(),
-        )
+            """.trimIndent()
+
+        val firstFile = myFixture.configureByText("First.kt", firstContent)
+        val secondFile = myFixture.configureByText("Second.kt", secondContent)
 
         myFixture.enableInspections(ArmeriaDuplicateRegistrationKotlinInspection())
         val expectedDescription = message("inspection.duplicate.registration.problem", "GET /shared", 2)
-        val duplicateHighlights =
-            myFixture.doHighlighting().filter {
-                it.description == expectedDescription
-            }
 
-        assertEquals(1, duplicateHighlights.size)
+        myFixture.openFileInEditor(firstFile.virtualFile)
+        assertRegistrationDuplicateHighlightOnKotlinMethod("First", "first", expectedDescription)
+
+        myFixture.openFileInEditor(secondFile.virtualFile)
+        assertRegistrationDuplicateHighlightOnKotlinMethod("Second", "second", expectedDescription)
+
         val expectedQuickFixName = message("inspection.duplicate.registration.quickfix.navigate", "GET /shared")
         val quickFixes =
             myFixture.getAvailableQuickFixes().filter {
