@@ -164,7 +164,34 @@ internal object ArmeriaJUnitServerExtensionSupport {
         }
 
     private fun KtAnnotationEntry.isRegisterExtensionAnnotation(): Boolean =
-        qualifiedName() == REGISTER_EXTENSION_ANNOTATION
+        when (qualifiedName()) {
+            REGISTER_EXTENSION_ANNOTATION -> true
+            null -> hasValidatedRegisterExtensionImport()
+            else -> false
+        }
+
+    private fun KtAnnotationEntry.hasValidatedRegisterExtensionImport(): Boolean {
+        if (shortName?.asString() != REGISTER_EXTENSION_ANNOTATION_SHORT) {
+            return false
+        }
+        containingKtFile.importDirectives.forEach { directive ->
+            val importPath = directive.importPath ?: return@forEach
+            if (importPath.isAllUnder) {
+                val packageName = importPath.pathStr?.removeSuffix(".*")?.removeSuffix("*")?.trimEnd('.')
+                if ("$packageName.$REGISTER_EXTENSION_ANNOTATION_SHORT" == REGISTER_EXTENSION_ANNOTATION) {
+                    return true
+                }
+            } else {
+                val path = importPath.pathStr
+                if (path == REGISTER_EXTENSION_ANNOTATION || path?.endsWith(".$REGISTER_EXTENSION_ANNOTATION_SHORT") == true) {
+                    return true
+                }
+            }
+        }
+        return containingKtFile.declarations
+            .filterIsInstance<KtClass>()
+            .any { it.name == REGISTER_EXTENSION_ANNOTATION_SHORT }
+    }
 
     private fun KtAnnotationEntry.qualifiedName(): String? {
         resolveAnnotationType()?.let { return it }
@@ -172,12 +199,9 @@ internal object ArmeriaJUnitServerExtensionSupport {
         containingKtFile.importDirectives.forEach { directive ->
             val importPath = directive.importPath ?: return@forEach
             if (importPath.isAllUnder) {
-                val packageName = importPath.pathStr?.trimEnd('.')
-                if (packageName != null) {
-                    val qualified = "$packageName.$shortName"
-                    if (qualified == REGISTER_EXTENSION_ANNOTATION || shortName == REGISTER_EXTENSION_ANNOTATION_SHORT) {
-                        return qualified
-                    }
+                val packageName = importPath.pathStr?.removeSuffix(".*")?.removeSuffix("*")?.trimEnd('.')
+                if (!packageName.isNullOrEmpty()) {
+                    return "$packageName.$shortName"
                 }
             } else {
                 val path = importPath.pathStr
