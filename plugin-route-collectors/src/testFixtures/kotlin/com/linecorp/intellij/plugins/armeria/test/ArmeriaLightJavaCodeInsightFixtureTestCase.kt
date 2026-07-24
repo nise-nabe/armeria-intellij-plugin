@@ -9,21 +9,18 @@ import java.io.File
  * [LightJavaCodeInsightFixtureTestCase] with 2026.2+ test sandbox root access for plugin runtime libraries.
  */
 abstract class ArmeriaLightJavaCodeInsightFixtureTestCase : LightJavaCodeInsightFixtureTestCase() {
-    override fun getTestDataPath(): String = resolveModuleTestDataPath()
-
+    /**
+     * Resolves `src/test/testData` relative to the Gradle test task working directory (module root).
+     * Do not override [getTestDataPath] globally — consumer modules without `testData/` rely on the
+     * platform default from [LightJavaCodeInsightFixtureTestCase].
+     */
     protected fun resolveModuleTestDataPath(): String {
         val fromWorkingDir = File("src/test/testData")
-        if (fromWorkingDir.isDirectory) {
-            return toSystemIndependentPath(fromWorkingDir.absolutePath)
+        require(fromWorkingDir.isDirectory) {
+            "Expected testData directory at ${fromWorkingDir.absolutePath}; run tests from the owning module root"
         }
-
-        val codeSource = javaClass.protectionDomain.codeSource
-        val classesDir = File(codeSource.location.toURI())
-        val moduleRoot = classesDir.parentFile.parentFile.parentFile
-        return toSystemIndependentPath(File(moduleRoot, "src/test/testData").absolutePath)
+        return fromWorkingDir.absolutePath.replace('\\', '/')
     }
-
-    private fun toSystemIndependentPath(path: String): String = path.replace('\\', '/')
 
     override fun setUp() {
         super.setUp()

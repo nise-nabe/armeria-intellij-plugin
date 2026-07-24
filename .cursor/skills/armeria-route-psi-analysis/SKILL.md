@@ -223,8 +223,10 @@ For PSI fixture tests that extend `ArmeriaFixtureTestBase` or
 
 - Place fixture sources under `src/test/testData/<suite>/<case>/` in the owning module
   (e.g. `plugin-route-collectors/src/test/testData/extendedRegistration/basic/fileService/Main.java`).
-- Load fixtures with `configureFixture("relative/path")` — the shared base resolves
-  `getTestDataPath()` to the module's `src/test/testData/`.
+- Load fixtures with `configureFixture("relative/path")` — sets `myFixture.testDataPath` to
+  `src/test/testData` relative to the **Gradle test task working directory** (module root).
+  Do not override `getTestDataPath()` on the shared base; consumer modules without `testData/`
+  rely on the platform default.
 - Assert collected routes with `collectRoutes().assertRoute(...)` from
   `ArmeriaRouteTestSupport` in `plugin-route-collectors` testFixtures.
 - Keep Armeria/Spring API **stubs** in `ArmeriaFixture*Stubs.kt` via `addClass(...)`; only

@@ -8,7 +8,10 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
  * Shared Armeria PSI stubs for [LightJavaCodeInsightFixtureTestCase] subclasses.
  */
 abstract class ArmeriaFixtureTestBase : ArmeriaLightJavaCodeInsightFixtureTestCase() {
-    protected fun configureFixture(relativePath: String): PsiFile = myFixture.configureByFile(relativePath)
+    protected fun configureFixture(relativePath: String): PsiFile {
+        myFixture.testDataPath = resolveModuleTestDataPath()
+        return myFixture.configureByFile(relativePath)
+    }
 
     protected fun collectRoutes(): List<ArmeriaRoute> = ArmeriaRouteCollector.collect(project)
 
