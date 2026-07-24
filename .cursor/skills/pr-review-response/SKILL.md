@@ -25,8 +25,9 @@ do not read the full skill unless Gradle MCP fails.
 ## Phase 1 — Fetch comments (minimal payload)
 
 Read **`cloud-github`** for built-in PR tools. In Cursor Cloud, prefer those tools for
-create/update, replies, resolve, and CI status. **`gh` is required only to fetch review-thread
-metadata** (no built-in list/fetch tool today).
+create/update, replies, resolve, and CI status. **`gh` is still required** for review-thread
+metadata (GraphQL) and, when the branch is unknown, PR branch metadata via `gh pr view` — no
+built-in list/fetch tool for review threads today.
 
 Before any `gh` call:
 

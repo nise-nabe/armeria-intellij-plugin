@@ -27,6 +27,7 @@ Use `gh` only when built-in tools do not cover the operation:
 |-----------|---------------|
 | Fetch review threads / inline comment metadata | `gh api graphql` |
 | Fetch PR branch metadata (no review threads) | `gh pr view --json headRefName,baseRefName,title` |
+| CI failure logs (run/job ID from check URLs) | `gh run view <run-id> --log-failed` or `gh run view --job <job-id> --log-failed` |
 | Create GitHub Release with assets | `gh release create` |
 
 Before calling `gh`:

@@ -40,7 +40,7 @@ Do not rely on bare `gh` commands without checking availability. `.cursor/instal
 | Post or reply to PR comments | **ManagePullRequest** (`post_comment`; use `in_reply_to` for review-thread replies) |
 | Resolve review threads | **ManagePullRequest** (`resolve_comment`) |
 | PR check status | **ManagePullRequest** (`get_ci_status`); fallback `gh pr checks` per `cloud-github` |
-| CI failure logs | `gh run view --log-failed` or follow check URLs from `get_ci_status` (after `gh auth status` succeeds) |
+| CI failure logs | Follow failing check URLs from `get_ci_status` (or `gh pr checks` fallback); or `gh run view <run-id> --log-failed` / `gh run view --job <job-id> --log-failed` with IDs from those URLs (after `gh auth status` succeeds) |
 | Open or close a PR | **ManagePullRequest** (`set_pr_status`) |
 | Edit PR labels | **EditPullRequestLabels** |
 | Verify changes locally | **Gradle MCP** (`gradle_run_tasks` / `gradle_run_tests`); shell `./gradlew build` for CI parity fallback — see `gradle-tapi-mcp` skill |

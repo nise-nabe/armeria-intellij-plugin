@@ -55,6 +55,7 @@ There is **no** built-in tool for these operations today:
 |------|------------|
 | Fetch review threads / inline comment metadata | `gh api graphql` (see `pr-review-response` skill) |
 | Fetch PR branch metadata (no review threads) | `gh pr view --json headRefName,baseRefName,title` |
+| CI failure logs (run/job ID from check URLs) | `gh run view <run-id> --log-failed` or `gh run view --job <job-id> --log-failed` |
 | Create a GitHub Release with assets | `gh release create` (see `release` skill) |
 
 Before calling `gh` for the above:
@@ -77,8 +78,10 @@ For agent-side verification, prefer:
 
 For GitHub-attached check status on a PR, use **ManagePullRequest** `get_ci_status` (not `gh pr checks`).
 Fall back to `gh pr checks` only when `get_ci_status` fails and `gh auth status` succeeds.
-When a check fails and you need log output to fix it, use `gh run view --log-failed` or follow the
-failing check's URL from `get_ci_status` (after `gh auth status` succeeds).
+When a check fails and you need log output to fix it, follow the failing check's URL from
+`get_ci_status` (or `gh pr checks` fallback) first. To fetch logs via CLI, use
+`gh run view <run-id> --log-failed` or `gh run view --job <job-id> --log-failed` with the run or
+job ID from those URLs (after `gh auth status` succeeds).
 
 ## Authentication troubleshooting
 
