@@ -16,8 +16,14 @@ java {
     }
 }
 
+val kotlinTest =
+    extensions
+        .getByType(org.gradle.api.artifacts.VersionCatalogsExtension::class.java)
+        .named("libs")
+        .findLibrary("kotlin-test")
+        .get()
+
 dependencies {
-    testImplementation(kotlin("test"))
     intellijPlatform {
         testFramework(TestFrameworkType.Platform)
     }
@@ -30,6 +36,9 @@ intellijPlatform {
 testing {
     suites {
         getByName<JvmTestSuite>("test") {
+            dependencies {
+                implementation(kotlinTest)
+            }
             targets.all {
                 testTask.configure {
                     failOnNoDiscoveredTests = false

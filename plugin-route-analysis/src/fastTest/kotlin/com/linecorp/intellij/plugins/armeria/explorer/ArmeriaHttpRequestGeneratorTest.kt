@@ -270,6 +270,7 @@ class ArmeriaHttpRequestGeneratorTest {
 
         val error = runCatching { ArmeriaHttpRequestGenerator.httpMethod(route) }.exceptionOrNull()
 
+        kotlinAssertNotNull(error)
         assertTrue(error is IllegalStateException)
         assertTrue(kotlinAssertNotNull(error.message).contains("NON_HTTP"))
     }
