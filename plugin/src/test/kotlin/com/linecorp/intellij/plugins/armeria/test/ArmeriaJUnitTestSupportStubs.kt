@@ -1,8 +1,12 @@
 package com.linecorp.intellij.plugins.armeria.test
 
+import com.intellij.openapi.module.Module
+import com.intellij.openapi.roots.ModuleRootManager
+import com.intellij.testFramework.PsiTestUtil
 import com.intellij.testFramework.fixtures.JavaCodeInsightTestFixture
 
 internal fun JavaCodeInsightTestFixture.registerArmeriaJUnitTestSupportStubs() {
+    markDefaultSourceRootAsTestSource(module)
     registerArmeriaAnnotationStubs()
     registerArmeriaBlockingAnnotationStubs()
     addClass(
@@ -75,4 +79,14 @@ internal fun JavaCodeInsightTestFixture.registerArmeriaJUnitTestSupportStubs() {
         }
         """.trimIndent(),
     )
+}
+
+private fun markDefaultSourceRootAsTestSource(module: Module) {
+    val rootManager = ModuleRootManager.getInstance(module)
+    val contentRoot = rootManager.contentRoots.firstOrNull() ?: return
+    if (rootManager.fileIndex.isInTestSourceContent(contentRoot)) {
+        return
+    }
+    PsiTestUtil.removeSourceRoot(module, contentRoot)
+    PsiTestUtil.addSourceRoot(module, contentRoot, true)
 }
