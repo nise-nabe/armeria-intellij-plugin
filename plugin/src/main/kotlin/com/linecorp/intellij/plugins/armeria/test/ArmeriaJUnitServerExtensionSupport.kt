@@ -1,12 +1,15 @@
 package com.linecorp.intellij.plugins.armeria.test
 
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.roots.ProjectRootManager
+import com.intellij.openapi.roots.TestSourcesFilter
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiClassType
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiField
+import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiModifierListOwner
@@ -138,6 +141,17 @@ internal object ArmeriaJUnitServerExtensionSupport {
     fun fileMayContainRegisterExtension(fileText: String): Boolean =
         REGISTER_EXTENSION_ANNOTATION in fileText || "@$REGISTER_EXTENSION_ANNOTATION_SHORT" in fileText
 
+    fun isLikelyJUnitTestFile(file: PsiFile): Boolean {
+        val virtualFile = file.virtualFile ?: return false
+        val project = file.project
+        val fileIndex = ProjectRootManager.getInstance(project).fileIndex
+        if (fileIndex.isInTestSourceContent(virtualFile) || TestSourcesFilter.isTestSources(virtualFile, project)) {
+            return true
+        }
+        val name = virtualFile.name
+        return name.endsWith("Test.java") || name.endsWith("Test.kt")
+    }
+
     fun escapeStringLiteral(value: String): String =
         buildString(value.length) {
             value.forEach { character ->
@@ -149,18 +163,29 @@ internal object ArmeriaJUnitServerExtensionSupport {
             }
         }
 
-    private fun KtAnnotationEntry.isRegisterExtensionAnnotation(): Boolean {
-        qualifiedName()?.let { return it == REGISTER_EXTENSION_ANNOTATION }
-        return shortName?.asString() == REGISTER_EXTENSION_ANNOTATION_SHORT
-    }
+    private fun KtAnnotationEntry.isRegisterExtensionAnnotation(): Boolean =
+        qualifiedName() == REGISTER_EXTENSION_ANNOTATION
 
     private fun KtAnnotationEntry.qualifiedName(): String? {
         resolveAnnotationType()?.let { return it }
         val shortName = shortName?.asString() ?: return null
-        containingKtFile.importDirectives
-            .mapNotNull { it.importPath?.pathStr }
-            .firstOrNull { it == shortName || it.endsWith(".$shortName") }
-            ?.let { return it }
+        containingKtFile.importDirectives.forEach { directive ->
+            val importPath = directive.importPath ?: return@forEach
+            if (importPath.isAllUnder) {
+                val packageName = importPath.pathStr?.trimEnd('.')
+                if (packageName != null) {
+                    val qualified = "$packageName.$shortName"
+                    if (qualified == REGISTER_EXTENSION_ANNOTATION || shortName == REGISTER_EXTENSION_ANNOTATION_SHORT) {
+                        return qualified
+                    }
+                }
+            } else {
+                val path = importPath.pathStr
+                if (path == shortName || path?.endsWith(".$shortName") == true) {
+                    return path
+                }
+            }
+        }
         return containingKtFile.declarations
             .filterIsInstance<KtClass>()
             .firstOrNull { it.name == shortName }

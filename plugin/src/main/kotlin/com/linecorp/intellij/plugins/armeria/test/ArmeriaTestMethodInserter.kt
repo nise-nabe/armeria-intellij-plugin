@@ -1,7 +1,5 @@
 package com.linecorp.intellij.plugins.armeria.test
 
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ScrollType
@@ -104,26 +102,21 @@ internal object ArmeriaTestMethodInserter {
             }
         }
         val methodText = ArmeriaTestMethodGenerator.generateTestMethod(route, extension.variableName, language)
-        ApplicationManager.getApplication().invokeLater(
+        if (project.isDisposed) {
+            return false
+        }
+        WriteCommandAction.runWriteCommandAction(
+            project,
+            message("route.explorer.action.generateTestMethod"),
+            null,
             {
-                if (project.isDisposed) {
-                    return@invokeLater
+                if (language == ArmeriaTestLanguage.JAVA) {
+                    insertJavaMethod(project, targetClass, methodText)
+                } else {
+                    val ktClass = kotlinTargetClass ?: return@runWriteCommandAction
+                    insertKotlinMethod(project, ktClass, methodText)
                 }
-                WriteCommandAction.runWriteCommandAction(
-                    project,
-                    message("route.explorer.action.generateTestMethod"),
-                    null,
-                    {
-                        if (language == ArmeriaTestLanguage.JAVA) {
-                            insertJavaMethod(project, targetClass, methodText)
-                        } else {
-                            val ktClass = kotlinTargetClass ?: return@runWriteCommandAction
-                            insertKotlinMethod(project, ktClass, methodText)
-                        }
-                    },
-                )
             },
-            ModalityState.defaultModalityState(),
         )
         return true
     }

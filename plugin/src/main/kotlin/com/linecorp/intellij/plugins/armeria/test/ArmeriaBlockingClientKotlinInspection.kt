@@ -29,6 +29,9 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
         if (!ArmeriaJUnitServerExtensionSupport.fileMayContainRegisterExtension(holder.file.text)) {
             return PsiElementVisitor.EMPTY_VISITOR
         }
+        if (!ArmeriaJUnitServerExtensionSupport.isLikelyJUnitTestFile(holder.file)) {
+            return PsiElementVisitor.EMPTY_VISITOR
+        }
         val scope = GlobalSearchScope.projectScope(holder.project)
         val blockingPaths = ArmeriaBlockingClientInspectionPaths.blockingRoutePaths(holder.project)
         if (blockingPaths.isEmpty()) {
