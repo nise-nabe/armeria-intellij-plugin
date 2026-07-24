@@ -19,7 +19,7 @@ internal object ArmeriaKotlinJUnitServerExtensionCollector {
     ) {
         for (virtualFile in FileTypeIndex.getFiles(KotlinFileType.INSTANCE, scope)) {
             val file = PsiManager.getInstance(project).findFile(virtualFile) as? KtFile ?: continue
-            if (!file.text.contains(ArmeriaJUnitServerExtensionSupport.REGISTER_EXTENSION_ANNOTATION)) {
+            if (!ArmeriaJUnitServerExtensionSupport.fileMayContainRegisterExtension(file.text)) {
                 continue
             }
             collectProperties(file.declarations.filterIsInstance<KtProperty>(), scope, extensions, seen)

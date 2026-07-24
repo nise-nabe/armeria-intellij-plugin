@@ -82,6 +82,9 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
         serverVariableName: String,
         methodName: String,
     ): Boolean {
+        if (isWebClientOfFactoryCall(qualifier, serverVariableName)) {
+            return methodName in HTTP_METHOD_NAMES
+        }
         val factoryName = qualifier.calleeExpression?.text ?: return false
         if (factoryName == "blockingWebClient") {
             return false
@@ -95,26 +98,50 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
                 return methodName in HTTP_METHOD_NAMES
             }
         }
-        if (factoryName == "of" && isWebClientOfCall(qualifier, serverVariableName)) {
-            return methodName in HTTP_METHOD_NAMES
-        }
         return false
     }
 
-    private fun isWebClientOfCall(
+    private fun isWebClientOfFactoryCall(
         call: KtCallExpression,
         serverVariableName: String,
     ): Boolean {
-        val parent = call.parent as? KtDotQualifiedExpression ?: return false
-        if (parent.selectorExpression != call) {
+        val ofCall: KtCallExpression
+        val webClientReceiver: KtExpression
+        when {
+            call.calleeExpression?.text == "of" -> {
+                val host = call.parent as? KtDotQualifiedExpression ?: return false
+                if (host.selectorExpression != call) {
+                    return false
+                }
+                ofCall = call
+                webClientReceiver = host.receiverExpression
+            }
+            call.calleeExpression is KtDotQualifiedExpression -> {
+                val host = call.calleeExpression as KtDotQualifiedExpression
+                ofCall = host.selectorExpression as? KtCallExpression ?: return false
+                if (ofCall.calleeExpression?.text != "of") {
+                    return false
+                }
+                webClientReceiver = host.receiverExpression
+            }
+            else -> return false
+        }
+        if (!isWebClientReceiver(webClientReceiver)) {
             return false
         }
-        if (!isWebClientTypeReference(parent.receiverExpression as? KtNameReferenceExpression ?: return false)) {
-            return false
-        }
-        val ofArgument = call.valueArguments.firstOrNull()?.getArgumentExpression() ?: return false
+        val ofArgument = ofCall.valueArguments.firstOrNull()?.getArgumentExpression() ?: return false
         return ArmeriaJUnitServerExtensionSupport.referencesServerHttpUri(ofArgument, serverVariableName)
     }
+
+    private fun isWebClientReceiver(expression: KtExpression): Boolean =
+        when (expression) {
+            is KtNameReferenceExpression -> isWebClientTypeReference(expression)
+            is KtDotQualifiedExpression -> {
+                val selector = expression.selectorExpression as? KtNameReferenceExpression ?: return false
+                selector.getReferencedName() == "WebClient"
+            }
+            else -> false
+        }
 
     private fun isWebClientTypeReference(reference: KtNameReferenceExpression): Boolean {
         val resolved = reference.reference?.resolve()
@@ -144,7 +171,7 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
         val resolved = reference.reference?.resolve()
         (resolved as? KtProperty)?.let { return it }
         (resolved?.navigationElement as? KtProperty)?.let { return it }
-        val name = reference.getReferencedName() ?: return null
+        val name = reference.getReferencedName()
         val scope =
             reference.getParentOfType<KtNamedFunction>(true)
                 ?: reference.getParentOfType<KtClass>(true)
@@ -185,6 +212,9 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
         if (factoryName == "of") {
             val ofArgument = call.valueArguments.firstOrNull()?.getArgumentExpression() ?: return false
             return ArmeriaJUnitServerExtensionSupport.referencesServerHttpUri(ofArgument, serverVariableName)
+        }
+        if (call.calleeExpression is KtDotQualifiedExpression) {
+            return isWebClientOfFactoryCall(call, serverVariableName)
         }
         return false
     }

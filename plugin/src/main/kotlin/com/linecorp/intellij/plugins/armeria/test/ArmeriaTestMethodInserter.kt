@@ -46,14 +46,19 @@ internal object ArmeriaTestMethodInserter {
             } else {
                 ArmeriaTestLanguage.KOTLIN
             }
+        val classExtensions = ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, targetClass)
         val extension =
-            ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, targetClass).firstOrNull() ?: run {
-                Messages.showWarningDialog(
-                    project,
-                    message("test.support.insert.noServerExtension"),
-                    message("test.support.insert.title"),
-                )
-                return false
+            when (classExtensions.size) {
+                1 -> classExtensions.single()
+                else ->
+                    run {
+                        Messages.showWarningDialog(
+                            project,
+                            message("test.support.insert.noServerExtension"),
+                            message("test.support.insert.title"),
+                        )
+                        return false
+                    }
             }
         val methodName = ArmeriaTestMethodGenerator.suggestMethodName(route)
         if (targetClass.methods.any { it.name == methodName }) {

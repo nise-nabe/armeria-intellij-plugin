@@ -47,7 +47,7 @@ object ArmeriaJUnitServerExtensionCollector {
         val seen = mutableSetOf<String>()
         for (virtualFile in FileTypeIndex.getFiles(JavaFileType.INSTANCE, scope)) {
             val file = PsiManager.getInstance(project).findFile(virtualFile) as? PsiJavaFile ?: continue
-            if (!file.text.contains(ArmeriaJUnitServerExtensionSupport.REGISTER_EXTENSION_ANNOTATION)) {
+            if (!ArmeriaJUnitServerExtensionSupport.fileMayContainRegisterExtension(file.text)) {
                 continue
             }
             file.accept(

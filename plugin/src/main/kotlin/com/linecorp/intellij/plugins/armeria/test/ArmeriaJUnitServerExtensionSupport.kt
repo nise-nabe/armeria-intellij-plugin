@@ -25,6 +25,7 @@ import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 internal object ArmeriaJUnitServerExtensionSupport {
     const val REGISTER_EXTENSION_ANNOTATION = "org.junit.jupiter.api.extension.RegisterExtension"
+    const val REGISTER_EXTENSION_ANNOTATION_SHORT = "RegisterExtension"
     const val SERVER_EXTENSION_CLASS = "com.linecorp.armeria.testing.junit5.server.ServerExtension"
     const val WEB_CLIENT_CLASS = "com.linecorp.armeria.client.WebClient"
     const val BLOCKING_WEB_CLIENT_CLASS = "com.linecorp.armeria.client.blocking.BlockingWebClient"
@@ -105,28 +106,35 @@ internal object ArmeriaJUnitServerExtensionSupport {
         )
     }
 
+    fun fileMayContainRegisterExtension(fileText: String): Boolean =
+        REGISTER_EXTENSION_ANNOTATION in fileText || "@$REGISTER_EXTENSION_ANNOTATION_SHORT" in fileText
+
     fun enclosingServerExtension(
         element: PsiElement,
         scope: GlobalSearchScope,
     ): ArmeriaJUnitServerExtension? {
         val project = element.project
-        element.getParentOfType<KtClass>(true)?.fqName?.asString()?.let { className ->
-            val extensions =
-                ArmeriaJUnitServerExtensionCollector
-                    .collect(project)
-                    .filter { it.containingClassName == className }
-            if (extensions.isNotEmpty()) {
-                return resolveScopedExtension(element, extensions)
-            }
+        val className =
+            element.getParentOfType<KtClass>(true)?.fqName?.asString()
+                ?: PsiTreeUtil.getParentOfType(element, PsiClass::class.java)?.qualifiedName
+                ?: return null
+        val extensions =
+            ArmeriaJUnitServerExtensionCollector
+                .collect(project)
+                .filter { extension -> isEnclosingOrNestedTestClass(className, extension.containingClassName) }
+        if (extensions.isEmpty()) {
+            return null
         }
-        PsiTreeUtil.getParentOfType(element, PsiClass::class.java)?.let { psiClass ->
-            val extensions = ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, psiClass)
-            if (extensions.isNotEmpty()) {
-                return resolveScopedExtension(element, extensions)
-            }
-        }
-        return null
+        return resolveScopedExtension(element, extensions)
     }
+
+    private fun isEnclosingOrNestedTestClass(
+        testClassName: String,
+        extensionClassName: String,
+    ): Boolean =
+        testClassName == extensionClassName ||
+            testClassName.startsWith("$extensionClassName.") ||
+            testClassName.startsWith("$extensionClassName$")
 
     fun toKtClass(psiClass: PsiClass): KtClass? {
         (psiClass as? KtClass)?.let { return it }
@@ -194,6 +202,14 @@ internal object ArmeriaJUnitServerExtensionSupport {
                 return false
             }
             val receiver = parent.receiverExpression as? KtNameReferenceExpression ?: return false
+            return receiver.getReferencedName() == serverVariableName
+        }
+        (expression as? KtDotQualifiedExpression)?.let { qualified ->
+            val call = qualified.selectorExpression as? KtCallExpression ?: return false
+            if (call.calleeExpression?.text != "httpUri") {
+                return false
+            }
+            val receiver = qualified.receiverExpression as? KtNameReferenceExpression ?: return false
             return receiver.getReferencedName() == serverVariableName
         }
         return false
