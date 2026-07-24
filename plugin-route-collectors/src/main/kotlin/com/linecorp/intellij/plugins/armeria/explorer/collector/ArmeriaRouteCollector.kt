@@ -81,7 +81,7 @@ object ArmeriaRouteCollector {
             CachedValueProvider {
                 val baseRoutes = cachedProjectRoutes(project, contributors)
                 CachedValueProvider.Result.create(
-                    mergeProtoRoutesIfEnabled(project, baseRoutes, contributors),
+                    mergeProtoRoutes(project, baseRoutes, contributors),
                     PsiModificationTracker.MODIFICATION_COUNT,
                     ProjectRootModificationTracker.getInstance(project),
                 )
@@ -89,13 +89,15 @@ object ArmeriaRouteCollector {
             false,
         )
 
-    private fun cacheKey(contributors: List<RouteContributor>): Key<CachedValue<List<ArmeriaRoute>>> =
-        cacheKeys.getOrPut(contributorCacheId(contributors)) { Key.create("armeria.route.collector.${contributorCacheId(contributors)}") }
+    private fun cacheKey(contributors: List<RouteContributor>): Key<CachedValue<List<ArmeriaRoute>>> {
+        val id = contributorCacheId(contributors)
+        return cacheKeys.getOrPut(id) { Key.create("armeria.route.collector.$id") }
+    }
 
-    private fun cacheKeyWithProto(contributors: List<RouteContributor>): Key<CachedValue<List<ArmeriaRoute>>> =
-        cacheKeys.getOrPut("${contributorCacheId(contributors)}.with-proto") {
-            Key.create("armeria.route.collector.${contributorCacheId(contributors)}.with-proto")
-        }
+    private fun cacheKeyWithProto(contributors: List<RouteContributor>): Key<CachedValue<List<ArmeriaRoute>>> {
+        val id = contributorCacheId(contributors)
+        return cacheKeys.getOrPut("$id.with-proto") { Key.create("armeria.route.collector.$id.with-proto") }
+    }
 
     private fun contributorCacheId(contributors: List<RouteContributor>): String =
         contributors
@@ -172,6 +174,7 @@ object ArmeriaRouteCollector {
                 compareBy(ArmeriaRoute::moduleName, ArmeriaRoute::path, ArmeriaRoute::httpMethod, ArmeriaRoute::target),
             ),
             PsiModificationTracker.MODIFICATION_COUNT,
+            ProjectRootModificationTracker.getInstance(project),
         )
     }
 
@@ -196,8 +199,11 @@ object ArmeriaRouteCollector {
     /**
      * Overlays proto (gRPC) routes on top of already-cached base routes by invoking
      * [RouteContributor.collectProtoOverlay] on each contributor.
+     *
+     * Registry gating is applied in [collect] before the proto cache is read; overlay
+     * contributors must still respect [ArmeriaProtoRouteDiscoverySupport.isEnabled] themselves.
      */
-    private fun mergeProtoRoutesIfEnabled(
+    private fun mergeProtoRoutes(
         project: Project,
         baseRoutes: List<ArmeriaRoute>,
         contributors: List<RouteContributor>,

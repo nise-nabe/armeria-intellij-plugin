@@ -386,4 +386,61 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
             )
         assertTrue(withoutProto.none { it.path == "/com.example.Greeter/SayHello" })
     }
+
+    fun testProtoRouteMergeCacheInvalidatesOnProtoEdit() {
+        myFixture.configureByText(
+            "greeter.proto",
+            """
+            syntax = "proto3";
+            package com.example;
+
+            service Greeter {
+              rpc SayHello(HelloRequest) returns (HelloResponse);
+            }
+            """.trimIndent(),
+        )
+
+        val first =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
+        assertEquals(listOf("/com.example.Greeter/SayHello"), first.map { it.path })
+        assertTrue(ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned > 0)
+
+        val cached =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
+        assertEquals(first.map { it.path }, cached.map { it.path })
+        assertEquals(0, ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned)
+
+        myFixture.configureByText(
+            "greeter.proto",
+            """
+            syntax = "proto3";
+            package com.example;
+
+            service Greeter {
+              rpc SayHello(HelloRequest) returns (HelloResponse);
+              rpc SayGoodbye(GoodbyeRequest) returns (GoodbyeResponse);
+            }
+            """.trimIndent(),
+        )
+
+        val afterEdit =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
+        assertEquals(
+            listOf("/com.example.Greeter/SayGoodbye", "/com.example.Greeter/SayHello"),
+            afterEdit.map { it.path },
+        )
+        assertTrue(ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned > 0)
+    }
 }

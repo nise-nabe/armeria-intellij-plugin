@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.intellij.openapi.util.registry.Registry
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaProtocolRouteContributor
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 
 class ArmeriaProtoRouteRegistryGateTest : ArmeriaFixtureTestBase() {
@@ -62,6 +63,7 @@ class ArmeriaProtoRouteRegistryGateTest : ArmeriaFixtureTestBase() {
                     contributors = listOf(ArmeriaProtocolRouteContributor),
                 )
             assertTrue(reenabled.any { it.path == "/com.example.Greeter/SayHello" })
+            assertEquals(0, ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned)
         } finally {
             registryKey.setValue(original)
         }
