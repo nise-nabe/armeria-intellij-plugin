@@ -31,6 +31,14 @@ testing {
                 implementation(testFixtures(project()))
                 implementation(libs.junit4)
             }
+            targets.all {
+                testTask.configure {
+                    val testDataDir = project.file("src/test/testData")
+                    if (testDataDir.isDirectory) {
+                        systemProperty("armeria.moduleTestDataPath", testDataDir.absolutePath)
+                    }
+                }
+            }
         }
 
         register("fastTest", JvmTestSuite::class) {
@@ -80,11 +88,4 @@ extensions.configure<KotlinJvmProjectExtension>("kotlin") {
 
 tasks.named("check") {
     dependsOn(testing.suites.named("fastTest"))
-}
-
-tasks.named<Test>("test").configure {
-    val testDataDir = file("src/test/testData")
-    if (testDataDir.isDirectory) {
-        systemProperty("armeria.moduleTestDataPath", testDataDir.absolutePath)
-    }
 }

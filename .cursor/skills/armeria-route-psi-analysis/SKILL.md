@@ -227,10 +227,10 @@ For PSI fixture tests that extend `ArmeriaFixtureTestBase` or
   `myFixture.testDataPath` to `src/test/testData` via the `armeria.moduleTestDataPath` system
   property or relative to the test task working directory (module root). Do not mix
   `configureFixture()` and `configureByText()` in one test — `testDataPath` stays set for the
-  method and inline text would resolve relative to `testData/`. When introducing
-  `src/test/testData/` in a module, add the `tasks.named<Test>("test")` block from
-  `plugin-route-collectors/build.gradle.kts` (sets `armeria.moduleTestDataPath` when the directory
-  exists) or rely on module-root CWD for Gradle-only runs. Gradle `:module:test` tasks set CWD to
+  method and inline text would resolve relative to `testData/`.   When introducing
+  `src/test/testData/` in a module, add the `testing.suites { getByName<JvmTestSuite>("test") { targets.all { testTask.configure { ... } } } }`
+  block from `plugin-route-collectors/build.gradle.kts` (sets `armeria.moduleTestDataPath` when the
+  directory exists) or rely on module-root CWD for Gradle-only runs. Gradle `:module:test` tasks set CWD to
   the module project dir, so `./gradlew :plugin-route-collectors:test` works out of the box;
   ad-hoc JUnit runners launched from the repo root need
   `-Darmeria.moduleTestDataPath=<module>/src/test/testData` or module-root CWD. Do not override
@@ -241,7 +241,7 @@ For PSI fixture tests that extend `ArmeriaFixtureTestBase` or
 - `collectRoutes()` on `ArmeriaFixtureTestBase` uses `ArmeriaRouteCollector` (core annotated +
   service registration only). Tests needing Spring or protocol routes must call
   `ArmeriaRouteAnalysisCollector.collect(project)` or a module-specific collector.
-- Assert collected routes with `collectRoutes().assertRoute(...)` from
+- Assert collected routes with `collectRoutes().also { it.singleRoute() }.assertRoute(...)` from
   `ArmeriaRouteTestSupport` in `plugin-route-collectors` testFixtures. Migration patterns:
 
   | Old pattern | New pattern |
