@@ -105,6 +105,10 @@ final pass before requesting review.
 | Bash script executable-bit assumptions | 5+ | checklist above |
 | Index not ready during refresh/execute | 2+ | `intellij-armeria-plugin` |
 
+## Commit workflow (coding agents)
+
+When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-empty, before each `git commit` run `gradle_run_tasks` with `["ktlintCheck"]` (`background: true` + poll `gradle_get_build_status` until terminal success). Fix failures with `gradle_run_tasks` `["ktlintFormat"]` (same poll) or manual edits, `git add` the changed files, re-run until clean. Wait for any in-flight MCP build to finish or cancel it (`gradle_cancel_build`) first. `ktlintFormat` is project-wide — re-stage only intended paths. Omit ktlint when the staged index contains none of those paths. Root `ktlintCheck` does not cover `build-logic/` or `settings.gradle.kts`; when all staged Kotlin is in those locations, manually review style; when a commit mixes those paths with plugin-module Kotlin, manually review the `build-logic/` and `settings.gradle.kts` portions even if `ktlintCheck` passes — see `.github/skills/gradle-tapi-mcp/SKILL.md`.
+
 ## Verification before PR
 
 1. Read the specialized skill for your change area.

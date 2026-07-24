@@ -43,7 +43,18 @@ Do **not** run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` concurr
 | Plugin fixture tests | `gradle_run_tasks` `{ "tasks": [":plugin:test"], "background": true }` |
 | Route-analysis fixture tests | `gradle_run_tasks` `{ "tasks": [":plugin-route-analysis:test"], "background": true }` |
 | Fast unit tests | `gradle_run_tasks` `{ "tasks": [":plugin-route-analysis:fastTest"], "background": true }` |
+| Lint Kotlin (when Kotlin/`.editorconfig` staged) | `gradle_run_tasks` `{ "tasks": ["ktlintCheck"], "background": true }` — fix with `gradle_run_tasks` `["ktlintFormat"]` or manual edits, `git add`, then re-check; shell fallback: `./gradlew ktlintCheck` |
 | Full verify | `gradle_run_tasks` `{ "tasks": ["build"], "background": true }` |
+
+When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-empty, coding agents must pass `ktlintCheck` before `git commit` (`gradle_run_tasks` `["ktlintCheck"]`, `background: true` + poll `gradle_get_build_status` until terminal success; fix with `gradle_run_tasks` `["ktlintFormat"]` or manual edits, `git add` the changed files, and re-check). Wait for any in-flight MCP build to finish or cancel it (`gradle_cancel_build`) first. `ktlintFormat` is project-wide — re-stage only intended paths. Omit ktlint when the staged index contains none of those paths. Root `ktlintCheck` does not cover the `includeBuild("build-logic")` composite or `settings.gradle.kts`; when all staged Kotlin is in those locations, manually review style; when a commit mixes those paths with plugin-module Kotlin, manually review the `build-logic/` and `settings.gradle.kts` portions even if `ktlintCheck` passes — neither root `build` nor `compileKotlin` runs ktlint on those sources.
+
+### Recommended agent workflow
+
+1. `gradle_connection_status` — confirm MCP is connected.
+2. `gradle_run_tasks` with `[":plugin:compileKotlin", ":plugin:compileTestKotlin"]` (foreground if warm, else `background: true` + poll).
+3. Before each `git commit` when staged Kotlin or `.editorconfig` is present (see detection command above), run `gradle_run_tasks` with `["ktlintCheck"]` (`background: true` + poll). On failure, apply `gradle_run_tasks` `["ktlintFormat"]` or manual fixes, `git add` the changed files, and re-run until clean. Wait for in-flight MCP builds to finish or cancel them (`gradle_cancel_build`). `ktlintFormat` is project-wide — re-stage only intended paths. Root `ktlintCheck` does not cover `build-logic/` or `settings.gradle.kts`; when all staged Kotlin is in those locations, manually review style; when a commit mixes those paths with plugin-module Kotlin, manually review the `build-logic/` and `settings.gradle.kts` portions even if `ktlintCheck` passes.
+4. Verify tests via MCP (`gradle_run_tests` or `gradle_run_tasks` with `background: true` + poll).
+5. Before opening a PR, run `gradle_run_tasks` with `["build"]` and `background: true`, poll to completion.
 
 If MCP is unresponsive: `gradle_list_builds` or poll `gradle_get_build_status` with the `buildId` (reconciles disk records automatically), then shell fallback.
 

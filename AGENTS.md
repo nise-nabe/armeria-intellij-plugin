@@ -58,7 +58,7 @@ Prefer **Gradle MCP** for the tasks below. Use `background: true` and poll `grad
 | Goal | MCP (preferred) | Shell fallback |
 |------|---------------|----------------|
 | Full verify | `gradle_run_tasks` `["build"]` + background/poll | `./gradlew build` |
-| Lint Kotlin | `gradle_run_tasks` `["ktlintCheck"]` + background/poll | `./gradlew ktlintCheck` |
+| Lint Kotlin (commit-time when Kotlin/`.editorconfig` staged; also in `build`/`check`) | `gradle_run_tasks` `["ktlintCheck"]` + background/poll — see **Commit workflow** below | `./gradlew ktlintCheck` |
 | Format Kotlin | `gradle_run_tasks` `["ktlintFormat"]` + background/poll | `./gradlew ktlintFormat` |
 | Compile plugin | `gradle_run_tasks` `[":plugin:compileKotlin"]` | `./gradlew :plugin:compileKotlin` |
 | Plugin fixture tests | `gradle_run_tasks` `[":plugin:test"]` or `gradle_run_tests` per class + background/poll | `./gradlew :plugin:test` |
@@ -74,6 +74,22 @@ Prefer **Gradle MCP** for the tasks below. Use `background: true` and poll `grad
 `:plugin:test` and each `:plugin-route-*:test` run platform PSI fixture tests under their module's `src/test`. Each route submodule (collectors, spring, protocol, analysis) also has a `fastTest` suite under `src/fastTest` for pure unit tests that run on the IntelliJ Platform test runtime without PSI fixtures. Use `build` to run the full suite across all modules.
 
 Kotlin style is enforced by ktlint (`com.linecorp.intellij.ktlint` convention, `ktlint_official`). `ktlintCheck` is part of `check` / `build`.
+
+### Commit workflow (coding agents)
+
+Detect staged Kotlin or style config:
+
+```bash
+git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'
+```
+
+When that output is non-empty, before `git commit` run `ktlintCheck` via Gradle MCP (`gradle_run_tasks` with `["ktlintCheck"]`, `background: true` + poll `gradle_get_build_status` until terminal success). If it fails, fix violations with `gradle_run_tasks` `["ktlintFormat"]` (same poll pattern) or manual edits, `git add` the changed files, re-run `ktlintCheck`, and only commit once it passes. Wait for any in-flight MCP build to finish or cancel it (`gradle_cancel_build`) before starting commit-time ktlint — the repo allows only one MCP build per project directory. Shell fallback: `./gradlew ktlintCheck` / `./gradlew ktlintFormat` (then `git add` formatted files). Omit ktlint when the staged index contains none of `*.kt`, `*.kts`, or `.editorconfig` (e.g. only `.md`, YAML, or properties). Do not skip based on commit message or PR title alone.
+
+`ktlintFormat` runs project-wide across all ktlint-enabled subprojects, not only staged files. Re-stage only the intended commit paths after format; if format touched other files, leave them unstaged or restore them — do not broaden `git add`.
+
+Root `ktlintCheck` does not cover the `includeBuild("build-logic")` composite or root-level `settings.gradle.kts`; neither root `build` nor `compileKotlin` runs ktlint on those sources. When **all** staged `*.kt` / `*.kts` paths are under `build-logic/` or are only `settings.gradle.kts`, a passing root `ktlintCheck` does not validate them — manually review style (no automated gate today) or extend ktlint to those locations in a follow-up. When a commit **mixes** those paths with plugin-module Kotlin, still manually review the `build-logic/` and `settings.gradle.kts` portions even if `ktlintCheck` passes.
+
+Commit-time ktlint catches style regressions early; pre-PR `build` remains the final gate (CI runs `build -x test`, which includes ktlint).
 
 **Isolated Projects status**: all production modules (`plugin-route-model`, `plugin-route-collectors`, `plugin-route-spring`, `plugin-route-protocol`, `plugin-route-analysis`, `plugin`) compile cleanly under `-Dorg.gradle.unsafe.isolated-projects=true` (verified via `./gradlew compileKotlin -Dorg.gradle.unsafe.isolated-projects=true`). Enabling it as a CI default (e.g. in `gradle.properties`) is a follow-up once test-task configuration-time access is also confirmed; see the commented line in `gradle.properties`.
 

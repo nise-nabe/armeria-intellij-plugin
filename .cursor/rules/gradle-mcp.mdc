@@ -21,11 +21,15 @@ Read `.cursor/skills/gradle-tapi-mcp/SKILL.md` for the full workflow.
 | Environment / versions | `gradle_get_build_environment` |
 | Module tree | `gradle_get_project_overview` |
 | Compile | `gradle_run_tasks` with `[":plugin:compileKotlin"]` |
-| Lint Kotlin | `gradle_run_tasks` with `["ktlintCheck"]`, `background: true` + poll |
+| Lint Kotlin (commit-time when Kotlin/`.editorconfig` staged; also in `build`/`check`) | `gradle_run_tasks` with `["ktlintCheck"]`, `background: true` + poll — see **Before committing** |
 | Tests (batch classes/methods in one call) | `gradle_run_tests` with `background: true` + poll |
 | Full verify | `gradle_run_tasks` with `["build"]`, `background: true` + poll |
 
 Use `background: true` and poll `gradle_get_build_status` for anything that may exceed ~30s (cold start, `:plugin:test`, `build`).
+
+## Before committing
+
+When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-empty, coding agents must run `ktlintCheck` (MCP with `background: true` + poll, or `./gradlew ktlintCheck`), fix violations with `gradle_run_tasks` `["ktlintFormat"]` or `./gradlew ktlintFormat` or manual edits, `git add` the changed files, re-run `ktlintCheck` until clean, and only then `git commit`. Wait for any in-flight MCP build to finish or cancel it (`gradle_cancel_build`) before commit-time ktlint. `ktlintFormat` is project-wide — re-stage only intended paths. Omit ktlint when the staged index contains none of those paths. Root `ktlintCheck` does not cover `build-logic/` or `settings.gradle.kts`; when all staged Kotlin is in those locations, manually review style; when a commit mixes those paths with plugin-module Kotlin, manually review the `build-logic/` and `settings.gradle.kts` portions even if `ktlintCheck` passes — see `AGENTS.md` **Commit workflow (coding agents)**.
 
 ## Shell fallback only when
 

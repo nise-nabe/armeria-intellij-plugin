@@ -110,7 +110,7 @@ Optional sanity check — MCP:
 
 ### 5. Merge to `main`
 
-Commit only version/changelog files (not build outputs):
+Commit only version/changelog files (not build outputs). Version-only release commits (staging only `gradle.properties` and `plugin/CHANGELOG.md`) do not need commit-time ktlint; the `build` step earlier in this skill already runs ktlint. If a release commit stages `*.kt`, `*.kts`, or `.editorconfig`, follow `AGENTS.md` **Commit workflow (coding agents)**.
 
 ```bash
 git add gradle.properties plugin/CHANGELOG.md
