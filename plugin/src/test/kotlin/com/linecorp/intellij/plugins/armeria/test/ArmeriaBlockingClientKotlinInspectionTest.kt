@@ -3,8 +3,13 @@ package com.linecorp.intellij.plugins.armeria.test
 import com.intellij.codeInspection.InspectionManager
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.ProblemsHolder
+import com.intellij.openapi.application.WriteAction
+import com.intellij.openapi.vfs.VfsUtil
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElementVisitor
+import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.testFramework.PsiTestUtil
 import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtFile
@@ -509,6 +514,40 @@ class ArmeriaBlockingClientKotlinInspectionTest : ArmeriaLightJavaCodeInsightFix
 
         val manager = InspectionManager.getInstance(project)
         val holder = ProblemsHolder(manager, myFixture.file, false)
+        val visitor = ArmeriaBlockingClientKotlinInspection().buildVisitor(holder, false)
+        assertTrue(visitor === PsiElementVisitor.EMPTY_VISITOR)
+    }
+
+    fun testNoInspectionSetupForMainSourceTestNamedFile() {
+        val mainRoot = myFixture.tempDirFixture.findOrCreateDir("main")
+        PsiTestUtil.addSourceRoot(module, mainRoot, false)
+        val virtualFile =
+            WriteAction.computeAndWait<com.intellij.openapi.vfs.VirtualFile, RuntimeException> {
+                mainRoot.createChildData(this, "MisnamedTest.kt")
+            }
+        VfsUtil.saveText(
+            virtualFile,
+            """
+            package example
+
+            import org.junit.jupiter.api.extension.RegisterExtension
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+            class MisnamedTest {
+                @RegisterExtension
+                val server: ServerExtension = object : ServerExtension() {}
+
+                fun run() {
+                    server.webClient().get("/slow")
+                }
+            }
+            """.trimIndent(),
+        )
+        PsiDocumentManager.getInstance(project).commitAllDocuments()
+        val psiFile = PsiManager.getInstance(project).findFile(virtualFile)!!
+
+        val manager = InspectionManager.getInstance(project)
+        val holder = ProblemsHolder(manager, psiFile, false)
         val visitor = ArmeriaBlockingClientKotlinInspection().buildVisitor(holder, false)
         assertTrue(visitor === PsiElementVisitor.EMPTY_VISITOR)
     }

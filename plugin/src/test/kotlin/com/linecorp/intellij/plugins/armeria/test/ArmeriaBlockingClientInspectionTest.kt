@@ -2,7 +2,12 @@ package com.linecorp.intellij.plugins.armeria.test
 
 import com.intellij.codeInspection.InspectionManager
 import com.intellij.codeInspection.ProblemsHolder
+import com.intellij.openapi.application.WriteAction
+import com.intellij.openapi.vfs.VfsUtil
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElementVisitor
+import com.intellij.psi.PsiManager
+import com.intellij.testFramework.PsiTestUtil
 import org.junit.Assert.assertTrue
 
 class ArmeriaBlockingClientInspectionTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
@@ -243,5 +248,39 @@ class ArmeriaBlockingClientInspectionTest : ArmeriaLightJavaCodeInsightFixtureTe
         )
 
         myFixture.testHighlighting(true, false, true)
+    }
+
+    fun testNoInspectionSetupForMainSourceTestNamedFile() {
+        val mainRoot = myFixture.tempDirFixture.findOrCreateDir("main")
+        PsiTestUtil.addSourceRoot(module, mainRoot, false)
+        val virtualFile =
+            WriteAction.computeAndWait<com.intellij.openapi.vfs.VirtualFile, RuntimeException> {
+                mainRoot.createChildData(this, "MisnamedTest.java")
+            }
+        VfsUtil.saveText(
+            virtualFile,
+            """
+            package example;
+
+            import org.junit.jupiter.api.extension.RegisterExtension;
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+            public class MisnamedTest {
+                @RegisterExtension
+                static ServerExtension server = new ServerExtension() {};
+
+                void run() {
+                    server.webClient().get("/slow");
+                }
+            }
+            """.trimIndent(),
+        )
+        PsiDocumentManager.getInstance(project).commitAllDocuments()
+        val psiFile = PsiManager.getInstance(project).findFile(virtualFile)!!
+
+        val manager = InspectionManager.getInstance(project)
+        val holder = ProblemsHolder(manager, psiFile, false)
+        val visitor = ArmeriaBlockingClientInspection().buildVisitor(holder, false)
+        assertTrue(visitor === PsiElementVisitor.EMPTY_VISITOR)
     }
 }

@@ -144,11 +144,8 @@ internal object ArmeriaJUnitServerExtensionSupport {
         val virtualFile = file.virtualFile ?: return false
         val project = file.project
         val fileIndex = ProjectRootManager.getInstance(project).fileIndex
-        if (fileIndex.isInTestSourceContent(virtualFile) || TestSourcesFilter.isTestSources(virtualFile, project)) {
-            return true
-        }
-        val name = virtualFile.name
-        return name.endsWith("Test.java") || name.endsWith("Test.kt")
+        return fileIndex.isInTestSourceContent(virtualFile) ||
+            TestSourcesFilter.isTestSources(virtualFile, project)
     }
 
     fun escapeStringLiteral(value: String): String =
