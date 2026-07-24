@@ -2,12 +2,12 @@ package com.linecorp.intellij.plugins.armeria.test
 
 import com.intellij.codeInspection.InspectionManager
 import com.intellij.codeInspection.ProblemsHolder
-import com.intellij.openapi.application.WriteAction
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiManager
 import com.intellij.testFramework.PsiTestUtil
+import com.intellij.testFramework.UsefulTestCase.runWriteAction
 import org.junit.Assert.assertTrue
 
 class ArmeriaBlockingClientInspectionTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
@@ -254,7 +254,7 @@ class ArmeriaBlockingClientInspectionTest : ArmeriaLightJavaCodeInsightFixtureTe
         val mainRoot = myFixture.tempDirFixture.findOrCreateDir("main")
         PsiTestUtil.addSourceRoot(module, mainRoot, false)
         val virtualFile =
-            WriteAction.computeAndWait<com.intellij.openapi.vfs.VirtualFile, RuntimeException> {
+            runWriteAction {
                 mainRoot.createChildData(this, "MisnamedTest.java")
             }
         VfsUtil.saveText(

@@ -3,13 +3,13 @@ package com.linecorp.intellij.plugins.armeria.test
 import com.intellij.codeInspection.InspectionManager
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.ProblemsHolder
-import com.intellij.openapi.application.WriteAction
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.testFramework.PsiTestUtil
+import com.intellij.testFramework.UsefulTestCase.runWriteAction
 import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtFile
@@ -522,7 +522,7 @@ class ArmeriaBlockingClientKotlinInspectionTest : ArmeriaLightJavaCodeInsightFix
         val mainRoot = myFixture.tempDirFixture.findOrCreateDir("main")
         PsiTestUtil.addSourceRoot(module, mainRoot, false)
         val virtualFile =
-            WriteAction.computeAndWait<com.intellij.openapi.vfs.VirtualFile, RuntimeException> {
+            runWriteAction {
                 mainRoot.createChildData(this, "MisnamedTest.kt")
             }
         VfsUtil.saveText(
