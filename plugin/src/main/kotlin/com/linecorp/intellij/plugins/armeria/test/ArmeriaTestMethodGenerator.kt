@@ -12,8 +12,7 @@ enum class ArmeriaTestLanguage {
 }
 
 internal object ArmeriaTestMethodGenerator {
-    fun supports(route: ArmeriaRoute): Boolean =
-        route.routeMatch == RouteMatch.ANNOTATED_HTTP && route.httpMethod.isNotBlank()
+    fun supports(route: ArmeriaRoute): Boolean = route.routeMatch == RouteMatch.ANNOTATED_HTTP && route.httpMethod.isNotBlank()
 
     fun requiresBlockingClient(route: ArmeriaRoute): Boolean = route.executionHints.contains(message("route.explorer.execution.blocking"))
 

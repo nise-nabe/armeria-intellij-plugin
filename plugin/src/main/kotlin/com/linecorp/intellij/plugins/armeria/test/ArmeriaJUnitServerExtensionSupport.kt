@@ -329,7 +329,12 @@ internal object ArmeriaJUnitServerExtensionSupport {
             }
             names.add(name)
             current.superTypeListEntries.forEach { entry ->
-                when (val resolved = entry.typeReference?.references?.firstOrNull()?.resolve()) {
+                val resolved =
+                    entry.typeReference
+                        ?.references
+                        ?.firstOrNull()
+                        ?.resolve()
+                when (resolved) {
                     is KtClass -> queue.add(resolved)
                     is PsiClass -> toKtClass(resolved)?.let(queue::add)
                 }
