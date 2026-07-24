@@ -4,6 +4,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteColl
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteDetailFormatter
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaKotlinServiceRegistrationCollectorVariantsTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
@@ -28,10 +29,10 @@ class ArmeriaKotlinServiceRegistrationCollectorVariantsTest : ArmeriaFixtureTest
             ArmeriaRouteCollector
                 .collect(project)
                 .firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
+        kotlinAssertNotNull(serviceRoute)
         assertEquals(
             "Server.builder().service(\"/api\", …)",
-            ArmeriaRouteDetailFormatter.registrationSummary(serviceRoute!!),
+            ArmeriaRouteDetailFormatter.registrationSummary(serviceRoute),
         )
     }
 
@@ -63,8 +64,8 @@ class ArmeriaKotlinServiceRegistrationCollectorVariantsTest : ArmeriaFixtureTest
             ArmeriaRouteCollector
                 .collect(project)
                 .firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals("example.HelloService", serviceRoute!!.target)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals("example.HelloService", serviceRoute.target)
         assertFalse(serviceRoute.targetUnresolved)
     }
 
@@ -97,8 +98,8 @@ class ArmeriaKotlinServiceRegistrationCollectorVariantsTest : ArmeriaFixtureTest
             ArmeriaRouteCollector
                 .collect(project)
                 .firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals("example.HelloService", serviceRoute!!.target)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals("example.HelloService", serviceRoute.target)
     }
 
     fun testCollectServiceRegistrationFromAnnotatedServerBuilderVariable() {
@@ -132,8 +133,8 @@ class ArmeriaKotlinServiceRegistrationCollectorVariantsTest : ArmeriaFixtureTest
             ArmeriaRouteCollector
                 .collect(project)
                 .firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals("example.HelloService", serviceRoute!!.target)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals("example.HelloService", serviceRoute.target)
         assertFalse(serviceRoute.targetUnresolved)
     }
 
@@ -165,8 +166,8 @@ class ArmeriaKotlinServiceRegistrationCollectorVariantsTest : ArmeriaFixtureTest
             ArmeriaRouteCollector
                 .collect(project)
                 .firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals("example.HelloService", serviceRoute!!.target)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals("example.HelloService", serviceRoute.target)
         assertFalse(serviceRoute.targetUnresolved)
     }
 
@@ -207,7 +208,7 @@ class ArmeriaKotlinServiceRegistrationCollectorVariantsTest : ArmeriaFixtureTest
             ArmeriaRouteCollector
                 .collect(project)
                 .firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
+        kotlinAssertNotNull(serviceRoute)
     }
 
     fun testCollectServiceRegistrationFromServerBuilderExtensionFunction() {
@@ -243,8 +244,8 @@ class ArmeriaKotlinServiceRegistrationCollectorVariantsTest : ArmeriaFixtureTest
             ArmeriaRouteCollector
                 .collect(project)
                 .firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals("example.HelloService", serviceRoute!!.target)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals("example.HelloService", serviceRoute.target)
     }
 
     fun testCollectServiceRegistrationFromServerBuilderTypeAlias() {
@@ -278,8 +279,8 @@ class ArmeriaKotlinServiceRegistrationCollectorVariantsTest : ArmeriaFixtureTest
             ArmeriaRouteCollector
                 .collect(project)
                 .firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals("example.HelloService", serviceRoute!!.target)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals("example.HelloService", serviceRoute.target)
     }
 
     fun testCollectServiceRegistrationFromParenthesizedServerBuilderReceiver() {
@@ -311,7 +312,7 @@ class ArmeriaKotlinServiceRegistrationCollectorVariantsTest : ArmeriaFixtureTest
             ArmeriaRouteCollector
                 .collect(project)
                 .firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals("example.HelloService", serviceRoute!!.target)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals("example.HelloService", serviceRoute.target)
     }
 }

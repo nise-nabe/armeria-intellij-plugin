@@ -15,9 +15,9 @@ import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     override fun setUp() {
@@ -71,8 +71,8 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
 
         val testClass = javaFile.classes.single()
         val method = testClass.methods.singleOrNull { it.name == "apiReturnsSuccess" }
-        assertNotNull(method)
-        assertTrue(method!!.text.contains("WebClient.of"))
+        kotlinAssertNotNull(method)
+        assertTrue(method.text.contains("WebClient.of"))
     }
 
     fun testInsertsKotlinTestMethodIntoServerExtensionClass() {
@@ -111,8 +111,8 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
 
         val function =
             ktClass.declarations.filterIsInstance<KtNamedFunction>().singleOrNull { it.name == "apiReturnsSuccess" }
-        assertNotNull(function)
-        assertTrue(function!!.text.contains("WebClient.of"))
+        kotlinAssertNotNull(function)
+        assertTrue(function.text.contains("WebClient.of"))
     }
 
     fun testDoesNotTargetFirstClassInMultiClassKotlinFile() {

@@ -4,6 +4,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteColl
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteDetailFormatter
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaKotlinAnnotatedRouteCollectorTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
@@ -67,8 +68,8 @@ class ArmeriaKotlinAnnotatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         val routes = ArmeriaRouteCollector.collect(project)
 
         val registrationRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ANNOTATED_SERVICE }
-        assertNotNull(registrationRoute)
-        assertEquals("/", registrationRoute!!.path)
+        kotlinAssertNotNull(registrationRoute)
+        assertEquals("/", registrationRoute.path)
         assertFalse(registrationRoute.annotatedServiceHasPathPrefix)
         assertEquals(
             "Server.builder().annotatedService(…)",
@@ -76,8 +77,8 @@ class ArmeriaKotlinAnnotatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         )
 
         val annotatedMethodRoute = routes.firstOrNull { it.path == "/hello" }
-        assertNotNull(annotatedMethodRoute)
-        assertEquals(RouteMatch.ANNOTATED_HTTP, annotatedMethodRoute!!.routeMatch)
+        kotlinAssertNotNull(annotatedMethodRoute)
+        assertEquals(RouteMatch.ANNOTATED_HTTP, annotatedMethodRoute.routeMatch)
     }
 
     fun testCollectPathPrefix() {
@@ -135,8 +136,8 @@ class ArmeriaKotlinAnnotatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         val routes = ArmeriaRouteCollector.collect(project)
 
         val registrationRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ANNOTATED_SERVICE }
-        assertNotNull(registrationRoute)
-        assertEquals("/v1", registrationRoute!!.path)
+        kotlinAssertNotNull(registrationRoute)
+        assertEquals("/v1", registrationRoute.path)
         assertTrue(registrationRoute.annotatedServiceHasPathPrefix)
     }
 
@@ -172,8 +173,8 @@ class ArmeriaKotlinAnnotatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         val routes = ArmeriaRouteCollector.collect(project)
 
         val registrationRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ANNOTATED_SERVICE }
-        assertNotNull(registrationRoute)
-        assertEquals("/v1", registrationRoute!!.path)
+        kotlinAssertNotNull(registrationRoute)
+        assertEquals("/v1", registrationRoute.path)
         assertTrue(registrationRoute.annotatedServiceHasPathPrefix)
     }
 }

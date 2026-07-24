@@ -17,6 +17,7 @@ java {
 }
 
 dependencies {
+    testImplementation(kotlin("test"))
     intellijPlatform {
         testFramework(TestFrameworkType.Platform)
     }

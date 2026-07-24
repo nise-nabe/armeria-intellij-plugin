@@ -6,6 +6,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaGrpcRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaProtocolRouteContributor
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
@@ -143,8 +144,8 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
             )
         val protoRoute = routes.firstOrNull { it.path == "/com.example.Greeter/SayHello" }
 
-        assertNotNull(protoRoute)
-        assertEquals("com.example.Greeter.SayHello", protoRoute!!.target)
+        kotlinAssertNotNull(protoRoute)
+        assertEquals("com.example.Greeter.SayHello", protoRoute.target)
     }
 
     fun testCollectGrpcRoutesFromMultipleServicesInOneProto() {
@@ -340,7 +341,7 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
                 contributors = listOf(ArmeriaProtocolRouteContributor),
             )
 
-        assertNotNull(routes.firstOrNull { it.path == "/grpc" })
-        assertNotNull(routes.firstOrNull { it.path == "/com.example.Greeter/SayHello" })
+        kotlinAssertNotNull(routes.firstOrNull { it.path == "/grpc" })
+        kotlinAssertNotNull(routes.firstOrNull { it.path == "/com.example.Greeter/SayHello" })
     }
 }

@@ -13,6 +13,7 @@ import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 import org.jetbrains.yaml.psi.YAMLFile
 import org.jetbrains.yaml.psi.YAMLKeyValue
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     fun testCollectPortsAndInternalServicesFromYaml() {
@@ -388,7 +389,7 @@ class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixture
 
         val portRoute = routes.single { it.path == ":8080" }
         val element = portRoute.pointer.element
-        assertNotNull(element)
+        kotlinAssertNotNull(element)
         assertTrue(
             "Port route should navigate to the YAML port key, not the whole file",
             element is YAMLKeyValue,
@@ -602,7 +603,7 @@ class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixture
         assertFalse(docs.resolveSourceHint().endsWith(":1"))
         assertFalse(health.resolveSourceHint().endsWith(":1"))
         assertFalse(metrics.resolveSourceHint().endsWith(":1"))
-        assertSame(psiFile, docs.pointer.element!!.containingFile)
+        assertSame(psiFile, kotlinAssertNotNull(docs.pointer.element).containingFile)
     }
 
     fun testYamlCommentOnlyIncludeThenBlockList() {

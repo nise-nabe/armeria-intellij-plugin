@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
@@ -37,8 +38,8 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         val routes = ArmeriaRouteCollector.collect(project)
 
         val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals("example.HelloService", serviceRoute!!.target)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals("example.HelloService", serviceRoute.target)
     }
 
     fun testCollectServiceRegistration() {
@@ -74,8 +75,8 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         val routes = ArmeriaRouteCollector.collect(project)
 
         val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals("/api", serviceRoute!!.path)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals("/api", serviceRoute.path)
         assertEquals("example.HelloService", serviceRoute.target)
     }
 
@@ -149,8 +150,8 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         val routes = ArmeriaRouteCollector.collect(project)
 
         val grpcRoute = routes.firstOrNull { it.routeMatch == RouteMatch.NON_HTTP }
-        assertNotNull(grpcRoute)
-        assertEquals("example.HelloGrpcService", grpcRoute!!.target)
+        kotlinAssertNotNull(grpcRoute)
+        assertEquals("example.HelloGrpcService", grpcRoute.target)
         assertFalse(grpcRoute.target.equals("build", ignoreCase = true))
     }
 
@@ -174,8 +175,8 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         val routes = ArmeriaRouteCollector.collect(project)
 
         val docRoute = routes.firstOrNull { it.isDocService }
-        assertNotNull(docRoute)
-        assertEquals("com.linecorp.armeria.server.docs.DocService", docRoute!!.target)
+        kotlinAssertNotNull(docRoute)
+        assertEquals("com.linecorp.armeria.server.docs.DocService", docRoute.target)
     }
 
     fun testCollectUnresolvedNewExpressionTarget() {
@@ -197,8 +198,8 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         val routes = ArmeriaRouteCollector.collect(project)
 
         val serviceRoute = routes.firstOrNull { it.path == "/api" }
-        assertNotNull(serviceRoute)
-        assertTrue(serviceRoute!!.targetUnresolved)
+        kotlinAssertNotNull(serviceRoute)
+        assertTrue(serviceRoute.targetUnresolved)
     }
 
     fun testCollectServiceRegistrationWithNamedArgumentsReversedOrder() {
@@ -228,8 +229,8 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         val routes = ArmeriaRouteCollector.collect(project)
 
         val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals("example.HelloService", serviceRoute!!.target)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals("example.HelloService", serviceRoute.target)
     }
 
     fun testCollectServiceRegistrationInApplyBlock() {
@@ -259,8 +260,8 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         val routes = ArmeriaRouteCollector.collect(project)
 
         val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals("example.HelloService", serviceRoute!!.target)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals("example.HelloService", serviceRoute.target)
     }
 
     fun testCollectServiceRegistrationInAlsoBlockWithExplicitReceiver() {
@@ -290,8 +291,8 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         val routes = ArmeriaRouteCollector.collect(project)
 
         val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals("example.HelloService", serviceRoute!!.target)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals("example.HelloService", serviceRoute.target)
     }
 
     fun testCollectServiceRegistrationWithConstValPath() {
@@ -323,6 +324,6 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         val routes = ArmeriaRouteCollector.collect(project)
 
         val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
+        kotlinAssertNotNull(serviceRoute)
     }
 }

@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.run
 
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaMainClassResolverTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     fun testFindsJavaMainClass() {
@@ -21,8 +22,8 @@ class ArmeriaMainClassResolverTest : ArmeriaLightJavaCodeInsightFixtureTestCase(
 
         val mainClass = ArmeriaMainClassResolver.findArmeriaMainClass(myFixture.file.findElementAt(myFixture.caretOffset))
 
-        assertNotNull(mainClass)
-        assertEquals("example.Main", mainClass!!.qualifiedName)
+        kotlinAssertNotNull(mainClass)
+        assertEquals("example.Main", mainClass.qualifiedName)
     }
 
     fun testFindsKotlinTopLevelMainFacade() {
@@ -41,8 +42,8 @@ class ArmeriaMainClassResolverTest : ArmeriaLightJavaCodeInsightFixtureTestCase(
 
         val mainClass = ArmeriaMainClassResolver.findArmeriaMainClass(myFixture.file.findElementAt(myFixture.caretOffset))
 
-        assertNotNull(mainClass)
-        assertEquals("example.MainKt", mainClass!!.qualifiedName)
+        kotlinAssertNotNull(mainClass)
+        assertEquals("example.MainKt", mainClass.qualifiedName)
     }
 
     fun testIgnoresNonArmeriaMain() {

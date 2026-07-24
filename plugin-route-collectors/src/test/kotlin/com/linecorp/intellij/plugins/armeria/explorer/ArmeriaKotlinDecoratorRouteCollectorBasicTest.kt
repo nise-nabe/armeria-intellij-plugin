@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaKotlinDecoratorRouteCollectorBasicTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
@@ -40,8 +41,8 @@ class ArmeriaKotlinDecoratorRouteCollectorBasicTest : ArmeriaFixtureTestBase() {
         val routes = ArmeriaRouteCollector.collect(project)
 
         val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals(listOf("CORS", "Logging"), serviceRoute!!.decorators)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals(listOf("CORS", "Logging"), serviceRoute.decorators)
     }
 
     fun testCollectProgrammaticDecoratorWithNewDecoratorFactory() {
@@ -73,8 +74,8 @@ class ArmeriaKotlinDecoratorRouteCollectorBasicTest : ArmeriaFixtureTestBase() {
         val routes = ArmeriaRouteCollector.collect(project)
 
         val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals(listOf("Logging"), serviceRoute!!.decorators)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals(listOf("Logging"), serviceRoute.decorators)
     }
 
     fun testCollectProgrammaticDecoratorWithBuilderNewDecoratorFactory() {
@@ -106,8 +107,8 @@ class ArmeriaKotlinDecoratorRouteCollectorBasicTest : ArmeriaFixtureTestBase() {
         val routes = ArmeriaRouteCollector.collect(project)
 
         val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals(listOf("Logging"), serviceRoute!!.decorators)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals(listOf("Logging"), serviceRoute.decorators)
     }
 
     fun testCollectProgrammaticDecoratorOnKotlinBuilderVariable() {
@@ -139,8 +140,8 @@ class ArmeriaKotlinDecoratorRouteCollectorBasicTest : ArmeriaFixtureTestBase() {
         val routes = ArmeriaRouteCollector.collect(project)
 
         val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals(listOf("Logging"), serviceRoute!!.decorators)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals(listOf("Logging"), serviceRoute.decorators)
     }
 
     fun testCollectProgrammaticDecoratorFromLocalVariable() {
@@ -173,7 +174,7 @@ class ArmeriaKotlinDecoratorRouteCollectorBasicTest : ArmeriaFixtureTestBase() {
         val routes = ArmeriaRouteCollector.collect(project)
 
         val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
-        assertNotNull(serviceRoute)
-        assertEquals(listOf("Logging"), serviceRoute!!.decorators)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals(listOf("Logging"), serviceRoute.decorators)
     }
 }

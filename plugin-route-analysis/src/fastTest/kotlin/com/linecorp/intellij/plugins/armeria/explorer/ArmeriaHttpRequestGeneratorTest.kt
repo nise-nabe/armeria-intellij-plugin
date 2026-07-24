@@ -14,6 +14,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaHttpRequestGeneratorTest {
     @Test
@@ -270,7 +271,7 @@ class ArmeriaHttpRequestGeneratorTest {
         val error = runCatching { ArmeriaHttpRequestGenerator.httpMethod(route) }.exceptionOrNull()
 
         assertTrue(error is IllegalStateException)
-        assertTrue(error!!.message!!.contains("NON_HTTP"))
+        assertTrue(kotlinAssertNotNull(error.message).contains("NON_HTTP"))
     }
 
     @Test

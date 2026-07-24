@@ -6,6 +6,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.ArmeriaIcons
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 import org.jetbrains.kotlin.psi.KtNamedFunction
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaRouteLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     private val javaProvider = ArmeriaJavaRouteLineMarkerProvider()
@@ -36,8 +37,8 @@ class ArmeriaRouteLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixtureTes
         val method = PsiTreeUtil.findChildOfType(myFixture.file, PsiMethod::class.java)!!
         val marker = javaProvider.getLineMarkerInfo(method.nameIdentifier!!)
 
-        assertNotNull(marker)
-        assertEquals(ArmeriaIcons.Armeria, marker!!.icon)
+        kotlinAssertNotNull(marker)
+        assertEquals(ArmeriaIcons.Armeria, marker.icon)
     }
 
     fun testKotlinAnnotatedRouteMarker() {
@@ -58,8 +59,8 @@ class ArmeriaRouteLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixtureTes
         val function = PsiTreeUtil.findChildOfType(myFixture.file, KtNamedFunction::class.java)!!
         val marker = kotlinProvider.getLineMarkerInfo(function.nameIdentifier!!)
 
-        assertNotNull(marker)
-        assertEquals(ArmeriaIcons.Armeria, marker!!.icon)
+        kotlinAssertNotNull(marker)
+        assertEquals(ArmeriaIcons.Armeria, marker.icon)
     }
 
     fun testServiceRegistrationMarker() {
@@ -85,8 +86,8 @@ class ArmeriaRouteLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixtureTes
         val element = myFixture.file.findElementAt(serviceIndex)!!
         val marker = javaProvider.getLineMarkerInfo(element)
 
-        assertNotNull(marker)
-        assertEquals(ArmeriaIcons.Armeria, marker!!.icon)
+        kotlinAssertNotNull(marker)
+        assertEquals(ArmeriaIcons.Armeria, marker.icon)
     }
 
     fun testJavaServiceRegistrationMarkerResolvesStringConstant() {
@@ -125,7 +126,7 @@ class ArmeriaRouteLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixtureTes
         assertEquals("/api", path)
         val marker = javaProvider.getLineMarkerInfo(element)
 
-        assertNotNull(marker)
+        kotlinAssertNotNull(marker)
     }
 
     fun testKotlinServiceRegistrationMarker() {
@@ -149,8 +150,8 @@ class ArmeriaRouteLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixtureTes
         val element = myFixture.file.findElementAt(serviceIndex)!!
         val marker = kotlinProvider.getLineMarkerInfo(element)
 
-        assertNotNull(marker)
-        assertEquals(ArmeriaIcons.Armeria, marker!!.icon)
+        kotlinAssertNotNull(marker)
+        assertEquals(ArmeriaIcons.Armeria, marker.icon)
     }
 
     fun testExtendedRegistrationMethodsDoNotGetMarkers() {

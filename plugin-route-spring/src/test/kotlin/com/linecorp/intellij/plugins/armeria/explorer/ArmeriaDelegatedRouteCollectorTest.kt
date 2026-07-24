@@ -12,6 +12,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringRouteC
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaDelegationSupport
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
     override fun setUp() {
@@ -338,13 +339,13 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
                 contributors = listOf(ArmeriaSpringRouteContributor),
             )
 
-        assertNotNull(
+        kotlinAssertNotNull(
             routes.singleOrNull {
                 it.path == "/spring/" &&
                     it.delegationKind == DelegationKind.SPRING_MVC
             },
         )
-        assertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED })
+        kotlinAssertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED })
     }
 
     fun testKotlinTomcatServiceBeanMountIsDetected() {
@@ -381,7 +382,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
                 springMounts.map { "${it.target}/${it.routeMatch}/${it.delegationKind}" },
             springMounts.any { it.delegationKind == DelegationKind.SPRING_MVC },
         )
-        assertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED })
+        kotlinAssertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED })
     }
 
     fun testClassLevelMultiPathRequestMappingEmitsAllPrefixes() {
@@ -559,7 +560,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
                     it.delegationKind == DelegationKind.SPRING_MVC
             },
         )
-        assertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED })
+        kotlinAssertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED })
     }
 
     fun testAmbiguousSameModuleMountsExpandOnlyUnderShortestPath() {
@@ -613,7 +614,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         val delegated = routes.filter { it.routeMatch == RouteMatch.DELEGATED }
         assertTrue(delegated.isNotEmpty())
         assertEquals(setOf("/"), delegated.map { it.delegationMountPath }.toSet())
-        assertNotNull(
+        kotlinAssertNotNull(
             delegated.singleOrNull {
                 it.path == "/api" &&
                     it.httpMethod == "GET" &&
@@ -622,7 +623,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             },
         )
         // Root mapping "" under preferred "/" becomes "/".
-        assertNotNull(
+        kotlinAssertNotNull(
             delegated.singleOrNull {
                 it.path == "/" &&
                     it.httpMethod == "GET" &&
@@ -663,7 +664,7 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
                 project,
                 contributors = listOf(ArmeriaSpringRouteContributor),
             )
-        assertNotNull(routes)
+        kotlinAssertNotNull(routes)
     }
 
     fun testNoDelegatedRoutesWithoutServletMount() {

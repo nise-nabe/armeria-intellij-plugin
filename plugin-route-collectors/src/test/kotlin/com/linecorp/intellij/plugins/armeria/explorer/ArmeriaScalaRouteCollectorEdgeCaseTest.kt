@@ -4,6 +4,7 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiDocumentManager
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaScalaRouteCollectorEdgeCaseTest : ArmeriaFixtureTestBase() {
     fun testNoFalsePositiveForUnrelatedServiceCall() {
@@ -128,15 +129,15 @@ class ArmeriaScalaRouteCollectorEdgeCaseTest : ArmeriaFixtureTestBase() {
 
         val routes = ArmeriaRouteCollector.collect(project)
         val serviceRoute = routes.firstOrNull { it.path == "/api" }
-        assertNotNull(serviceRoute)
-        val offset = serviceRoute!!.sourceOffset
-        assertNotNull(offset)
+        kotlinAssertNotNull(serviceRoute)
+        val offset = serviceRoute.sourceOffset
+        kotlinAssertNotNull(offset)
         val document =
             PsiDocumentManager
                 .getInstance(project)
                 .getDocument(myFixture.file)
-        assertNotNull(document)
-        val line = document!!.getLineNumber(offset!!)
+        kotlinAssertNotNull(document)
+        val line = document.getLineNumber(offset)
         val lineText = document.getText(TextRange(document.getLineStartOffset(line), document.getLineEndOffset(line)))
         assertTrue(lineText.contains(".service"))
     }

@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.client
 
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaScalaClientCollectorTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     fun testCollectWebClientOfFromScala() {
@@ -32,8 +33,8 @@ class ArmeriaScalaClientCollectorTest : ArmeriaLightJavaCodeInsightFixtureTestCa
         assertEquals("HTTP", endpoint.clientType)
         assertEquals("https://example.com", endpoint.uri)
         assertEquals("WebClient", endpoint.target)
-        assertNotNull(endpoint.sourceOffset)
-        assertTrue(endpoint.sourceOffset!! > 0)
+        val sourceOffset = kotlinAssertNotNull(endpoint.sourceOffset)
+        assertTrue(sourceOffset > 0)
     }
 
     fun testIgnoresWebClientOfInsideStringLiteral() {

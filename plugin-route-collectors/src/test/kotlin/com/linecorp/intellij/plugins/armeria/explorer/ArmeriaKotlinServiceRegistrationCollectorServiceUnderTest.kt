@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaKotlinServiceRegistrationCollectorServiceUnderTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
@@ -36,8 +37,8 @@ class ArmeriaKotlinServiceRegistrationCollectorServiceUnderTest : ArmeriaFixture
         val routes = ArmeriaRouteCollector.collect(project)
 
         val serviceRoute = routes.firstOrNull { it.routeMatch == RouteMatch.SERVICE_UNDER }
-        assertNotNull(serviceRoute)
-        assertEquals("/v1", serviceRoute!!.path)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals("/v1", serviceRoute.path)
         assertEquals("example.HelloService", serviceRoute.target)
     }
 
@@ -68,8 +69,8 @@ class ArmeriaKotlinServiceRegistrationCollectorServiceUnderTest : ArmeriaFixture
         val routes = ArmeriaRouteCollector.collect(project)
 
         val serviceRoute = routes.firstOrNull { it.routeMatch == RouteMatch.SERVICE_UNDER }
-        assertNotNull(serviceRoute)
-        assertEquals("/v1", serviceRoute!!.path)
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals("/v1", serviceRoute.path)
         assertEquals("example.HelloService", serviceRoute.target)
     }
 }
