@@ -97,6 +97,29 @@ class ArmeriaProtoRpcLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixture
         assertNull(provider.getLineMarkerInfo(nameIdentifier))
     }
 
+    fun testProtoRpcMarkerIgnoresJavaPackageOption() {
+        myFixture.configureByText(
+            "greeter.proto",
+            """
+            syntax = "proto3";
+            package com.example;
+            option java_package = "com.example.java";
+
+            service Greeter {
+              rpc SayHello(HelloRequest) returns (HelloResponse);
+            }
+            """.trimIndent(),
+        )
+
+        val marker = provider.getLineMarkerInfo(findRpcKeyword())
+
+        assertNotNull(marker)
+        assertEquals(
+            message("marker.grpc.rpc", "/com.example.Greeter/SayHello"),
+            marker!!.lineMarkerTooltip,
+        )
+    }
+
     fun testCommentedRpcHasNoMarker() {
         myFixture.configureByText(
             "greeter.proto",
