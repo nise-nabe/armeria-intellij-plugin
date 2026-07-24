@@ -293,11 +293,15 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
 
         myFixture.openFileInEditor(firstFile.virtualFile)
         assertRegistrationDuplicateHighlightOnKotlinMethod("First", "first", expectedDescription)
+        assertRegistrationNavigateQuickFixAvailable("GET /shared")
 
         myFixture.openFileInEditor(secondFile.virtualFile)
         assertRegistrationDuplicateHighlightOnKotlinMethod("Second", "second", expectedDescription)
+        assertRegistrationNavigateQuickFixAvailable("GET /shared")
+    }
 
-        val expectedQuickFixName = message("inspection.duplicate.registration.quickfix.navigate", "GET /shared")
+    private fun assertRegistrationNavigateQuickFixAvailable(label: String) {
+        val expectedQuickFixName = message("inspection.duplicate.registration.quickfix.navigate", label)
         val quickFixes =
             myFixture.getAvailableQuickFixes().filter {
                 it.text == expectedQuickFixName
