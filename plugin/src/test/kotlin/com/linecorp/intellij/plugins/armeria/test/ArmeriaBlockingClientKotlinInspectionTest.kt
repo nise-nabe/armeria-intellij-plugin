@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.test
 import com.intellij.codeInspection.InspectionManager
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.ProblemsHolder
+import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -331,6 +332,92 @@ class ArmeriaBlockingClientKotlinInspectionTest : ArmeriaLightJavaCodeInsightFix
         val visitor = ArmeriaBlockingClientKotlinInspection().buildVisitor(holder, false)
         getCall.accept(visitor)
         assertEquals(1, holder.results.size)
+    }
+
+    fun testWarnsWhenCompanionObjectServerExtensionUsesAsyncWebClient() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Blocking
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "SlowServiceTest.kt",
+            """
+            package example
+
+            import org.junit.jupiter.api.extension.RegisterExtension
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+            class SlowServiceTest {
+                companion object {
+                    @RegisterExtension
+                    @JvmField
+                    val server: ServerExtension = object : ServerExtension() {}
+                }
+
+                fun testSlow() {
+                    server.webClient().get("/slow")
+                }
+            }
+            """.trimIndent(),
+        )
+        val getCall = findGetCall(myFixture.file as KtFile)
+
+        val manager = InspectionManager.getInstance(project)
+        val holder = ProblemsHolder(manager, myFixture.file, false)
+        val visitor = ArmeriaBlockingClientKotlinInspection().buildVisitor(holder, false)
+        getCall.accept(visitor)
+        assertEquals(1, holder.results.size)
+    }
+
+    fun testNoWarningInProductionFileWithoutRegisterExtension() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Blocking
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "SlowService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Blocking
+            import com.linecorp.armeria.server.annotation.Get
+
+            class SlowService {
+                @Blocking
+                @Get("/slow")
+                fun slow(): String = "slow"
+            }
+            """.trimIndent(),
+        )
+
+        val manager = InspectionManager.getInstance(project)
+        val holder = ProblemsHolder(manager, myFixture.file, false)
+        val visitor = ArmeriaBlockingClientKotlinInspection().buildVisitor(holder, false)
+        assertTrue(visitor === PsiElementVisitor.EMPTY_VISITOR)
     }
 
     private fun findGetCall(file: KtFile): KtCallExpression =

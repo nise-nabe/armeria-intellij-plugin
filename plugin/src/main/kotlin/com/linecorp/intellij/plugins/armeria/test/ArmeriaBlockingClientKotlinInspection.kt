@@ -4,9 +4,7 @@ import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElementVisitor
-import com.intellij.psi.PsiVariable
 import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -28,6 +26,9 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
         holder: ProblemsHolder,
         isOnTheFly: Boolean,
     ): PsiElementVisitor {
+        if (!ArmeriaJUnitServerExtensionSupport.fileMayContainRegisterExtension(holder.file.text)) {
+            return PsiElementVisitor.EMPTY_VISITOR
+        }
         val scope = GlobalSearchScope.projectScope(holder.project)
         val blockingPaths = ArmeriaBlockingClientInspectionPaths.blockingRoutePaths(holder.project)
         if (blockingPaths.isEmpty()) {

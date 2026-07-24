@@ -13,6 +13,7 @@ import com.intellij.psi.PsiType
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import org.jetbrains.kotlin.asJava.toLightClass
+import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
@@ -90,7 +91,7 @@ internal object ArmeriaJUnitServerExtensionSupport {
         property: KtProperty,
         scope: GlobalSearchScope,
     ): ArmeriaJUnitServerExtension? {
-        if (!property.annotationEntries.any { it.shortName?.asString() == "RegisterExtension" }) {
+        if (!property.annotationEntries.any { it.isRegisterExtensionAnnotation() }) {
             return null
         }
         if (!isKotlinServerExtensionProperty(property, property.project, scope)) {
@@ -108,6 +109,51 @@ internal object ArmeriaJUnitServerExtensionSupport {
 
     fun fileMayContainRegisterExtension(fileText: String): Boolean =
         REGISTER_EXTENSION_ANNOTATION in fileText || "@$REGISTER_EXTENSION_ANNOTATION_SHORT" in fileText
+
+    fun escapeStringLiteral(value: String): String =
+        buildString(value.length) {
+            value.forEach { character ->
+                when (character) {
+                    '\\' -> append("\\\\")
+                    '"' -> append("\\\"")
+                    else -> append(character)
+                }
+            }
+        }
+
+    private fun KtAnnotationEntry.isRegisterExtensionAnnotation(): Boolean {
+        qualifiedName()?.let { return it == REGISTER_EXTENSION_ANNOTATION }
+        return shortName?.asString() == REGISTER_EXTENSION_ANNOTATION_SHORT
+    }
+
+    private fun KtAnnotationEntry.qualifiedName(): String? {
+        resolveAnnotationType()?.let { return it }
+        val shortName = shortName?.asString() ?: return null
+        containingKtFile.importDirectives
+            .mapNotNull { it.importPath?.pathStr }
+            .firstOrNull { it == shortName || it.endsWith(".$shortName") }
+            ?.let { return it }
+        return containingKtFile.declarations
+            .filterIsInstance<KtClass>()
+            .firstOrNull { it.name == shortName }
+            ?.fqName
+            ?.asString()
+    }
+
+    private fun KtAnnotationEntry.resolveAnnotationType(): String? {
+        val candidates =
+            listOfNotNull(
+                typeReference?.references?.firstOrNull()?.resolve(),
+                calleeExpression?.references?.firstOrNull()?.resolve(),
+            )
+        for (resolved in candidates) {
+            when (resolved) {
+                is PsiClass -> resolved.qualifiedName?.let { return it }
+                is KtClass -> resolved.fqName?.asString()?.let { return it }
+            }
+        }
+        return null
+    }
 
     fun enclosingServerExtension(
         element: PsiElement,
@@ -175,7 +221,13 @@ internal object ArmeriaJUnitServerExtensionSupport {
                 else -> null
             } ?: return false
         return objectDeclaration.superTypeListEntries.any { entry ->
-            when (val resolved = entry.typeReference?.references?.firstOrNull()?.resolve()) {
+            when (
+                val resolved =
+                    entry.typeReference
+                        ?.references
+                        ?.firstOrNull()
+                        ?.resolve()
+            ) {
                 is PsiClass -> isServerExtensionClass(resolved, project, scope)
                 is KtClass -> resolved.toLightClass()?.let { isServerExtensionClass(it, project, scope) } == true
                 else -> entry.typeReference?.text?.contains("ServerExtension") == true

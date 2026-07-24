@@ -37,7 +37,7 @@ internal object ArmeriaTestMethodGenerator {
     ): String {
         val methodName = suggestMethodName(route)
         val call = httpMethod(route).lowercase(Locale.ROOT)
-        val path = ArmeriaRouteSupport.normalizePath(route.path)
+        val path = ArmeriaJUnitServerExtensionSupport.escapeStringLiteral(ArmeriaRouteSupport.normalizePath(route.path))
         val blocking = requiresBlockingClient(route)
         return when (language) {
             ArmeriaTestLanguage.JAVA ->

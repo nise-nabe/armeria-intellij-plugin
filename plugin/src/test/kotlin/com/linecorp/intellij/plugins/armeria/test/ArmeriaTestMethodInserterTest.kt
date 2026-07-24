@@ -15,7 +15,9 @@ import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 
 class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
@@ -114,14 +116,46 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
         assertTrue(function!!.text.contains("WebClient.of"))
     }
 
-    private fun route(path: String): ArmeriaRoute =
+    fun testDoesNotTargetFirstClassInMultiClassKotlinFile() {
+        val psiFile =
+            myFixture.configureByText(
+                "ExampleServiceTest.kt",
+                """
+                package example
+
+                import org.junit.jupiter.api.extension.RegisterExtension
+                import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+                class OtherTest {
+                    @RegisterExtension
+                    val server: ServerExtension = object : ServerExtension() {}
+                }
+
+                class ExampleServiceTest
+                """.trimIndent(),
+            ) as KtFile
+        myFixture.openFileInEditor(psiFile.virtualFile)
+
+        val resolved =
+            ArmeriaTestMethodInserter.resolveTargetClassInternal(
+                project,
+                route(path = "/api", moduleName = "unmatched-module"),
+            )
+
+        assertNull(resolved)
+    }
+
+    private fun route(
+        path: String,
+        moduleName: String = "app",
+    ): ArmeriaRoute =
         ArmeriaRoute(
             protocol = "HTTP",
             httpMethod = "GET",
             path = path,
             target = "Handler",
             routeMatch = RouteMatch.ANNOTATED_HTTP,
-            moduleName = "app",
+            moduleName = moduleName,
             targetUnresolved = false,
             isDocService = false,
             decorators = emptyList(),

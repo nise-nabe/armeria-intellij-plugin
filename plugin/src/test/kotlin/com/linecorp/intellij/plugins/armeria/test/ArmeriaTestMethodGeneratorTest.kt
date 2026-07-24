@@ -47,6 +47,17 @@ class ArmeriaTestMethodGeneratorTest {
         assertTrue(generated.contains("blockingWebClient"))
     }
 
+    @Test
+    fun generateJavaTestMethodEscapesPathCharacters() {
+        val generated =
+            ArmeriaTestMethodGenerator.generateTestMethod(
+                route = route(path = "/api\"quoted"),
+                serverVariableName = "server",
+                language = ArmeriaTestLanguage.JAVA,
+            )
+        assertTrue(generated.contains("\"/api\\\"quoted\""))
+    }
+
     private fun route(
         httpMethod: String = "GET",
         path: String = "/api",
