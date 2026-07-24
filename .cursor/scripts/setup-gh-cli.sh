@@ -24,11 +24,11 @@ if ! "${gh_source}" auth status >/dev/null 2>&1; then
   if [[ -n "${token}" ]]; then
     if ! "${gh_source}" auth login --hostname github.com --git-protocol https --with-token <<<"${token}"; then
       echo "Warning: gh auth login failed; gh CLI may be unavailable for API calls." >&2
-      echo "Use ManagePullRequest for PRs, or set GH_TOKEN in Cursor Cloud Secrets." >&2
+      echo "Use ManagePullRequest and EditPullRequestLabels for PR work, or set GH_TOKEN in Cursor Cloud Secrets (see .cursor/skills/cloud-github/SKILL.md)." >&2
     fi
   else
     echo "Warning: gh is not authenticated and GH_TOKEN/GITHUB_TOKEN is unset." >&2
-    echo "Set GH_TOKEN in Cursor Cloud Secrets, or use the ManagePullRequest tool for PRs." >&2
+    echo "Set GH_TOKEN in Cursor Cloud Secrets, or use ManagePullRequest / EditPullRequestLabels for PR work (see .cursor/skills/cloud-github/SKILL.md)." >&2
   fi
 fi
 
