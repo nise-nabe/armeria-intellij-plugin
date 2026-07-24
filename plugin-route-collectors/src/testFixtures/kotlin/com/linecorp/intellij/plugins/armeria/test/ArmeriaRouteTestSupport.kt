@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.test
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import org.junit.Assert.assertEquals
 
 fun List<ArmeriaRoute>.route(
     match: RouteMatch? = null,
@@ -42,7 +43,7 @@ fun List<ArmeriaRoute>.assertRoute(
     pathType: PathType? = null,
 ): ArmeriaRoute {
     val route = route(match = match, path = path)
-    httpMethod?.let { check(route.httpMethod == it) { "Expected httpMethod '$it' but was '${route.httpMethod}'" } }
-    pathType?.let { check(route.pathType == it) { "Expected pathType '$it' but was '${route.pathType}'" } }
+    httpMethod?.let { assertEquals("httpMethod", it, route.httpMethod) }
+    pathType?.let { assertEquals("pathType", it, route.pathType) }
     return route
 }

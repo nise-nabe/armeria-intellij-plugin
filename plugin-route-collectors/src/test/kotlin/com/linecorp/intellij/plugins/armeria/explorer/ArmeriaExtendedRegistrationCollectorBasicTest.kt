@@ -4,6 +4,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 import com.linecorp.intellij.plugins.armeria.test.assertRoute
+import com.linecorp.intellij.plugins.armeria.test.singleRoute
 
 class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
@@ -41,17 +42,17 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
 
     fun testCollectPathAnnotationAndPathType() {
         configureFixture("extendedRegistration/basic/pathAnnotation/HelloService.java")
-        collectRoutes().assertRoute(path = "/hello", pathType = PathType.PREFIX)
+        collectRoutes().also { it.singleRoute() }.assertRoute(path = "/hello", pathType = PathType.PREFIX)
     }
 
     fun testCollectRegexPathAnnotationTrimsWhitespace() {
         configureFixture("extendedRegistration/basic/regexPathAnnotation/HelloService.java")
-        collectRoutes().assertRoute(path = "/foo", pathType = PathType.REGEX)
+        collectRoutes().also { it.singleRoute() }.assertRoute(path = "/foo", pathType = PathType.REGEX)
     }
 
     fun testCollectGlobPathAnnotationNormalizesLeadingSlash() {
         configureFixture("extendedRegistration/basic/globPathAnnotation/HelloService.java")
-        collectRoutes().assertRoute(path = "/foo/**", pathType = PathType.GLOB)
+        collectRoutes().also { it.singleRoute() }.assertRoute(path = "/foo/**", pathType = PathType.GLOB)
     }
 
     fun testCollectFluentRoutePathPrefix() {

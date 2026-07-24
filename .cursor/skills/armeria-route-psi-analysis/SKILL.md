@@ -225,12 +225,17 @@ For PSI fixture tests that extend `ArmeriaFixtureTestBase` or
   (e.g. `plugin-route-collectors/src/test/testData/extendedRegistration/basic/fileService/Main.java`).
 - Load fixtures with `configureFixture("relative/path")` on `ArmeriaFixtureTestBase` — sets
   `myFixture.testDataPath` to `src/test/testData` relative to the **Gradle test task working
-  directory** (module root). Do not override `getTestDataPath()` on the shared base; consumer
-  modules without `testData/` rely on the platform default. Subclasses of
-  `ArmeriaLightJavaCodeInsightFixtureTestCase` that do not extend `ArmeriaFixtureTestBase` must
-  set `myFixture.testDataPath` themselves (or override `getTestDataPath()` locally).
+  directory** (module root). Gradle `:module:test` tasks set CWD to the module project dir, so
+  `./gradlew :plugin-route-collectors:test` works out of the box; ad-hoc JUnit runners launched
+  from the repo root will fail unless the working directory is the owning module. Do not override
+  `getTestDataPath()` on the shared base; consumer modules without `testData/` rely on the
+  platform default. Subclasses of `ArmeriaLightJavaCodeInsightFixtureTestCase` that do not extend
+  `ArmeriaFixtureTestBase` must set `myFixture.testDataPath` themselves (or override
+  `getTestDataPath()` locally).
 - Assert collected routes with `collectRoutes().assertRoute(...)` from
-  `ArmeriaRouteTestSupport` in `plugin-route-collectors` testFixtures.
+  `ArmeriaRouteTestSupport` in `plugin-route-collectors` testFixtures. When replacing
+  `routes.single()`, call `collectRoutes().also { it.singleRoute() }.assertRoute(...)` so the
+  test still fails if the collector emits extra routes at other paths.
 - Keep Armeria/Spring API **stubs** in `ArmeriaFixture*Stubs.kt` via `addClass(...)`; only
   user source under test belongs in `testData/`.
 
