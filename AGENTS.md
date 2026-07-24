@@ -85,7 +85,9 @@ git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'
 
 When that output is non-empty, before `git commit` run `ktlintCheck` via Gradle MCP (`gradle_run_tasks` with `["ktlintCheck"]`, `background: true` + poll `gradle_get_build_status` until terminal success). If it fails, fix violations with `gradle_run_tasks` `["ktlintFormat"]` (same poll pattern) or manual edits, `git add` the changed files, re-run `ktlintCheck`, and only commit once it passes. Wait for any in-flight MCP build to finish or cancel it (`gradle_cancel_build`) before starting commit-time ktlint — the repo allows only one MCP build per project directory. Shell fallback: `./gradlew ktlintCheck` / `./gradlew ktlintFormat` (then `git add` formatted files). Omit ktlint when the staged index contains none of `*.kt`, `*.kts`, or `.editorconfig` (e.g. only `.md`, YAML, or properties). Do not skip based on commit message or PR title alone.
 
-Root `ktlintCheck` does not cover the `includeBuild("build-logic")` composite; neither root `build` nor `compileKotlin` runs ktlint on `build-logic/` sources. Manually review `build-logic/` style or extend ktlint to that composite in a follow-up.
+`ktlintFormat` runs project-wide across all ktlint-enabled subprojects, not only staged files. Re-stage only the intended commit paths after format; if format touched other files, leave them unstaged or restore them — do not broaden `git add`.
+
+Root `ktlintCheck` does not cover the `includeBuild("build-logic")` composite or root-level `settings.gradle.kts`; neither root `build` nor `compileKotlin` runs ktlint on those sources. When **all** staged `*.kt` / `*.kts` paths are under `build-logic/` or are only `settings.gradle.kts`, a passing root `ktlintCheck` does not validate them — manually review style (no automated gate today) or extend ktlint to those locations in a follow-up.
 
 Commit-time ktlint catches style regressions early; pre-PR `build` remains the final gate (CI runs `build -x test`, which includes ktlint).
 

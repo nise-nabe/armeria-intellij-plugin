@@ -216,7 +216,7 @@ If every MCP call times out but `./gradlew` still works:
 | Multiple test classes/methods | `gradle_run_tests` `{ "taskPath": ":plugin-route-analysis:test", "testMethods": { ... }, "background": true }` | `./gradlew :plugin-route-analysis:test --tests 'FQCN'` per class |
 | Single test method | `gradle_run_tests` `{ "taskPath": ":plugin-route-analysis:test", "testMethods": { "FQCN": ["method"] }, "background": true }` | `./gradlew :plugin-route-analysis:test --tests 'FQCN.method'` |
 | Fast compile gate | `gradle_run_tasks` `{ "tasks": [":plugin:compileKotlin"] }` | `./gradlew :plugin:compileKotlin` |
-| Lint Kotlin (when Kotlin is staged) | `gradle_run_tasks` `{ "tasks": ["ktlintCheck"], "background": true }` | `./gradlew ktlintCheck` |
+| Lint Kotlin (when Kotlin/`.editorconfig` staged) | `gradle_run_tasks` `{ "tasks": ["ktlintCheck"], "background": true }` | `./gradlew ktlintCheck` |
 
 Prefer MCP for all verification. Use shell only when MCP is unresponsive or for final CI parity before merge.
 
