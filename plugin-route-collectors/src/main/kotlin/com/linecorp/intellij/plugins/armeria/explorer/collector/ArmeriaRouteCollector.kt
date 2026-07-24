@@ -82,8 +82,7 @@ object ArmeriaRouteCollector {
                 val baseRoutes = cachedProjectRoutes(project, contributors)
                 CachedValueProvider.Result.create(
                     mergeProtoRoutes(project, baseRoutes, contributors),
-                    PsiModificationTracker.MODIFICATION_COUNT,
-                    ProjectRootModificationTracker.getInstance(project),
+                    *routeCacheInvalidators(project),
                 )
             },
             false,
@@ -173,10 +172,15 @@ object ArmeriaRouteCollector {
             routes.sortedWith(
                 compareBy(ArmeriaRoute::moduleName, ArmeriaRoute::path, ArmeriaRoute::httpMethod, ArmeriaRoute::target),
             ),
+            *routeCacheInvalidators(project),
+        )
+    }
+
+    private fun routeCacheInvalidators(project: Project): Array<Any> =
+        arrayOf(
             PsiModificationTracker.MODIFICATION_COUNT,
             ProjectRootModificationTracker.getInstance(project),
         )
-    }
 
     private fun buildCollectContext(
         project: Project,

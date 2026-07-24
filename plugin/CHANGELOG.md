@@ -12,6 +12,7 @@
 
 ### Changed
 
+- Route Explorer caches proto route merging so Refresh no longer re-scans `.proto` files on every collect.
 - Route Explorer reads Spring Boot `application.yml` / `.yaml` via IntelliJ YAML PSI (key-level navigation); `.properties` parsing is unchanged. YAML config is skipped when the YAML plugin is unavailable.
 - Split `plugin-route-analysis` `explorer` sources into focused packages (`model`, `collector`, `spring`, `protocol`, `docservice`, `support`, `duplicate`, `navigation`, `ui`).
 - Split the route-analysis codebase into five acyclic Gradle modules: `plugin-route-model` (leaf domain types), `plugin-route-collectors` (annotated / service-registration collectors, decorator/timeout support, `RouteContributor` SPI, public `ArmeriaRouteCollector`, shared test fixtures), `plugin-route-spring` (Spring MVC / Boot / config collectors), `plugin-route-protocol` (GraphQL / gRPC / Thrift), and `plugin-route-analysis` (UI helpers, DocService, navigation, duplicate index, `ArmeriaRouteAnalysisCollector`). `plugin` depends only on `plugin-route-analysis` (transitively `api`-exported to the rest); test fixtures are consumed from `plugin-route-collectors`.
@@ -23,7 +24,6 @@
 
 ### Fixed
 
-- Route Explorer caches proto route merging so Refresh no longer re-scans `.proto` files on every collect.
 - Spring MVC Route Explorer discovery finds mappings declared on generic base types/interfaces when the concrete controller substitutes type parameters (e.g. `Handler<T>` → `StringHandler`), including multi-level unannotated overrides and interface mappings satisfied by an inherited superclass method.
 - Bundle `plugin-shared` (including `ArmeriaBundle`) into the main plugin JAR so installing only `plugin-*.jar` no longer fails inspection-profile saves with `ClassNotFoundException: ArmeriaBundleKt`.
 - Route Explorer deduplicates GraphQL and Thrift IDL routes per module when the same operation appears in multiple schema or `.thrift` files.

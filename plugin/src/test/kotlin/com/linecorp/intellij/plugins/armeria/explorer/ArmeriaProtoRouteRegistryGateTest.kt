@@ -68,4 +68,57 @@ class ArmeriaProtoRouteRegistryGateTest : ArmeriaFixtureTestBase() {
             registryKey.setValue(original)
         }
     }
+
+    fun testProtoEditWhileRegistryDisabledIsVisibleAfterReenable() {
+        myFixture.configureByText(
+            "greeter.proto",
+            """
+            syntax = "proto3";
+            package com.example;
+
+            service Greeter {
+              rpc SayHello(HelloRequest) returns (HelloResponse);
+            }
+            """.trimIndent(),
+        )
+
+        val registryKey = Registry.get("armeria.grpc.proto.routes.enabled")
+        val original = registryKey.asBoolean()
+        try {
+            registryKey.setValue(true)
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
+
+            registryKey.setValue(false)
+            myFixture.configureByText(
+                "greeter.proto",
+                """
+                syntax = "proto3";
+                package com.example;
+
+                service Greeter {
+                  rpc SayHello(HelloRequest) returns (HelloResponse);
+                  rpc SayGoodbye(GoodbyeRequest) returns (GoodbyeResponse);
+                }
+                """.trimIndent(),
+            )
+
+            registryKey.setValue(true)
+            val reenabled =
+                ArmeriaRouteCollector.collect(
+                    project,
+                    includeProtoRoutes = true,
+                    contributors = listOf(ArmeriaProtocolRouteContributor),
+                )
+            assertEquals(
+                listOf("/com.example.Greeter/SayGoodbye", "/com.example.Greeter/SayHello"),
+                reenabled.map { it.path },
+            )
+        } finally {
+            registryKey.setValue(original)
+        }
+    }
 }

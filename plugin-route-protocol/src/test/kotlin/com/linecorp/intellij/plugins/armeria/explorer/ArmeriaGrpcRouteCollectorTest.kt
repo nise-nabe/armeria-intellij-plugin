@@ -11,6 +11,7 @@ import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
         registerResolvableArmeriaServerStubs()
+        registerArmeriaAnnotationStubs()
         myFixture.addClass(
             """
             package com.linecorp.armeria.server.grpc;
@@ -441,6 +442,81 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
             listOf("/com.example.Greeter/SayGoodbye", "/com.example.Greeter/SayHello"),
             afterEdit.map { it.path },
         )
+        assertTrue(ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned > 0)
+    }
+
+    fun testProtoRouteMergeCacheInvalidatesOnBaseRouteEdit() {
+        myFixture.configureByText(
+            "greeter.proto",
+            """
+            syntax = "proto3";
+            package com.example;
+
+            service Greeter {
+              rpc SayHello(HelloRequest) returns (HelloResponse);
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class HelloService {
+                @Get("/hello")
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val first =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
+        assertTrue(first.any { it.path == "/hello" })
+        assertTrue(first.any { it.path == "/com.example.Greeter/SayHello" })
+        assertTrue(ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned > 0)
+
+        val cached =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
+        assertEquals(first.map { it.path }.sorted(), cached.map { it.path }.sorted())
+        assertEquals(0, ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned)
+
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class HelloService {
+                @Get("/hello-updated")
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val afterEdit =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
+        assertTrue(afterEdit.any { it.path == "/hello-updated" })
+        assertTrue(afterEdit.none { it.path == "/hello" })
+        assertTrue(afterEdit.any { it.path == "/com.example.Greeter/SayHello" })
         assertTrue(ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned > 0)
     }
 }
