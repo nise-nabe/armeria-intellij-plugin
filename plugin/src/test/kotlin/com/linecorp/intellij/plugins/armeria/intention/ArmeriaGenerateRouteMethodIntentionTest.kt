@@ -1,6 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.intention
 
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ArmeriaGenerateRouteMethodIntentionTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {

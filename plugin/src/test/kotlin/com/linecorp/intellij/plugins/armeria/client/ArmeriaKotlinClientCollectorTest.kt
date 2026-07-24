@@ -1,6 +1,9 @@
 package com.linecorp.intellij.plugins.armeria.client
 
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaClientFixtureTestBase
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ArmeriaKotlinClientCollectorTest : ArmeriaClientFixtureTestBase() {
     fun testCollectWebClientOfFromKotlin() {

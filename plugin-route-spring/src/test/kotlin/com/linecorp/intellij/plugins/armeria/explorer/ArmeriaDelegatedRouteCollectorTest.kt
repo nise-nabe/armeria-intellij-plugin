@@ -12,6 +12,10 @@ import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringRouteC
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaDelegationSupport
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
@@ -378,9 +382,9 @@ class ArmeriaDelegatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             )
         val springMounts = routes.filter { it.path == "/spring/" }
         assertTrue(
+            springMounts.any { it.delegationKind == DelegationKind.SPRING_MVC },
             "expected Spring MVC–badged /spring/ mount; got: " +
                 springMounts.map { "${it.target}/${it.routeMatch}/${it.delegationKind}" },
-            springMounts.any { it.delegationKind == DelegationKind.SPRING_MVC },
         )
         kotlinAssertNotNull(routes.singleOrNull { it.path == "/spring/hello" && it.routeMatch == RouteMatch.DELEGATED })
     }

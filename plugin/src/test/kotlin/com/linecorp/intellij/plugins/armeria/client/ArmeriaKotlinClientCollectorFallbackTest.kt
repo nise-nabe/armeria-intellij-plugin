@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.client
 
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
+import kotlin.test.assertEquals
 
 class ArmeriaKotlinClientCollectorFallbackTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     fun testCollectWebClientOfViaImportWhenMethodResolutionFails() {

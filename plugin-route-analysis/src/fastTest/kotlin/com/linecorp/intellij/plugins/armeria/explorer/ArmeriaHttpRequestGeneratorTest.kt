@@ -10,11 +10,11 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpRequestGenerator
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.test.assertNotNull as kotlinAssertNotNull
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class ArmeriaHttpRequestGeneratorTest {
     @Test
@@ -270,9 +270,9 @@ class ArmeriaHttpRequestGeneratorTest {
 
         val error = runCatching { ArmeriaHttpRequestGenerator.httpMethod(route) }.exceptionOrNull()
 
-        kotlinAssertNotNull(error)
+        assertNotNull(error)
         assertTrue(error is IllegalStateException)
-        assertTrue(kotlinAssertNotNull(error.message).contains("NON_HTTP"))
+        assertTrue(assertNotNull(error.message).contains("NON_HTTP"))
     }
 
     @Test

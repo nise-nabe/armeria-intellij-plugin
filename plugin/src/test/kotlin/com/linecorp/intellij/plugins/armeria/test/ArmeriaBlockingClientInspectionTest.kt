@@ -8,7 +8,7 @@ import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiManager
 import com.intellij.testFramework.PsiTestUtil
-import org.junit.Assert.assertTrue
+import kotlin.test.assertTrue
 
 class ArmeriaBlockingClientInspectionTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     override fun setUp() {

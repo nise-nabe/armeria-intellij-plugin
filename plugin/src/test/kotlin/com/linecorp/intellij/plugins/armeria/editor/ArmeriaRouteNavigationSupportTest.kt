@@ -7,6 +7,9 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaRouteNavigationSupportTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {

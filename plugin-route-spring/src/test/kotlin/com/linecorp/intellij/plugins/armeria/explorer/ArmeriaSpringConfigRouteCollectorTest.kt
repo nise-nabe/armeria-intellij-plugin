@@ -13,6 +13,10 @@ import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 import org.jetbrains.yaml.psi.YAMLFile
 import org.jetbrains.yaml.psi.YAMLKeyValue
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertSame
+import kotlin.test.assertTrue
 import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
@@ -368,7 +372,7 @@ class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixture
         assertTrue(health.httpMethod.isNotBlank())
         assertEquals("GET", health.httpMethod)
         // CONFIG is a static-analysis match, not a runtime route.
-        assertFalse("CONFIG route must not be RUNTIME", health.routeMatch == RouteMatch.RUNTIME)
+        assertFalse(health.routeMatch == RouteMatch.RUNTIME, "CONFIG route must not be RUNTIME")
     }
 
     fun testYamlPortNavigationTargetsKeyElement() {
@@ -391,8 +395,8 @@ class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixture
         val element = portRoute.pointer.element
         kotlinAssertNotNull(element)
         assertTrue(
-            "Port route should navigate to the YAML port key, not the whole file",
             element is YAMLKeyValue,
+            "Port route should navigate to the YAML port key, not the whole file",
         )
         assertEquals("port", (element as YAMLKeyValue).keyText)
         assertFalse(portRoute.resolveSourceHint().endsWith(":1"))
@@ -643,8 +647,8 @@ class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixture
                 content,
             )
         assertFalse(
-            "Fixture must not be YAMLFile for this regression",
             psiFile is YAMLFile,
+            "Fixture must not be YAMLFile for this regression",
         )
 
         val routes = mutableListOf<ArmeriaRoute>()

@@ -1,8 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.module
 
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.nio.charset.StandardCharsets
+import kotlin.test.assertTrue
 
 class ArmeriaWizardTemplateCoverageTest {
     @Test
@@ -30,8 +30,8 @@ class ArmeriaWizardTemplateCoverageTest {
         val template = readClasspathResource(templateResource)
         armeriaWizardLibraryIds.forEach { libraryId ->
             assertTrue(
-                "$templateResource is missing hasLibrary(\"$libraryId\")",
                 template.contains("""hasLibrary("$libraryId")"""),
+                "$templateResource is missing hasLibrary(\"$libraryId\")",
             )
         }
     }

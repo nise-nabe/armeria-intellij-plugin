@@ -1,6 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.run
 
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaMainClassResolverTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {

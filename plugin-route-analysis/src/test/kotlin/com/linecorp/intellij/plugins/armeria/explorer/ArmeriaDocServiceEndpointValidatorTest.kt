@@ -1,9 +1,9 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceEndpointValidator
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class ArmeriaDocServiceEndpointValidatorTest {
     @Test

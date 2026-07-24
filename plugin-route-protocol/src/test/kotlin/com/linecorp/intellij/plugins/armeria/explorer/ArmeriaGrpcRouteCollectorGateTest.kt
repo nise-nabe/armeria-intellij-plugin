@@ -5,6 +5,8 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteColl
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaGrpcRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaProtocolRouteContributor
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ArmeriaGrpcRouteCollectorGateTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {

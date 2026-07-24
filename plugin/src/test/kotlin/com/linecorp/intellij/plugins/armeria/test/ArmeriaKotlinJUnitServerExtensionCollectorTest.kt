@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.test
 
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
+import kotlin.test.assertEquals
 
 class ArmeriaKotlinJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     fun testCollectsRegisterExtensionFromClassProperty() {
