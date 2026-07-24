@@ -29,7 +29,7 @@ Use `background: true` and poll `gradle_get_build_status` for anything that may 
 
 ## Before committing
 
-Coding agents must run `ktlintCheck` (MCP or `./gradlew ktlintCheck`) and fix any violations before `git commit`.
+When staged files include `*.kt`, `*.kts`, or `.editorconfig`, coding agents must run `ktlintCheck` (MCP or `./gradlew ktlintCheck`), fix violations with `ktlintFormat` or manual edits, re-run `ktlintCheck` until clean, and only then `git commit`. Skip for docs-only commits.
 
 ## Shell fallback only when
 

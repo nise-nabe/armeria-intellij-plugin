@@ -105,17 +105,20 @@ final pass before requesting review.
 | Bash script executable-bit assumptions | 5+ | checklist above |
 | Index not ready during refresh/execute | 2+ | `intellij-armeria-plugin` |
 
+## Commit workflow (coding agents)
+
+When staged files include `*.kt`, `*.kts`, or `.editorconfig`, run `ktlintCheck` via Gradle MCP before each `git commit` (fix with `ktlintFormat` or manual edits until clean). Skip for docs-only commits. See `AGENTS.md` **Commit workflow (coding agents)** for details.
+
 ## Verification before PR
 
 1. Read the specialized skill for your change area.
-2. Run `ktlintCheck` via Gradle MCP before every `git commit` (fix with `ktlintFormat` or manual edits until clean).
-3. Run compile/tests via Gradle MCP with the correct module `taskPath` (see `gradle-tapi-mcp`).
-4. Scan the diff for `expression.text`, hard-coded `"` strings in UI code (including
+2. Run compile/tests via Gradle MCP with the correct module `taskPath` (see `gradle-tapi-mcp`).
+3. Scan the diff for `expression.text`, hard-coded `"` strings in UI code (including
    documentation maps), Kotlin imports in shared collectors, tool windows registered only
    under optional `*-integration.xml`, renderer state that is set but never cleared, and
    (for config parsers) missing comment stripping / `:`-in-list-scalar handling / first-match
    `.properties` reads / `getAllFilesByExt` scans / hard-coded UTF-8 `contentsToByteArray`.
-5. Write the PR body as Summary / Changes / Test plan — fold any review-driven edits into
+4. Write the PR body as Summary / Changes / Test plan — fold any review-driven edits into
    **Changes**, do not add "Copilot review fixes" sections.
 
 ## Test plan template

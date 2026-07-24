@@ -110,7 +110,7 @@ Optional sanity check — MCP:
 
 ### 5. Merge to `main`
 
-Commit only version/changelog files (not build outputs):
+Commit only version/changelog files (not build outputs). If Kotlin changed on the release branch, run `ktlintCheck` before commit (see `AGENTS.md` **Commit workflow (coding agents)**).
 
 ```bash
 git add gradle.properties plugin/CHANGELOG.md

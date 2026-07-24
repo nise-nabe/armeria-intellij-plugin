@@ -216,7 +216,7 @@ If every MCP call times out but `./gradlew` still works:
 | Multiple test classes/methods | `gradle_run_tests` `{ "taskPath": ":plugin-route-analysis:test", "testMethods": { ... }, "background": true }` | `./gradlew :plugin-route-analysis:test --tests 'FQCN'` per class |
 | Single test method | `gradle_run_tests` `{ "taskPath": ":plugin-route-analysis:test", "testMethods": { "FQCN": ["method"] }, "background": true }` | `./gradlew :plugin-route-analysis:test --tests 'FQCN.method'` |
 | Fast compile gate | `gradle_run_tasks` `{ "tasks": [":plugin:compileKotlin"] }` | `./gradlew :plugin:compileKotlin` |
-| Lint Kotlin (before commit) | `gradle_run_tasks` `{ "tasks": ["ktlintCheck"], "background": true }` | `./gradlew ktlintCheck` |
+| Lint Kotlin (when Kotlin is staged) | `gradle_run_tasks` `{ "tasks": ["ktlintCheck"], "background": true }` | `./gradlew ktlintCheck` |
 
 Prefer MCP for all verification. Use shell only when MCP is unresponsive or for final CI parity before merge.
 
@@ -224,7 +224,7 @@ Prefer MCP for all verification. Use shell only when MCP is unresponsive or for 
 
 1. `gradle_connection_status` — confirm MCP is connected.
 2. `gradle_run_tasks` with `[":plugin:compileKotlin", ":plugin:compileTestKotlin"]` (foreground if warm, else `background: true` + poll).
-3. Before each `git commit`, run `gradle_run_tasks` with `["ktlintCheck"]` (`background: true` + poll). On failure, apply `ktlintFormat` or manual fixes and re-run until clean.
+3. Before each `git commit` that stages `*.kt`, `*.kts`, or `.editorconfig`, run `gradle_run_tasks` with `["ktlintCheck"]` (`background: true` + poll). On failure, apply `ktlintFormat` or manual fixes and re-run until clean. Skip for docs-only commits.
 4. Verify tests via MCP (one build at a time on this repo):
    - Batch all changed classes/methods into **one** `gradle_run_tests` when doing a verification pass.
    - When isolating failures, run one class or method per call; wait for terminal status (or `gradle_cancel_build`) before the next.

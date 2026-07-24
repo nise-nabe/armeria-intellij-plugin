@@ -43,10 +43,10 @@ Do **not** run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` concurr
 | Plugin fixture tests | `gradle_run_tasks` `{ "tasks": [":plugin:test"], "background": true }` |
 | Route-analysis fixture tests | `gradle_run_tasks` `{ "tasks": [":plugin-route-analysis:test"], "background": true }` |
 | Fast unit tests | `gradle_run_tasks` `{ "tasks": [":plugin-route-analysis:fastTest"], "background": true }` |
-| Lint Kotlin (before every commit) | `gradle_run_tasks` `{ "tasks": ["ktlintCheck"], "background": true }` — fix with `ktlintFormat` or manual edits, then re-check |
+| Lint Kotlin (when Kotlin is staged) | `gradle_run_tasks` `{ "tasks": ["ktlintCheck"], "background": true }` — fix with `ktlintFormat` or manual edits, then re-check; shell fallback: `./gradlew ktlintCheck` |
 | Full verify | `gradle_run_tasks` `{ "tasks": ["build"], "background": true }` |
 
-Coding agents must pass `ktlintCheck` before `git commit`.
+When staged files include `*.kt`, `*.kts`, or `.editorconfig`, coding agents must pass `ktlintCheck` before `git commit`. Skip for docs-only commits.
 
 If MCP is unresponsive: `gradle_list_builds` or poll `gradle_get_build_status` with the `buildId` (reconciles disk records automatically), then shell fallback.
 
