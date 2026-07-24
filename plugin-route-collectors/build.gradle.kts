@@ -82,7 +82,7 @@ tasks.named("check") {
     dependsOn(testing.suites.named("fastTest"))
 }
 
-tasks.withType<Test>().configureEach {
+tasks.named<Test>("test").configure {
     val testDataDir = file("src/test/testData")
     if (testDataDir.isDirectory) {
         systemProperty("armeria.moduleTestDataPath", testDataDir.absolutePath)

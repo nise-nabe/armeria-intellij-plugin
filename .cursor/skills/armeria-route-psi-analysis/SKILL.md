@@ -225,8 +225,10 @@ For PSI fixture tests that extend `ArmeriaFixtureTestBase` or
   (e.g. `plugin-route-collectors/src/test/testData/extendedRegistration/basic/fileService/Main.java`).
 - Load fixtures with `configureFixture("relative/path")` on `ArmeriaFixtureTestBase` — sets
   `myFixture.testDataPath` to `src/test/testData` via the `armeria.moduleTestDataPath` system
-  property or relative to the test task working directory (module root). When introducing
-  `src/test/testData/` in a module, add the `tasks.withType<Test>()` block from
+  property or relative to the test task working directory (module root). Do not mix
+  `configureFixture()` and `configureByText()` in one test — `testDataPath` stays set for the
+  method and inline text would resolve relative to `testData/`. When introducing
+  `src/test/testData/` in a module, add the `tasks.named<Test>("test")` block from
   `plugin-route-collectors/build.gradle.kts` (sets `armeria.moduleTestDataPath` when the directory
   exists) or rely on module-root CWD for Gradle-only runs. Gradle `:module:test` tasks set CWD to
   the module project dir, so `./gradlew :plugin-route-collectors:test` works out of the box;
