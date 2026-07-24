@@ -2,6 +2,7 @@ package com.linecorp.intellij.plugins.armeria.inspection
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.psi.PsiJavaFile
 import com.intellij.testFramework.PlatformTestUtil
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
@@ -16,6 +17,29 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
             it.description?.let(::matchesRegistrationDuplicateProblem) == true
         }
 
+    private fun assertRegistrationDuplicateHighlightOnMethod(
+        className: String,
+        methodName: String,
+        expectedDescription: String,
+    ) {
+        val duplicateHighlights =
+            myFixture.doHighlighting().filter {
+                it.description == expectedDescription
+            }
+        assertEquals(1, duplicateHighlights.size)
+
+        val file = myFixture.file as PsiJavaFile
+        val clazz =
+            file.classes.singleOrNull { it.name == className }
+                ?: error("Class $className not found in ${file.name}")
+        val method = clazz.findMethodsByName(methodName, false).single()
+        val methodOffset = method.nameIdentifier!!.textRange.startOffset
+        assertTrue(
+            "Expected registration duplicate highlight on $className.$methodName",
+            methodOffset in duplicateHighlights.map { it.startOffset }.toSet(),
+        )
+    }
+
     private fun matchesRegistrationDuplicateProblem(description: String): Boolean {
         val labelPlaceholder = "\uE000"
         val countPlaceholder = "\uE001"
@@ -26,7 +50,8 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
                 countPlaceholder,
             )
         val pattern =
-            Regex.escape(template)
+            Regex
+                .escape(template)
                 .replace(Regex.escape(labelPlaceholder), "(.+?)")
                 .replace(Regex.escape(countPlaceholder), "(\\p{N}+)")
         return Regex("^$pattern$").matches(description)
@@ -107,16 +132,10 @@ class ArmeriaDuplicateRegistrationInspectionTest : ArmeriaFixtureTestBase() {
         myFixture.enableInspections(ArmeriaDuplicateRegistrationInspection())
         val expectedDescription = message("inspection.duplicate.registration.problem", "GET /shared", 2)
 
-        assertEquals(
-            1,
-            myFixture.doHighlighting().count { it.description == expectedDescription },
-        )
+        assertRegistrationDuplicateHighlightOnMethod("First", "first", expectedDescription)
 
         myFixture.openFileInEditor(secondClass.containingFile.virtualFile)
-        assertEquals(
-            1,
-            myFixture.doHighlighting().count { it.description == expectedDescription },
-        )
+        assertRegistrationDuplicateHighlightOnMethod("Second", "second", expectedDescription)
     }
 
     fun testInClassJavaAnnotatedDuplicatesAreNotRegistrationProblems() {
