@@ -140,6 +140,7 @@ internal object ArmeriaJUnitServerExtensionSupport {
     fun fileMayContainRegisterExtension(fileText: String): Boolean =
         REGISTER_EXTENSION_ANNOTATION in fileText || "@$REGISTER_EXTENSION_ANNOTATION_SHORT" in fileText
 
+    /** True when [file] is under a test source root (IDE markers only; filename is not considered). */
     fun isLikelyJUnitTestFile(file: PsiFile): Boolean {
         val virtualFile = file.virtualFile ?: return false
         val project = file.project
