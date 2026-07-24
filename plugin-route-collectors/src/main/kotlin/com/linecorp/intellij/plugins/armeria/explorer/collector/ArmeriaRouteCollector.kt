@@ -2,8 +2,8 @@ package com.linecorp.intellij.plugins.armeria.explorer.collector
 
 import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.roots.ProjectRootModificationTracker
 import com.intellij.openapi.util.Key
-import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiElement
@@ -21,6 +21,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.jav
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.kotlin.ArmeriaKotlinExtendedRegistrationCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinPluginSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaProtoRouteDiscoverySupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.CoreServiceRegistrationSupport
@@ -28,7 +29,6 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.RouteCollectContex
 import com.linecorp.intellij.plugins.armeria.explorer.support.RouteContributor
 import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.psi.KtFile
-import java.util.MissingResourceException
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -49,7 +49,7 @@ object ArmeriaRouteCollector {
         val startedAt = System.nanoTime()
         val routes =
             ArmeriaRouteCollectionMetrics.runWith(metrics) {
-                if (includeProtoRoutes && isProtoRouteDiscoveryEnabled()) {
+                if (includeProtoRoutes && ArmeriaProtoRouteDiscoverySupport.isEnabled()) {
                     cachedProjectRoutesWithProto(project, contributors)
                 } else {
                     cachedProjectRoutes(project, contributors)
@@ -83,6 +83,7 @@ object ArmeriaRouteCollector {
                 CachedValueProvider.Result.create(
                     mergeProtoRoutesIfEnabled(project, baseRoutes, contributors),
                     PsiModificationTracker.MODIFICATION_COUNT,
+                    ProjectRootModificationTracker.getInstance(project),
                 )
             },
             false,
@@ -102,13 +103,6 @@ object ArmeriaRouteCollector {
             .sorted()
             .joinToString(",")
             .ifEmpty { "core-only" }
-
-    private fun isProtoRouteDiscoveryEnabled(): Boolean =
-        try {
-            Registry.`is`("armeria.grpc.proto.routes.enabled")
-        } catch (_: MissingResourceException) {
-            true
-        }
 
     private fun computeProjectRoutes(
         project: Project,

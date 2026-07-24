@@ -2,7 +2,6 @@ package com.linecorp.intellij.plugins.armeria.explorer.protocol
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.registry.Registry
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -13,9 +12,9 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRouteMetadata
 import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRoutePath
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaProtoRouteDiscoverySupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.message
-import java.util.MissingResourceException
 
 object ArmeriaGrpcRouteCollector {
     private const val GRPC_SERVICE_CLASS = "com.linecorp.armeria.server.grpc.GrpcService"
@@ -28,7 +27,7 @@ object ArmeriaGrpcRouteCollector {
         scope: GlobalSearchScope,
         routes: MutableList<ArmeriaRoute>,
     ) {
-        if (!isProtoRouteDiscoveryEnabled() || !isGrpcOnClasspath(project, scope)) {
+        if (!ArmeriaProtoRouteDiscoverySupport.isEnabled() || !isGrpcOnClasspath(project, scope)) {
             return
         }
         val seenProtoRoutes = mutableSetOf<String>()
@@ -105,12 +104,7 @@ object ArmeriaGrpcRouteCollector {
             )
     }
 
-    fun isProtoRouteDiscoveryEnabled(): Boolean =
-        try {
-            Registry.`is`("armeria.grpc.proto.routes.enabled")
-        } catch (_: MissingResourceException) {
-            true
-        }
+    fun isProtoRouteDiscoveryEnabled(): Boolean = ArmeriaProtoRouteDiscoverySupport.isEnabled()
 
     internal fun isGrpcOnClasspath(
         project: Project,

@@ -37,9 +37,13 @@ class ArmeriaRouteCollectionMetrics {
         private val LOG = logger<ArmeriaRouteCollectionMetrics>()
         private val active = ThreadLocal<ArmeriaRouteCollectionMetrics?>()
 
-        @Volatile
-        var lastSnapshot: Snapshot? = null
-            private set
+        private val lastSnapshotHolder = ThreadLocal<Snapshot?>()
+
+        var lastSnapshot: Snapshot?
+            get() = lastSnapshotHolder.get()
+            private set(value) {
+                lastSnapshotHolder.set(value)
+            }
 
         fun <T> runWith(
             metrics: ArmeriaRouteCollectionMetrics,
