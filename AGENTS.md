@@ -87,7 +87,7 @@ When that output is non-empty, before `git commit` run `ktlintCheck` via Gradle 
 
 `ktlintFormat` runs project-wide across all ktlint-enabled subprojects, not only staged files. Re-stage only the intended commit paths after format; if format touched other files, leave them unstaged or restore them — do not broaden `git add`.
 
-Root `ktlintCheck` does not cover the `includeBuild("build-logic")` composite or root-level `settings.gradle.kts`; neither root `build` nor `compileKotlin` runs ktlint on those sources. When **all** staged `*.kt` / `*.kts` paths are under `build-logic/` or are only `settings.gradle.kts`, a passing root `ktlintCheck` does not validate them — manually review style (no automated gate today) or extend ktlint to those locations in a follow-up.
+Root `ktlintCheck` does not cover the `includeBuild("build-logic")` composite or root-level `settings.gradle.kts`; neither root `build` nor `compileKotlin` runs ktlint on those sources. When **all** staged `*.kt` / `*.kts` paths are under `build-logic/` or are only `settings.gradle.kts`, a passing root `ktlintCheck` does not validate them — manually review style (no automated gate today) or extend ktlint to those locations in a follow-up. When a commit **mixes** those paths with plugin-module Kotlin, still manually review the `build-logic/` and `settings.gradle.kts` portions even if `ktlintCheck` passes.
 
 Commit-time ktlint catches style regressions early; pre-PR `build` remains the final gate (CI runs `build -x test`, which includes ktlint).
 

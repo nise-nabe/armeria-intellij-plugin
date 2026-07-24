@@ -154,10 +154,12 @@ When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-em
 set -e
 git add <paths>
 if [ -n "$(git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig')" ]; then
-  while ! ./gradlew ktlintCheck; do
+  for _ in 1 2 3; do
+    ./gradlew ktlintCheck && break
     ./gradlew ktlintFormat
     git add <paths>
   done
+  ./gradlew ktlintCheck  # exit non-zero if still failing — apply manual fixes, git add, re-run
 fi
 git commit -m "fix: address PR <N> review comments"
 ```
