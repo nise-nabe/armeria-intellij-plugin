@@ -2,7 +2,8 @@
 name: cloud-github
 description: >-
   GitHub and pull-request workflows for Cursor Cloud Agents in this repo.
-  Prefer built-in ManagePullRequest over gh CLI; use gh only after install.sh.
+  Prefer built-in ManagePullRequest and EditPullRequestLabels over gh CLI;
+  use gh only for operations with no built-in tool (review-thread fetch, releases).
 ---
 
 # Cloud GitHub operations
@@ -12,18 +13,29 @@ Cursor Cloud Agents in this repository must not fail because `gh` is missing fro
 `/usr/local/bin` is writable, into `/usr/local/bin/gh`. When `gh auth status` is unauthenticated,
 it logs in with `GH_TOKEN` or `GITHUB_TOKEN` if set.
 
-## PR create / update (preferred)
+## PR operations (preferred — built-in tools)
 
-Use the built-in **ManagePullRequest** tool. Do not run `gh pr create` or `gh pr edit`
-unless ManagePullRequest fails and `gh auth status` succeeds.
+Use the built-in **ManagePullRequest** and **EditPullRequestLabels** tools. Do **not** run
+`gh pr create`, `gh pr edit`, `gh pr comment`, `gh pr checks`, or `gh pr close` unless the
+built-in tool fails and `gh auth status` succeeds.
 
 | Task | Tool / action |
 |------|----------------|
 | Open a PR | `ManagePullRequest` with `action: create_pr` |
 | Update PR title/body | `ManagePullRequest` with `action: update_pr` |
-| Edit labels | `EditPullRequestLabels` |
+| Post a top-level PR comment | `ManagePullRequest` with `action: post_comment` |
+| Reply to a review comment | `ManagePullRequest` with `action: post_comment`, `in_reply_to: <databaseId>` |
+| Comment on a file/line in the diff | `ManagePullRequest` with `action: post_comment`, `path` + `line` (optional `start_line`, `side`) |
+| Resolve a review thread | `ManagePullRequest` with `action: resolve_comment`, `comment_id: <databaseId>` |
+| PR check / CI status | `ManagePullRequest` with `action: get_ci_status` |
+| Open or close a PR | `ManagePullRequest` with `action: set_pr_status`, `status: open` or `closed` |
+| Edit labels | `EditPullRequestLabels` with `add_labels` / `remove_labels` |
 
 Branch naming for agent work: `cursor/<descriptive-name>-<suffix>` (suffix is assigned per agent session).
+
+When a bundled skill (for example `loop-on-ci`, `fix-ci`, `new-branch-and-pr`, `review-and-ship`)
+instructs `gh pr create`, `gh pr checks`, or similar, use the matching built-in tool above instead
+in Cursor Cloud.
 
 ## PR description format
 
@@ -32,17 +44,23 @@ PR bodies must read like **feature pull requests**, not review-response document
 
 - Use **Summary**, **Changes**, optional **Depends on**, and **Test plan** only
 - Never add sections such as "Thermos review fixes", "Fixes in this update", or "Review feedback addressed"
-- After addressing review comments, fold edits into **Changes**; reply in PR comments, not as new body sections
+- After addressing review comments, fold edits into **Changes**; reply in PR comments via `post_comment`, not as new body sections
 
-## When `gh` is required
+## When `gh` is still required
 
-Some bundled skills (for example `loop-on-ci`, `fix-ci`) reference `gh pr checks`.
-Before calling `gh`:
+There is **no** built-in tool for these operations today:
+
+| Task | gh command |
+|------|------------|
+| Fetch review threads / inline comment metadata | `gh api graphql` (see `pr-review-response` skill) |
+| Create a GitHub Release with assets | `gh release create` (see `release` skill) |
+
+Before calling `gh` for the above:
 
 1. Confirm install finished: `.cursor/install.sh` runs on every Cloud Agent boot.
 2. Resolve the binary: `command -v gh` → prefer that path; fall back to `/exec-daemon/gh`.
 3. Confirm auth: `gh auth status` (or the resolved path above).
-4. If auth fails, stop retrying `gh` and either use ManagePullRequest for PR work or
+4. If auth fails, stop retrying `gh`. Use built-in PR tools for create/update/comment/resolve/CI;
    verify locally with Gradle MCP (`gradle_run_tasks` `["build"]` + background/poll).
 
 Do not install `gh` via apt, brew, or curl in agent sessions.
@@ -55,7 +73,8 @@ For agent-side verification, prefer:
 1. **Gradle MCP** — `gradle_connection_status`, then `gradle_run_tasks` / `gradle_run_tests` with `background: true` + poll (see `gradle-tapi-mcp` skill)
 2. Shell `./gradlew build` only when MCP is unresponsive, returns `BUILD_ALREADY_RUNNING` that cannot be cancelled, or for final CI parity after MCP passes
 
-Use `gh pr checks` only when you need GitHub-attached check status and `gh auth status` succeeds.
+For GitHub-attached check status on a PR, use **ManagePullRequest** `get_ci_status` (not `gh pr checks`).
+Fall back to `gh pr checks` only when `get_ci_status` fails and `gh auth status` succeeds.
 
 ## Authentication troubleshooting
 

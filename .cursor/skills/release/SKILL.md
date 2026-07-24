@@ -142,7 +142,8 @@ Rebuild on `main` so the ZIP matches the tagged commit (prefer MCP `gradle_run_t
 cp plugin/build/distributions/plugin-<version>.zip /tmp/armeria-intellij-plugin-<version>.zip
 ```
 
-Create the release with `gh` (after `gh auth status` succeeds — see `cloud-github` skill):
+There is **no** built-in tool for GitHub Releases. Create the release with `gh` after
+`gh auth status` succeeds (see `cloud-github` skill):
 
 ```bash
 gh release create v<version> \
@@ -193,7 +194,9 @@ Ensure `## [Unreleased]` still has the six empty section templates.
 ## Cloud Agent notes
 
 - Use branch prefix `cursor/` and session suffix (e.g. `cursor/release-0.2.0-0716`).
-- Prefer **ManagePullRequest** for the version-bump PR; use `gh release create` only after `gh auth status` succeeds.
+- Prefer **ManagePullRequest** for the version-bump PR; use **ManagePullRequest** `get_ci_status`
+  to wait for CI green before merge (not `gh pr checks`).
+- Use `gh release create` only for publishing the release asset — no built-in release tool.
 - Do not commit `plugin/build/` artifacts; upload the ZIP only to GitHub Releases.
 - CI (`.github/workflows/main.yml`) runs `./gradlew build` on PRs — wait for green before merging the release PR.
 

@@ -36,20 +36,25 @@ Do not rely on bare `gh` commands without checking availability. `.cursor/instal
 
 | Goal | Preferred approach |
 |------|-------------------|
-| Create or update a PR | Built-in **ManagePullRequest** tool (`create_pr` / `update_pr`); body format in `.cursor/rules/pr-description-format.mdc` |
-| Edit PR labels | **EditPullRequestLabels** tool |
+| Create or update a PR | Built-in **ManagePullRequest** (`create_pr` / `update_pr`); body format in `.cursor/rules/pr-description-format.mdc` |
+| Post or reply to PR comments | **ManagePullRequest** (`post_comment`; use `in_reply_to` for review-thread replies) |
+| Resolve review threads | **ManagePullRequest** (`resolve_comment`) |
+| PR check status / CI logs | **ManagePullRequest** (`get_ci_status`) |
+| Open or close a PR | **ManagePullRequest** (`set_pr_status`) |
+| Edit PR labels | **EditPullRequestLabels** |
 | Verify changes locally | **Gradle MCP** (`gradle_run_tasks` / `gradle_run_tests`); shell `./gradlew build` for CI parity fallback — see `gradle-tapi-mcp` skill |
-| PR check status / CI logs | `gh` only after `gh auth status` succeeds (see `.cursor/skills/cloud-github/SKILL.md`) |
+| Fetch review threads / create GitHub Release | `gh` only after `gh auth status` succeeds — no built-in tool (see `.cursor/skills/cloud-github/SKILL.md`) |
 
-If `gh` is not found or auth fails, use ManagePullRequest for PR work and Gradle MCP for build
-verification instead of retrying `gh`. Set `GH_TOKEN` in Cursor Cloud Secrets when the GitHub App
-token lacks required scopes.
+If `gh` is not found or auth fails, use ManagePullRequest and EditPullRequestLabels for PR work
+and Gradle MCP for build verification instead of retrying `gh`. Set `GH_TOKEN` in Cursor Cloud
+Secrets when the GitHub App token lacks required scopes.
 
 ### Plugin releases
 
 GitHub Releases distribution is documented in `.cursor/skills/release/SKILL.md`. Version lives in
 `gradle.properties` (`pluginVersion`); changelog in `plugin/CHANGELOG.md`. There is no automated
-release workflow — tag and `gh release create` after merging a version-bump PR to `main`.
+release workflow — tag and publish with `gh release create` after merging a version-bump PR to
+`main` (no built-in release tool; see `release` skill).
 
 ### Build, test, lint
 

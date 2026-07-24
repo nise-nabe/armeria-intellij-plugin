@@ -7,16 +7,28 @@ alwaysApply: true
 
 In Cursor Cloud, do **not** assume `gh` is on PATH before `.cursor/install.sh` completes.
 
-## Pull requests
+## Pull requests (built-in tools)
 
-- Use the built-in **ManagePullRequest** tool for `create_pr` and `update_pr`.
+- Use **ManagePullRequest** for PR work:
+  - `create_pr` / `update_pr` — open or edit a PR
+  - `post_comment` — top-level comment, review-thread reply (`in_reply_to`), or line comment (`path` + `line`)
+  - `resolve_comment` — resolve a review thread (`comment_id`)
+  - `get_ci_status` — PR check / CI status (not `gh pr checks`)
+  - `set_pr_status` — open or close a PR
 - Use **EditPullRequestLabels** for label changes.
-- Do not run `gh pr create` / `gh pr edit` unless ManagePullRequest fails and `gh auth status` succeeds.
+- Do not run `gh pr create` / `gh pr edit` / `gh pr comment` / `gh pr checks` unless the matching built-in action fails and `gh auth status` succeeds.
 - PR bodies must follow `.cursor/rules/pr-description-format.mdc` (feature PR format; no review-response sections).
 
-## GitHub CLI fallback
+## GitHub CLI fallback (no built-in tool)
 
-When a skill requires `gh` (CI checks, PR comments, API calls):
+Use `gh` only when built-in tools do not cover the operation:
+
+| Operation | gh fallback |
+|-----------|---------------|
+| Fetch review threads / inline comment metadata | `gh api graphql` |
+| Create GitHub Release with assets | `gh release create` |
+
+Before calling `gh`:
 
 1. Resolve: `command -v gh` or `/exec-daemon/gh`
 2. Verify: `gh auth status`
