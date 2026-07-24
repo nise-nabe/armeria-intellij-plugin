@@ -81,6 +81,11 @@ object ArmeriaGrpcRouteCollector {
         }
     }
 
+    fun grpcPath(
+        fqService: String,
+        methodName: String,
+    ): String = "/$fqService/$methodName"
+
     fun addProtoRoute(
         element: PsiElement,
         fqService: String,
@@ -88,7 +93,7 @@ object ArmeriaGrpcRouteCollector {
         routes: MutableList<ArmeriaRoute>,
         seenProtoRoutes: MutableSet<String>,
     ) {
-        val path = "/$fqService/$methodName"
+        val path = grpcPath(fqService, methodName)
         val dedupeKey = "${ArmeriaRouteMetadata.moduleName(element)}:$path"
         if (!seenProtoRoutes.add(dedupeKey)) {
             return

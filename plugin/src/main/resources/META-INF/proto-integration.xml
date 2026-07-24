@@ -1,4 +1,8 @@
 <idea-plugin>
+    <extensions defaultExtensionNs="com.intellij">
+        <codeInsight.lineMarkerProvider language="protobuf"
+                                        implementationClass="com.linecorp.intellij.plugins.armeria.marker.ArmeriaProtoRpcLineMarkerProvider"/>
+    </extensions>
     <extensions defaultExtensionNs="com.linecorp.intellij.armeria">
         <protoRouteCollector implementation="com.linecorp.intellij.plugins.armeria.explorer.ArmeriaProtoPsiRouteCollector"/>
     </extensions>
