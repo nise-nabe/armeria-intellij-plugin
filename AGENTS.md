@@ -58,7 +58,7 @@ Prefer **Gradle MCP** for the tasks below. Use `background: true` and poll `grad
 | Goal | MCP (preferred) | Shell fallback |
 |------|---------------|----------------|
 | Full verify | `gradle_run_tasks` `["build"]` + background/poll | `./gradlew build` |
-| Lint Kotlin (when Kotlin/`.editorconfig` staged) | `gradle_run_tasks` `["ktlintCheck"]` + background/poll — see **Commit workflow** below |
+| Lint Kotlin (when Kotlin/`.editorconfig` staged) | `gradle_run_tasks` `["ktlintCheck"]` + background/poll — see **Commit workflow** below | `./gradlew ktlintCheck` |
 | Format Kotlin | `gradle_run_tasks` `["ktlintFormat"]` + background/poll | `./gradlew ktlintFormat` |
 | Compile plugin | `gradle_run_tasks` `[":plugin:compileKotlin"]` | `./gradlew :plugin:compileKotlin` |
 | Plugin fixture tests | `gradle_run_tasks` `[":plugin:test"]` or `gradle_run_tests` per class + background/poll | `./gradlew :plugin:test` |

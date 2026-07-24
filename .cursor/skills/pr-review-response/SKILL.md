@@ -151,9 +151,13 @@ For optional Kotlin plugin issues, follow the **`ArmeriaClientCollector` / `Arme
 When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-empty, run `gradle_run_tasks` with `["ktlintCheck"]` (`background: true` + poll) before committing (see `AGENTS.md` **Commit workflow (coding agents)**). Commit once before verification:
 
 ```bash
+set -e
 git add <paths>
 if [ -n "$(git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig')" ]; then
-  ./gradlew ktlintCheck || { ./gradlew ktlintFormat && git add -u -- '*.kt' '*.kts' && ./gradlew ktlintCheck; }
+  if ! ./gradlew ktlintCheck; then
+    ./gradlew ktlintFormat && git add -u -- '*.kt' '*.kts'
+    ./gradlew ktlintCheck
+  fi
 fi
 git commit -m "fix: address PR <N> review comments"
 ```
