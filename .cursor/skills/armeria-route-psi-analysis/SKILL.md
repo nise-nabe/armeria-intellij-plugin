@@ -225,13 +225,16 @@ For PSI fixture tests that extend `ArmeriaFixtureTestBase` or
   (e.g. `plugin-route-collectors/src/test/testData/extendedRegistration/basic/fileService/Main.java`).
 - Load fixtures with `configureFixture("relative/path")` on `ArmeriaFixtureTestBase` — sets
   `myFixture.testDataPath` to `src/test/testData` via the `armeria.moduleTestDataPath` system
-  property (set by Gradle when `src/test/testData` exists) or relative to the test task working
-  directory (module root). Gradle `:module:test` tasks set CWD to the module project dir, so
-  `./gradlew :plugin-route-collectors:test` works out of the box; ad-hoc JUnit runners launched
-  from the repo root need `-Darmeria.moduleTestDataPath=<module>/src/test/testData` or module-root
-  CWD. Do not override `getTestDataPath()` on the shared base; consumer modules without `testData/`
-  rely on the platform default. Subclasses of `ArmeriaLightJavaCodeInsightFixtureTestCase` that do
-  not extend `ArmeriaFixtureTestBase` must set `myFixture.testDataPath` themselves (or override
+  property or relative to the test task working directory (module root). When introducing
+  `src/test/testData/` in a module, add the `tasks.withType<Test>()` block from
+  `plugin-route-collectors/build.gradle.kts` (sets `armeria.moduleTestDataPath` when the directory
+  exists) or rely on module-root CWD for Gradle-only runs. Gradle `:module:test` tasks set CWD to
+  the module project dir, so `./gradlew :plugin-route-collectors:test` works out of the box;
+  ad-hoc JUnit runners launched from the repo root need
+  `-Darmeria.moduleTestDataPath=<module>/src/test/testData` or module-root CWD. Do not override
+  `getTestDataPath()` on the shared base; consumer modules without `testData/` rely on the platform
+  default. Subclasses of `ArmeriaLightJavaCodeInsightFixtureTestCase` that do not extend
+  `ArmeriaFixtureTestBase` must set `myFixture.testDataPath` themselves (or override
   `getTestDataPath()` locally).
 - `collectRoutes()` on `ArmeriaFixtureTestBase` uses `ArmeriaRouteCollector` (core annotated +
   service registration only). Tests needing Spring or protocol routes must call

@@ -20,7 +20,7 @@ dependencies {
         testFramework(TestFrameworkType.Plugin.Java, configurationName = "testFixturesImplementation")
     }
     testFixturesImplementation(libs.junit4)
-    testFixturesImplementation(libs.kotlin.test)
+    testFixturesApi(libs.kotlin.test)
 }
 
 testing {
