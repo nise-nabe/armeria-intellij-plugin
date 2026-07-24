@@ -36,8 +36,7 @@ internal object ArmeriaJUnitServerExtensionSupport {
     const val WEB_CLIENT_CLASS = "com.linecorp.armeria.client.WebClient"
     const val BLOCKING_WEB_CLIENT_CLASS = "com.linecorp.armeria.client.blocking.BlockingWebClient"
 
-    fun hasRegisterExtensionAnnotation(owner: PsiModifierListOwner): Boolean =
-        owner.annotations.any(::isRegisterExtensionAnnotation)
+    fun hasRegisterExtensionAnnotation(owner: PsiModifierListOwner): Boolean = owner.annotations.any(::isRegisterExtensionAnnotation)
 
     private fun isRegisterExtensionAnnotation(annotation: PsiAnnotation): Boolean {
         annotation.qualifiedName?.let {
@@ -177,7 +176,11 @@ internal object ArmeriaJUnitServerExtensionSupport {
         containingKtFile.importDirectives.forEach { directive ->
             val importPath = directive.importPath ?: return@forEach
             if (importPath.isAllUnder) {
-                val packageName = importPath.pathStr?.removeSuffix(".*")?.removeSuffix("*")?.trimEnd('.')
+                val packageName =
+                    importPath.pathStr
+                        ?.removeSuffix(".*")
+                        ?.removeSuffix("*")
+                        ?.trimEnd('.')
                 if ("$packageName.$REGISTER_EXTENSION_ANNOTATION_SHORT" == REGISTER_EXTENSION_ANNOTATION) {
                     return true
                 }
@@ -199,7 +202,11 @@ internal object ArmeriaJUnitServerExtensionSupport {
         containingKtFile.importDirectives.forEach { directive ->
             val importPath = directive.importPath ?: return@forEach
             if (importPath.isAllUnder) {
-                val packageName = importPath.pathStr?.removeSuffix(".*")?.removeSuffix("*")?.trimEnd('.')
+                val packageName =
+                    importPath.pathStr
+                        ?.removeSuffix(".*")
+                        ?.removeSuffix("*")
+                        ?.trimEnd('.')
                 if (!packageName.isNullOrEmpty()) {
                     return "$packageName.$shortName"
                 }
