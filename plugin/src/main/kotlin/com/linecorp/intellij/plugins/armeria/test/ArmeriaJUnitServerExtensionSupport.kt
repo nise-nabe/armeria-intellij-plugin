@@ -284,7 +284,7 @@ internal object ArmeriaJUnitServerExtensionSupport {
         return names
     }
 
-    private fun canAccessServerExtension(
+    internal fun canAccessServerExtension(
         testClassName: String,
         extensionClassName: String,
         project: Project,

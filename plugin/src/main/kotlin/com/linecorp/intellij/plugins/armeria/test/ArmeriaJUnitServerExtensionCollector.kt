@@ -27,14 +27,23 @@ object ArmeriaJUnitServerExtensionCollector {
         psiClass: PsiClass,
     ): List<ArmeriaJUnitServerExtension> {
         val scope = GlobalSearchScope.projectScope(project)
-        val hierarchyNames = ArmeriaJUnitServerExtensionSupport.classHierarchyQualifiedNames(psiClass)
+        val testClassName =
+            psiClass.qualifiedName
+                ?: ArmeriaJUnitServerExtensionSupport.toKtClass(psiClass)?.fqName?.asString()
+                ?: return emptyList()
         val fromFields = extensionsFromClassHierarchy(psiClass, scope)
         if (fromFields.isNotEmpty()) {
             return fromFields
         }
         return collect(project)
-            .filter { it.containingClassName in hierarchyNames }
-            .distinctBy { "${it.containingClassName}#${it.variableName}" }
+            .filter { extension ->
+                ArmeriaJUnitServerExtensionSupport.canAccessServerExtension(
+                    testClassName,
+                    extension.containingClassName,
+                    project,
+                    scope,
+                )
+            }.distinctBy { "${it.containingClassName}#${it.variableName}" }
     }
 
     private fun extensionsFromClassHierarchy(

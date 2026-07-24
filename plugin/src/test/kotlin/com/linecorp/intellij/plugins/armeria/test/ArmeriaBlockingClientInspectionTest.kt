@@ -221,23 +221,18 @@ class ArmeriaBlockingClientInspectionTest : ArmeriaLightJavaCodeInsightFixtureTe
             }
             """.trimIndent(),
         )
-        myFixture.addClass(
+        myFixture.configureByText(
+            "UserServiceTest.java",
             """
             package example;
 
             import org.junit.jupiter.api.extension.RegisterExtension;
             import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-            public abstract class BaseIntegrationTest {
+            abstract class BaseIntegrationTest {
                 @RegisterExtension
                 static ServerExtension server = new ServerExtension() {};
             }
-            """.trimIndent(),
-        )
-        myFixture.configureByText(
-            "UserServiceTest.java",
-            """
-            package example;
 
             public class UserServiceTest extends BaseIntegrationTest {
                 void testSlow() {

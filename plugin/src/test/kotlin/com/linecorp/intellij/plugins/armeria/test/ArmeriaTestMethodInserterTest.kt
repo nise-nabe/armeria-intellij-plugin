@@ -145,24 +145,19 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
     }
 
     fun testInsertsIntoSubclassWhenServerExtensionIsInSuperclass() {
-        myFixture.addClass(
-            """
-            package example;
-
-            import org.junit.jupiter.api.extension.RegisterExtension;
-            import com.linecorp.armeria.testing.junit5.server.ServerExtension;
-
-            public abstract class BaseIntegrationTest {
-                @RegisterExtension
-                static ServerExtension server = new ServerExtension() {};
-            }
-            """.trimIndent(),
-        )
         val javaFile =
             myFixture.configureByText(
                 "UserServiceTest.java",
                 """
                 package example;
+
+                import org.junit.jupiter.api.extension.RegisterExtension;
+                import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+                abstract class BaseIntegrationTest {
+                    @RegisterExtension
+                    static ServerExtension server = new ServerExtension() {};
+                }
 
                 public class UserServiceTest extends BaseIntegrationTest {
                 }
@@ -177,7 +172,7 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
             )
         assertTrue(inserted)
 
-        val testClass = javaFile.classes.single { it.qualifiedName == "example.UserServiceTest" }
+        val testClass = javaFile.classes.single { it.name == "UserServiceTest" }
         val method = testClass.methods.singleOrNull { it.name == "apiReturnsSuccess" }
         assertNotNull(method)
         assertTrue(method!!.text.contains("WebClient.of"))
