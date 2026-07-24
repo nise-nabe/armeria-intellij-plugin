@@ -13,8 +13,8 @@ class ArmeriaKotlinJUnitServerExtensionLineMarkerProvider : LineMarkerProviderDe
     override fun getName(): String = message("test.support.lineMarker.name")
 
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
-        val property = element as? KtProperty ?: return null
-        if (element != property.nameIdentifier && element != property) {
+        val property = element.parent as? KtProperty ?: return null
+        if (element != property.nameIdentifier) {
             return null
         }
         val scope = GlobalSearchScope.projectScope(property.project)
@@ -22,7 +22,7 @@ class ArmeriaKotlinJUnitServerExtensionLineMarkerProvider : LineMarkerProviderDe
             return null
         }
         return LineMarkerInfo(
-            property,
+            property.nameIdentifier ?: property,
             property.textRange,
             AllIcons.RunConfigurations.Junit,
             { message("test.support.lineMarker.tooltip", property.name.orEmpty()) },

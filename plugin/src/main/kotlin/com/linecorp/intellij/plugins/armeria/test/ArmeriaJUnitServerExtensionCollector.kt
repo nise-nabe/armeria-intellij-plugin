@@ -27,6 +27,12 @@ object ArmeriaJUnitServerExtensionCollector {
         psiClass: PsiClass,
     ): List<ArmeriaJUnitServerExtension> {
         val scope = GlobalSearchScope.projectScope(project)
+        ArmeriaJUnitServerExtensionSupport.toKtClass(psiClass)?.fqName?.asString()?.let { className ->
+            val fromCollector = collect(project).filter { it.containingClassName == className }
+            if (fromCollector.isNotEmpty()) {
+                return fromCollector
+            }
+        }
         val fromFields = ArmeriaJUnitServerExtensionSupport.serverExtensionsInClass(psiClass, scope)
         if (fromFields.isNotEmpty()) {
             return fromFields

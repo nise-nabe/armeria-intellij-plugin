@@ -2,12 +2,17 @@ package com.linecorp.intellij.plugins.armeria.test
 
 import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.codeInspection.ProblemsHolder
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.message
+import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
+import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
+import org.jetbrains.kotlin.psi.KtNameReferenceExpression
+import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 import org.jetbrains.kotlin.psi.KtVisitorVoid
 
@@ -46,15 +51,58 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
         call: KtCallExpression,
         serverVariableName: String,
     ): Boolean {
-        val parent = call.parent as? KtDotQualifiedExpression ?: return false
-        val receiver = parent.receiverExpression.text
-        if (receiver == serverVariableName) {
-            return (parent.selectorExpression as? KtCallExpression)?.calleeExpression?.text in setOf("webClient", "httpUri")
+        val methodName = call.calleeExpression?.text ?: return false
+        if (!referencesServerExtension(call, serverVariableName)) {
+            return false
         }
-        if (receiver.startsWith("WebClient.of") || receiver.endsWith("WebClient") || receiver.contains("webClient")) {
-            return call.calleeExpression?.text in HTTP_METHOD_NAMES
+        if (methodName in HTTP_METHOD_NAMES) {
+            return true
+        }
+        return methodName in setOf("webClient", "httpUri")
+    }
+
+    private fun referencesServerExtension(
+        call: KtCallExpression,
+        serverVariableName: String,
+    ): Boolean {
+        var current: PsiElement? = call
+        while (current != null) {
+            val parent = current.parent
+            if (parent is KtDotQualifiedExpression && parent.selectorExpression == current) {
+                when (val receiver = parent.receiverExpression) {
+                    is KtNameReferenceExpression -> {
+                        if (receiver.getReferencedName() == serverVariableName) {
+                            return true
+                        }
+                    }
+                    is KtCallExpression -> {
+                        if (isWebClientFactoryCall(receiver, serverVariableName)) {
+                            return true
+                        }
+                    }
+                }
+                current = parent
+                continue
+            }
+            if (parent is KtNamedFunction || parent is KtBlockExpression || parent is KtClass) {
+                break
+            }
+            current = parent
         }
         return false
+    }
+
+    private fun isWebClientFactoryCall(
+        call: KtCallExpression,
+        serverVariableName: String,
+    ): Boolean {
+        val callee = call.calleeExpression?.text ?: return false
+        if (callee != "of") {
+            return false
+        }
+        return call.valueArguments.any { argument ->
+            argument.getArgumentExpression()?.text?.contains(serverVariableName) == true
+        }
     }
 
     private fun extractRequestPath(call: KtCallExpression): String? {

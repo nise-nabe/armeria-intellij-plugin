@@ -3,7 +3,7 @@ package com.linecorp.intellij.plugins.armeria.test
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 
 class ArmeriaKotlinJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
-    fun testCollectsRegisterExtensionFromCompanionObject() {
+    fun testCollectsRegisterExtensionFromClassProperty() {
         myFixture.configureByText(
             "ExampleServiceTest.kt",
             """
@@ -13,11 +13,8 @@ class ArmeriaKotlinJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsig
             import com.linecorp.armeria.testing.junit5.server.ServerExtension
 
             class ExampleServiceTest {
-                companion object {
-                    @RegisterExtension
-                    @JvmField
-                    val server: ServerExtension = object : ServerExtension() {}
-                }
+                @RegisterExtension
+                val server: ServerExtension = object : ServerExtension() {}
             }
             """.trimIndent(),
         )

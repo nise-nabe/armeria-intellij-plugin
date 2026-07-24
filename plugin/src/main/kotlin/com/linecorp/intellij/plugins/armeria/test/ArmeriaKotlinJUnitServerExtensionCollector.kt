@@ -9,7 +9,6 @@ import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtObjectDeclaration
 import org.jetbrains.kotlin.psi.KtProperty
-import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 internal object ArmeriaKotlinJUnitServerExtensionCollector {
     fun collect(
@@ -53,21 +52,5 @@ internal object ArmeriaKotlinJUnitServerExtensionCollector {
     private fun from(
         property: KtProperty,
         scope: GlobalSearchScope,
-    ): ArmeriaJUnitServerExtension? {
-        if (!property.annotationEntries.any { it.shortName?.asString() == "RegisterExtension" }) {
-            return null
-        }
-        val typeText = property.typeReference?.text ?: return null
-        if (!typeText.contains("ServerExtension")) {
-            return null
-        }
-        val variableName = property.name ?: return null
-        val containingClass = property.getParentOfType<KtClass>(true) ?: return null
-        return ArmeriaJUnitServerExtension.create(
-            element = property,
-            variableName = variableName,
-            containingClassName = containingClass.fqName?.asString().orEmpty(),
-            moduleName = ArmeriaTestMetadata.moduleName(property),
-        )
-    }
+    ): ArmeriaJUnitServerExtension? = ArmeriaJUnitServerExtensionSupport.serverExtensionFromKotlinProperty(property, scope)
 }

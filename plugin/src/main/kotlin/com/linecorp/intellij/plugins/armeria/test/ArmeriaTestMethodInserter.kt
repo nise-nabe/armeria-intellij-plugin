@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.test
 
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ScrollType
@@ -16,10 +17,12 @@ import com.intellij.psi.codeStyle.JavaCodeStyleManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.message
+import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtPsiFactory
+import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 import org.jetbrains.kotlin.resolve.ImportPath
 
 internal object ArmeriaTestMethodInserter {
@@ -51,24 +54,42 @@ internal object ArmeriaTestMethodInserter {
                 )
                 return false
             }
-        val methodText = ArmeriaTestMethodGenerator.generateTestMethod(route, extension.variableName, language)
-        ApplicationManager.getApplication().invokeLater {
-            if (project.isDisposed) {
-                return@invokeLater
+        val kotlinTargetClass =
+            if (language == ArmeriaTestLanguage.KOTLIN) {
+                FileEditorManager
+                    .getInstance(project)
+                    .selectedFiles
+                    .firstOrNull()
+                    ?.let { PsiManager.getInstance(project).findFile(it) as? KtFile }
+                    ?.declarations
+                    ?.filterIsInstance<KtClass>()
+                    ?.firstOrNull { it.fqName?.asString() == targetClass.qualifiedName }
+                    ?: ArmeriaJUnitServerExtensionSupport.toKtClass(targetClass)
+            } else {
+                null
             }
-            WriteCommandAction.runWriteCommandAction(
-                project,
-                message("route.explorer.action.generateTestMethod"),
-                null,
-                {
-                    if (language == ArmeriaTestLanguage.JAVA) {
-                        insertJavaMethod(project, targetClass, methodText)
-                    } else {
-                        insertKotlinMethod(project, targetClass, methodText)
-                    }
-                },
-            )
-        }
+        val methodText = ArmeriaTestMethodGenerator.generateTestMethod(route, extension.variableName, language)
+        ApplicationManager.getApplication().invokeLater(
+            {
+                if (project.isDisposed) {
+                    return@invokeLater
+                }
+                WriteCommandAction.runWriteCommandAction(
+                    project,
+                    message("route.explorer.action.generateTestMethod"),
+                    null,
+                    {
+                        if (language == ArmeriaTestLanguage.JAVA) {
+                            insertJavaMethod(project, targetClass, methodText)
+                        } else {
+                            val ktClass = kotlinTargetClass ?: return@runWriteCommandAction
+                            insertKotlinMethod(project, ktClass, methodText)
+                        }
+                    },
+                )
+            },
+            ModalityState.defaultModalityState(),
+        )
         return true
     }
 
@@ -91,16 +112,14 @@ internal object ArmeriaTestMethodInserter {
         editor?.scrollingModel?.scrollToCaret(ScrollType.CENTER)
     }
 
-    private fun insertKotlinMethod(
+    internal fun insertKotlinMethod(
         project: Project,
-        targetClass: PsiClass,
+        ktClass: KtClass,
         methodText: String,
     ) {
-        val ktClass = targetClass as? KtClass ?: return
-        val anchor = ktClass.body?.rBrace ?: return
         val factory = KtPsiFactory(project)
         val function = factory.createFunction(methodText)
-        val added = ktClass.addBefore(function, anchor)
+        val added = ktClass.addDeclaration(function)
         val ktFile = ktClass.containingKtFile
         insertKotlinImport(project, ktFile, "org.junit.jupiter.api.Test")
         insertKotlinImport(project, ktFile, "org.junit.jupiter.api.Assertions.assertEquals")
@@ -143,12 +162,17 @@ internal object ArmeriaTestMethodInserter {
         route: ArmeriaRoute,
     ): PsiClass? {
         val selectedFile = FileEditorManager.getInstance(project).selectedFiles.firstOrNull()
+        val selectedPsiFile = selectedFile?.let { PsiManager.getInstance(project).findFile(it) }
         val selectedClass =
-            selectedFile?.let { virtualFile ->
-                PsiTreeUtil.getChildOfType(
-                    PsiManager.getInstance(project).findFile(virtualFile),
-                    PsiClass::class.java,
-                )
+            when (selectedPsiFile) {
+                is PsiJavaFile ->
+                    PsiTreeUtil.getChildOfType(selectedPsiFile, PsiClass::class.java)
+                is KtFile ->
+                    selectedPsiFile.declarations
+                        .filterIsInstance<KtClass>()
+                        .firstOrNull()
+                        ?.toLightClass()
+                else -> null
             }
         if (selectedClass != null &&
             ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, selectedClass).isNotEmpty()

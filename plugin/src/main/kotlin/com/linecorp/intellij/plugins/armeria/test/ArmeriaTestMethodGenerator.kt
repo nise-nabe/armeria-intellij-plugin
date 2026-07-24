@@ -86,7 +86,7 @@ internal object ArmeriaTestMethodGenerator {
     private fun httpMethod(route: ArmeriaRoute): String =
         when (route.routeMatch) {
             RouteMatch.ANNOTATED_HTTP -> route.httpMethod
-            RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER -> "GET"
+            RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER -> route.httpMethod.takeIf { it.isNotBlank() } ?: "GET"
             else -> error("Unsupported route match: ${route.routeMatch}")
         }
 
