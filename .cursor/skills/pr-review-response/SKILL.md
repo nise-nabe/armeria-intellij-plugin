@@ -148,14 +148,15 @@ For optional Kotlin plugin issues, follow the **`ArmeriaClientCollector` / `Arme
 3. Add/adjust tests only when the comment is about missing coverage or you fixed a bug.
 4. For test fixtures: **reuse `setUp()` stubs** — do not duplicate Java FQCN annotations as Kotlin `annotation class` in the same fixture.
 
-When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-empty, run `gradle_run_tasks` with `["ktlintCheck"]` (`background: true` + poll) before committing (see `AGENTS.md` **Commit workflow (coding agents)**). Commit once before verification:
+When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-empty, run `gradle_run_tasks` with `["ktlintCheck"]` (`background: true` + poll) before committing (see `AGENTS.md` **Commit workflow (coding agents)**). Re-stage the same `<paths>` after `ktlintFormat` — do not use a broad `git add -u -- '*.kt'` pathspec, which can pick up unrelated Kotlin edits. If `ktlintCheck` still fails after format, apply manual fixes, `git add` those files, and re-run until clean. Commit once before verification:
 
 ```bash
 set -e
 git add <paths>
 if [ -n "$(git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig')" ]; then
   if ! ./gradlew ktlintCheck; then
-    ./gradlew ktlintFormat && git add -u -- '*.kt' '*.kts'
+    ./gradlew ktlintFormat
+    git add <paths>
     ./gradlew ktlintCheck
   fi
 fi
