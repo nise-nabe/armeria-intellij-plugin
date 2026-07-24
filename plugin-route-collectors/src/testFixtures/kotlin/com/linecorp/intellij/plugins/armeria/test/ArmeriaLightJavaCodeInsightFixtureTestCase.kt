@@ -9,6 +9,21 @@ import java.io.File
  * [LightJavaCodeInsightFixtureTestCase] with 2026.2+ test sandbox root access for plugin runtime libraries.
  */
 abstract class ArmeriaLightJavaCodeInsightFixtureTestCase : LightJavaCodeInsightFixtureTestCase() {
+    /**
+     * Resolves `src/test/testData` relative to the Gradle test task working directory (module root).
+     * Do not override [getTestDataPath] globally — consumer modules without `testData/` rely on the
+     * platform default from [LightJavaCodeInsightFixtureTestCase].
+     */
+    protected fun resolveModuleTestDataPath(): String {
+        System.getProperty("armeria.moduleTestDataPath")?.takeIf { it.isNotBlank() }?.let { return it.replace('\\', '/') }
+        val fromWorkingDir = File("src/test/testData")
+        require(fromWorkingDir.isDirectory) {
+            "Expected testData directory at ${fromWorkingDir.absolutePath}; run tests from the owning module root " +
+                "or set -Darmeria.moduleTestDataPath"
+        }
+        return fromWorkingDir.absolutePath.replace('\\', '/')
+    }
+
     override fun setUp() {
         super.setUp()
         allowTestSandboxRoots()

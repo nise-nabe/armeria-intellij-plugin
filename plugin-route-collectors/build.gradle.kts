@@ -20,6 +20,7 @@ dependencies {
         testFramework(TestFrameworkType.Plugin.Java, configurationName = "testFixturesImplementation")
     }
     testFixturesImplementation(libs.junit4)
+    testFixturesApi(libs.kotlin.test)
 }
 
 testing {
@@ -29,6 +30,14 @@ testing {
             dependencies {
                 implementation(testFixtures(project()))
                 implementation(libs.junit4)
+            }
+            targets.all {
+                testTask.configure {
+                    val testDataDir = project.file("src/test/testData")
+                    if (testDataDir.isDirectory) {
+                        systemProperty("armeria.moduleTestDataPath", testDataDir.absolutePath)
+                    }
+                }
             }
         }
 

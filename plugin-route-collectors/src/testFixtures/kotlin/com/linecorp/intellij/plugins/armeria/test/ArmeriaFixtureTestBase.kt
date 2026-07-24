@@ -1,9 +1,25 @@
 package com.linecorp.intellij.plugins.armeria.test
 
+import com.intellij.psi.PsiFile
+import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+
 /**
  * Shared Armeria PSI stubs for [LightJavaCodeInsightFixtureTestCase] subclasses.
  */
 abstract class ArmeriaFixtureTestBase : ArmeriaLightJavaCodeInsightFixtureTestCase() {
+    protected fun configureFixture(relativePath: String): PsiFile {
+        myFixture.testDataPath = resolveModuleTestDataPath()
+        return myFixture.configureByFile(relativePath)
+    }
+
+    /**
+     * Collects routes via [ArmeriaRouteCollector] (core annotated + service registration only).
+     * Tests needing Spring or protocol routes must call `ArmeriaRouteAnalysisCollector.collect(project)`
+     * in the `plugin-route-analysis` module instead.
+     */
+    protected fun collectRoutes(): List<ArmeriaRoute> = ArmeriaRouteCollector.collect(project)
+
     override fun setUp() {
         super.setUp()
         registerArmeriaStubs()
