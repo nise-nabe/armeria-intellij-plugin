@@ -141,6 +141,95 @@ class ArmeriaProtoRpcLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixture
         assertNotNull(provider.getLineMarkerInfo(findRpcKeyword()))
     }
 
+    fun testMultipleRpcMarkersInOneService() {
+        myFixture.configureByText(
+            "greeter.proto",
+            """
+            syntax = "proto3";
+            package com.example;
+
+            service Greeter {
+              rpc SayHello(HelloRequest) returns (HelloResponse);
+              rpc SayGoodbye(GoodbyeRequest) returns (GoodbyeResponse);
+            }
+            """.trimIndent(),
+        )
+
+        val methods = PsiTreeUtil.findChildrenOfType(myFixture.file, PbServiceMethod::class.java).toList()
+        assertEquals(2, methods.size)
+
+        val markers =
+            methods.map { method ->
+                val rpcKeyword = myFixture.file.findElementAt(method.textRange.startOffset)!!
+                provider.getLineMarkerInfo(rpcKeyword)
+            }
+        assertEquals(2, markers.filterNotNull().size)
+        assertEquals(
+            listOf(
+                message("marker.grpc.rpc", "/com.example.Greeter/SayGoodbye"),
+                message("marker.grpc.rpc", "/com.example.Greeter/SayHello"),
+            ),
+            markers.mapNotNull { it?.lineMarkerTooltip }.sorted(),
+        )
+    }
+
+    fun testMultipleServicesEachGetRpcMarkers() {
+        myFixture.configureByText(
+            "multi.proto",
+            """
+            syntax = "proto3";
+            package com.example;
+
+            service Greeter {
+              rpc SayHello(HelloRequest) returns (HelloResponse);
+            }
+
+            service Echo {
+              rpc Ping(PingRequest) returns (PingResponse);
+            }
+            """.trimIndent(),
+        )
+
+        val methods = PsiTreeUtil.findChildrenOfType(myFixture.file, PbServiceMethod::class.java).toList()
+        assertEquals(2, methods.size)
+
+        val tooltips =
+            methods
+                .map { method ->
+                    val rpcKeyword = myFixture.file.findElementAt(method.textRange.startOffset)!!
+                    provider.getLineMarkerInfo(rpcKeyword)!!.lineMarkerTooltip
+                }.sorted()
+        assertEquals(
+            listOf(
+                message("marker.grpc.rpc", "/com.example.Echo/Ping"),
+                message("marker.grpc.rpc", "/com.example.Greeter/SayHello"),
+            ),
+            tooltips,
+        )
+    }
+
+    fun testStreamingRpcMarkerShowsGrpcPath() {
+        myFixture.configureByText(
+            "greeter.proto",
+            """
+            syntax = "proto3";
+            package com.example;
+
+            service Greeter {
+              rpc StreamHello(stream HelloRequest) returns (stream HelloResponse);
+            }
+            """.trimIndent(),
+        )
+
+        val marker = provider.getLineMarkerInfo(findRpcKeyword())
+
+        assertNotNull(marker)
+        assertEquals(
+            message("marker.grpc.rpc", "/com.example.Greeter/StreamHello"),
+            marker!!.lineMarkerTooltip,
+        )
+    }
+
     private fun findRpcKeyword(): PsiElement {
         val method = PsiTreeUtil.findChildOfType(myFixture.file, PbServiceMethod::class.java)!!
         return myFixture.file.findElementAt(method.textRange.startOffset)!!

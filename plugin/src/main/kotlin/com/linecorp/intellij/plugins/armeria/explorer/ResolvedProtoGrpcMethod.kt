@@ -3,14 +3,14 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.intellij.protobuf.lang.psi.PbServiceDefinition
 import com.intellij.protobuf.lang.psi.PbServiceMethod
 import com.intellij.psi.util.PsiTreeUtil
-import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaGrpcRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRoutePath
 
 internal data class ResolvedProtoGrpcMethod(
     val fqService: String,
     val methodName: String,
 ) {
     val path: String
-        get() = ArmeriaGrpcRouteCollector.grpcPath(fqService, methodName)
+        get() = GrpcRoutePath.path(fqService, methodName)
 }
 
 internal fun resolveProtoGrpcMethod(method: PbServiceMethod): ResolvedProtoGrpcMethod? {
