@@ -198,8 +198,13 @@ internal object ArmeriaTestMethodInserter {
         val selectedFile = fileEditorManager.selectedFiles.firstOrNull()
         val selectedEditor = fileEditorManager.selectedTextEditor
         val selectedPsiFile = selectedFile?.let { PsiManager.getInstance(project).findFile(it) }
+        val elementAtCaret =
+            if (selectedPsiFile != null && selectedEditor != null) {
+                selectedPsiFile.findElementAt(selectedEditor.caretModel.offset)
+            } else {
+                null
+            }
         if (selectedPsiFile != null && selectedEditor != null) {
-            val elementAtCaret = selectedPsiFile.findElementAt(selectedEditor.caretModel.offset)
             elementAtCaret?.getParentOfType<KtClass>(true)?.toLightClass()?.let { ktClass ->
                 if (ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, ktClass).isNotEmpty()) {
                     return ktClass
@@ -213,10 +218,7 @@ internal object ArmeriaTestMethodInserter {
         }
         val selectedClass =
             when (selectedPsiFile) {
-                is PsiJavaFile -> {
-                    val topLevelClasses = selectedPsiFile.classes.filter { it.containingClass == null }
-                    topLevelClasses.singleOrNull()
-                }
+                is PsiJavaFile -> resolveJavaTargetClass(project, selectedPsiFile, elementAtCaret)
                 is KtFile -> {
                     val topLevelClasses = selectedPsiFile.declarations.filterIsInstance<KtClass>()
                     topLevelClasses.singleOrNull()?.toLightClass()
@@ -256,5 +258,20 @@ internal object ArmeriaTestMethodInserter {
             ?.firstOrNull { it.fqName?.asString() == targetClass.qualifiedName }
             ?.let { return it }
         return ArmeriaJUnitServerExtensionSupport.toKtClass(targetClass)
+    }
+
+    private fun resolveJavaTargetClass(
+        project: Project,
+        javaFile: PsiJavaFile,
+        elementAtCaret: com.intellij.psi.PsiElement?,
+    ): PsiClass? {
+        val topLevelClasses = javaFile.classes.filter { it.containingClass == null }
+        elementAtCaret
+            ?.let { PsiTreeUtil.getParentOfType(it, PsiClass::class.java) }
+            ?.takeIf { candidate -> topLevelClasses.any { it.isEquivalentTo(candidate) } }
+            ?.let { return it }
+        return topLevelClasses.singleOrNull {
+            ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, it).isNotEmpty()
+        } ?: topLevelClasses.singleOrNull()
     }
 }

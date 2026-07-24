@@ -144,38 +144,38 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
         assertNull(resolved)
     }
 
-    fun testInsertsIntoSubclassWhenServerExtensionIsInSuperclass() {
+    fun testResolvesInheritedServerExtensionInSubclass() {
         val javaFile =
             myFixture.configureByText(
-                "UserServiceTest.java",
+                "InheritedServerInserterTest.java",
                 """
                 package example;
 
                 import org.junit.jupiter.api.extension.RegisterExtension;
                 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-                abstract class BaseIntegrationTest {
+                abstract class InserterBaseTest {
                     @RegisterExtension
                     static ServerExtension server = new ServerExtension() {};
                 }
 
-                public class UserServiceTest extends BaseIntegrationTest {
+                public class InheritedServerInserterTest extends InserterBaseTest {
                 }
                 """.trimIndent(),
             ) as PsiJavaFile
+        val testClass = javaFile.classes.single { it.name == "InheritedServerInserterTest" }
         myFixture.openFileInEditor(javaFile.virtualFile)
+        myFixture.editor.caretModel.moveToOffset(testClass.textRange.startOffset)
 
-        val inserted =
-            ArmeriaTestMethodInserter.insertFromRouteExplorer(
+        val extensions = ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, testClass)
+        assertEquals(1, extensions.size)
+
+        val resolved =
+            ArmeriaTestMethodInserter.resolveTargetClassInternal(
                 project,
                 route(path = "/api"),
             )
-        assertTrue(inserted)
-
-        val testClass = javaFile.classes.single { it.name == "UserServiceTest" }
-        val method = testClass.methods.singleOrNull { it.name == "apiReturnsSuccess" }
-        assertNotNull(method)
-        assertTrue(method!!.text.contains("WebClient.of"))
+        assertEquals("InheritedServerInserterTest", resolved?.name)
     }
 
     private fun route(

@@ -352,19 +352,19 @@ class ArmeriaBlockingClientKotlinInspectionTest : ArmeriaLightJavaCodeInsightFix
             """.trimIndent(),
         )
         myFixture.configureByText(
-            "UserServiceTest.kt",
+            "InheritedServerKotlinBlockingClientTest.kt",
             """
             package example
 
             import org.junit.jupiter.api.extension.RegisterExtension
             import com.linecorp.armeria.testing.junit5.server.ServerExtension
 
-            abstract class BaseIntegrationTest {
+            abstract class BlockingClientKotlinBaseTest {
                 @RegisterExtension
                 val server: ServerExtension = object : ServerExtension() {}
             }
 
-            class UserServiceTest : BaseIntegrationTest() {
+            class InheritedServerKotlinBlockingClientTest : BlockingClientKotlinBaseTest() {
                 fun testSlow() {
                     server.webClient().get("/slow")
                 }

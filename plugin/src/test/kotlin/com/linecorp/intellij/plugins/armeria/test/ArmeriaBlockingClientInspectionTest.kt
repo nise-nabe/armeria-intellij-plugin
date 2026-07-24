@@ -222,19 +222,19 @@ class ArmeriaBlockingClientInspectionTest : ArmeriaLightJavaCodeInsightFixtureTe
             """.trimIndent(),
         )
         myFixture.configureByText(
-            "UserServiceTest.java",
+            "InheritedServerBlockingClientTest.java",
             """
             package example;
 
             import org.junit.jupiter.api.extension.RegisterExtension;
             import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-            abstract class BaseIntegrationTest {
+            abstract class BlockingClientBaseTest {
                 @RegisterExtension
                 static ServerExtension server = new ServerExtension() {};
             }
 
-            public class UserServiceTest extends BaseIntegrationTest {
+            public class InheritedServerBlockingClientTest extends BlockingClientBaseTest {
                 void testSlow() {
                     server.webClient().<warning descr="Route /slow is marked @Blocking; use blockingWebClient() in tests instead of async WebClient.">get</warning>("/slow");
                 }
