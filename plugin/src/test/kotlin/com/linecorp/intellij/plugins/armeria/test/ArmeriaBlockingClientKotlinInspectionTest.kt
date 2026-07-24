@@ -520,8 +520,8 @@ class ArmeriaBlockingClientKotlinInspectionTest : ArmeriaLightJavaCodeInsightFix
 
     fun testNoInspectionSetupForMainSourceTestNamedFile() {
         val mainRoot = myFixture.tempDirFixture.findOrCreateDir("main")
-        PsiTestUtil.addSourceRoot(module, mainRoot, false)
         try {
+            PsiTestUtil.addSourceRoot(module, mainRoot, false)
             val content =
                 """
                 package example
