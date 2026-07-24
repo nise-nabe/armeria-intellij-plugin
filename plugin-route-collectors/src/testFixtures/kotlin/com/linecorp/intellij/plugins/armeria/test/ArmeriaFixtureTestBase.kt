@@ -13,6 +13,10 @@ abstract class ArmeriaFixtureTestBase : ArmeriaLightJavaCodeInsightFixtureTestCa
         return myFixture.configureByFile(relativePath)
     }
 
+    /**
+     * Collects routes via [ArmeriaRouteCollector] (core annotated + service registration only).
+     * Tests needing Spring or protocol routes must call [ArmeriaRouteAnalysisCollector.collect] instead.
+     */
     protected fun collectRoutes(): List<ArmeriaRoute> = ArmeriaRouteCollector.collect(project)
 
     override fun setUp() {

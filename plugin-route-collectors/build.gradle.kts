@@ -20,6 +20,7 @@ dependencies {
         testFramework(TestFrameworkType.Plugin.Java, configurationName = "testFixturesImplementation")
     }
     testFixturesImplementation(libs.junit4)
+    testFixturesImplementation(libs.kotlin.test)
 }
 
 testing {
@@ -79,4 +80,11 @@ extensions.configure<KotlinJvmProjectExtension>("kotlin") {
 
 tasks.named("check") {
     dependsOn(testing.suites.named("fastTest"))
+}
+
+tasks.withType<Test>().configureEach {
+    val testDataDir = file("src/test/testData")
+    if (testDataDir.isDirectory) {
+        systemProperty("armeria.moduleTestDataPath", testDataDir.absolutePath)
+    }
 }

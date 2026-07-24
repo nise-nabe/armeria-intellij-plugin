@@ -15,9 +15,11 @@ abstract class ArmeriaLightJavaCodeInsightFixtureTestCase : LightJavaCodeInsight
      * platform default from [LightJavaCodeInsightFixtureTestCase].
      */
     protected fun resolveModuleTestDataPath(): String {
+        System.getProperty("armeria.moduleTestDataPath")?.let { return it.replace('\\', '/') }
         val fromWorkingDir = File("src/test/testData")
         require(fromWorkingDir.isDirectory) {
-            "Expected testData directory at ${fromWorkingDir.absolutePath}; run tests from the owning module root"
+            "Expected testData directory at ${fromWorkingDir.absolutePath}; run tests from the owning module root " +
+                "or set -Darmeria.moduleTestDataPath"
         }
         return fromWorkingDir.absolutePath.replace('\\', '/')
     }

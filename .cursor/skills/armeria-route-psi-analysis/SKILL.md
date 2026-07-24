@@ -224,18 +224,30 @@ For PSI fixture tests that extend `ArmeriaFixtureTestBase` or
 - Place fixture sources under `src/test/testData/<suite>/<case>/` in the owning module
   (e.g. `plugin-route-collectors/src/test/testData/extendedRegistration/basic/fileService/Main.java`).
 - Load fixtures with `configureFixture("relative/path")` on `ArmeriaFixtureTestBase` — sets
-  `myFixture.testDataPath` to `src/test/testData` relative to the **Gradle test task working
-  directory** (module root). Gradle `:module:test` tasks set CWD to the module project dir, so
+  `myFixture.testDataPath` to `src/test/testData` via the `armeria.moduleTestDataPath` system
+  property (set by Gradle when `src/test/testData` exists) or relative to the test task working
+  directory (module root). Gradle `:module:test` tasks set CWD to the module project dir, so
   `./gradlew :plugin-route-collectors:test` works out of the box; ad-hoc JUnit runners launched
-  from the repo root will fail unless the working directory is the owning module. Do not override
-  `getTestDataPath()` on the shared base; consumer modules without `testData/` rely on the
-  platform default. Subclasses of `ArmeriaLightJavaCodeInsightFixtureTestCase` that do not extend
-  `ArmeriaFixtureTestBase` must set `myFixture.testDataPath` themselves (or override
+  from the repo root need `-Darmeria.moduleTestDataPath=<module>/src/test/testData` or module-root
+  CWD. Do not override `getTestDataPath()` on the shared base; consumer modules without `testData/`
+  rely on the platform default. Subclasses of `ArmeriaLightJavaCodeInsightFixtureTestCase` that do
+  not extend `ArmeriaFixtureTestBase` must set `myFixture.testDataPath` themselves (or override
   `getTestDataPath()` locally).
+- `collectRoutes()` on `ArmeriaFixtureTestBase` uses `ArmeriaRouteCollector` (core annotated +
+  service registration only). Tests needing Spring or protocol routes must call
+  `ArmeriaRouteAnalysisCollector.collect(project)` or a module-specific collector.
 - Assert collected routes with `collectRoutes().assertRoute(...)` from
-  `ArmeriaRouteTestSupport` in `plugin-route-collectors` testFixtures. When replacing
-  `routes.single()`, call `collectRoutes().also { it.singleRoute() }.assertRoute(...)` so the
-  test still fails if the collector emits extra routes at other paths.
+  `ArmeriaRouteTestSupport` in `plugin-route-collectors` testFixtures. Migration patterns:
+
+  | Old pattern | New pattern |
+  |---|---|
+  | `routes.single()` + field asserts | `collectRoutes().also { it.singleRoute() }.assertRoute(...)` |
+  | `routes.firstOrNull { it.routeMatch == X }` + field asserts | `collectRoutes().assertRoute(RouteMatch.X, path = ...)` |
+  | Uniqueness **and** field match | `collectRoutes().also { it.singleRoute() }.assertRoute(...)` |
+
+  `assertRoute()` with no expected fields is rejected — use `singleRoute()` for cardinality-only
+  checks. Registration tests that only matched on `routeMatch` may omit `singleRoute()` (parity
+  with old `firstOrNull`); annotated tests should keep `singleRoute()` so extra routes fail.
 - Keep Armeria/Spring API **stubs** in `ArmeriaFixture*Stubs.kt` via `addClass(...)`; only
   user source under test belongs in `testData/`.
 

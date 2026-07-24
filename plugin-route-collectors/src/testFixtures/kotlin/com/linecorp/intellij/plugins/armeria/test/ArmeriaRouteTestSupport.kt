@@ -3,7 +3,7 @@ package com.linecorp.intellij.plugins.armeria.test
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
-import org.junit.Assert.assertEquals
+import kotlin.test.assertEquals
 
 fun List<ArmeriaRoute>.route(
     match: RouteMatch? = null,
@@ -42,8 +42,11 @@ fun List<ArmeriaRoute>.assertRoute(
     httpMethod: String? = null,
     pathType: PathType? = null,
 ): ArmeriaRoute {
+    require(match != null || path != null || httpMethod != null || pathType != null) {
+        "assertRoute requires at least one expected field; use singleRoute() for cardinality-only checks"
+    }
     val route = route(match = match, path = path)
-    httpMethod?.let { assertEquals("httpMethod", it, route.httpMethod) }
-    pathType?.let { assertEquals("pathType", it, route.pathType) }
+    httpMethod?.let { assertEquals(it, route.httpMethod, message = "httpMethod") }
+    pathType?.let { assertEquals(it, route.pathType, message = "pathType") }
     return route
 }
