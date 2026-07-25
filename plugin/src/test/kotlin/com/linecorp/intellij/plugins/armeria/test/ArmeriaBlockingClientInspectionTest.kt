@@ -272,11 +272,13 @@ class ArmeriaBlockingClientInspectionTest : ArmeriaLightJavaCodeInsightFixtureTe
         )
 
         ArmeriaRouteAnalysisCollector.collect(project)
-        assertTrue(ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned > 0)
+        val firstScan = ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned
+        assertTrue(firstScan > 0)
 
         val blockingPaths = ArmeriaBlockingClientInspectionPaths.blockingRoutePaths(project)
         assertTrue(blockingPaths.contains("/slow"))
-        assertEquals(0, ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned)
+        val secondScan = ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned
+        assertEquals(0, secondScan)
     }
 
     fun testNoInspectionSetupForMainSourceTestNamedFile() {
