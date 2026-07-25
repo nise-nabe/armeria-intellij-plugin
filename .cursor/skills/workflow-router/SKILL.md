@@ -27,10 +27,17 @@ Pick **one** path below. Do **not** read unrelated skills in full.
 | Gradle verify (after you know the task) | `gradle-tapi-mcp` — verification table only |
 | Pre-PR Copilot patterns | `copilot-review-preflight` — checklist for changed area only |
 
-## Session reuse (token save)
+## Session reuse
 
-- Same PR or issue: **resume an IDLE Cloud Agent** (user may pass `bc-…` URL) instead of starting a new session.
-- If `HEAD` is unchanged since last SHIP and the user only asks to file P3 issues, create issues — **do not** re-run Thermo or tests.
+| Task | Resume IDLE session? |
+|------|---------------------|
+| `/thermos PR N` (audit) | **No** — run full one-shot pipeline at current `HEAD` (Phases 0–6 in `thermo-nuclear-review`) |
+| PR comment triage | Optional — resume if same branch and threads already fetched |
+| Issue → PR continuation | Yes — push, PR polish, issue comment |
+| Push / link issues only | Yes — no re-audit |
+
+**Do not** start a second Cloud session for a "fresh" Thermo look — the skill's closure pass
+(Phase 5) is the built-in independent re-check.
 
 ## Fetch once
 

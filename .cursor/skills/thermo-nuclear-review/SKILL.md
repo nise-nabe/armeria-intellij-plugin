@@ -1,78 +1,134 @@
 ---
 name: thermo-nuclear-review
 description: >-
-  Token-efficient Thermo-nuclear branch audit for /thermos PR N prompts.
-  Fix P0–P2 on branch, file issues for deferred P3, SHIP when clean.
-  Use for branch audits — not for GitHub inline review-thread triage.
+  One-shot Thermo-nuclear branch audit for /thermos PR N. Independent audit pass,
+  fix P0–P2, file P3 issues, closure verification, SHIP — no second session needed.
+  Not for GitHub inline review-thread triage.
 ---
 
-# Thermo-nuclear review (`/thermos PR N`)
+# Thermo-nuclear review (`/thermos PR N`) — one-shot complete
 
 For **GitHub review comment threads**, use `pr-review-response` instead.
 
+**Goal:** finish in **one user invocation** with confidence comparable to a fresh second
+session. Use **independent passes** inside the session — not IDLE resume across sessions.
+
 Read `workflow-router` only if you have not already routed here.
 
-## Phase 0 — Branch first (no exploration on main)
+## Phase 0 — Setup (once)
 
 ```bash
 gh pr view N --json headRefName,baseRefName,title,files
 git fetch origin <headRefName>
 git checkout -B <headRefName> origin/<headRefName>
-git diff origin/<baseRefName>...HEAD   # single diff; do not gh pr diff
+git diff origin/<baseRefName>...HEAD > /tmp/pr-diff.txt
 ```
 
-Optional: **ManagePullRequest** `get_ci_status` once if merge-readiness matters.
+- **ManagePullRequest** `get_ci_status` once when merge-readiness matters.
+- Record `BASE_SHA=$(git merge-base origin/<baseRefName> HEAD)` and `START_HEAD=$(git rev-parse HEAD)`.
 
-## Phase 1 — Tier (controls subagent use)
+Do not explore on `main`. Do not pass prior session conclusions into later phases.
 
-| Tier | When | Thermo subagent |
-|------|------|-----------------|
-| **A** | Docs / scripts / ≤2 files and ≤30 net lines | **No** — use checklist below |
-| **B** | Typical code PR | **Max 1** before fixes |
-| **C** | Large diff or first pass found P0/P1 | **Max 2** (initial + after fixes only) |
+## Phase 1 — Deterministic scan (objective, no judgment)
 
-Never run a subagent and a long manual P0–P3 audit on the same pass.
+Map `files` from PR metadata to **one** `copilot-review-preflight` subsection. Run only
+checklist items verifiable by Grep / targeted `Read` on changed paths — not a subjective
+P0–P3 essay in the parent agent.
 
-### Tier A checklist (inline, no subagent)
+| Changed area | Preflight section |
+|--------------|-------------------|
+| `plugin/`, `plugin-shared/`, `plugin-wizard/` | Plugin feature code |
+| `plugin-route-*/` collectors | Route analysis |
+| `plugin-route-spring/` config | Spring Boot config |
+| `.cursor/`, `AGENTS.md`, scripts | Agent docs and shell scripts |
 
-- [ ] User-visible strings via `message()` / bundle
-- [ ] No hard-coded paths; tests reuse fixtures / `setUp()`
-- [ ] Module placement matches `intellij-armeria-plugin` / `armeria-route-psi-analysis`
-- [ ] Agent docs: built-in PR tools over `gh` where applicable
-- [ ] Gradle: `testing { suites { … } }` — no bare `tasks.named<Test>("test")` (see `agent-workflow` rule)
+Also run the Tier A Gradle/docs bullets when applicable (bundle keys, `testing { suites }`, etc.).
 
-## Phase 2 — Triage
+Output a **findings table** (id, source, path, priority, action). Sources: `deterministic` only.
 
-| Priority | Action on branch |
-|----------|------------------|
-| P0–P1 | Must fix before SHIP |
-| P2 | Fix in PR or block SHIP |
-| P3 | Fix now **or** file one issue each — **decide before SHIP** |
+## Phase 2 — Independent audit pass (fresh judgment)
 
-Do not SHIP with “will file issues later” — create issues in the same session.
+Tier controls cost; each tier still completes in one invocation.
 
-## Phase 3 — Implement + verify
+| Tier | When | Subagent |
+|------|------|----------|
+| **A** | Docs / scripts / ≤2 files and ≤30 net lines | **Skip** — Phase 1 table is the audit |
+| **B** | Typical code PR | **One** audit subagent |
+| **C** | Large diff or many files | **One** audit subagent + **one** post-fix closure subagent (Phase 5 only) |
 
-1. Batch all fixes per file; one commit when possible.
-2. Verify (code PRs only) — `gradle-tapi-mcp` table: **one** compile batch + **one** `gradle_run_tests` for affected classes; `ktlintCheck` before commit when `*.kt` staged.
-3. Tier B/C: optional second subagent **only after** push-worthy fixes are in the tree.
-4. **Do not** re-audit if `HEAD` unchanged and user only asked to file P3 issues.
+### Subagent input (mandatory — simulates a new session)
 
-## Phase 4 — Ship
+Pass **only**:
+
+- `git diff origin/<base>...HEAD` (or `/tmp/pr-diff.txt`)
+- PR title and changed file list
+- Thermo rubric / priority definitions
+- Instruction: *return a findings table; do not assume any prior SHIP or triage*
+
+**Do not pass:** parent agent analysis, earlier findings table, chat history summary, or
+"we already checked X".
+
+Parent agent: **no** long manual P0–P3 audit in parallel with the subagent.
+
+Merge subagent rows into the findings table (`source: audit`). Deduplicate by path + concern.
+
+## Phase 3 — Triage gate (block until clear)
+
+| Priority | Rule |
+|----------|------|
+| P0–P1 | Fix on branch before SHIP |
+| P2 | Fix on branch or block SHIP |
+| P3 | Fix now **or** `gh issue create` — **every P3 row resolved before Phase 4** |
+
+No SHIP with open P3 rows marked "later".
+
+## Phase 4 — Fix + verify
+
+1. Batch fixes per file; prefer one commit.
+2. Code PRs: **one** compile batch + **one** `gradle_run_tests` for affected classes.
+3. `ktlintCheck` before commit when `*.kt` / `*.kts` staged.
+4. Update findings table: `fixed` / `issue #NNN` / `wontfix` (with reason).
+
+## Phase 5 — Closure pass (replaces a second session)
+
+Run **after** fixes are committed (before push). Cheap and mandatory for Tier B/C; Tier A when
+code changed.
+
+1. `git diff origin/<baseRefName>...HEAD` — post-fix diff only.
+2. **Findings closure:** every row from Phases 1–2 has a terminal status.
+3. **Deterministic re-scan:** re-run Phase 1 checklist on **newly changed hunks** only.
+4. **Tests:** rerun only if fix commit touched production or test code (`git diff START_HEAD..HEAD --name-only`).
+5. Tier C only: **one** closure subagent with **post-fix diff only** — same blind-input rules as Phase 2.
+   - If it reports new P0–P1 → return to Phase 4 once; do not loop.
+
+**SHIP blocked** if any P0–P2 row is open or closure finds new P0–P1.
+
+## Phase 6 — Ship
 
 ```bash
 git push -u origin <headRefName>
 ```
 
-- **ManagePullRequest** `update_pr` when behavior changed (fold into Summary/Changes per `pr-description-format.mdc`).
-- `gh issue create` for deferred P3; link issues in a PR comment (**ManagePullRequest** `post_comment`).
+- **ManagePullRequest** `update_pr` when behavior changed.
+- **ManagePullRequest** `post_comment` — findings table (fixed / issue / skipped) + test commands.
+- Link created P3 issues.
 
-Report: priority table, fixed vs deferred, test command, PR link.
+User summary: findings table, SHIP verdict, PR link. State that closure pass ran (no second session required).
+
+## `/thermos` and session resume
+
+| Situation | Action |
+|-----------|--------|
+| New `/thermos PR N` | Run **Phases 0–6** fully; ignore prior session SHIP |
+| Resume + "続き" / push only | Skip re-audit; complete unfinished push/issue links |
+| Resume + same `/thermos` again | **Full Phases 0–6** — treat as new audit at current `HEAD` |
+
+Do not recommend a second Cloud session for confidence; the closure pass is the built-in second look.
 
 ## Token budget
 
-- [ ] ≤1 `gh pr view` / built-in PR metadata fetch
-- [ ] ≤1 diff (`git diff`, not `gh pr diff` twice)
-- [ ] Subagent count within tier cap
+- [ ] ≤1 PR metadata fetch; ≤2 diffs (initial + post-fix)
+- [ ] Subagent count within tier cap; blind input only
 - [ ] No `pr-review-response` full read
-- [ ] Gradle: ≤1 compile + ≤1 test batch + ktlint at commit
+- [ ] Gradle: ≤2 compile/test rounds (pre-fix + post-fix only if code changed)
+- [ ] No parent + subagent duplicate audit on the same diff
