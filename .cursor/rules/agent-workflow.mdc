@@ -11,8 +11,9 @@ For PR work (`/thermos`, review fixes), **fetch and checkout the PR head branch 
 
 ## No duplicate work
 
-- **Resume** an IDLE Cloud Agent for the same PR/issue when the user provides a session URL or `bc-…` id.
-- If `HEAD` is unchanged since the last SHIP and the user only asks to file deferred issues, create issues — **do not** re-run Thermo, full diff review, or tests.
+- **`/thermos`:** one invocation runs the full pipeline in `thermo-nuclear-review` (deterministic scan → blind audit → fix → **closure pass** → SHIP). Do not ask for a second session for a fresh look — closure pass is the second check.
+- **Resume** IDLE sessions only for continuations (push, issue comment, PR polish) — not to skip Thermo phases on a new `/thermos` request.
+- Push-only / link-only follow-ups: create issues or push — **do not** re-run audit or tests.
 
 ## Gradle test tasks
 
