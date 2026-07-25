@@ -12,6 +12,8 @@ description: >-
 Workflow for **triage → batch fix → verify once → resolve threads**, derived from
 agent sessions on this repository (e.g. PR #208, ~45 tool rounds without this skill).
 
+**Not for `/thermos` branch audits** — use `thermo-nuclear-review` instead (`workflow-router`).
+
 Read **`cloud-github`** for PR tools and **`copilot-review-preflight`** for recurring
 fix patterns. Read **`gradle-tapi-mcp`** only for the verification subsection below —
 do not read the full skill unless Gradle MCP fails.
@@ -21,6 +23,8 @@ do not read the full skill unless Gradle MCP fails.
 - User asks to address / fix / resolve comments on PR *N*
 - After Copilot or Thermos review on an open PR
 - Before marking review threads resolved
+
+**Not for `/thermos PR N` branch audits** — use `thermo-nuclear-review` (`workflow-router`).
 
 ## Phase 1 — Fetch comments (minimal payload)
 
@@ -245,6 +249,9 @@ Report in the user’s language:
 
 | Need | Skill |
 |------|-------|
+| `/thermos` branch audit (not inline comments) | `thermo-nuclear-review` |
+| Route task to correct skill | `workflow-router` |
+| Issue → PR | `issue-to-pr` |
 | PR create/update body | `cloud-github` + `pr-description-format.mdc` |
 | Copilot recurring patterns | `copilot-review-preflight` |
 | Plugin / PSI conventions | `intellij-armeria-plugin` |

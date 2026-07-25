@@ -24,7 +24,10 @@ final pass before requesting review.
 
 | Area | Skill |
 |------|-------|
+| **Route task first** | `workflow-router` |
+| **`/thermos` branch audit** | `thermo-nuclear-review` |
 | **Addressing PR review comments** | `pr-review-response` |
+| **Issue → PR** | `issue-to-pr` |
 | UI, run configs, tool windows, inspections, module placement | `intellij-armeria-plugin` |
 | Route/client PSI collectors, Spring YAML/properties, virtualHost | `armeria-route-psi-analysis` |
 | Gradle build/test via MCP | `gradle-tapi-mcp` |
