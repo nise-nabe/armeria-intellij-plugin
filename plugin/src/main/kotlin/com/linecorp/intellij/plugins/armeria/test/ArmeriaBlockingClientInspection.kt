@@ -10,9 +10,6 @@ import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.psi.util.CachedValueProvider
-import com.intellij.psi.util.CachedValuesManager
-import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnalysisCollector
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
@@ -136,14 +133,10 @@ class ArmeriaBlockingClientInspection : LocalInspectionTool() {
 
 internal object ArmeriaBlockingClientInspectionPaths {
     fun blockingRoutePaths(project: Project): Set<String> =
-        CachedValuesManager.getManager(project).getCachedValue(project) {
-            val paths =
-                ArmeriaRouteAnalysisCollector
-                    .collect(project)
-                    .asSequence()
-                    .filter { ArmeriaTestMethodGenerator.isBlockingInspectableRoute(it) }
-                    .map { ArmeriaRouteSupport.normalizePath(it.path) }
-                    .toSet()
-            CachedValueProvider.Result.create(paths, PsiModificationTracker.MODIFICATION_COUNT)
-        }
+        ArmeriaRouteAnalysisCollector
+            .collect(project)
+            .asSequence()
+            .filter { ArmeriaTestMethodGenerator.isBlockingInspectableRoute(it) }
+            .map { ArmeriaRouteSupport.normalizePath(it.path) }
+            .toSet()
 }

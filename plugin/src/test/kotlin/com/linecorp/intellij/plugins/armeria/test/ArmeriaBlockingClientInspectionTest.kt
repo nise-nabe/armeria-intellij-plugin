@@ -8,6 +8,9 @@ import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiManager
 import com.intellij.testFramework.PsiTestUtil
+import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnalysisCollector
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class ArmeriaBlockingClientInspectionTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
@@ -248,6 +251,34 @@ class ArmeriaBlockingClientInspectionTest : ArmeriaLightJavaCodeInsightFixtureTe
         )
 
         myFixture.testHighlighting(true, false, true)
+    }
+
+    fun testBlockingRoutePathsReusesRouteCollectorCache() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Blocking
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        ArmeriaRouteAnalysisCollector.collect(project)
+        val firstScan = ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned
+        assertTrue(firstScan > 0)
+
+        val blockingPaths = ArmeriaBlockingClientInspectionPaths.blockingRoutePaths(project)
+        assertTrue(blockingPaths.contains("/slow"))
+        val secondScan = ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned
+        assertEquals(0, secondScan)
     }
 
     fun testNoInspectionSetupForMainSourceTestNamedFile() {
