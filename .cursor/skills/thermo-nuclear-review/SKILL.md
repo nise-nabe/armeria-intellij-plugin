@@ -91,8 +91,7 @@ No SHIP with open P3 rows marked "later".
 
 ## Phase 5 — Closure pass (replaces a second session)
 
-Run **after** fixes are committed (before push). Cheap and mandatory for Tier B/C; Tier A when
-code changed.
+Run **after** fixes are committed (before push). Mandatory for Tier B/C; Tier A when code changed.
 
 1. `git diff origin/<baseRefName>...HEAD` — post-fix diff only.
 2. **Findings closure:** every row from Phases 1–2 has a terminal status.
@@ -109,7 +108,7 @@ code changed.
 git push -u origin <headRefName>
 ```
 
-- **ManagePullRequest** `update_pr` when behavior changed.
+- **ManagePullRequest** `update_pr` when behavior changed (fold into Summary/Changes per `pr-description-format.mdc`).
 - **ManagePullRequest** `post_comment` — findings table (fixed / issue / skipped) + test commands.
 - Link created P3 issues.
 
