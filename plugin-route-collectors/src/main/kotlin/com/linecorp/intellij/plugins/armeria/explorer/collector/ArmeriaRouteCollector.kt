@@ -85,17 +85,9 @@ object ArmeriaRouteCollector {
             cacheKeyWithProto(contributors),
             CachedValueProvider {
                 val baseRoutes = cachedProjectRoutes(project, contributors)
-                val baseCachedValue = project.getUserData(cacheKey(contributors))
-                val dependencies =
-                    buildList {
-                        if (baseCachedValue != null) {
-                            add(baseCachedValue)
-                        }
-                        addAll(routeCacheInvalidators(project))
-                    }
                 CachedValueProvider.Result.create(
                     mergeProtoRoutes(project, baseRoutes, contributors),
-                    dependencies,
+                    *routeCacheInvalidators(project),
                 )
             },
             false,
@@ -191,17 +183,8 @@ object ArmeriaRouteCollector {
 
     fun routeCacheDependencies(
         project: Project,
-        contributors: List<RouteContributor>,
-    ): Array<Any> {
-        cachedProjectRoutes(project, contributors)
-        val baseCachedValue = project.getUserData(cacheKey(contributors))
-        return buildList {
-            if (baseCachedValue != null) {
-                add(baseCachedValue)
-            }
-            addAll(routeCacheInvalidators(project))
-        }.toTypedArray()
-    }
+        @Suppress("unused") contributors: List<RouteContributor>,
+    ): Array<Any> = routeCacheInvalidators(project)
 
     private fun routeCacheInvalidators(project: Project): Array<Any> =
         arrayOf(
