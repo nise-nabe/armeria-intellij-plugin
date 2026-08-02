@@ -29,7 +29,7 @@ object ArmeriaJUnitServerExtensionCollector {
         val scope = GlobalSearchScope.projectScope(project)
         val testClassName =
             psiClass.qualifiedName
-                ?: ArmeriaJUnitServerExtensionSupport.toKtClass(psiClass)?.fqName?.asString()
+                ?: ArmeriaJUnitServerExtensionSupport.toKtClassOrObject(psiClass)?.fqName?.asString()
                 ?: return emptyList()
         val fromFields = extensionsFromClassHierarchy(psiClass, scope)
         if (fromFields.isNotEmpty()) {

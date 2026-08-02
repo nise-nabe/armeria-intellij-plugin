@@ -20,6 +20,7 @@ import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtObjectDeclaration
@@ -79,15 +80,15 @@ internal object ArmeriaTestMethodInserter {
             )
             return false
         }
-        val kotlinTargetClass =
+        val kotlinTarget =
             if (language == ArmeriaTestLanguage.KOTLIN) {
-                resolveKotlinTargetClass(project, targetClass)
+                resolveKotlinTargetClassOrObject(project, targetClass)
             } else {
                 null
             }
         if (language == ArmeriaTestLanguage.KOTLIN) {
-            val ktClass =
-                kotlinTargetClass ?: run {
+            val ktTarget =
+                kotlinTarget ?: run {
                     Messages.showWarningDialog(
                         project,
                         message("test.support.insert.noTarget"),
@@ -95,7 +96,7 @@ internal object ArmeriaTestMethodInserter {
                     )
                     return false
                 }
-            if (ktClass.declarations.filterIsInstance<KtNamedFunction>().any { it.name == methodName }) {
+            if (ktTarget.declarations.filterIsInstance<KtNamedFunction>().any { it.name == methodName }) {
                 Messages.showInfoMessage(
                     project,
                     message("test.support.insert.methodExists", methodName),
@@ -116,8 +117,8 @@ internal object ArmeriaTestMethodInserter {
                 if (language == ArmeriaTestLanguage.JAVA) {
                     insertJavaMethod(project, targetClass, methodText)
                 } else {
-                    val ktClass = kotlinTargetClass ?: return@runWriteCommandAction
-                    insertKotlinMethod(project, ktClass, methodText)
+                    val ktTarget = kotlinTarget ?: return@runWriteCommandAction
+                    insertKotlinMethod(project, ktTarget, methodText)
                 }
             },
         )
@@ -145,13 +146,13 @@ internal object ArmeriaTestMethodInserter {
 
     internal fun insertKotlinMethod(
         project: Project,
-        ktClass: KtClass,
+        ktTarget: KtClassOrObject,
         methodText: String,
     ) {
         val factory = KtPsiFactory(project)
         val function = factory.createFunction(methodText)
-        val added = ktClass.addDeclaration(function)
-        val ktFile = ktClass.containingKtFile
+        val added = ktTarget.addDeclaration(function)
+        val ktFile = ktTarget.containingKtFile
         insertKotlinImport(project, ktFile, "org.junit.jupiter.api.Test")
         insertKotlinImport(project, ktFile, "org.junit.jupiter.api.Assertions.assertEquals")
         if (methodText.contains("WebClient")) {
@@ -208,9 +209,9 @@ internal object ArmeriaTestMethodInserter {
                 null
             }
         if (selectedPsiFile != null && selectedEditor != null) {
-            elementAtCaret?.getParentOfType<KtClass>(true)?.toLightClass()?.let { ktClass ->
-                if (ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, ktClass).isNotEmpty()) {
-                    return ktClass
+            kotlinDeclarationLightClassAtCaret(elementAtCaret)?.let { kotlinClass ->
+                if (ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, kotlinClass).isNotEmpty()) {
+                    return kotlinClass
                 }
             }
             elementAtCaret?.let { PsiTreeUtil.getParentOfType(it, PsiClass::class.java) }?.let { javaClass ->
@@ -222,10 +223,7 @@ internal object ArmeriaTestMethodInserter {
         val selectedClass =
             when (selectedPsiFile) {
                 is PsiJavaFile -> resolveJavaTargetClass(project, selectedPsiFile, elementAtCaret)
-                is KtFile -> {
-                    val topLevelClasses = selectedPsiFile.declarations.filterIsInstance<KtClass>()
-                    topLevelClasses.singleOrNull()?.toLightClass()
-                }
+                is KtFile -> selectedPsiFile.singleTopLevelKotlinDeclaration()?.toLightClass()
                 else -> null
             }
         if (selectedClass != null &&
@@ -298,18 +296,40 @@ internal object ArmeriaTestMethodInserter {
         }
     }
 
-    private fun resolveKotlinTargetClass(
+    private fun resolveKotlinTargetClassOrObject(
         project: Project,
         targetClass: PsiClass,
-    ): KtClass? {
+    ): KtClassOrObject? {
         val selectedFile = FileEditorManager.getInstance(project).selectedFiles.firstOrNull()
         selectedFile
             ?.let { PsiManager.getInstance(project).findFile(it) as? KtFile }
             ?.declarations
-            ?.filterIsInstance<KtClass>()
+            ?.filterIsInstance<KtClassOrObject>()
             ?.firstOrNull { it.fqName?.asString() == targetClass.qualifiedName }
             ?.let { return it }
-        return ArmeriaJUnitServerExtensionSupport.toKtClass(targetClass)
+        return ArmeriaJUnitServerExtensionSupport.toKtClassOrObject(targetClass)
+    }
+
+    private fun kotlinDeclarationLightClassAtCaret(elementAtCaret: PsiElement?): PsiClass? {
+        if (elementAtCaret == null) {
+            return null
+        }
+        elementAtCaret.getParentOfType<KtClass>(true)?.toLightClass()?.let { return it }
+        elementAtCaret
+            .getParentOfType<KtObjectDeclaration>(true)
+            ?.takeUnless { it.isCompanion() }
+            ?.toLightClass()
+            ?.let { return it }
+        return null
+    }
+
+    private fun KtFile.singleTopLevelKotlinDeclaration(): KtClassOrObject? {
+        val topLevelDeclarations =
+            declarations.filter { declaration ->
+                declaration is KtClass ||
+                    (declaration is KtObjectDeclaration && !declaration.isCompanion())
+            }
+        return topLevelDeclarations.singleOrNull() as? KtClassOrObject
     }
 
     private fun resolveJavaTargetClass(
