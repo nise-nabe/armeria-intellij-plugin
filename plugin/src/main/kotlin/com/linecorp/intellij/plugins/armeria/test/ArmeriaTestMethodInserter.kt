@@ -7,7 +7,9 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementFactory
+import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMethod
@@ -230,6 +232,24 @@ internal object ArmeriaTestMethodInserter {
         ) {
             return selectedClass
         }
+        return resolveModuleFallbackTargetClass(project, route, selectedPsiFile, elementAtCaret, selectedClass)
+    }
+
+    private fun resolveModuleFallbackTargetClass(
+        project: Project,
+        route: ArmeriaRoute,
+        selectedPsiFile: PsiFile?,
+        elementAtCaret: PsiElement?,
+        selectedClass: PsiClass?,
+    ): PsiClass? {
+        if (selectedPsiFile != null && !ArmeriaJUnitServerExtensionSupport.isInTestSourceContent(selectedPsiFile)) {
+            return null
+        }
+        if (selectedPsiFile != null &&
+            editorHasResolvableClass(selectedPsiFile, elementAtCaret, selectedClass)
+        ) {
+            return null
+        }
         val unassignedModule = message("route.explorer.module.unassigned")
         if (route.moduleName == unassignedModule) {
             return null
@@ -244,6 +264,29 @@ internal object ArmeriaTestMethodInserter {
             .pointer
             .element
             ?.let { PsiTreeUtil.getParentOfType(it, PsiClass::class.java) }
+    }
+
+    private fun editorHasResolvableClass(
+        selectedPsiFile: PsiFile,
+        elementAtCaret: PsiElement?,
+        selectedClass: PsiClass?,
+    ): Boolean {
+        if (selectedClass != null) {
+            return true
+        }
+        if (elementAtCaret != null) {
+            if (elementAtCaret.getParentOfType<KtClass>(true) != null) {
+                return true
+            }
+            if (PsiTreeUtil.getParentOfType(elementAtCaret, PsiClass::class.java) != null) {
+                return true
+            }
+        }
+        return when (selectedPsiFile) {
+            is PsiJavaFile -> selectedPsiFile.classes.any { it.containingClass == null }
+            is KtFile -> selectedPsiFile.declarations.any { it is KtClass }
+            else -> false
+        }
     }
 
     private fun resolveKotlinTargetClass(
