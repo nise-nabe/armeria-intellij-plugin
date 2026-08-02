@@ -27,6 +27,16 @@ Read `.cursor/skills/gradle-tapi-mcp/SKILL.md` for the full workflow.
 
 Use `background: true` and poll `gradle_get_build_status` for anything that may exceed ~30s (cold start, `:plugin:test`, `build`).
 
+## On MCP build failure
+
+When `gradle_get_build_status` returns `status: failed`, fetch details from the **same `buildId`** — do **not** re-run the task via shell `./gradlew` just to read compiler or test output.
+
+1. **Compile / task failure** (`failureCategory: GRADLE_TASK`, `failedTasks` non-empty): re-poll with `includeProblems: true` (Kotlin/Java messages via Gradle Problems API).
+2. **Test failure** (`failureCategory: TEST`): re-poll with `includeTestDetails: true` (`testFailures` with class, method, source line).
+3. **Still insufficient**: re-poll with `includeOutput: true`, or read `recordDirectory` / `.gradle/mcp-builds/<buildId>/stdout.log`.
+
+While `status: running`, poll with `waitUntilComplete: true` (short `waitTimeoutMs`) — do **not** `sleep` then poll.
+
 ## Before committing
 
 When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-empty, coding agents must run `ktlintCheck` (MCP with `background: true` + poll, or `./gradlew ktlintCheck`), fix violations with `gradle_run_tasks` `["ktlintFormat"]` or `./gradlew ktlintFormat` or manual edits, `git add` the changed files, re-run `ktlintCheck` until clean, and only then `git commit`. Wait for any in-flight MCP build to finish or cancel it (`gradle_cancel_build`) before commit-time ktlint. `ktlintFormat` is project-wide — re-stage only intended paths. Omit ktlint when the staged index contains none of those paths. Root `ktlintCheck` does not cover `build-logic/` or `settings.gradle.kts`; when all staged Kotlin is in those locations, manually review style; when a commit mixes those paths with plugin-module Kotlin, manually review the `build-logic/` and `settings.gradle.kts` portions even if `ktlintCheck` passes — see `AGENTS.md` **Commit workflow (coding agents)**.
@@ -36,5 +46,7 @@ When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-em
 - MCP tools time out or the server is unresponsive (poll `gradle_list_builds` / `gradle_get_build_status` first)
 - `BUILD_ALREADY_RUNNING` and you cannot cancel the in-flight MCP build
 - PR / CI parity requires `./gradlew build` after MCP verification passes
+
+**Not** for reading compile errors, test failures, or task logs from a build MCP already executed — use **On MCP build failure** above.
 
 Do **not** run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` on the same checkout concurrently.

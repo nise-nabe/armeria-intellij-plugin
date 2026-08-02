@@ -25,7 +25,7 @@ Default workflow:
 3. `gradle_get_project_overview` for module hierarchy
 4. `gradle_run_tasks` / `gradle_run_tests` for verification (`background: true` + poll `gradle_get_build_status` when a run may exceed ~30s)
 
-Shell `./gradlew` is fallback only: MCP server unresponsive, or final CI parity before merge. Do not run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` at the same time (sandbox contention). If MCP stops responding, poll with `gradle_get_build_status` or `gradle_list_builds` (reconciles disk records), then fall back to shell. Task discovery: `gradle_get_build_invocations` / `gradle_get_project_model` (see `gradle-tapi-mcp` skill).
+Shell `./gradlew` is fallback only: MCP server unresponsive, or final CI parity before merge — **not** to read compile/test output from an MCP build that already failed (re-poll the same `buildId` with `includeProblems` / `includeTestDetails` first; see `gradle-mcp.mdc`). Do not run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` at the same time (sandbox contention). If MCP stops responding, poll with `gradle_get_build_status` or `gradle_list_builds` (reconciles disk records), then fall back to shell. Task discovery: `gradle_get_build_invocations` / `gradle_get_project_model` (see `gradle-tapi-mcp` skill).
 
 ### GitHub and pull requests (Cursor Cloud)
 
@@ -59,7 +59,7 @@ release workflow — tag and publish with `gh release create` after merging a ve
 
 ### Build, test, lint
 
-Prefer **Gradle MCP** for the tasks below. Use `background: true` and poll `gradle_get_build_status` for long runs. Fall back to shell `./gradlew` only when MCP is unavailable.
+Prefer **Gradle MCP** for the tasks below. Use `background: true` and poll `gradle_get_build_status` for long runs. Fall back to shell `./gradlew` only when MCP is unavailable or for CI parity — not to read errors from a failed MCP build (re-poll with `includeProblems` / `includeTestDetails`; see `gradle-mcp.mdc`).
 
 | Goal | MCP (preferred) | Shell fallback |
 |------|---------------|----------------|
