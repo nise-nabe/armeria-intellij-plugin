@@ -17,6 +17,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import kotlin.test.assertEquals
@@ -336,6 +337,111 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
         } finally {
             PsiTestUtil.removeSourceRoot(module, mainRoot)
         }
+    }
+
+    fun testInsertsKotlinTestMethodIntoObjectServerExtension() {
+        val psiFile =
+            myFixture.configureByText(
+                "ExampleServiceTest.kt",
+                """
+                package example
+
+                import org.junit.jupiter.api.extension.RegisterExtension
+                import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+                object ExampleServiceTest {
+                    @RegisterExtension
+                    val server: ServerExtension = object : ServerExtension() {}
+                }
+                """.trimIndent(),
+            ) as KtFile
+        val ktObject = psiFile.declarations.filterIsInstance<KtClassOrObject>().single()
+        myFixture.openFileInEditor(psiFile.virtualFile)
+
+        WriteCommandAction.runWriteCommandAction(
+            project,
+            {
+                ArmeriaTestMethodInserter.insertKotlinMethod(
+                    project,
+                    ktObject,
+                    ArmeriaTestMethodGenerator.generateTestMethod(
+                        route(path = "/api"),
+                        serverVariableName = "server",
+                        language = ArmeriaTestLanguage.KOTLIN,
+                    ),
+                )
+            },
+        )
+
+        val function =
+            ktObject.declarations.filterIsInstance<KtNamedFunction>().singleOrNull { it.name == "apiReturnsSuccess" }
+        kotlinAssertNotNull(function)
+        assertTrue(function.text.contains("WebClient.of"))
+    }
+
+    fun testResolvesKotlinObjectWithServerExtension() {
+        val psiFile =
+            myFixture.configureByText(
+                "ExampleServiceTest.kt",
+                """
+                package example
+
+                import org.junit.jupiter.api.extension.RegisterExtension
+                import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+                object ExampleServiceTest {
+                    @RegisterExtension
+                    val server: ServerExtension = object : ServerExtension() {}
+                }
+                """.trimIndent(),
+            ) as KtFile
+        myFixture.openFileInEditor(psiFile.virtualFile)
+
+        val resolved =
+            ArmeriaTestMethodInserter.resolveTargetClassInternal(
+                project,
+                route(path = "/api"),
+            )
+
+        assertEquals("ExampleServiceTest", resolved?.name)
+    }
+
+    fun testDoesNotModuleFallbackWhenKotlinObjectOnlyTestFileFocused() {
+        myFixture.configureByText(
+            "ExampleServiceTest.kt",
+            """
+            package example
+
+            import org.junit.jupiter.api.extension.RegisterExtension
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+            class ExampleServiceTest {
+                @RegisterExtension
+                val server: ServerExtension = object : ServerExtension() {}
+            }
+            """.trimIndent(),
+        )
+        val objectTestFile =
+            myFixture.configureByText(
+                "ObjectTest.kt",
+                """
+                package example
+
+                object ObjectTest {
+                }
+                """.trimIndent(),
+            )
+        myFixture.openFileInEditor(objectTestFile.virtualFile)
+        val objectDeclaration = (objectTestFile as KtFile).declarations.filterIsInstance<KtClassOrObject>().single()
+        myFixture.editor.caretModel.moveToOffset(objectDeclaration.textRange.endOffset - 2)
+
+        val resolved =
+            ArmeriaTestMethodInserter.resolveTargetClassInternal(
+                project,
+                route(path = "/api"),
+            )
+
+        assertNull(resolved)
     }
 
     fun testDoesNotModuleFallbackWhenDifferentKotlinTestClassFocused() {

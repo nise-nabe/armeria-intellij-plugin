@@ -21,10 +21,12 @@ import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
+import org.jetbrains.kotlin.psi.KtObjectDeclaration
 import org.jetbrains.kotlin.psi.KtObjectLiteralExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
@@ -128,11 +130,21 @@ internal object ArmeriaJUnitServerExtensionSupport {
             return null
         }
         val variableName = property.name ?: return null
-        val containingClass = property.getParentOfType<KtClass>(true) ?: return null
+        val containingDeclaration = property.getParentOfType<KtClassOrObject>(true) ?: return null
+        val containingClassName =
+            when (containingDeclaration) {
+                is KtObjectDeclaration ->
+                    if (containingDeclaration.isCompanion()) {
+                        containingDeclaration.getParentOfType<KtClass>(true)?.fqName?.asString()
+                    } else {
+                        containingDeclaration.fqName?.asString()
+                    }
+                else -> containingDeclaration.fqName?.asString()
+            }.orEmpty()
         return ArmeriaJUnitServerExtension.create(
             element = property,
             variableName = variableName,
-            containingClassName = containingClass.fqName?.asString().orEmpty(),
+            containingClassName = containingClassName,
             moduleName = ArmeriaTestMetadata.moduleName(property),
         )
     }
@@ -253,9 +265,16 @@ internal object ArmeriaJUnitServerExtensionSupport {
         return null
     }
 
-    fun enclosingTestClassName(element: PsiElement): String? =
-        element.getParentOfType<KtClass>(true)?.fqName?.asString()
+    fun enclosingTestClassName(element: PsiElement): String? {
+        element.getParentOfType<KtObjectDeclaration>(true)?.let { objectDeclaration ->
+            if (objectDeclaration.isCompanion()) {
+                return objectDeclaration.getParentOfType<KtClass>(true)?.fqName?.asString()
+            }
+            return objectDeclaration.fqName?.asString()
+        }
+        return element.getParentOfType<KtClass>(true)?.fqName?.asString()
             ?: PsiTreeUtil.getParentOfType(element, PsiClass::class.java)?.qualifiedName
+    }
 
     fun enclosingServerExtension(
         element: PsiElement,
@@ -366,13 +385,15 @@ internal object ArmeriaJUnitServerExtensionSupport {
             testClassName.startsWith("$extensionClassName.") ||
             testClassName.startsWith("$extensionClassName$")
 
-    fun toKtClass(psiClass: PsiClass): KtClass? {
-        (psiClass as? KtClass)?.let { return it }
-        (psiClass.navigationElement as? KtClass)?.let { return it }
-        (psiClass.originalElement as? KtClass)?.let { return it }
+    fun toKtClass(psiClass: PsiClass): KtClass? = toKtClassOrObject(psiClass) as? KtClass
+
+    fun toKtClassOrObject(psiClass: PsiClass): KtClassOrObject? {
+        (psiClass as? KtClassOrObject)?.let { return it }
+        (psiClass.navigationElement as? KtClassOrObject)?.let { return it }
+        (psiClass.originalElement as? KtClassOrObject)?.let { return it }
         val qualifiedName = psiClass.qualifiedName ?: return null
         val ktFile = psiClass.containingFile as? KtFile ?: return null
-        return ktFile.declarations.filterIsInstance<KtClass>().firstOrNull { it.fqName?.asString() == qualifiedName }
+        return ktFile.declarations.filterIsInstance<KtClassOrObject>().firstOrNull { it.fqName?.asString() == qualifiedName }
     }
 
     private fun isKotlinServerExtensionProperty(

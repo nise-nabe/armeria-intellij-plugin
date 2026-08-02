@@ -27,7 +27,7 @@ internal object ArmeriaKotlinJUnitServerExtensionCollector {
                 collectFromKotlinClass(ktClass, scope, extensions, seen)
             }
             for (objectDeclaration in file.declarations.filterIsInstance<KtObjectDeclaration>()) {
-                if (!objectDeclaration.isCompanion()) {
+                if (objectDeclaration.isCompanion()) {
                     continue
                 }
                 collectProperties(objectDeclaration.declarations.filterIsInstance<KtProperty>(), scope, extensions, seen)

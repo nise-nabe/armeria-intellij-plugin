@@ -120,4 +120,27 @@ class ArmeriaKotlinJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsig
         assertEquals("server", extensions.single().variableName)
         assertEquals("example.ExampleServiceTest", extensions.single().containingClassName)
     }
+
+    fun testCollectsRegisterExtensionFromObjectDeclaration() {
+        myFixture.configureByText(
+            "ExampleServiceTest.kt",
+            """
+            package example
+
+            import org.junit.jupiter.api.extension.RegisterExtension
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+            object ExampleServiceTest {
+                @RegisterExtension
+                val server: ServerExtension = object : ServerExtension() {}
+            }
+            """.trimIndent(),
+        )
+
+        val extensions = ArmeriaJUnitServerExtensionCollector.collect(project)
+
+        assertEquals(1, extensions.size)
+        assertEquals("server", extensions.single().variableName)
+        assertEquals("example.ExampleServiceTest", extensions.single().containingClassName)
+    }
 }
