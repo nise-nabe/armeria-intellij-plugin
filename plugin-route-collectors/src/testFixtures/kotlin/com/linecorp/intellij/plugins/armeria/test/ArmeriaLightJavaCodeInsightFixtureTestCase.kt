@@ -7,6 +7,22 @@ import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import java.io.File
 
+fun resolveArmeriaModuleTestDataPath(): String {
+    System.getProperty("armeria.moduleTestDataPath")?.takeIf { it.isNotBlank() }?.let { path ->
+        val normalized = path.replace('\\', '/')
+        require(File(normalized).isDirectory) {
+            "armeria.moduleTestDataPath is not a directory: $normalized"
+        }
+        return normalized
+    }
+    val fromWorkingDir = File("src/test/testData")
+    require(fromWorkingDir.isDirectory) {
+        "Expected testData directory at ${fromWorkingDir.absolutePath}; run tests from the owning module root " +
+            "or set -Darmeria.moduleTestDataPath"
+    }
+    return fromWorkingDir.absolutePath.replace('\\', '/')
+}
+
 /**
  * [LightJavaCodeInsightFixtureTestCase] with 2026.2+ test sandbox root access for plugin runtime libraries.
  */
@@ -16,21 +32,7 @@ abstract class ArmeriaLightJavaCodeInsightFixtureTestCase : LightJavaCodeInsight
      * Do not override [getTestDataPath] globally — consumer modules without `testData/` rely on the
      * platform default from [LightJavaCodeInsightFixtureTestCase].
      */
-    protected fun resolveModuleTestDataPath(): String {
-        System.getProperty("armeria.moduleTestDataPath")?.takeIf { it.isNotBlank() }?.let { path ->
-            val normalized = path.replace('\\', '/')
-            require(File(normalized).isDirectory) {
-                "armeria.moduleTestDataPath is not a directory: $normalized"
-            }
-            return normalized
-        }
-        val fromWorkingDir = File("src/test/testData")
-        require(fromWorkingDir.isDirectory) {
-            "Expected testData directory at ${fromWorkingDir.absolutePath}; run tests from the owning module root " +
-                "or set -Darmeria.moduleTestDataPath"
-        }
-        return fromWorkingDir.absolutePath.replace('\\', '/')
-    }
+    protected fun resolveModuleTestDataPath(): String = resolveArmeriaModuleTestDataPath()
 
     /**
      * Loads a fixture from [resolveModuleTestDataPath] and resets [myFixture.testDataPath] afterward so

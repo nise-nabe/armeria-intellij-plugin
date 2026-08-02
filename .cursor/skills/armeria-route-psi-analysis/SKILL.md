@@ -226,7 +226,7 @@ For PSI fixture tests that extend `ArmeriaFixtureTestBase` or
 - Load fixtures with `configureFixture("relative/path")` on `ArmeriaLightJavaCodeInsightFixtureTestCase`
   (or subclasses such as `ArmeriaFixtureTestBase`) — temporarily sets `myFixture.testDataPath` to
   `src/test/testData` via the `armeria.moduleTestDataPath` system property (set automatically by the
-  `com.linecorp.intellij.platform-library` convention when `src/test/testData/` exists) or relative
+  `com.linecorp.intellij.platform-library` convention on the `test` suite when `src/test/testData/` exists) or relative
   to the test task working directory (module root). `configureFixture()` restores the previous
   `testDataPath` after each call, so later `configureByText()` calls in the same test method are safe.
   Gradle `:module:test` tasks set CWD to the module project dir, so

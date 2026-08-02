@@ -1,16 +1,16 @@
-package com.linecorp.intellij.plugins.armeria.explorer
+package com.linecorp.intellij.plugins.armeria.test
 
-import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
+import junit.framework.TestCase
 import kotlin.test.assertFailsWith
 
-class ArmeriaModuleTestDataPathTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
+class ArmeriaModuleTestDataPathTest : TestCase() {
     fun testResolveModuleTestDataPathRejectsInvalidProperty() {
         val key = "armeria.moduleTestDataPath"
         val previous = System.getProperty(key)
         try {
             System.setProperty(key, "/nonexistent/armeria-module-test-data-path")
             assertFailsWith<IllegalArgumentException> {
-                resolveModuleTestDataPath()
+                resolveArmeriaModuleTestDataPath()
             }
         } finally {
             if (previous == null) {
