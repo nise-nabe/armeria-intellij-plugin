@@ -223,21 +223,18 @@ For PSI fixture tests that extend `ArmeriaFixtureTestBase` or
 
 - Place fixture sources under `src/test/testData/<suite>/<case>/` in the owning module
   (e.g. `plugin-route-collectors/src/test/testData/extendedRegistration/basic/fileService/Main.java`).
-- Load fixtures with `configureFixture("relative/path")` on `ArmeriaFixtureTestBase` — sets
-  `myFixture.testDataPath` to `src/test/testData` via the `armeria.moduleTestDataPath` system
-  property or relative to the test task working directory (module root). Do not mix
-  `configureFixture()` and `configureByText()` in one test — `testDataPath` stays set for the
-  method and inline text would resolve relative to `testData/`.   When introducing
-  `src/test/testData/` in a module, add the `testing.suites { getByName<JvmTestSuite>("test") { targets.all { testTask.configure { ... } } } }`
-  block from `plugin-route-collectors/build.gradle.kts` (sets `armeria.moduleTestDataPath` when the
-  directory exists) or rely on module-root CWD for Gradle-only runs. Gradle `:module:test` tasks set CWD to
-  the module project dir, so `./gradlew :plugin-route-collectors:test` works out of the box;
-  ad-hoc JUnit runners launched from the repo root need
-  `-Darmeria.moduleTestDataPath=<module>/src/test/testData` or module-root CWD. Do not override
-  `getTestDataPath()` on the shared base; consumer modules without `testData/` rely on the platform
-  default. Subclasses of `ArmeriaLightJavaCodeInsightFixtureTestCase` that do not extend
-  `ArmeriaFixtureTestBase` must set `myFixture.testDataPath` themselves (or override
-  `getTestDataPath()` locally).
+- Load fixtures with `configureFixture("relative/path")` on `ArmeriaLightJavaCodeInsightFixtureTestCase`
+  (or subclasses such as `ArmeriaFixtureTestBase`) — temporarily sets `myFixture.testDataPath` to
+  `src/test/testData` via the `armeria.moduleTestDataPath` system property (set automatically by the
+  `com.linecorp.intellij.platform-library` convention when `src/test/testData/` exists) or relative
+  to the test task working directory (module root). `configureFixture()` restores the previous
+  `testDataPath` after each call, so later `configureByText()` calls in the same test method are safe.
+  Gradle `:module:test` tasks set CWD to the module project dir, so
+  `./gradlew :plugin-route-collectors:test` works out of the box; ad-hoc JUnit runners launched from
+  the repo root need `-Darmeria.moduleTestDataPath=<module>/src/test/testData` or module-root CWD
+  (see `.run/Armeria testData fixture.run.xml`). Invalid `armeria.moduleTestDataPath` values fail fast
+  in `resolveModuleTestDataPath()`. Do not override `getTestDataPath()` on the shared base; consumer
+  modules without `testData/` rely on the platform default.
 - `collectRoutes()` on `ArmeriaFixtureTestBase` uses `ArmeriaRouteCollector` (core annotated +
   service registration only). Tests needing Spring or protocol routes must call
   `ArmeriaRouteAnalysisCollector.collect(project)` or a module-specific collector.
@@ -257,6 +254,10 @@ For PSI fixture tests that extend `ArmeriaFixtureTestBase` or
   user source under test belongs in `testData/`.
 
 Reference migration: `ArmeriaExtendedRegistrationCollectorBasicTest`.
+
+Proto route cache integration tests (`ArmeriaGrpcRouteCollectorTest`, `ArmeriaGrpcRouteCollectorGateTest`)
+live in `plugin-route-protocol` because they exercise gRPC classpath gates and collector integration;
+keep collector-internal unit tests in `plugin-route-collectors`.
 
 ## Related skills
 

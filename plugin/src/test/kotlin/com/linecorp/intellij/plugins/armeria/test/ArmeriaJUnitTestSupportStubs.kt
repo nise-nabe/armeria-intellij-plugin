@@ -2,8 +2,19 @@ package com.linecorp.intellij.plugins.armeria.test
 
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.roots.ModuleRootManager
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.PsiTestUtil
 import com.intellij.testFramework.fixtures.JavaCodeInsightTestFixture
+
+internal fun JavaCodeInsightTestFixture.withTemporaryMainSourceRoot(block: (VirtualFile) -> Unit) {
+    val mainRoot = tempDirFixture.findOrCreateDir("main")
+    try {
+        PsiTestUtil.addSourceRoot(module, mainRoot, false)
+        block(mainRoot)
+    } finally {
+        PsiTestUtil.removeSourceRoot(module, mainRoot)
+    }
+}
 
 internal fun JavaCodeInsightTestFixture.registerArmeriaJUnitTestSupportStubs() {
     markDefaultSourceRootAsTestSource(module)

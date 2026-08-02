@@ -34,10 +34,6 @@ testing {
             targets.all {
                 testTask.configure {
                     failOnNoDiscoveredTests = false
-                    val testDataDir = project.file("src/test/testData")
-                    if (testDataDir.isDirectory) {
-                        systemProperty("armeria.moduleTestDataPath", testDataDir.absolutePath)
-                    }
                 }
             }
         }
