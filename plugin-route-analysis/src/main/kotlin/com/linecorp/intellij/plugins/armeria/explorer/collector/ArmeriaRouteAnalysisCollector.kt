@@ -24,5 +24,5 @@ object ArmeriaRouteAnalysisCollector {
             contributors = CONTRIBUTORS,
         )
 
-    fun routeCacheDependencies(project: Project): Array<Any> = ArmeriaRouteCollector.routeCacheDependencies(project, CONTRIBUTORS)
+    fun routeCacheDependencies(project: Project): Array<Any> = ArmeriaRouteCollector.routeCacheDependencies(project)
 }

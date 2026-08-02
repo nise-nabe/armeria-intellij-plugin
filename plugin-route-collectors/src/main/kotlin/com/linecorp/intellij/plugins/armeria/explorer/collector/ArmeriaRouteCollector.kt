@@ -181,10 +181,8 @@ object ArmeriaRouteCollector {
         )
     }
 
-    fun routeCacheDependencies(
-        project: Project,
-        @Suppress("unused") contributors: List<RouteContributor>,
-    ): Array<Any> = routeCacheInvalidators(project)
+    /** Invalidators shared by base, proto-overlay, and downstream route memo caches. */
+    fun routeCacheDependencies(project: Project): Array<Any> = routeCacheInvalidators(project)
 
     private fun routeCacheInvalidators(project: Project): Array<Any> =
         arrayOf(
