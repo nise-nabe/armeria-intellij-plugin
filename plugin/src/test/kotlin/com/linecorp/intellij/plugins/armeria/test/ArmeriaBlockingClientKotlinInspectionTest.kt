@@ -9,7 +9,6 @@ import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
-import com.intellij.testFramework.PsiTestUtil
 import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtFile
@@ -568,9 +567,7 @@ class ArmeriaBlockingClientKotlinInspectionTest : ArmeriaLightJavaCodeInsightFix
     }
 
     fun testNoInspectionSetupForMainSourceTestNamedFile() {
-        val mainRoot = myFixture.tempDirFixture.findOrCreateDir("main")
-        try {
-            PsiTestUtil.addSourceRoot(module, mainRoot, false)
+        myFixture.withTemporaryMainSourceRoot { mainRoot ->
             val content =
                 """
                 package example
@@ -600,8 +597,6 @@ class ArmeriaBlockingClientKotlinInspectionTest : ArmeriaLightJavaCodeInsightFix
             val holder = ProblemsHolder(manager, psiFile, false)
             val visitor = ArmeriaBlockingClientKotlinInspection().buildVisitor(holder, false)
             assertTrue(visitor === PsiElementVisitor.EMPTY_VISITOR)
-        } finally {
-            PsiTestUtil.removeSourceRoot(module, mainRoot)
         }
     }
 

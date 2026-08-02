@@ -6,6 +6,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import kotlin.test.assertEquals
 import kotlin.test.fail
 
+/** Finds exactly one route matching the optional criteria; fails with a descriptive message otherwise. */
 fun List<ArmeriaRoute>.route(
     match: RouteMatch? = null,
     path: String? = null,
@@ -35,6 +36,7 @@ fun List<ArmeriaRoute>.route(
     }
 }
 
+/** Asserts the list contains exactly one route (cardinality only; no field matching). */
 fun List<ArmeriaRoute>.singleRoute(): ArmeriaRoute {
     if (size != 1) {
         fail("Expected a single route but found $size: ${map { it.routeMatch to it.path }}")
@@ -42,6 +44,10 @@ fun List<ArmeriaRoute>.singleRoute(): ArmeriaRoute {
     return single()
 }
 
+/**
+ * Asserts one route matches the given fields. When multiple routes may share a [path], pass [match]
+ * or call [singleRoute] first so ambiguous lookups fail with a clear message.
+ */
 fun List<ArmeriaRoute>.assertRoute(
     match: RouteMatch? = null,
     path: String? = null,

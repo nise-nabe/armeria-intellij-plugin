@@ -12,7 +12,6 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.testFramework.PlatformTestUtil
-import com.intellij.testFramework.PsiTestUtil
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import org.jetbrains.kotlin.asJava.toLightClass
@@ -226,9 +225,7 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
             """.trimIndent(),
         )
 
-        val mainRoot = myFixture.tempDirFixture.findOrCreateDir("main")
-        try {
-            PsiTestUtil.addSourceRoot(module, mainRoot, false)
+        myFixture.withTemporaryMainSourceRoot { mainRoot ->
             val virtualFile =
                 ApplicationManager.getApplication().runWriteAction<VirtualFile> {
                     val file = mainRoot.createChildData(this, "ExampleService.java")
@@ -252,8 +249,6 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
                 )
 
             assertNull(resolved)
-        } finally {
-            PsiTestUtil.removeSourceRoot(module, mainRoot)
         }
     }
 
@@ -308,9 +303,7 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
             """.trimIndent(),
         )
 
-        val mainRoot = myFixture.tempDirFixture.findOrCreateDir("main")
-        try {
-            PsiTestUtil.addSourceRoot(module, mainRoot, false)
+        myFixture.withTemporaryMainSourceRoot { mainRoot ->
             val virtualFile =
                 ApplicationManager.getApplication().runWriteAction<VirtualFile> {
                     val file = mainRoot.createChildData(this, "ExampleService.kt")
@@ -334,8 +327,6 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
                 )
 
             assertNull(resolved)
-        } finally {
-            PsiTestUtil.removeSourceRoot(module, mainRoot)
         }
     }
 

@@ -201,6 +201,49 @@ plugin-route-analysis/src/fastTest/... — pure unit tests (no fixtures)
 
 Name tests after the behavior (`virtualHost_doesNotAnnotateEarlierRegistrations`), not the PR number.
 
+### PSI fixture layout (`testData/`)
+
+For PSI fixture tests that extend `ArmeriaFixtureTestBase` or
+`ArmeriaLightJavaCodeInsightFixtureTestCase`:
+
+- Place fixture sources under `src/test/testData/<suite>/<case>/` in the owning module
+  (e.g. `plugin-route-collectors/src/test/testData/extendedRegistration/basic/fileService/Main.java`).
+- Load fixtures with `configureFixture("relative/path")` on `ArmeriaLightJavaCodeInsightFixtureTestCase`
+  (or subclasses such as `ArmeriaFixtureTestBase`) — temporarily sets `myFixture.testDataPath` to
+  `src/test/testData` via the `armeria.moduleTestDataPath` system property (set automatically by the
+  `com.linecorp.intellij.platform-library` convention on the `test` suite when `src/test/testData/` exists) or relative
+  to the test task working directory (module root). `configureFixture()` restores the previous
+  `testDataPath` after each call, so later `configureByText()` calls in the same test method are safe.
+  Gradle `:module:test` tasks set CWD to the module project dir, so
+  `./gradlew :plugin-route-collectors:test` works out of the box; ad-hoc JUnit runners launched from
+  the repo root need `-Darmeria.moduleTestDataPath=<module>/src/test/testData` or module-root CWD
+  (see `.run/Armeria testData fixture.run.xml`). Invalid `armeria.moduleTestDataPath` values fail fast
+  in `resolveArmeriaModuleTestDataPath()`. Do not override `getTestDataPath()` on the shared base; consumer
+  modules without `testData/` rely on the platform default.
+- `collectRoutes()` on `ArmeriaFixtureTestBase` uses `ArmeriaRouteCollector` (core annotated +
+  service registration only). Tests needing Spring or protocol routes must call
+  `ArmeriaRouteAnalysisCollector.collect(project)` or a module-specific collector.
+- Assert collected routes with `collectRoutes().also { it.singleRoute() }.assertRoute(...)` from
+  `ArmeriaRouteTestSupport` in `plugin-route-collectors` testFixtures. Migration patterns:
+
+  | Old pattern | New pattern |
+  |---|---|
+  | `routes.single()` + field asserts | `collectRoutes().also { it.singleRoute() }.assertRoute(...)` |
+  | `routes.firstOrNull { it.routeMatch == X }` + field asserts | `collectRoutes().also { it.singleRoute() }.assertRoute(RouteMatch.X, path = ...)` |
+  | Uniqueness **and** field match | `collectRoutes().also { it.singleRoute() }.assertRoute(...)` |
+
+  `assertRoute()` with no expected fields is rejected — use `singleRoute()` for cardinality-only
+  checks. Prefer `singleRoute()` before `assertRoute()` so extra routes from stubs or fixture
+  leakage fail the test.
+- Keep Armeria/Spring API **stubs** in `ArmeriaFixture*Stubs.kt` via `addClass(...)`; only
+  user source under test belongs in `testData/`.
+
+Reference migration: `ArmeriaExtendedRegistrationCollectorBasicTest`.
+
+Proto route cache integration tests (`ArmeriaGrpcRouteCollectorTest`, `ArmeriaGrpcRouteCollectorGateTest`)
+live in `plugin-route-protocol` because they exercise gRPC classpath gates and collector integration;
+keep collector-internal unit tests in `plugin-route-collectors`.
+
 ## Related skills
 
 - `intellij-armeria-plugin` — UI/i18n, index readiness, module placement, test task paths
