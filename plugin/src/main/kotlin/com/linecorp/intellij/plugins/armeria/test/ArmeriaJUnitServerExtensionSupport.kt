@@ -265,9 +265,16 @@ internal object ArmeriaJUnitServerExtensionSupport {
         return null
     }
 
-    fun enclosingTestClassName(element: PsiElement): String? =
-        element.getParentOfType<KtClass>(true)?.fqName?.asString()
+    fun enclosingTestClassName(element: PsiElement): String? {
+        element.getParentOfType<KtObjectDeclaration>(true)?.let { objectDeclaration ->
+            if (objectDeclaration.isCompanion()) {
+                return objectDeclaration.getParentOfType<KtClass>(true)?.fqName?.asString()
+            }
+            return objectDeclaration.fqName?.asString()
+        }
+        return element.getParentOfType<KtClass>(true)?.fqName?.asString()
             ?: PsiTreeUtil.getParentOfType(element, PsiClass::class.java)?.qualifiedName
+    }
 
     fun enclosingServerExtension(
         element: PsiElement,
