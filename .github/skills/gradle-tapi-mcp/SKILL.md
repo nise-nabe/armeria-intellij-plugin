@@ -17,7 +17,7 @@ This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com
 
 The wrapper `.github/scripts/gradle-mcp-server.sh` sets `GRADLE_PROJECT_DIR` to the git root before starting the MCP server.
 
-**Use MCP for all Gradle tasks.** Fall back to shell `./gradlew` only when MCP is unresponsive or returns `BUILD_ALREADY_RUNNING` that cannot be cancelled.
+**Use MCP for all Gradle tasks.** Fall back to shell `./gradlew` only when MCP is unresponsive, returns `BUILD_ALREADY_RUNNING` that cannot be cancelled, or for CI parity — **not** to read compile/test output from a build MCP already ran (see **On MCP build failure** below).
 
 ## Workflow
 
@@ -63,9 +63,9 @@ When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-em
 1. `gradle_connection_status` — confirm MCP is connected.
 2. `gradle_run_tasks` with `[":plugin:compileKotlin", ":plugin:compileTestKotlin"]` (foreground if warm, else `background: true` + poll).
 3. Before each `git commit` when staged Kotlin or `.editorconfig` is present (see detection command above), run `gradle_run_tasks` with `["ktlintCheck"]` (`background: true` + poll). On failure, apply `gradle_run_tasks` `["ktlintFormat"]` or manual fixes, `git add` the changed files, and re-run until clean. Wait for in-flight MCP builds to finish or cancel them (`gradle_cancel_build`). `ktlintFormat` is project-wide — re-stage only intended paths. Root `ktlintCheck` does not cover `build-logic/` or `settings.gradle.kts`; when all staged Kotlin is in those locations, manually review style; when a commit mixes those paths with plugin-module Kotlin, manually review the `build-logic/` and `settings.gradle.kts` portions even if `ktlintCheck` passes.
-4. Verify tests via MCP (`gradle_run_tests` or `gradle_run_tasks` with `background: true` + poll).
+4. Verify tests via MCP (`gradle_run_tests` or `gradle_run_tasks` with `background: true` + poll). On `status: failed`, follow **On MCP build failure** — do not shell `./gradlew` for logs.
 5. Before opening a PR, run `gradle_run_tasks` with `["build"]` and `background: true`, poll to completion.
 
-If MCP is unresponsive: `gradle_list_builds` or poll `gradle_get_build_status` with the `buildId` (reconciles disk records automatically), then shell fallback.
+If MCP is unresponsive: `gradle_list_builds` or poll `gradle_get_build_status` with the `buildId` (reconciles disk records automatically), then shell fallback. Do not shell `./gradlew` to read errors from a completed MCP failure.
 
 Full reference: `.cursor/skills/gradle-tapi-mcp/SKILL.md`
