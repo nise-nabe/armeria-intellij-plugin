@@ -91,7 +91,7 @@ class ArmeriaRouteTestSupportTest : TestCase() {
         assertEquals("/api", route.path)
     }
 
-    fun testAssertRoutePrefersSingleRouteWhenPathIsAmbiguous() {
+    fun testAssertRouteFailsWhenPathIsAmbiguous() {
         val routes =
             listOf(
                 testRoute(path = "/dup", routeMatch = RouteMatch.ANNOTATED_HTTP),

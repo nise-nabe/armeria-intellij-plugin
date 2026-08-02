@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Armeria testData fixture" type="JUnit" factoryName="JUnit">
-    <module name="plugin-route-collectors.test" />
-    <option name="MAIN_CLASS_NAME" value="" />
+    <module name="armeria-intellij-plugin.plugin-route-collectors.test" />
+    <option name="MAIN_CLASS_NAME" value="com.linecorp.intellij.plugins.armeria.explorer.ArmeriaExtendedRegistrationCollectorBasicTest" />
     <option name="METHOD_NAME" value="" />
     <option name="TEST_OBJECT" value="class" />
     <option name="VM_PARAMETERS" value="-Darmeria.moduleTestDataPath=$MODULE_WORKING_DIR$/src/test/testData" />

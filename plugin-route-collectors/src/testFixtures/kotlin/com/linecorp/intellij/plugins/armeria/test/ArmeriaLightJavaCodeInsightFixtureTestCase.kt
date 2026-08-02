@@ -39,7 +39,9 @@ abstract class ArmeriaLightJavaCodeInsightFixtureTestCase : LightJavaCodeInsight
     protected fun configureFixture(relativePath: String): PsiFile {
         val previousTestDataPath = myFixture.testDataPath
         myFixture.testDataPath = resolveModuleTestDataPath()
-        return myFixture.configureByFile(relativePath).also {
+        try {
+            return myFixture.configureByFile(relativePath)
+        } finally {
             myFixture.testDataPath = previousTestDataPath
         }
     }
