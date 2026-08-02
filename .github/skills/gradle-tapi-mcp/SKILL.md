@@ -8,7 +8,7 @@ description: >-
 
 # Gradle Tooling API MCP (Copilot / GitHub Agents)
 
-This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.6.1:
+This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.7.0:
 
 | Environment | Config | Install |
 |-------------|--------|---------|
@@ -32,7 +32,7 @@ Use `background: true` and poll `gradle_get_build_status` for runs that may exce
 
 Only **one** MCP build per `projectDirectory` at a time (gate releases immediately on terminal status). `BUILD_ALREADY_RUNNING` includes `error.activeBuildId` for direct polling. Batch multiple test classes/methods in a **single** `gradle_run_tests` instead of parallel MCP calls. To chain compile → test, use `queueIfBusy: true` with `background: true` on the second call (queue depth max 3). To run both `:test` and a custom `JvmTestSuite` (`fastTest`) in one build, use `tasks: [":mod:test", ":mod:fastTest"]` + `includePatterns`. Use `gradle_cancel_build` + poll when you need to stop a stale run (`not_running` means the build already finished).
 
-Do **not** run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` concurrently (IntelliJ test sandbox contention). In this multi-project repo, `testClasses`/`testMethods` require `taskPath` or `tasks` (e.g. `taskPath: ":plugin:test"`).
+Do **not** run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` concurrently (IntelliJ test sandbox contention). In this multi-project repo, prefer explicit `taskPath` or `tasks` (e.g. `taskPath: ":plugin:test"`). Unscoped `testClasses`/`testMethods` auto-infer when unambiguous; otherwise `INVALID_ARGUMENT` includes `suggestedTaskPaths` and a `hint`.
 
 ## Common tasks (this repo)
 
