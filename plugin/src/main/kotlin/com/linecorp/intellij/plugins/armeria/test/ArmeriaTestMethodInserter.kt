@@ -242,10 +242,12 @@ internal object ArmeriaTestMethodInserter {
         elementAtCaret: PsiElement?,
         selectedClass: PsiClass?,
     ): PsiClass? {
-        val openTestFile =
-            selectedPsiFile?.takeIf { ArmeriaJUnitServerExtensionSupport.isInTestSourceContent(it) }
-                ?: return null
-        if (editorHasResolvableClass(openTestFile, elementAtCaret, selectedClass)) {
+        if (selectedPsiFile != null && !ArmeriaJUnitServerExtensionSupport.isInTestSourceContent(selectedPsiFile)) {
+            return null
+        }
+        if (selectedPsiFile != null &&
+            editorHasResolvableClass(selectedPsiFile, elementAtCaret, selectedClass)
+        ) {
             return null
         }
         val unassignedModule = message("route.explorer.module.unassigned")
