@@ -8,7 +8,7 @@ description: >-
 
 # Gradle Tooling API MCP
 
-This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.6.1 in `.cursor/mcp.json` (Cursor) and `.github/mcp.json` (Copilot). The JAR is installed by `.cursor/install.sh` or `.github/scripts/install-gradle-tapi-mcp.sh` to `~/.local/share/gradle-tapi-mcp-server/gradle-tapi-mcp-server.jar`. At MCP server launch, `GRADLE_PROJECT_DIR` is set to the workspace/git root.
+This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.7.0 in `.cursor/mcp.json` (Cursor) and `.github/mcp.json` (Copilot). The JAR is installed by `.cursor/install.sh` or `.github/scripts/install-gradle-tapi-mcp.sh` to `~/.local/share/gradle-tapi-mcp-server/gradle-tapi-mcp-server.jar`. At MCP server launch, `GRADLE_PROJECT_DIR` is set to the workspace/git root.
 
 The MCP server may report `loading` for a few seconds on first use; call `gradle_connection_status` before other tools.
 
@@ -87,7 +87,7 @@ Use `projectPath` on model tools to scope to a submodule and avoid huge response
 
 Do **not** run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` on the same checkout concurrently — IntelliJ Platform test workers compete for the same sandbox and can hang for many minutes.
 
-In multi-project builds, `gradle_run_tests` with `testClasses` or `testMethods` requires `taskPath` or `tasks` to scope the test task (e.g. `taskPath: ":plugin:test"`). Unscoped class/method selection returns `INVALID_ARGUMENT`.
+In multi-project builds, prefer explicit `taskPath` or `tasks` (e.g. `taskPath: ":plugin:test"`). Unscoped `testClasses`/`testMethods` auto-infer `taskPath` when unambiguous (single JVM test task, or all classes resolve to one subproject with one suite); successful inference sets `taskPathInferred: true`. When inference is ambiguous, `INVALID_ARGUMENT` includes `suggestedTaskPaths` (capped) and a `hint`.
 
 ## When to use MCP vs shell
 
@@ -263,7 +263,7 @@ Then rerun `:plugin:test` or `build` via shell or MCP (background + polling).
 | `error.code: NOT_CONNECTED` | `gradle_connect` or restart the MCP server |
 | `error.code: BUILD_ALREADY_RUNNING` | Poll `gradle_get_build_status` with `error.activeBuildId`, `gradle_cancel_build` if stale (`not_running` = already finished), batch tests into one `gradle_run_tests`, or use `queueIfBusy: true` with `background: true` |
 | `error.code: BUILD_QUEUE_FULL` | Queue saturated (max 3 queued per project). Use `error.activeBuildId` to identify the occupying build; `gradle_cancel_build` or wait for completion |
-| `error.code: INVALID_ARGUMENT` on `gradle_run_tests` | Add `taskPath` or `tasks` when using `testClasses`/`testMethods` in this multi-project repo |
+| `error.code: INVALID_ARGUMENT` on `gradle_run_tests` | Prefer explicit `taskPath` or `tasks` in this multi-project repo; when omitted, use `suggestedTaskPaths` / `hint` from the error, or `gradle_get_project_model` with `includeTasks=true` |
 | MCP call timed out but Gradle may still be running | Foreground runs auto-detach; use `gradle_list_builds` and poll `gradle_get_build_status` (short polls; do not rely on one long `waitUntilComplete`) |
 | Huge MCP responses | Keep `includeTasks` / `includeTaskSelectors` false unless filtering |
 | Declared Java vs daemon Java differ | Report both toolchain declaration (files) and daemon Java (MCP) |
@@ -272,6 +272,6 @@ Then rerun `:plugin:test` or `build` via shell or MCP (background + polling).
 
 Full tool reference and advanced workflows live in the upstream repository:
 
-- [README (v0.6.1)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/v0.6.1/README.md)
+- [README (v0.7.0)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/v0.7.0/README.md)
 - [gradle-tapi-mcp skill](https://github.com/nise-nabe/gradle-tapi-mcp-server/tree/main/skills/gradle-tapi-mcp)
 - [Tool reference (reference.md)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/main/skills/gradle-tapi-mcp/reference.md)
