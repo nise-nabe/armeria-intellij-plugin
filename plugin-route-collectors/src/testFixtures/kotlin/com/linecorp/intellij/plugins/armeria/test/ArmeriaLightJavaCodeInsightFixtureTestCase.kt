@@ -2,6 +2,7 @@ package com.linecorp.intellij.plugins.armeria.test
 
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
+import com.intellij.psi.PsiFile
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import java.io.File
@@ -23,6 +24,18 @@ abstract class ArmeriaLightJavaCodeInsightFixtureTestCase : LightJavaCodeInsight
                 "or set -Darmeria.moduleTestDataPath"
         }
         return fromWorkingDir.absolutePath.replace('\\', '/')
+    }
+
+    /**
+     * Loads a fixture from [resolveModuleTestDataPath] and resets [myFixture.testDataPath] afterward so
+     * later [configureByText] calls do not accidentally resolve relative paths against testData.
+     */
+    protected fun configureFixture(relativePath: String): PsiFile {
+        val previousTestDataPath = myFixture.testDataPath
+        myFixture.testDataPath = resolveModuleTestDataPath()
+        return myFixture.configureByFile(relativePath).also {
+            myFixture.testDataPath = previousTestDataPath
+        }
     }
 
     override fun setUp() {

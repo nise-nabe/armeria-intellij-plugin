@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer.collector
 
 import com.intellij.ide.highlighter.JavaFileType
+import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootModificationTracker
 import com.intellij.openapi.util.Key
@@ -49,7 +50,11 @@ object ArmeriaRouteCollector {
         val startedAt = System.nanoTime()
         val routes =
             ArmeriaRouteCollectionMetrics.runWith(metrics) {
-                if (includeProtoRoutes && ArmeriaProtoRouteDiscoverySupport.isEnabled()) {
+                if (
+                    includeProtoRoutes &&
+                    ArmeriaProtoRouteDiscoverySupport.isEnabled() &&
+                    ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, collectionScope(project))
+                ) {
                     cachedProjectRoutesWithProto(project, contributors)
                 } else {
                     cachedProjectRoutes(project, contributors)
@@ -176,10 +181,14 @@ object ArmeriaRouteCollector {
         )
     }
 
+    /** Invalidators shared by base, proto-overlay, and downstream route memo caches. */
+    fun routeCacheDependencies(project: Project): Array<Any> = routeCacheInvalidators(project)
+
     private fun routeCacheInvalidators(project: Project): Array<Any> =
         arrayOf(
             PsiModificationTracker.MODIFICATION_COUNT,
             ProjectRootModificationTracker.getInstance(project),
+            DumbService.getInstance(project).modificationTracker,
         )
 
     private fun buildCollectContext(

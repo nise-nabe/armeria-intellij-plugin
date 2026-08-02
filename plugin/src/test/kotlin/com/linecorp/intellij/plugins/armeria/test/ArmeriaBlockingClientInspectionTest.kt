@@ -11,6 +11,7 @@ import com.intellij.testFramework.PsiTestUtil
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnalysisCollector
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ArmeriaBlockingClientInspectionTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
@@ -272,13 +273,58 @@ class ArmeriaBlockingClientInspectionTest : ArmeriaLightJavaCodeInsightFixtureTe
         )
 
         ArmeriaRouteAnalysisCollector.collect(project)
-        val firstScan = ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned
-        assertTrue(firstScan > 0)
+        ArmeriaRouteAnalysisCollector.collect(project)
+        assertEquals(0, ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned)
 
         val blockingPaths = ArmeriaBlockingClientInspectionPaths.blockingRoutePaths(project)
         assertTrue(blockingPaths.contains("/slow"))
-        val secondScan = ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned
-        assertEquals(0, secondScan)
+        val secondPaths = ArmeriaBlockingClientInspectionPaths.blockingRoutePaths(project)
+        assertEquals(blockingPaths, secondPaths)
+        assertEquals(0, ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned)
+    }
+
+    fun testBlockingRoutePathsInvalidateAfterBlockingAnnotationEdit() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        ArmeriaRouteAnalysisCollector.collect(project)
+        ArmeriaRouteAnalysisCollector.collect(project)
+        assertFalse(ArmeriaBlockingClientInspectionPaths.blockingRoutePaths(project).contains("/slow"))
+
+        myFixture.configureByText(
+            "SlowService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Blocking
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val blockingPaths = ArmeriaBlockingClientInspectionPaths.blockingRoutePaths(project)
+        assertTrue(blockingPaths.contains("/slow"))
+        assertTrue(ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned > 0)
     }
 
     fun testNoInspectionSetupForMainSourceTestNamedFile() {

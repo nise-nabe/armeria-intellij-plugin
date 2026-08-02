@@ -23,4 +23,6 @@ object ArmeriaRouteAnalysisCollector {
             includeProtoRoutes = includeProtoRoutes,
             contributors = CONTRIBUTORS,
         )
+
+    fun routeCacheDependencies(project: Project): Array<Any> = ArmeriaRouteCollector.routeCacheDependencies(project)
 }
