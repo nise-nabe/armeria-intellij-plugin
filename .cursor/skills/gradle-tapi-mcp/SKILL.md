@@ -31,6 +31,28 @@ When using Cursor `mcp_get_tools`:
 
 Avoid `includeTasks=true` and heavy model queries unless necessary. `gradle_run_tasks` omits stdout/stderr by default (`includeOutput=false`). On failure, check `failedTasks`, `buildSummary.failureSummary`, structured `testFailures` / `failedTestCount` (test runs), and structured `problems` before setting `includeOutput=true`.
 
+### Failure diagnosis (required before shell fallback)
+
+A terminal poll with only `failedTasks` / `error` is **not** enough to fix compile or test failures. Re-poll the **same `buildId`**:
+
+| Failure kind | First re-poll flags | If still insufficient |
+|--------------|---------------------|-------------------------|
+| Compile / task (`GRADLE_TASK`, `compile*Kotlin` in `failedTasks`) | `includeProblems: true` | `includeOutput: true`, or read `recordDirectory`/`.gradle/mcp-builds/<buildId>/stdout.log` |
+| Test (`TEST`, or `testFailures` expected) | `includeTestDetails: true` | `includeOutput: true` |
+| Any | `includeProblems: true` + `includeTestDetails: true` when both may apply | disk logs above |
+
+**Do not** run shell `./gradlew <same-task>` to obtain error text MCP already captured. Shell `./gradlew` is for MCP unresponsiveness or CI parity only.
+
+While `status: running`, use `waitUntilComplete: true` on `gradle_get_build_status` (short `waitTimeoutMs`, repeat until terminal) — do **not** `sleep` then poll.
+
+```json
+{
+  "buildId": "<from gradle_run_tasks or gradle_run_tests>",
+  "includeProblems": true,
+  "includeTestDetails": true
+}
+```
+
 ### Inquiry tools (read-only, fast)
 
 | Tool | Use |
@@ -164,9 +186,9 @@ Or for test selection:
 }
 ```
 
-2. Poll `gradle_get_build_status` with the returned `buildId` until `status` is `succeeded`, `failed`, or `cancelled`. Prefer repeated short polls over one long wait. Optional `waitUntilComplete: true` uses a **server-side** wait only (`waitTimeoutMs` default 30s, max 60s); on timeout the build keeps running and the response includes `waitTimedOut`, `waitedMs`, and a `hint` to poll again. Non-wait status polls read memory/disk only and do not block on the Tooling API.
+2. Poll `gradle_get_build_status` with the returned `buildId` until `status` is `succeeded`, `failed`, or `cancelled`. Prefer `waitUntilComplete: true` (short `waitTimeoutMs`, repeat) over `sleep` + poll. Optional explicit short polls work too; do not block on one long wait.
 
-3. Read `outcome`, `buildSummary`, `failureCategory` (`TEST` / `GRADLE_TASK` / `TOOLING_CONNECTION` / `CANCELLED`), and `statusSource` (`memory` or `disk`) from the poll response. Use `includeProgress: true` for task/test events; set `includeOutput: true` only if you need truncated logs. For incremental log polling while running, pass `sinceStdoutOffset` / `sinceStderrOffset` to receive `stdoutDelta` / `stderrDelta` instead of re-reading prior prefixes.
+3. On `status: failed`, follow **Failure diagnosis** above before fixing code or re-running tasks. Read `outcome`, `buildSummary`, `failureCategory` (`TEST` / `GRADLE_TASK` / `TOOLING_CONNECTION` / `CANCELLED`), and `statusSource` (`memory` or `disk`). Use `includeProgress: true` for task/test events while running; use `includeProblems` / `includeTestDetails` / `includeOutput` on the failure re-poll, not on every running poll.
 
 `gradle_get_build_status` reconciles memory and disk records. While `status` is `running`, disk `events.ndjson` task events are merged into progress.
 
@@ -229,7 +251,7 @@ Prefer MCP for all verification. Use shell only when MCP is unresponsive or for 
 4. Verify tests via MCP (one build at a time on this repo):
    - Batch all changed classes/methods into **one** `gradle_run_tests` when doing a verification pass.
    - When isolating failures, run one class or method per call; wait for terminal status (or `gradle_cancel_build`) before the next.
-   - Use `background: true`; on failure read `testFailures` / `buildSummary.failureSummary` first, then poll with `includeOutput: true` only if logs are still needed.
+   - Use `background: true`; on failure follow **Failure diagnosis** (`includeProblems` / `includeTestDetails`, then `includeOutput` if needed) — do not shell `./gradlew` for logs.
    - Do not overlap MCP runs with shell `./gradlew :plugin:test`.
 5. Before opening a PR, run `gradle_run_tasks` with `["build"]` and `background: true`, poll to completion, then optionally shell `./gradlew build` for exact CI parity if MCP already passed.
 
@@ -260,6 +282,8 @@ Then rerun `:plugin:test` or `build` via shell or MCP (background + polling).
 
 | Symptom | Action |
 |---------|--------|
+| `status: failed` but only `failedTasks` / generic `error` | Re-poll same `buildId` with `includeProblems: true` (compile) or `includeTestDetails: true` (tests); then `includeOutput: true` or read `recordDirectory`/stdout.log — **do not** shell `./gradlew` |
+| Agent used `sleep` then polled | Use `waitUntilComplete: true` on `gradle_get_build_status` instead |
 | `error.code: NOT_CONNECTED` | `gradle_connect` or restart the MCP server |
 | `error.code: BUILD_ALREADY_RUNNING` | Poll `gradle_get_build_status` with `error.activeBuildId`, `gradle_cancel_build` if stale (`not_running` = already finished), batch tests into one `gradle_run_tests`, or use `queueIfBusy: true` with `background: true` |
 | `error.code: BUILD_QUEUE_FULL` | Queue saturated (max 3 queued per project). Use `error.activeBuildId` to identify the occupying build; `gradle_cancel_build` or wait for completion |

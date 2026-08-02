@@ -28,6 +28,16 @@ The wrapper `.github/scripts/gradle-mcp-server.sh` sets `GRADLE_PROJECT_DIR` to 
 
 Use `background: true` and poll `gradle_get_build_status` for runs that may exceed ~30s (`build`, `:plugin:test`, `:plugin-route-analysis:test`, cold start).
 
+## On MCP build failure
+
+Re-poll the **same `buildId`** — do **not** shell `./gradlew` just to read compiler or test output:
+
+- Compile / task failure: `includeProblems: true`
+- Test failure: `includeTestDetails: true`
+- Still insufficient: `includeOutput: true`, or read `.gradle/mcp-builds/<buildId>/stdout.log` from `recordDirectory`
+
+While `status: running`, use `waitUntilComplete: true` — do **not** `sleep` then poll.
+
 ## Concurrency
 
 Only **one** MCP build per `projectDirectory` at a time (gate releases immediately on terminal status). `BUILD_ALREADY_RUNNING` includes `error.activeBuildId` for direct polling. Batch multiple test classes/methods in a **single** `gradle_run_tests` instead of parallel MCP calls. To chain compile → test, use `queueIfBusy: true` with `background: true` on the second call (queue depth max 3). To run both `:test` and a custom `JvmTestSuite` (`fastTest`) in one build, use `tasks: [":mod:test", ":mod:fastTest"]` + `includePatterns`. Use `gradle_cancel_build` + poll when you need to stop a stale run (`not_running` means the build already finished).

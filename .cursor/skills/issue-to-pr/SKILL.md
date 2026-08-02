@@ -52,7 +52,7 @@ Wait for `gradle_connection_status` (`connectedAny: true`).
 | Tests | **One** `gradle_run_tests` batch — affected class(es) only (`Grep` for callers) |
 | Lint (when `*.kt` staged) | `gradle_run_tasks` `["ktlintCheck"]` — after tests, before commit |
 
-Do not run full `build` for small fixes. Poll without `includeOutput` until failure.
+Do not run full `build` for small fixes. Poll without `includeOutput` while `status: running`. On `status: failed`, re-poll the same `buildId` with `includeProblems: true` (compile/task failures) or `includeTestDetails: true` (test failures) before fixing — do **not** shell `./gradlew` to read errors (see `gradle-mcp.mdc` and `gradle-tapi-mcp` **Failure diagnosis**).
 
 ## 5 — Commit + PR
 
