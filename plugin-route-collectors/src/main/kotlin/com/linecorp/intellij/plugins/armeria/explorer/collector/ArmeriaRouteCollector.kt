@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer.collector
 
 import com.intellij.ide.highlighter.JavaFileType
+import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootModificationTracker
 import com.intellij.openapi.util.Key
@@ -49,7 +50,11 @@ object ArmeriaRouteCollector {
         val startedAt = System.nanoTime()
         val routes =
             ArmeriaRouteCollectionMetrics.runWith(metrics) {
-                if (includeProtoRoutes && ArmeriaProtoRouteDiscoverySupport.isEnabled()) {
+                if (
+                    includeProtoRoutes &&
+                    ArmeriaProtoRouteDiscoverySupport.isEnabled() &&
+                    ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, collectionScope(project))
+                ) {
                     cachedProjectRoutesWithProto(project, contributors)
                 } else {
                     cachedProjectRoutes(project, contributors)
@@ -80,9 +85,17 @@ object ArmeriaRouteCollector {
             cacheKeyWithProto(contributors),
             CachedValueProvider {
                 val baseRoutes = cachedProjectRoutes(project, contributors)
+                val baseCachedValue = project.getUserData(cacheKey(contributors))
+                val dependencies =
+                    buildList {
+                        if (baseCachedValue != null) {
+                            add(baseCachedValue)
+                        }
+                        addAll(routeCacheInvalidators(project))
+                    }
                 CachedValueProvider.Result.create(
                     mergeProtoRoutes(project, baseRoutes, contributors),
-                    *routeCacheInvalidators(project),
+                    dependencies,
                 )
             },
             false,
@@ -176,10 +189,25 @@ object ArmeriaRouteCollector {
         )
     }
 
+    fun routeCacheDependencies(
+        project: Project,
+        contributors: List<RouteContributor>,
+    ): Array<Any> {
+        cachedProjectRoutes(project, contributors)
+        val baseCachedValue = project.getUserData(cacheKey(contributors))
+        return buildList {
+            if (baseCachedValue != null) {
+                add(baseCachedValue)
+            }
+            addAll(routeCacheInvalidators(project))
+        }.toTypedArray()
+    }
+
     private fun routeCacheInvalidators(project: Project): Array<Any> =
         arrayOf(
             PsiModificationTracker.MODIFICATION_COUNT,
             ProjectRootModificationTracker.getInstance(project),
+            DumbService.getInstance(project).modificationTracker,
         )
 
     private fun buildCollectContext(

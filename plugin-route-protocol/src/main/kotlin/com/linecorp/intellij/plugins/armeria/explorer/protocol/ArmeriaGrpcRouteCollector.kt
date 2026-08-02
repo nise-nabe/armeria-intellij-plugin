@@ -2,7 +2,6 @@ package com.linecorp.intellij.plugins.armeria.explorer.protocol
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
-import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
@@ -17,7 +16,6 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollec
 import com.linecorp.intellij.plugins.armeria.message
 
 object ArmeriaGrpcRouteCollector {
-    private const val GRPC_SERVICE_CLASS = "com.linecorp.armeria.server.grpc.GrpcService"
     private val SERVICE_HEADER_PATTERN = Regex("""\bservice\s+(\w+)\s*\{""")
     private val RPC_PATTERN = Regex("""\brpc\s+(\w+)\s*\(""")
     private val PACKAGE_PATTERN = Regex("""\bpackage\s+([\w.]+)\s*;?""")
@@ -27,7 +25,7 @@ object ArmeriaGrpcRouteCollector {
         scope: GlobalSearchScope,
         routes: MutableList<ArmeriaRoute>,
     ) {
-        if (!ArmeriaProtoRouteDiscoverySupport.isEnabled() || !isGrpcOnClasspath(project, scope)) {
+        if (!ArmeriaProtoRouteDiscoverySupport.isEnabled() || !ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope)) {
             return
         }
         val seenProtoRoutes = mutableSetOf<String>()
@@ -109,7 +107,7 @@ object ArmeriaGrpcRouteCollector {
     internal fun isGrpcOnClasspath(
         project: Project,
         scope: GlobalSearchScope,
-    ): Boolean = JavaPsiFacade.getInstance(project).findClass(GRPC_SERVICE_CLASS, scope) != null
+    ): Boolean = ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope)
 
     private fun findServiceBodies(text: String): List<Pair<String, String>> {
         val results = mutableListOf<Pair<String, String>>()

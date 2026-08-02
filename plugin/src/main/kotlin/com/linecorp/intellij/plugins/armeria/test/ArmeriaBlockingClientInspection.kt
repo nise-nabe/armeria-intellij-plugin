@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.test
 import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Key
 import com.intellij.psi.JavaElementVisitor
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElementVisitor
@@ -11,6 +12,9 @@ import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.psi.util.CachedValue
+import com.intellij.psi.util.CachedValueProvider
+import com.intellij.psi.util.CachedValuesManager
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnalysisCollector
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.message
@@ -132,11 +136,25 @@ class ArmeriaBlockingClientInspection : LocalInspectionTool() {
 }
 
 internal object ArmeriaBlockingClientInspectionPaths {
+    private val BLOCKING_PATHS_KEY = Key.create<CachedValue<Set<String>>>("armeria.blocking.client.route.paths")
+
     fun blockingRoutePaths(project: Project): Set<String> =
-        ArmeriaRouteAnalysisCollector
-            .collect(project)
-            .asSequence()
-            .filter { ArmeriaTestMethodGenerator.isBlockingInspectableRoute(it) }
-            .map { ArmeriaRouteSupport.normalizePath(it.path) }
-            .toSet()
+        CachedValuesManager.getManager(project).getCachedValue(
+            project,
+            BLOCKING_PATHS_KEY,
+            CachedValueProvider {
+                val paths =
+                    ArmeriaRouteAnalysisCollector
+                        .collect(project)
+                        .asSequence()
+                        .filter { ArmeriaTestMethodGenerator.isBlockingInspectableRoute(it) }
+                        .map { ArmeriaRouteSupport.normalizePath(it.path) }
+                        .toSet()
+                CachedValueProvider.Result.create(
+                    paths,
+                    *ArmeriaRouteAnalysisCollector.routeCacheDependencies(project),
+                )
+            },
+            false,
+        )
 }
