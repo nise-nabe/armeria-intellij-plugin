@@ -1,13 +1,17 @@
 package com.linecorp.intellij.plugins.armeria.test
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.util.TextRange
+import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.testFramework.PlatformTestUtil
+import com.intellij.testFramework.PsiTestUtil
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import org.jetbrains.kotlin.asJava.toLightClass
@@ -139,6 +143,88 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
             ArmeriaTestMethodInserter.resolveTargetClassInternal(
                 project,
                 route(path = "/api", moduleName = "unmatched-module"),
+            )
+
+        assertNull(resolved)
+    }
+
+    fun testDoesNotModuleFallbackWhenMainSourceEditorFocused() {
+        myFixture.configureByText(
+            "ExampleServiceTest.java",
+            """
+            package example;
+
+            import org.junit.jupiter.api.extension.RegisterExtension;
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+            public class ExampleServiceTest {
+                @RegisterExtension
+                static ServerExtension server = new ServerExtension() {};
+            }
+            """.trimIndent(),
+        )
+
+        val mainRoot = myFixture.tempDirFixture.findOrCreateDir("main")
+        try {
+            PsiTestUtil.addSourceRoot(module, mainRoot, false)
+            val virtualFile =
+                ApplicationManager.getApplication().runWriteAction<VirtualFile> {
+                    val file = mainRoot.createChildData(this, "ExampleService.java")
+                    VfsUtil.saveText(
+                        file,
+                        """
+                        package example;
+
+                        public class ExampleService {}
+                        """.trimIndent(),
+                    )
+                    file
+                }
+            PsiDocumentManager.getInstance(project).commitAllDocuments()
+            myFixture.openFileInEditor(virtualFile)
+
+            val resolved =
+                ArmeriaTestMethodInserter.resolveTargetClassInternal(
+                    project,
+                    route(path = "/api"),
+                )
+
+            assertNull(resolved)
+        } finally {
+            PsiTestUtil.removeSourceRoot(module, mainRoot)
+        }
+    }
+
+    fun testDoesNotModuleFallbackWhenDifferentTestClassFocused() {
+        myFixture.configureByText(
+            "ExampleServiceTest.java",
+            """
+            package example;
+
+            import org.junit.jupiter.api.extension.RegisterExtension;
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+            public class ExampleServiceTest {
+                @RegisterExtension
+                static ServerExtension server = new ServerExtension() {};
+            }
+            """.trimIndent(),
+        )
+        val otherTestFile =
+            myFixture.configureByText(
+                "OtherTest.java",
+                """
+                package example;
+
+                public class OtherTest {}
+                """.trimIndent(),
+            )
+        myFixture.openFileInEditor(otherTestFile.virtualFile)
+
+        val resolved =
+            ArmeriaTestMethodInserter.resolveTargetClassInternal(
+                project,
+                route(path = "/api"),
             )
 
         assertNull(resolved)
