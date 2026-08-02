@@ -233,7 +233,7 @@ For PSI fixture tests that extend `ArmeriaFixtureTestBase` or
   `./gradlew :plugin-route-collectors:test` works out of the box; ad-hoc JUnit runners launched from
   the repo root need `-Darmeria.moduleTestDataPath=<module>/src/test/testData` or module-root CWD
   (see `.run/Armeria testData fixture.run.xml`). Invalid `armeria.moduleTestDataPath` values fail fast
-  in `resolveModuleTestDataPath()`. Do not override `getTestDataPath()` on the shared base; consumer
+  in `resolveArmeriaModuleTestDataPath()`. Do not override `getTestDataPath()` on the shared base; consumer
   modules without `testData/` rely on the platform default.
 - `collectRoutes()` on `ArmeriaFixtureTestBase` uses `ArmeriaRouteCollector` (core annotated +
   service registration only). Tests needing Spring or protocol routes must call
