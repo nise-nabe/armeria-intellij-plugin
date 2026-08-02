@@ -22,6 +22,7 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
+import org.jetbrains.kotlin.psi.KtObjectDeclaration
 import org.jetbrains.kotlin.psi.KtPsiFactory
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 import org.jetbrains.kotlin.resolve.ImportPath
@@ -278,13 +279,21 @@ internal object ArmeriaTestMethodInserter {
             if (elementAtCaret.getParentOfType<KtClass>(true) != null) {
                 return true
             }
+            elementAtCaret
+                .getParentOfType<KtObjectDeclaration>(true)
+                ?.takeUnless { it.isCompanion() }
+                ?.let { return true }
             if (PsiTreeUtil.getParentOfType(elementAtCaret, PsiClass::class.java) != null) {
                 return true
             }
         }
         return when (selectedPsiFile) {
             is PsiJavaFile -> selectedPsiFile.classes.any { it.containingClass == null }
-            is KtFile -> selectedPsiFile.declarations.any { it is KtClass }
+            is KtFile ->
+                selectedPsiFile.declarations.any { declaration ->
+                    declaration is KtClass ||
+                        (declaration is KtObjectDeclaration && !declaration.isCompanion())
+                }
             else -> false
         }
     }

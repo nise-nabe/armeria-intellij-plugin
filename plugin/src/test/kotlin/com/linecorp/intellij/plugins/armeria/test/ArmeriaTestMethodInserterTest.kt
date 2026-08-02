@@ -338,6 +338,41 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
         }
     }
 
+    fun testDoesNotModuleFallbackWhenKotlinObjectOnlyTestFileFocused() {
+        myFixture.configureByText(
+            "ExampleServiceTest.kt",
+            """
+            package example
+
+            import org.junit.jupiter.api.extension.RegisterExtension
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+            class ExampleServiceTest {
+                @RegisterExtension
+                val server: ServerExtension = object : ServerExtension() {}
+            }
+            """.trimIndent(),
+        )
+        val objectTestFile =
+            myFixture.configureByText(
+                "ObjectTest.kt",
+                """
+                package example
+
+                object ObjectTest
+                """.trimIndent(),
+            )
+        myFixture.openFileInEditor(objectTestFile.virtualFile)
+
+        val resolved =
+            ArmeriaTestMethodInserter.resolveTargetClassInternal(
+                project,
+                route(path = "/api"),
+            )
+
+        assertNull(resolved)
+    }
+
     fun testDoesNotModuleFallbackWhenDifferentKotlinTestClassFocused() {
         myFixture.configureByText(
             "ExampleServiceTest.kt",
