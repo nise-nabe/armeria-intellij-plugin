@@ -59,7 +59,7 @@ release workflow — tag and publish with `gh release create` after merging a ve
 
 ### Build, test, lint
 
-Prefer **Gradle MCP** for the tasks below. Use `background: true` and poll `gradle_get_build_status` for long runs. Fall back to shell `./gradlew` only when MCP is unavailable.
+Prefer **Gradle MCP** for the tasks below. Use `background: true` and poll `gradle_get_build_status` for long runs. Fall back to shell `./gradlew` only when MCP is unavailable or for CI parity — not to read errors from a failed MCP build (re-poll with `includeProblems` / `includeTestDetails`; see `gradle-mcp.mdc`).
 
 | Goal | MCP (preferred) | Shell fallback |
 |------|---------------|----------------|
