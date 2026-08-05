@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Close duplicate and already-resolved GitHub issues filed as Thermo P3 follow-ups.
+# One-shot cleanup: close duplicate and already-resolved Thermo P3 follow-up issues.
 # Requires a token with issues:write (e.g. gh auth login or GH_TOKEN with repo scope).
 set -euo pipefail
 
 REPO="${GITHUB_REPOSITORY:-nise-nabe/armeria-intellij-plugin}"
+FAILURES=0
 
 if ! command -v gh >/dev/null 2>&1; then
   echo "gh CLI is required" >&2
@@ -15,16 +16,48 @@ if ! gh auth status >/dev/null 2>&1; then
   exit 1
 fi
 
+issue_state() {
+  local num="$1"
+  gh issue view "$num" --repo "$REPO" --json state --jq '.state' 2>/dev/null || echo "MISSING"
+}
+
 close_dup() {
   local dup="$1" canonical="$2" reason="$3"
-  echo "Closing #${dup} (duplicate of #${canonical})"
-  gh issue close "$dup" --repo "$REPO" --comment "Duplicate of #${canonical}. ${reason}"
+  local state
+  state="$(issue_state "$dup")"
+  if [[ "$state" != "OPEN" ]]; then
+    echo "Skipping #${dup} (state=${state})"
+    return 0
+  fi
+  echo "Closing #${dup} as duplicate of #${canonical}"
+  if gh issue close "$dup" \
+    --repo "$REPO" \
+    --duplicate-of "$canonical" \
+    --reason duplicate \
+    --comment "Duplicate of #${canonical}. ${reason}"; then
+    return 0
+  fi
+  echo "Failed to close #${dup}" >&2
+  FAILURES=$((FAILURES + 1))
 }
 
 close_done() {
   local num="$1" message="$2"
+  local state
+  state="$(issue_state "$num")"
+  if [[ "$state" != "OPEN" ]]; then
+    echo "Skipping #${num} (state=${state})"
+    return 0
+  fi
   echo "Closing #${num} (resolved)"
-  gh issue close "$num" --repo "$REPO" --comment "$message"
+  if gh issue close "$num" \
+    --repo "$REPO" \
+    --reason completed \
+    --comment "$message"; then
+    return 0
+  fi
+  echo "Failed to close #${num}" >&2
+  FAILURES=$((FAILURES + 1))
 }
 
 echo "=== Duplicates (close in favor of canonical issue) ==="
@@ -87,4 +120,9 @@ close_done 352 \
   "Resolved on \`main\`: \`.run/Armeria testData fixture.run.xml\` plus skill documentation for IDE ad-hoc runs."
 
 echo ""
+if [[ "$FAILURES" -gt 0 ]]; then
+  echo "Done with ${FAILURES} failure(s). #362 remains open (optional perf). #337 remains open (incremental testData/ migration)." >&2
+  exit 1
+fi
+
 echo "Done. #362 remains open (optional perf memoization). #337 remains open (incremental testData/ migration)."
