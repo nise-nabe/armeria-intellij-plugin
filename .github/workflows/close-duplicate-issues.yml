@@ -1,0 +1,17 @@
+name: Close duplicate issues
+
+on:
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  close-duplicates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Close duplicate and resolved issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/close-duplicate-issues.sh
