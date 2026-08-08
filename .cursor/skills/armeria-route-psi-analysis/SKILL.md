@@ -258,8 +258,9 @@ Reference migrations: `ArmeriaExtendedRegistrationCollectorBasicTest` and
 
 ### JUnit 5 and parameterized PSI tests
 
-`plugin-route-collectors` and `plugin` `test` suites use JUnit Platform (`useJUnitJupiter()` with JUnit
-Vintage so legacy `fun test*()` fixture tests still run). Route-module `fastTest` suites remain on JUnit 4.
+Every module `test` suite uses JUnit Platform via `platform-library` / `platform-plugin` conventions
+(`useJUnitJupiter()` with JUnit Vintage so legacy `fun test*()` fixture tests still run). Route-module
+`fastTest` suites remain on JUnit 4.
 For new or migrated table-driven PSI tests:
 
 - Extend `ArmeriaFixtureTestBase5` or `ArmeriaLightJavaCodeInsightFixtureTestCase5` in testFixtures (`@RunInEdt` on the base runs PSI on EDT).

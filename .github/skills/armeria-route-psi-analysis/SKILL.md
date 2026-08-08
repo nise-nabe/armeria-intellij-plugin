@@ -1,7 +1,7 @@
 ---
 name: armeria-route-psi-analysis
 description: >-
-  PSI and route-analysis implementation patterns for plugin-route-analysis. Use when
+  PSI and route-analysis implementation patterns for the plugin-route-* modules. Use when
   editing ArmeriaRouteCollector, decorator/registration collectors, duplicate detection,
   virtualHost scoping, annotated-service parsing, Spring YAML/properties config collectors,
   or related regression tests.
@@ -10,9 +10,18 @@ description: >-
 # Armeria route PSI analysis
 
 This skill captures recurring GitHub Copilot review findings on route/client PSI
-collectors. Apply it when changing code under `plugin-route-analysis/`.
+collectors. Apply it when changing code under any of:
 
-## When to use
+- `plugin-route-model/` — leaf domain types (`ArmeriaRoute`, `RouteMatch`, `RouteProtocol`, …)
+- `plugin-route-collectors/` — annotated/service-registration collectors, decorator/timeout
+  support, `ArmeriaKotlinRouteCollector`, `RouteContributor` SPI, shared fixtures
+- `plugin-route-spring/` — Spring MVC / Boot / config collectors, `ArmeriaDelegatedRouteCollector`
+- `plugin-route-protocol/` — GraphQL / gRPC / Thrift / IDL / proto-text collectors
+- `plugin-route-analysis/` — UI helpers, DocService, navigation, duplicate index, and
+  `ArmeriaRouteAnalysisCollector` (production façade that always passes Spring/protocol contributors)
+
+`ArmeriaRouteCollector` (core façade) and the `RouteContributor` / `RouteCollectContext` SPI
+live in `plugin-route-collectors/`. Production callers use `ArmeriaRouteAnalysisCollector`.
 
 - `ArmeriaRouteCollector`, `ArmeriaKotlinRouteCollector`, extended-registration collectors
 - `ArmeriaRouteSupport`, decorator/annotated metadata helpers
@@ -192,11 +201,17 @@ When emitting routes that are not PSI call-site registrations:
 
 ## Regression tests
 
-When fixing collector behavior, add a focused fixture test that would have failed before the fix:
+When fixing collector behavior, add a focused fixture test that would have failed before the fix, in the module that owns the code under test:
 
 ```
-plugin-route-analysis/src/test/...     — PSI fixture tests (platform harness)
-plugin-route-analysis/src/fastTest/... — pure unit tests (no fixtures)
+plugin-route-collectors/src/test/...     — Java/Kotlin collector + extended registration PSI fixture tests
+plugin-route-collectors/src/fastTest/... — collector-side pure unit tests (no fixtures)
+plugin-route-spring/src/test/...         — Spring MVC/Boot/config + delegated collector PSI tests
+plugin-route-spring/src/fastTest/...     — Spring config parse / semantics unit tests
+plugin-route-protocol/src/test/...       — gRPC/IDL/Thrift/GraphQL PSI tests
+plugin-route-protocol/src/fastTest/...   — proto-text unit tests
+plugin-route-analysis/src/test/...       — DocService, duplicate index, UI detail-formatter PSI tests
+plugin-route-analysis/src/fastTest/...   — UI helper (`Http*`, `RouteTreeBuilder`, observability) unit tests
 ```
 
 Name tests after the behavior (`virtualHost_doesNotAnnotateEarlierRegistrations`), not the PR number.
@@ -243,8 +258,9 @@ Reference migrations: `ArmeriaExtendedRegistrationCollectorBasicTest` and
 
 ### JUnit 5 and parameterized PSI tests
 
-`plugin-route-collectors` and `plugin` `test` suites use JUnit Platform (`useJUnitJupiter()` with JUnit
-Vintage so legacy `fun test*()` fixture tests still run). Route-module `fastTest` suites remain on JUnit 4.
+Every module `test` suite uses JUnit Platform via `platform-library` / `platform-plugin` conventions
+(`useJUnitJupiter()` with JUnit Vintage so legacy `fun test*()` fixture tests still run). Route-module
+`fastTest` suites remain on JUnit 4.
 For new or migrated table-driven PSI tests:
 
 - Extend `ArmeriaFixtureTestBase5` or `ArmeriaLightJavaCodeInsightFixtureTestCase5` in testFixtures (`@RunInEdt` on the base runs PSI on EDT).
@@ -263,5 +279,5 @@ keep collector-internal unit tests in `plugin-route-collectors`.
 ## Related skills
 
 - `intellij-armeria-plugin` — UI/i18n, index readiness, module placement, test task paths
-- `gradle-tapi-mcp` — run `:plugin-route-analysis:test` / `fastTest` with correct `taskPath`
+- `gradle-tapi-mcp` — run `:plugin-route-<module>:test` / `fastTest` with correct `taskPath`
 - `copilot-review-preflight` — pre-PR checklist

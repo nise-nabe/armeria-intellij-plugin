@@ -81,7 +81,7 @@ Prefer **Gradle MCP** for the tasks below. Use `background: true` and poll `grad
 
 **PSI fixture tests** in `plugin-route-collectors` (and other modules as migrated) place user source under `src/test/testData/` and load it with `configureFixture("relative/path")` on `ArmeriaLightJavaCodeInsightFixtureTestCase` / `ArmeriaFixtureTestBase`. Assert routes with `collectRoutes().also { it.singleRoute() }.assertRoute(...)` from `ArmeriaRouteTestSupport` in testFixtures. See `.cursor/skills/armeria-route-psi-analysis/SKILL.md` for the full convention.
 
-**JUnit 5** is enabled on `plugin-route-collectors` and `plugin` `test` suites (`useJUnitJupiter()` with JUnit Vintage for legacy `fun test*()` cases). New table-driven PSI tests should extend `ArmeriaFixtureTestBase5` / `ArmeriaLightJavaCodeInsightFixtureTestCase5` and use `@ParameterizedTest` where cases differ only by inputs. Route-module `fastTest` suites remain on JUnit 4 (`useJUnit`); use the `test` suite for Jupiter `@ParameterizedTest` with PSI fixtures.
+**JUnit 5** is enabled on every module `test` suite via `platform-library` / `platform-plugin` conventions (`useJUnitJupiter()` with JUnit Vintage for legacy `fun test*()` cases). New table-driven PSI tests should extend `ArmeriaFixtureTestBase5` / `ArmeriaLightJavaCodeInsightFixtureTestCase5` and use `@ParameterizedTest` where cases differ only by inputs. Route-module `fastTest` suites remain on JUnit 4 (`useJUnit`); use the `test` suite for Jupiter `@ParameterizedTest` with PSI fixtures.
 
 Kotlin style is enforced by ktlint (`com.linecorp.intellij.ktlint` convention, `ktlint_official`). `ktlintCheck` is part of `check` / `build`.
 

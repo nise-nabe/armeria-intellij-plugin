@@ -24,6 +24,7 @@
 
 ### Fixed
 
+- Test helper resolution and blocking-client inspection no longer guess which `ServerExtension` applies when multiple `@RegisterExtension` fields are in scope.
 - Spring MVC Route Explorer discovery finds mappings declared on generic base types/interfaces when the concrete controller substitutes type parameters (e.g. `Handler<T>` → `StringHandler`), including multi-level unannotated overrides and interface mappings satisfied by an inherited superclass method.
 - Bundle `plugin-shared` (including `ArmeriaBundle`) into the main plugin JAR so installing only `plugin-*.jar` no longer fails inspection-profile saves with `ClassNotFoundException: ArmeriaBundleKt`.
 - Route Explorer deduplicates GraphQL and Thrift IDL routes per module when the same operation appears in multiple schema or `.thrift` files.

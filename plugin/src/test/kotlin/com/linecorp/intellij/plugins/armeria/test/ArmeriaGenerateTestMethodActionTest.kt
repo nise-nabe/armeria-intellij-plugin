@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.test
 
 import com.intellij.openapi.actionSystem.ex.ActionUtil
+import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
@@ -12,7 +13,8 @@ import com.intellij.testFramework.TestActionEvent
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaGenerateTestMethodAction
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
-import kotlin.test.assertFailsWith
+import com.linecorp.intellij.plugins.armeria.message
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -98,13 +100,22 @@ class ArmeriaGenerateTestMethodActionTest : ArmeriaLightJavaCodeInsightFixtureTe
         myFixture.openFileInEditor(javaFile.virtualFile)
 
         val action = ArmeriaGenerateTestMethodAction { route(path = "/api") }
-        assertFailsWith<RuntimeException> {
+        var capturedMessage: String? = null
+        val previousDialog =
+            TestDialogManager.setTestDialog { message ->
+                capturedMessage = message
+                0
+            }
+        try {
             myFixture.testAction(action)
+        } finally {
+            TestDialogManager.setTestDialog(previousDialog)
         }
         repeat(5) {
             PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
         }
 
+        assertEquals(message("test.support.insert.ambiguousServerExtension"), capturedMessage)
         assertTrue(
             javaFile.classes
                 .single()
