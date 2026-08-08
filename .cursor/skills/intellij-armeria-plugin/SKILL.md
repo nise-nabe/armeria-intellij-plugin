@@ -225,6 +225,8 @@ Match the Gradle task to the module that contains the test class:
 
 PSI fixture layout (`src/test/testData/`, `configureFixture()`, `ArmeriaRouteTestSupport`) is
 documented in `armeria-route-psi-analysis` — see that skill before adding externalized fixtures.
+For ad-hoc IDE runs of `testData/` fixture tests, use `.run/Armeria testData fixture.run.xml`
+(module working directory + `-Darmeria.moduleTestDataPath=$MODULE_WORKING_DIR$/src/test/testData`).
 
 When documenting a test plan in a PR, use the module-qualified task. With Gradle MCP,
 set `taskPath` accordingly (e.g. `":plugin-route-collectors:test"`).

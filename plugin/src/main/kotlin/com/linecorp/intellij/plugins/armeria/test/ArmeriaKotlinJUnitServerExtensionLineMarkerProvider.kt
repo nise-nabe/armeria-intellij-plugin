@@ -17,6 +17,10 @@ class ArmeriaKotlinJUnitServerExtensionLineMarkerProvider : LineMarkerProviderDe
         if (element != property.nameIdentifier) {
             return null
         }
+        val containingFile = property.containingFile
+        if (containingFile == null || !ArmeriaJUnitServerExtensionSupport.isInTestSourceContent(containingFile)) {
+            return null
+        }
         val scope = GlobalSearchScope.projectScope(property.project)
         if (ArmeriaJUnitServerExtensionSupport.serverExtensionFromKotlinProperty(property, scope) == null) {
             return null
