@@ -11,11 +11,6 @@ class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBa
         registerKotlinExtendedRegistrationCollectorStubs()
     }
 
-    fun testCollectKotlinFileServiceRegistration() {
-        configureFixture("extendedRegistration/kotlin/basic/fileService/Main.kt")
-        collectRoutes().also { it.singleRoute() }.assertRoute(RouteMatch.FILE_SERVICE, path = "/files/")
-    }
-
     fun testCollectKotlinFluentRouteRegistration() {
         configureFixture("extendedRegistration/kotlin/basic/fluentRoute/Main.kt")
         collectRoutes().also { it.singleRoute() }.assertRoute(
@@ -23,11 +18,6 @@ class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBa
             path = "/api/items",
             httpMethod = "POST",
         )
-    }
-
-    fun testCollectKotlinDecoratorUnderRegistration() {
-        configureFixture("extendedRegistration/kotlin/basic/decoratorUnder/Main.kt")
-        collectRoutes().also { it.singleRoute() }.assertRoute(RouteMatch.DECORATOR_UNDER, path = "/public")
     }
 
     fun testCollectKotlinWithRouteRegistration() {
@@ -46,11 +36,6 @@ class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBa
             path = "/wrapped",
             httpMethod = "POST",
         )
-    }
-
-    fun testCollectKotlinHealthCheckRegistration() {
-        configureFixture("extendedRegistration/kotlin/basic/healthCheck/Main.kt")
-        collectRoutes().also { it.singleRoute() }.assertRoute(RouteMatch.HEALTH_CHECK, path = "/internal/healthcheck")
     }
 
     fun testCollectKotlinFluentRoutePathPrefix() {

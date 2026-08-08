@@ -476,12 +476,23 @@ internal object ArmeriaJUnitServerExtensionSupport {
         element: PsiElement,
         extensions: List<ArmeriaJUnitServerExtension>,
     ): ArmeriaJUnitServerExtension? {
-        // When multiple ServerExtension fields exist in scope, do not guess which server a call
-        // targets — inspection and test generation treat the scope as ambiguous.
-        if (extensions.size != 1) {
+        if (extensions.size == 1) {
+            return extensions.single()
+        }
+        val enclosingClass = enclosingTestClassName(element)
+        val sameClassExtensions =
+            if (enclosingClass == null) {
+                extensions
+            } else {
+                extensions.filter { it.containingClassName == enclosingClass }
+            }
+        // Multiple @RegisterExtension fields in the same class are ambiguous even when the call
+        // names one receiver (e.g. server1 vs server2 in one test class).
+        if (sameClassExtensions.size > 1) {
             return null
         }
-        return extensions.single()
+        val matches = extensions.filter { it.variableName in referencedServerVariableNames(element) }
+        return if (matches.size == 1) matches.single() else null
     }
 
     internal fun referencesServerVariable(

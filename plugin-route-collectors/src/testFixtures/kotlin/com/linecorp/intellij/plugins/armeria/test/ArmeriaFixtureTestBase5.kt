@@ -5,6 +5,9 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 
 /**
  * JUnit 5 shared Armeria PSI stubs for [ArmeriaLightJavaCodeInsightFixtureTestCase5] subclasses.
+ *
+ * Stub registration helpers mirror [ArmeriaFixtureTestBase]; add new helpers to both bases until
+ * shared registration is extracted.
  */
 abstract class ArmeriaFixtureTestBase5 : ArmeriaLightJavaCodeInsightFixtureTestCase5() {
     protected fun collectRoutes(): List<ArmeriaRoute> = ArmeriaRouteCollector.collect(project)

@@ -442,6 +442,50 @@ class ArmeriaBlockingClientInspectionTest : ArmeriaLightJavaCodeInsightFixtureTe
         myFixture.testHighlighting(true, false, true)
     }
 
+    fun testWarnsWhenSubclassAddsOwnServerExtensionAndUsesInheritedServer() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Blocking
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "SubclassWithOwnServerTest.java",
+            """
+            package example;
+
+            import org.junit.jupiter.api.extension.RegisterExtension;
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+            abstract class SubclassWithOwnServerBaseTest {
+                @RegisterExtension
+                static ServerExtension server = new ServerExtension() {};
+            }
+
+            public class SubclassWithOwnServerTest extends SubclassWithOwnServerBaseTest {
+                @RegisterExtension
+                static ServerExtension otherServer = new ServerExtension() {};
+
+                void testSlow() {
+                    server.webClient().<warning descr="Route /slow is marked @Blocking; use blockingWebClient() in tests instead of async WebClient.">get</warning>("/slow");
+                }
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.testHighlighting(true, false, true)
+    }
+
     fun testNoWarningWhenMultipleRegisterExtensionsAreAmbiguous() {
         myFixture.addClass(
             """

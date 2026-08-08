@@ -600,6 +600,55 @@ class ArmeriaBlockingClientKotlinInspectionTest : ArmeriaLightJavaCodeInsightFix
         }
     }
 
+    fun testWarnsWhenSubclassAddsOwnServerExtensionAndUsesInheritedServer() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Blocking
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "SubclassWithOwnServerKotlinTest.kt",
+            """
+            package example
+
+            import org.junit.jupiter.api.extension.RegisterExtension
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+            abstract class SubclassWithOwnServerKotlinBaseTest {
+                @RegisterExtension
+                val server: ServerExtension = object : ServerExtension() {}
+            }
+
+            class SubclassWithOwnServerKotlinTest : SubclassWithOwnServerKotlinBaseTest() {
+                @RegisterExtension
+                val otherServer: ServerExtension = object : ServerExtension() {}
+
+                fun testSlow() {
+                    server.webClient().get("/slow")
+                }
+            }
+            """.trimIndent(),
+        )
+        val getCall = findGetCall(myFixture.file as KtFile)
+
+        val manager = InspectionManager.getInstance(project)
+        val holder = ProblemsHolder(manager, myFixture.file, false)
+        val visitor = ArmeriaBlockingClientKotlinInspection().buildVisitor(holder, false)
+        getCall.accept(visitor)
+        assertEquals(1, holder.results.size)
+    }
+
     fun testNoWarningWhenMultipleRegisterExtensionsAreAmbiguous() {
         myFixture.addClass(
             """
