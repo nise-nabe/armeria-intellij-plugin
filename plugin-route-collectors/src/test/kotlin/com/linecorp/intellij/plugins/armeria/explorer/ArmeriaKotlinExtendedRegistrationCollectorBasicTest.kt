@@ -1,11 +1,10 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
-import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull as kotlinAssertNotNull
+import com.linecorp.intellij.plugins.armeria.test.assertRoute
+import com.linecorp.intellij.plugins.armeria.test.singleRoute
 
 class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
@@ -13,199 +12,59 @@ class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBa
     }
 
     fun testCollectKotlinFileServiceRegistration() {
-        myFixture.configureByText(
-            "Main.kt",
-            """
-            package example
-
-            import com.linecorp.armeria.server.Server
-            import java.io.File
-
-            fun main() {
-                Server.builder()
-                    .fileService("/files/", File("/tmp"))
-                    .build()
-            }
-            """.trimIndent(),
-        )
-
-        val routes = ArmeriaRouteCollector.collect(project)
-        val fileRoute = routes.firstOrNull { it.routeMatch == RouteMatch.FILE_SERVICE }
-        kotlinAssertNotNull(fileRoute)
-        assertEquals("/files/", fileRoute.path)
+        configureFixture("extendedRegistration/kotlin/basic/fileService/Main.kt")
+        collectRoutes().also { it.singleRoute() }.assertRoute(RouteMatch.FILE_SERVICE, path = "/files/")
     }
 
     fun testCollectKotlinFluentRouteRegistration() {
-        myFixture.configureByText(
-            "Main.kt",
-            """
-            package example
-
-            import com.linecorp.armeria.server.Server
-
-            fun main() {
-                Server.builder()
-                    .route()
-                    .post("/api/items")
-                    .build(Any())
-                    .build()
-            }
-            """.trimIndent(),
+        configureFixture("extendedRegistration/kotlin/basic/fluentRoute/Main.kt")
+        collectRoutes().also { it.singleRoute() }.assertRoute(
+            RouteMatch.ROUTE_FLUENT,
+            path = "/api/items",
+            httpMethod = "POST",
         )
-
-        val routes = ArmeriaRouteCollector.collect(project)
-        val fluentRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_FLUENT }
-        kotlinAssertNotNull(fluentRoute)
-        assertEquals("POST", fluentRoute.httpMethod)
-        assertEquals("/api/items", fluentRoute.path)
     }
 
     fun testCollectKotlinDecoratorUnderRegistration() {
-        myFixture.configureByText(
-            "Main.kt",
-            """
-            package example
-
-            import com.linecorp.armeria.server.Server
-            import com.linecorp.armeria.server.logging.LoggingService
-
-            fun main() {
-                Server.builder()
-                    .decoratorUnder("/public", LoggingService.newDecorator())
-                    .build()
-            }
-            """.trimIndent(),
-        )
-
-        val routes = ArmeriaRouteCollector.collect(project)
-        val decoratorRoute = routes.firstOrNull { it.routeMatch == RouteMatch.DECORATOR_UNDER }
-        kotlinAssertNotNull(decoratorRoute)
-        assertEquals("/public", decoratorRoute.path)
+        configureFixture("extendedRegistration/kotlin/basic/decoratorUnder/Main.kt")
+        collectRoutes().also { it.singleRoute() }.assertRoute(RouteMatch.DECORATOR_UNDER, path = "/public")
     }
 
     fun testCollectKotlinWithRouteRegistration() {
-        myFixture.configureByText(
-            "Main.kt",
-            """
-            package example
-
-            import com.linecorp.armeria.server.RouteBuilder
-            import com.linecorp.armeria.server.Server
-
-            fun main() {
-                Server.builder()
-                    .withRoute { route: RouteBuilder ->
-                        route.post("/wrapped").build(Any())
-                    }
-                    .build()
-            }
-            """.trimIndent(),
+        configureFixture("extendedRegistration/kotlin/basic/withRoute/Main.kt")
+        collectRoutes().also { it.singleRoute() }.assertRoute(
+            RouteMatch.ROUTE_FLUENT,
+            path = "/wrapped",
+            httpMethod = "POST",
         )
-
-        val routes = ArmeriaRouteCollector.collect(project)
-        val fluentRoutes = routes.filter { it.routeMatch == RouteMatch.ROUTE_FLUENT }
-        assertEquals(1, fluentRoutes.size)
-        assertEquals("POST", fluentRoutes.single().httpMethod)
-        assertEquals("/wrapped", fluentRoutes.single().path)
     }
 
     fun testCollectKotlinWithRouteDoesNotBurnDedupKeyOnInvalidLambda() {
-        myFixture.configureByText(
-            "Main.kt",
-            """
-            package example
-
-            import com.linecorp.armeria.server.RouteBuilder
-            import com.linecorp.armeria.server.Server
-
-            fun main() {
-                Server.builder()
-                    .withRoute { _: RouteBuilder -> null }
-                    .withRoute { route: RouteBuilder ->
-                        route.post("/wrapped").build(Any())
-                    }
-                    .build()
-            }
-            """.trimIndent(),
+        configureFixture("extendedRegistration/kotlin/basic/withRouteDedup/Main.kt")
+        collectRoutes().also { it.singleRoute() }.assertRoute(
+            RouteMatch.ROUTE_FLUENT,
+            path = "/wrapped",
+            httpMethod = "POST",
         )
-
-        val routes = ArmeriaRouteCollector.collect(project)
-        val fluentRoutes = routes.filter { it.routeMatch == RouteMatch.ROUTE_FLUENT }
-        assertEquals(1, fluentRoutes.size)
-        assertEquals("/wrapped", fluentRoutes.single().path)
     }
 
     fun testCollectKotlinHealthCheckRegistration() {
-        myFixture.configureByText(
-            "Main.kt",
-            """
-            package example
-
-            import com.linecorp.armeria.server.Server
-
-            fun main() {
-                Server.builder()
-                    .healthCheckService()
-                    .build()
-            }
-            """.trimIndent(),
-        )
-
-        val routes = ArmeriaRouteCollector.collect(project)
-        val healthRoute = routes.firstOrNull { it.routeMatch == RouteMatch.HEALTH_CHECK }
-        kotlinAssertNotNull(healthRoute)
-        assertEquals("/internal/healthcheck", healthRoute.path)
+        configureFixture("extendedRegistration/kotlin/basic/healthCheck/Main.kt")
+        collectRoutes().also { it.singleRoute() }.assertRoute(RouteMatch.HEALTH_CHECK, path = "/internal/healthcheck")
     }
 
     fun testCollectKotlinFluentRoutePathPrefix() {
-        myFixture.configureByText(
-            "Main.kt",
-            """
-            package example
-
-            import com.linecorp.armeria.server.Server
-
-            fun main() {
-                Server.builder()
-                    .route()
-                    .pathPrefix("/api")
-                    .get("/items")
-                    .build(Any())
-                    .build()
-            }
-            """.trimIndent(),
+        configureFixture("extendedRegistration/kotlin/basic/fluentRoutePathPrefix/Main.kt")
+        collectRoutes().also { it.singleRoute() }.assertRoute(
+            RouteMatch.ROUTE_FLUENT,
+            path = "/api/items",
+            httpMethod = "GET",
+            pathType = PathType.EXACT,
         )
-
-        val routes = ArmeriaRouteCollector.collect(project)
-        val fluentRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_FLUENT }
-        kotlinAssertNotNull(fluentRoute)
-        assertEquals(PathType.EXACT, fluentRoute.pathType)
-        assertEquals("/api/items", fluentRoute.path)
-        assertEquals("GET", fluentRoute.httpMethod)
     }
 
     fun testCollectKotlinFileServiceFromConstValPath() {
-        myFixture.configureByText(
-            "Main.kt",
-            """
-            package example
-
-            import com.linecorp.armeria.server.Server
-            import java.io.File
-
-            private const val FILES_PATH = "/files/"
-
-            fun main() {
-                Server.builder()
-                    .fileService(FILES_PATH, File("/tmp"))
-                    .build()
-            }
-            """.trimIndent(),
-        )
-
-        val routes = ArmeriaRouteCollector.collect(project)
-        val fileRoute = routes.firstOrNull { it.routeMatch == RouteMatch.FILE_SERVICE }
-        kotlinAssertNotNull(fileRoute)
-        assertEquals("/files/", fileRoute.path)
+        configureFixture("extendedRegistration/kotlin/basic/fileServiceWithConstVal/Main.kt")
+        collectRoutes().also { it.singleRoute() }.assertRoute(RouteMatch.FILE_SERVICE, path = "/files/")
     }
 }

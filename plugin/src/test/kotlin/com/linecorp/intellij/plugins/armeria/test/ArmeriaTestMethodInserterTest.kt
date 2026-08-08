@@ -20,6 +20,7 @@ import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.assertNotNull as kotlinAssertNotNull
@@ -502,6 +503,64 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
                 route(path = "/api"),
             )
         assertEquals("InheritedServerInserterTest", resolved?.name)
+    }
+
+    fun testRejectsMultipleRegisterExtensionsInJavaClass() {
+        val javaFile =
+            myFixture.configureByText(
+                "AmbiguousTest.java",
+                """
+                package example;
+
+                import org.junit.jupiter.api.extension.RegisterExtension;
+                import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+                public class AmbiguousTest {
+                    @RegisterExtension
+                    static ServerExtension server1 = new ServerExtension() {};
+
+                    @RegisterExtension
+                    static ServerExtension server2 = new ServerExtension() {};
+                }
+                """.trimIndent(),
+            ) as PsiJavaFile
+        myFixture.openFileInEditor(javaFile.virtualFile)
+
+        val extensions = ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, javaFile.classes.single())
+        assertEquals(2, extensions.size)
+        assertFailsWith<RuntimeException> {
+            ArmeriaTestMethodInserter.insertFromRouteExplorer(project, route(path = "/api"))
+        }
+    }
+
+    fun testRejectsMultipleRegisterExtensionsInKotlinClass() {
+        myFixture.configureByText(
+            "AmbiguousTest.kt",
+            """
+            package example
+
+            import org.junit.jupiter.api.extension.RegisterExtension
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+            class AmbiguousTest {
+                @RegisterExtension
+                val server1: ServerExtension = object : ServerExtension() {}
+
+                @RegisterExtension
+                val server2: ServerExtension = object : ServerExtension() {}
+            }
+            """.trimIndent(),
+        )
+        myFixture.openFileInEditor(myFixture.file.virtualFile)
+
+        val extensions =
+            ArmeriaJUnitServerExtensionCollector
+                .collect(project)
+                .filter { it.containingClassName.endsWith("AmbiguousTest") }
+        assertEquals(2, extensions.size)
+        assertFailsWith<RuntimeException> {
+            ArmeriaTestMethodInserter.insertFromRouteExplorer(project, route(path = "/api"))
+        }
     }
 
     private fun route(

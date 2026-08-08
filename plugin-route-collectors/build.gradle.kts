@@ -18,15 +18,17 @@ dependencies {
         bundledPlugin("org.jetbrains.kotlin")
         testFramework(TestFrameworkType.Plugin.Java)
         testFramework(TestFrameworkType.Plugin.Java, configurationName = "testFixturesImplementation")
+        testFramework(TestFrameworkType.JUnit5)
+        testFramework(TestFrameworkType.JUnit5, configurationName = "testFixturesImplementation")
     }
     testFixturesImplementation(libs.junit4)
+    testFixturesImplementation(libs.junit.jupiter)
     testFixturesApi(libs.kotlin.test)
 }
 
 testing {
     suites {
         getByName<JvmTestSuite>("test") {
-            useJUnit(libs.versions.junit4.get())
             dependencies {
                 implementation(testFixtures(project()))
                 implementation(libs.junit4)

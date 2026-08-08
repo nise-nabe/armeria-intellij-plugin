@@ -476,11 +476,10 @@ internal object ArmeriaJUnitServerExtensionSupport {
         element: PsiElement,
         extensions: List<ArmeriaJUnitServerExtension>,
     ): ArmeriaJUnitServerExtension? {
-        if (extensions.size == 1) {
-            return extensions.single()
+        if (extensions.size != 1) {
+            return null
         }
-        val matches = extensions.filter { it.variableName in referencedServerVariableNames(element) }
-        return if (matches.size == 1) matches.single() else null
+        return extensions.single()
     }
 
     internal fun referencesServerVariable(

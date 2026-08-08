@@ -79,6 +79,10 @@ Prefer **Gradle MCP** for the tasks below. Use `background: true` and poll `grad
 
 `:plugin:test` and each `:plugin-route-*:test` run platform PSI fixture tests under their module's `src/test`. Each route submodule (collectors, spring, protocol, analysis) also has a `fastTest` suite under `src/fastTest` for pure unit tests that run on the IntelliJ Platform test runtime without PSI fixtures. Use `build` to run the full suite across all modules.
 
+**PSI fixture tests** in `plugin-route-collectors` (and other modules as migrated) place user source under `src/test/testData/` and load it with `configureFixture("relative/path")` on `ArmeriaLightJavaCodeInsightFixtureTestCase` / `ArmeriaFixtureTestBase`. Assert routes with `collectRoutes().also { it.singleRoute() }.assertRoute(...)` from `ArmeriaRouteTestSupport` in testFixtures. See `.cursor/skills/armeria-route-psi-analysis/SKILL.md` for the full convention.
+
+**JUnit 5** is enabled on `plugin-route-collectors` and `plugin` test suites (`useJUnitJupiter()` with JUnit Vintage for legacy `fun test*()` cases). New table-driven PSI tests should extend `ArmeriaFixtureTestBase5` / `ArmeriaLightJavaCodeInsightFixtureTestCase5` and use `@ParameterizedTest` where cases differ only by inputs. `fastTest` in `plugin-route-collectors` also runs on JUnit Platform.
+
 Kotlin style is enforced by ktlint (`com.linecorp.intellij.ktlint` convention, `ktlint_official`). `ktlintCheck` is part of `check` / `build`.
 
 ### Commit workflow (coding agents)
