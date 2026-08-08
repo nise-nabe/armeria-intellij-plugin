@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.marker
 
+import com.intellij.openapi.util.registry.Registry
 import com.intellij.protobuf.lang.psi.PbFile
 import com.intellij.protobuf.lang.psi.PbServiceMethod
 import com.intellij.psi.PsiElement
@@ -210,6 +211,32 @@ class ArmeriaProtoRpcLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixture
             ),
             tooltips,
         )
+    }
+
+    fun testProtoRpcMarkerDisabledWhenRegistryOff() {
+        myFixture.configureByText(
+            "greeter.proto",
+            """
+            syntax = "proto3";
+            package com.example;
+
+            service Greeter {
+              rpc SayHello(HelloRequest) returns (HelloResponse);
+            }
+            """.trimIndent(),
+        )
+
+        val registryKey = Registry.get("armeria.grpc.proto.routes.enabled")
+        val original = registryKey.asBoolean()
+        try {
+            registryKey.setValue(true)
+            kotlinAssertNotNull(provider.getLineMarkerInfo(findRpcKeyword()))
+
+            registryKey.setValue(false)
+            assertNull(provider.getLineMarkerInfo(findRpcKeyword()))
+        } finally {
+            registryKey.setValue(original)
+        }
     }
 
     fun testStreamingRpcMarkerShowsGrpcPath() {

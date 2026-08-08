@@ -21,6 +21,10 @@ class ArmeriaJUnitServerExtensionLineMarkerProvider : LineMarkerProviderDescript
         if (element != field.nameIdentifier) {
             return null
         }
+        val containingFile = field.containingFile
+        if (containingFile == null || !ArmeriaJUnitServerExtensionSupport.isInTestSourceContent(containingFile)) {
+            return null
+        }
         val scope = GlobalSearchScope.projectScope(field.project)
         if (ArmeriaJUnitServerExtensionSupport.serverExtensionFromField(field, scope) == null) {
             return null
