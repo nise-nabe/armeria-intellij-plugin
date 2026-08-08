@@ -1,102 +1,54 @@
 package com.linecorp.intellij.plugins.armeria.test
 
-import com.intellij.openapi.application.PathManager
-import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.util.Disposer
 import com.intellij.psi.PsiFile
 import com.intellij.testFramework.LightProjectDescriptor
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase.JAVA_LATEST_WITH_LATEST_JDK
+import com.intellij.testFramework.fixtures.JavaCodeInsightTestFixture
+import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase5
 import com.intellij.testFramework.junit5.RunInEdt
-import com.intellij.testFramework.rules.TestNameExtension
-import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
-import org.junit.jupiter.api.extension.AfterEachCallback
-import org.junit.jupiter.api.extension.BeforeEachCallback
-import org.junit.jupiter.api.extension.ExtensionContext
-import org.junit.jupiter.api.extension.RegisterExtension
-import java.io.File
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 
 /**
- * JUnit 5 wrapper around [LightJavaCodeInsightFixtureTestCase] with Armeria sandbox and testData helpers.
+ * Platform [LightJavaCodeInsightFixtureTestCase5] with Armeria sandbox roots, testData helpers, and metrics teardown.
  */
 @RunInEdt(writeIntent = true)
 abstract class ArmeriaLightJavaCodeInsightFixtureTestCase5(
-    private val lightProjectDescriptor: LightProjectDescriptor? = null,
-) {
-    @RegisterExtension
-    protected val testNameRule: TestNameExtension = TestNameExtension()
+    projectDescriptor: LightProjectDescriptor? = null,
+) : LightJavaCodeInsightFixtureTestCase5(projectDescriptor) {
+    private var vfsRootDisposable: Disposable? = null
 
-    @JvmField
-    @RegisterExtension
-    protected val testCase: ArmeriaLightFixtureCase = ArmeriaLightFixtureCase(lightProjectDescriptor, this)
+    protected val myFixture: JavaCodeInsightTestFixture get() = fixture
+
+    protected val project get() = fixture.project
+
+    protected val module get() = fixture.module
 
     protected open fun onFixtureSetUp() {}
 
-    protected val myFixture get() = testCase.fixture
-
-    protected val project get() = testCase.projectForTests
-
-    protected val module get() = testCase.moduleForTests
-
     protected fun resolveModuleTestDataPath(): String = resolveArmeriaModuleTestDataPath()
 
-    protected fun configureFixture(relativePath: String): PsiFile {
-        val previousTestDataPath = myFixture.testDataPath
-        myFixture.testDataPath = resolveModuleTestDataPath()
-        try {
-            return myFixture.configureByFile(relativePath)
-        } finally {
-            myFixture.testDataPath = previousTestDataPath
-        }
+    protected fun configureFixture(relativePath: String): PsiFile = fixture.configureArmeriaFixture(relativePath)
+
+    /**
+     * Avoid [com.intellij.JavaTestUtil.getRelativeJavaTestDataPath] during fixture setUp; Armeria tests
+     * load files via [configureFixture] / [resolveModuleTestDataPath] instead.
+     */
+    override fun getRelativePath(): String = ""
+
+    @BeforeEach
+    fun armeriaFixtureSetUp() {
+        val disposable = Disposer.newDisposable("ArmeriaFixtureVfsRoot")
+        vfsRootDisposable = disposable
+        Disposer.register(fixture.project, disposable)
+        allowArmeriaTestSandboxRoots(disposable)
+        onFixtureSetUp()
     }
 
-    class ArmeriaLightFixtureCase(
-        private val lightProjectDescriptor: LightProjectDescriptor?,
-        private val owner: ArmeriaLightJavaCodeInsightFixtureTestCase5,
-    ) : LightJavaCodeInsightFixtureTestCase(),
-        BeforeEachCallback,
-        AfterEachCallback {
-        override fun getProjectDescriptor(): LightProjectDescriptor = lightProjectDescriptor ?: JAVA_LATEST_WITH_LATEST_JDK
-
-        override fun beforeEach(context: ExtensionContext) {
-            setUp()
-        }
-
-        override fun afterEach(context: ExtensionContext) {
-            tearDown()
-        }
-
-        val fixture get() = myFixture
-
-        val projectForTests get() = project
-
-        val moduleForTests get() = module
-
-        override fun setUp() {
-            super.setUp()
-            allowTestSandboxRoots()
-            owner.onFixtureSetUp()
-        }
-
-        override fun tearDown() {
-            try {
-                ArmeriaRouteCollectionMetrics.clearLastSnapshotForTests()
-            } finally {
-                super.tearDown()
-            }
-        }
-
-        private fun allowTestSandboxRoots() {
-            val sandboxRoot = File(PathManager.getConfigPath()).parentFile
-            val pluginsTestDir = sandboxRoot?.resolve("plugins-test")
-            if (pluginsTestDir != null && pluginsTestDir.isDirectory) {
-                VfsRootAccess.allowRootAccess(testRootDisposable, pluginsTestDir.absolutePath)
-                return
-            }
-
-            VfsRootAccess.allowRootAccess(testRootDisposable, PathManager.getPluginsPath())
-            sandboxRoot?.absolutePath?.let { root ->
-                VfsRootAccess.allowRootAccess(testRootDisposable, root)
-            }
-        }
+    @AfterEach
+    fun armeriaFixtureTearDown() {
+        clearArmeriaRouteCollectionMetricsForTests()
+        vfsRootDisposable = null
     }
 }
