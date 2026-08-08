@@ -86,6 +86,22 @@ class ArmeriaJUnitServerExtensionLineMarkerProviderTest : ArmeriaLightJavaCodeIn
         assertNull(javaProvider.getLineMarkerInfo(field.nameIdentifier!!))
     }
 
+    fun testNonExtensionKotlinPropertyHasNoMarker() {
+        myFixture.configureByText(
+            "ExampleServiceTest.kt",
+            """
+            package example
+
+            class ExampleServiceTest {
+                val helper: String = "value"
+            }
+            """.trimIndent(),
+        )
+
+        val property = PsiTreeUtil.findChildOfType(myFixture.file, KtProperty::class.java)!!
+        assertNull(kotlinProvider.getLineMarkerInfo(property.nameIdentifier!!))
+    }
+
     fun testJavaRegisterExtensionInMainSourceHasNoMarker() {
         myFixture.withTemporaryMainSourceRoot { mainRoot ->
             val content =
@@ -111,6 +127,34 @@ class ArmeriaJUnitServerExtensionLineMarkerProviderTest : ArmeriaLightJavaCodeIn
             val field = PsiTreeUtil.findChildOfType(psiFile, PsiField::class.java)!!
 
             assertNull(javaProvider.getLineMarkerInfo(field.nameIdentifier!!))
+        }
+    }
+
+    fun testKotlinRegisterExtensionInMainSourceHasNoMarker() {
+        myFixture.withTemporaryMainSourceRoot { mainRoot ->
+            val content =
+                """
+                package example
+
+                import org.junit.jupiter.api.extension.RegisterExtension
+                import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+                class MisnamedTest {
+                    @RegisterExtension
+                    val server: ServerExtension = object : ServerExtension() {}
+                }
+                """.trimIndent()
+            val virtualFile =
+                ApplicationManager.getApplication().runWriteAction<com.intellij.openapi.vfs.VirtualFile> {
+                    val file = mainRoot.createChildData(this, "MisnamedTest.kt")
+                    VfsUtil.saveText(file, content)
+                    file
+                }
+            PsiDocumentManager.getInstance(project).commitAllDocuments()
+            val psiFile = PsiManager.getInstance(project).findFile(virtualFile)!!
+            val property = PsiTreeUtil.findChildOfType(psiFile, KtProperty::class.java)!!
+
+            assertNull(kotlinProvider.getLineMarkerInfo(property.nameIdentifier!!))
         }
     }
 }

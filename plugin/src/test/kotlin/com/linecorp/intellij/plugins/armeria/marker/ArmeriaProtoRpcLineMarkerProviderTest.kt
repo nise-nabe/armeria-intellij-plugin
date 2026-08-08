@@ -229,6 +229,9 @@ class ArmeriaProtoRpcLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixture
         val registryKey = Registry.get("armeria.grpc.proto.routes.enabled")
         val original = registryKey.asBoolean()
         try {
+            registryKey.setValue(true)
+            kotlinAssertNotNull(provider.getLineMarkerInfo(findRpcKeyword()))
+
             registryKey.setValue(false)
             assertNull(provider.getLineMarkerInfo(findRpcKeyword()))
         } finally {
