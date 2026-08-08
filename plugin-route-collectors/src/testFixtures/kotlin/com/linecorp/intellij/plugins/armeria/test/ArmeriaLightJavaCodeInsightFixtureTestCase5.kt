@@ -6,6 +6,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase.JAVA_LATEST_WITH_LATEST_JDK
+import com.intellij.testFramework.junit5.RunInEdt
 import com.intellij.testFramework.rules.TestNameExtension
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import org.junit.jupiter.api.extension.AfterEachCallback
@@ -17,6 +18,7 @@ import java.io.File
 /**
  * JUnit 5 wrapper around [LightJavaCodeInsightFixtureTestCase] with Armeria sandbox and testData helpers.
  */
+@RunInEdt(writeIntent = true)
 abstract class ArmeriaLightJavaCodeInsightFixtureTestCase5(
     private val lightProjectDescriptor: LightProjectDescriptor? = null,
 ) {

@@ -35,7 +35,6 @@ testing {
             dependencies {
                 implementation(versionCatalogs.named("libs").findLibrary("kotlin-test").get())
                 implementation(versionCatalogs.named("libs").findLibrary("junit-jupiter").get())
-                implementation(versionCatalogs.named("libs").findLibrary("opentest4j").get())
                 runtimeOnly(versionCatalogs.named("libs").findLibrary("junit4").get())
                 runtimeOnly(versionCatalogs.named("libs").findLibrary("junit-vintage").get())
             }

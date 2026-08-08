@@ -34,13 +34,16 @@ testing {
             dependencies {
                 implementation(versionCatalogs.named("libs").findLibrary("kotlin-test").get())
                 implementation(versionCatalogs.named("libs").findLibrary("junit-jupiter").get())
-                implementation(versionCatalogs.named("libs").findLibrary("opentest4j").get())
                 runtimeOnly(versionCatalogs.named("libs").findLibrary("junit4").get())
                 runtimeOnly(versionCatalogs.named("libs").findLibrary("junit-vintage").get())
             }
             targets.all {
                 testTask.configure {
                     failOnNoDiscoveredTests = false
+                    val testDataDir = project.file("src/test/testData")
+                    if (testDataDir.isDirectory) {
+                        systemProperty("armeria.moduleTestDataPath", testDataDir.absolutePath)
+                    }
                 }
             }
         }

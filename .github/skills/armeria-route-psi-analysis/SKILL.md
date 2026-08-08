@@ -238,7 +238,23 @@ For PSI fixture tests that extend `ArmeriaFixtureTestBase` or
 - Keep Armeria/Spring API **stubs** in `ArmeriaFixture*Stubs.kt` via `addClass(...)`; only
   user source under test belongs in `testData/`.
 
-Reference migration: `ArmeriaExtendedRegistrationCollectorBasicTest`.
+Reference migrations: `ArmeriaExtendedRegistrationCollectorBasicTest` and
+`ArmeriaKotlinExtendedRegistrationCollectorBasicTest` (`testData/` + `assertRoute()`).
+
+### JUnit 5 and parameterized PSI tests
+
+`plugin-route-collectors` and `plugin` `test` suites use JUnit Platform (`useJUnitJupiter()` with JUnit
+Vintage so legacy `fun test*()` fixture tests still run). Route-module `fastTest` suites remain on JUnit 4.
+For new or migrated table-driven PSI tests:
+
+- Extend `ArmeriaFixtureTestBase5` or `ArmeriaLightJavaCodeInsightFixtureTestCase5` in testFixtures (`@RunInEdt` on the base runs PSI on EDT).
+- Use `@ParameterizedTest` + `@MethodSource` / `@CsvSource` when cases differ only by fixture path and
+  expected route fields.
+- Keep Java/Kotlin pairs separate when PSI behavior differs; merge only when parity is intentional.
+
+Reference pilots: `ArmeriaTestMethodGeneratorSupportsParameterizedTest` in `plugin/src/test` (no PSI
+fixtures); `ArmeriaKotlinExtendedRegistrationCollectorParameterizedTest` in `plugin-route-collectors`
+(PSI fixtures + `@ParameterizedTest`).
 
 Proto route cache integration tests (`ArmeriaGrpcRouteCollectorTest`, `ArmeriaGrpcRouteCollectorGateTest`)
 live in `plugin-route-protocol` because they exercise gRPC classpath gates and collector integration;

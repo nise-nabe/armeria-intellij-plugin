@@ -476,6 +476,8 @@ internal object ArmeriaJUnitServerExtensionSupport {
         element: PsiElement,
         extensions: List<ArmeriaJUnitServerExtension>,
     ): ArmeriaJUnitServerExtension? {
+        // When multiple ServerExtension fields exist in scope, do not guess which server a call
+        // targets — inspection and test generation treat the scope as ambiguous.
         if (extensions.size != 1) {
             return null
         }

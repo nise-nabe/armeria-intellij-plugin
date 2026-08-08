@@ -24,7 +24,6 @@ dependencies {
 testing {
     suites {
         getByName<JvmTestSuite>("test") {
-            useJUnit(libs.versions.junit4.get())
             dependencies {
                 implementation(testFixtures(project(":plugin-route-collectors")))
                 implementation(libs.junit4)
