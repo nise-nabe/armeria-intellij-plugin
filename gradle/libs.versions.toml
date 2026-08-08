@@ -5,6 +5,8 @@ intellij-platform-plugin = "2.18.1"
 idea-platform = "2026.2"
 changelog = "2.5.0"
 junit4 = "4.13.2"
+junit-jupiter = "5.11.4"
+junit-vintage = "5.11.4"
 velocity = "2.4.1"
 ktlint-gradle = "14.2.0"
 ktlint = "1.5.0"
@@ -16,6 +18,8 @@ intellij-platform-gradle-plugin = { module = "org.jetbrains.intellij.platform:or
 changelog-gradle-plugin = { module = "org.jetbrains.changelog:org.jetbrains.changelog.gradle.plugin", version.ref = "changelog" }
 ktlint-gradle-plugin = { module = "org.jlleitschuh.gradle.ktlint:org.jlleitschuh.gradle.ktlint.gradle.plugin", version.ref = "ktlint-gradle" }
 junit4 = { module = "junit:junit", version.ref = "junit4" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
+junit-vintage = { module = "org.junit.vintage:junit-vintage-engine", version.ref = "junit-vintage" }
 velocity-engine-core = { module = "org.apache.velocity:velocity-engine-core", version.ref = "velocity" }
 
 [plugins]

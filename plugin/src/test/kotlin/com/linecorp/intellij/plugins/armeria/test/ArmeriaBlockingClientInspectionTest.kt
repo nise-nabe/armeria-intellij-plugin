@@ -359,4 +359,128 @@ class ArmeriaBlockingClientInspectionTest : ArmeriaLightJavaCodeInsightFixtureTe
             assertTrue(visitor === PsiElementVisitor.EMPTY_VISITOR)
         }
     }
+
+    fun testWarnsWhenNestedTestUsesOuterServerExtension() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Blocking
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "SlowServiceTest.java",
+            """
+            package example;
+
+            import org.junit.jupiter.api.extension.RegisterExtension;
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+            public class SlowServiceTest {
+                @RegisterExtension
+                static ServerExtension server = new ServerExtension() {};
+
+                class Nested {
+                    void testSlow() {
+                        server.webClient().<warning descr="Route /slow is marked @Blocking; use blockingWebClient() in tests instead of async WebClient.">get</warning>("/slow");
+                    }
+                }
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.testHighlighting(true, false, true)
+    }
+
+    fun testWarnsWhenStaticNestedTestUsesOuterServerExtension() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Blocking
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "SlowServiceTest.java",
+            """
+            package example;
+
+            import org.junit.jupiter.api.extension.RegisterExtension;
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+            public class SlowServiceTest {
+                @RegisterExtension
+                static ServerExtension server = new ServerExtension() {};
+
+                static class Nested {
+                    void testSlow() {
+                        server.webClient().<warning descr="Route /slow is marked @Blocking; use blockingWebClient() in tests instead of async WebClient.">get</warning>("/slow");
+                    }
+                }
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.testHighlighting(true, false, true)
+    }
+
+    fun testNoWarningWhenMultipleRegisterExtensionsAreAmbiguous() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Blocking
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "AmbiguousTest.java",
+            """
+            package example;
+
+            import org.junit.jupiter.api.extension.RegisterExtension;
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+            public class AmbiguousTest {
+                @RegisterExtension
+                static ServerExtension server1 = new ServerExtension() {};
+
+                @RegisterExtension
+                static ServerExtension server2 = new ServerExtension() {};
+
+                void testSlow() {
+                    server1.webClient().get("/slow");
+                }
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.testHighlighting(true, false, true)
+    }
 }

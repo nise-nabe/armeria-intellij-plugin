@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.test
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
@@ -14,12 +15,14 @@ import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.testFramework.PlatformTestUtil
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.assertNotNull as kotlinAssertNotNull
@@ -502,6 +505,82 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
                 route(path = "/api"),
             )
         assertEquals("InheritedServerInserterTest", resolved?.name)
+    }
+
+    fun testRejectsMultipleRegisterExtensionsInJavaClass() {
+        val javaFile =
+            myFixture.configureByText(
+                "AmbiguousTest.java",
+                """
+                package example;
+
+                import org.junit.jupiter.api.extension.RegisterExtension;
+                import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+                public class AmbiguousTest {
+                    @RegisterExtension
+                    static ServerExtension server1 = new ServerExtension() {};
+
+                    @RegisterExtension
+                    static ServerExtension server2 = new ServerExtension() {};
+                }
+                """.trimIndent(),
+            ) as PsiJavaFile
+        myFixture.openFileInEditor(javaFile.virtualFile)
+
+        val extensions = ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, javaFile.classes.single())
+        assertEquals(2, extensions.size)
+        var capturedMessage: String? = null
+        val previousDialog =
+            TestDialogManager.setTestDialog { message ->
+                capturedMessage = message
+                0
+            }
+        try {
+            assertFalse(ArmeriaTestMethodInserter.insertFromRouteExplorer(project, route(path = "/api")))
+        } finally {
+            TestDialogManager.setTestDialog(previousDialog)
+        }
+        assertEquals(message("test.support.insert.ambiguousServerExtension"), capturedMessage)
+    }
+
+    fun testRejectsMultipleRegisterExtensionsInKotlinClass() {
+        myFixture.configureByText(
+            "AmbiguousTest.kt",
+            """
+            package example
+
+            import org.junit.jupiter.api.extension.RegisterExtension
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+            class AmbiguousTest {
+                @RegisterExtension
+                val server1: ServerExtension = object : ServerExtension() {}
+
+                @RegisterExtension
+                val server2: ServerExtension = object : ServerExtension() {}
+            }
+            """.trimIndent(),
+        )
+        myFixture.openFileInEditor(myFixture.file.virtualFile)
+
+        val extensions =
+            ArmeriaJUnitServerExtensionCollector
+                .collect(project)
+                .filter { it.containingClassName.endsWith("AmbiguousTest") }
+        assertEquals(2, extensions.size)
+        var capturedMessage: String? = null
+        val previousDialog =
+            TestDialogManager.setTestDialog { message ->
+                capturedMessage = message
+                0
+            }
+        try {
+            assertFalse(ArmeriaTestMethodInserter.insertFromRouteExplorer(project, route(path = "/api")))
+        } finally {
+            TestDialogManager.setTestDialog(previousDialog)
+        }
+        assertEquals(message("test.support.insert.ambiguousServerExtension"), capturedMessage)
     }
 
     private fun route(

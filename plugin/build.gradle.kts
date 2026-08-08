@@ -25,6 +25,7 @@ dependencies {
         bundledPlugin("idea.plugin.protoeditor")
         testFramework(TestFrameworkType.Plugin.Java)
         testFramework(TestFrameworkType.Plugin.Java, configurationName = "testFixturesImplementation")
+        testFramework(TestFrameworkType.JUnit5)
     }
     testFixturesImplementation(testFixtures(project(":plugin-route-collectors")))
     testFixturesImplementation(libs.junit4)
@@ -33,7 +34,6 @@ dependencies {
 testing {
     suites {
         getByName<JvmTestSuite>("test") {
-            useJUnit(libs.versions.junit4.get())
             dependencies {
                 implementation(testFixtures(project()))
                 implementation(testFixtures(project(":plugin-route-collectors")))
