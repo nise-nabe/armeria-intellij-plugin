@@ -18,7 +18,8 @@ abstract class ArmeriaLightJavaCodeInsightFixtureTestCase : LightJavaCodeInsight
      * Loads a fixture from [resolveModuleTestDataPath] and resets [myFixture.testDataPath] afterward so
      * later [configureByText] calls do not accidentally resolve relative paths against testData.
      */
-    protected fun configureFixture(relativePath: String): PsiFile = myFixture.configureArmeriaFixture(relativePath)
+    protected fun configureFixture(relativePath: String): PsiFile =
+        myFixture.configureArmeriaFixture(relativePath) { resolveModuleTestDataPath() }
 
     override fun setUp() {
         super.setUp()

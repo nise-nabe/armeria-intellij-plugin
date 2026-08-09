@@ -1,7 +1,5 @@
 package com.linecorp.intellij.plugins.armeria.test
 
-import com.intellij.openapi.Disposable
-import com.intellij.openapi.util.Disposer
 import com.intellij.psi.PsiFile
 import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.fixtures.JavaCodeInsightTestFixture
@@ -17,8 +15,6 @@ import org.junit.jupiter.api.BeforeEach
 abstract class ArmeriaLightJavaCodeInsightFixtureTestCase5(
     projectDescriptor: LightProjectDescriptor? = null,
 ) : LightJavaCodeInsightFixtureTestCase5(projectDescriptor) {
-    private var vfsRootDisposable: Disposable? = null
-
     protected val myFixture: JavaCodeInsightTestFixture get() = fixture
 
     protected val project get() = fixture.project
@@ -29,7 +25,8 @@ abstract class ArmeriaLightJavaCodeInsightFixtureTestCase5(
 
     protected fun resolveModuleTestDataPath(): String = resolveArmeriaModuleTestDataPath()
 
-    protected fun configureFixture(relativePath: String): PsiFile = fixture.configureArmeriaFixture(relativePath)
+    protected fun configureFixture(relativePath: String): PsiFile =
+        fixture.configureArmeriaFixture(relativePath) { resolveModuleTestDataPath() }
 
     /**
      * Avoid [com.intellij.JavaTestUtil.getRelativeJavaTestDataPath] during fixture setUp; Armeria tests
@@ -39,16 +36,12 @@ abstract class ArmeriaLightJavaCodeInsightFixtureTestCase5(
 
     @BeforeEach
     fun armeriaFixtureSetUp() {
-        val disposable = Disposer.newDisposable("ArmeriaFixtureVfsRoot")
-        vfsRootDisposable = disposable
-        Disposer.register(fixture.project, disposable)
-        allowArmeriaTestSandboxRoots(disposable)
+        allowArmeriaTestSandboxRoots(fixture.project)
         onFixtureSetUp()
     }
 
     @AfterEach
     fun armeriaFixtureTearDown() {
         clearArmeriaRouteCollectionMetricsForTests()
-        vfsRootDisposable = null
     }
 }

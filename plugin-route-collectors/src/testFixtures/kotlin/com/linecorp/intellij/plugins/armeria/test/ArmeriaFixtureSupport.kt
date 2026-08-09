@@ -42,9 +42,12 @@ fun clearArmeriaRouteCollectionMetricsForTests() {
     ArmeriaRouteCollectionMetrics.clearLastSnapshotForTests()
 }
 
-fun JavaCodeInsightTestFixture.configureArmeriaFixture(relativePath: String): PsiFile {
+fun JavaCodeInsightTestFixture.configureArmeriaFixture(
+    relativePath: String,
+    testDataPathResolver: () -> String = ::resolveArmeriaModuleTestDataPath,
+): PsiFile {
     val previousTestDataPath = testDataPath
-    testDataPath = resolveArmeriaModuleTestDataPath()
+    testDataPath = testDataPathResolver()
     try {
         return configureByFile(relativePath)
     } finally {
