@@ -5,6 +5,7 @@ import com.intellij.testFramework.PsiTestUtil
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaGrpcRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaProtocolRouteContributor
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaProtoRouteDiscoverySupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 import kotlin.test.assertEquals
@@ -217,5 +218,26 @@ class ArmeriaGrpcRouteCollectorGateTest : ArmeriaFixtureTestBase() {
         } finally {
             PsiTestUtil.removeSourceRoot(module, extraRoot)
         }
+    }
+
+    fun testIsGrpcOnClasspathMemoizedForProjectScope() {
+        val scope = GlobalSearchScope.projectScope(project)
+        assertFalse(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
+        assertFalse(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
+
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.grpc;
+
+            public final class GrpcService {
+                public static GrpcServiceBuilder builder(Object bindableService) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
+        assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
     }
 }

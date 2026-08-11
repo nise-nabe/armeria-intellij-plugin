@@ -1,15 +1,13 @@
 package com.linecorp.intellij.plugins.armeria.explorer.support
 
-import com.intellij.java.library.JavaLibraryModificationTracker
-import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.roots.ProjectRootModificationTracker
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.util.CachedValue
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
-import com.intellij.psi.util.PsiModificationTracker
 import java.util.MissingResourceException
 
 /**
@@ -24,6 +22,7 @@ import java.util.MissingResourceException
  */
 object ArmeriaProtoRouteDiscoverySupport {
     private const val GRPC_SERVICE_CLASS = "com.linecorp.armeria.server.grpc.GrpcService"
+    private val GRPC_ON_CLASSPATH_KEY = Key.create<CachedValue<Boolean>>("armeria.grpc.on.classpath")
 
     fun isEnabled(): Boolean =
         try {
@@ -45,15 +44,17 @@ object ArmeriaProtoRouteDiscoverySupport {
         if (scope != GlobalSearchScope.projectScope(project)) {
             return JavaPsiFacade.getInstance(project).findClass(GRPC_SERVICE_CLASS, scope) != null
         }
-        return CachedValuesManager.getManager(project).getCachedValue(project) {
-            val onClasspath = JavaPsiFacade.getInstance(project).findClass(GRPC_SERVICE_CLASS, scope) != null
-            CachedValueProvider.Result.create(
-                onClasspath,
-                PsiModificationTracker.MODIFICATION_COUNT,
-                ProjectRootModificationTracker.getInstance(project),
-                DumbService.getInstance(project).modificationTracker,
-                JavaLibraryModificationTracker.getInstance(project),
-            )
-        }
+        return CachedValuesManager.getManager(project).getCachedValue(
+            project,
+            GRPC_ON_CLASSPATH_KEY,
+            CachedValueProvider {
+                val onClasspath = JavaPsiFacade.getInstance(project).findClass(GRPC_SERVICE_CLASS, scope) != null
+                CachedValueProvider.Result.create(
+                    onClasspath,
+                    *ArmeriaRouteCacheSupport.invalidators(project),
+                )
+            },
+            false,
+        )
     }
 }
