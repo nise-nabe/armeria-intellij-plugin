@@ -47,25 +47,41 @@ internal object ArmeriaBlockingClientPathSupport {
     fun extractKotlinRequestPath(argument: KtExpression?): String? {
         argument ?: return null
         return when (argument) {
-            is KtStringTemplateExpression -> {
-                if (argument.entries.size != 1) {
-                    return null
-                }
-                argument.entries
-                    .single()
-                    .text
-                    .removeSurrounding("\"")
-            }
+            is KtStringTemplateExpression -> extractKotlinStringTemplatePath(argument)
             is KtNameReferenceExpression -> resolveKotlinStringConstant(argument)
             is KtDotQualifiedExpression -> {
                 val reference = argument.selectorExpression as? KtNameReferenceExpression ?: return null
                 resolveKotlinStringConstant(reference)
             }
-            else -> null
+            else ->
+                JavaPsiFacade
+                    .getInstance(argument.project)
+                    .constantEvaluationHelper
+                    .computeConstantExpression(argument) as? String
         }
     }
 
+    private fun extractKotlinStringTemplatePath(template: KtStringTemplateExpression): String? {
+        JavaPsiFacade
+            .getInstance(template.project)
+            .constantEvaluationHelper
+            .computeConstantExpression(template)
+            ?.let { return it as? String }
+        if (template.entries.size != 1) {
+            return null
+        }
+        return template.entries
+            .single()
+            .text
+            .removeSurrounding("\"")
+    }
+
     private fun resolveKotlinStringConstant(reference: KtNameReferenceExpression): String? {
+        JavaPsiFacade
+            .getInstance(reference.project)
+            .constantEvaluationHelper
+            .computeConstantExpression(reference)
+            ?.let { return it as? String }
         when (val resolved = reference.reference?.resolve()) {
             is PsiField -> return staticFinalStringLiteral(resolved)
             is KtProperty -> {
