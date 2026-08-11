@@ -1,10 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer.collector
 
 import com.intellij.ide.highlighter.JavaFileType
-import com.intellij.java.library.JavaLibraryModificationTracker
-import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.roots.ProjectRootModificationTracker
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.JavaPsiFacade
@@ -17,13 +14,13 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.CachedValue
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
-import com.intellij.psi.util.PsiModificationTracker
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaBuilderCallHeuristics
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.java.ArmeriaExtendedRegistrationCollector
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.kotlin.ArmeriaKotlinExtendedRegistrationCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinPluginSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaProtoRouteDiscoverySupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCacheSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.CoreServiceRegistrationSupport
@@ -199,13 +196,7 @@ object ArmeriaRouteCollector {
      */
     fun routeCacheDependencies(project: Project): Array<Any> = routeCacheInvalidators(project)
 
-    private fun routeCacheInvalidators(project: Project): Array<Any> =
-        arrayOf(
-            PsiModificationTracker.MODIFICATION_COUNT,
-            ProjectRootModificationTracker.getInstance(project),
-            DumbService.getInstance(project).modificationTracker,
-            JavaLibraryModificationTracker.getInstance(project),
-        )
+    private fun routeCacheInvalidators(project: Project): Array<Any> = ArmeriaRouteCacheSupport.invalidators(project)
 
     private fun buildCollectContext(
         project: Project,

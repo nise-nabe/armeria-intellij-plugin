@@ -190,8 +190,11 @@ class ArmeriaJUnitServerExtensionLineMarkerProviderTest : ArmeriaLightJavaCodeIn
             import com.linecorp.armeria.testing.junit5.server.ServerExtension
 
             class ExampleServiceTest {
-                @RegisterExtension
-                fun server(): ServerExtension = object : ServerExtension() {}
+                companion object {
+                    @JvmStatic
+                    @RegisterExtension
+                    fun server(): ServerExtension = object : ServerExtension() {}
+                }
             }
             """.trimIndent(),
         )

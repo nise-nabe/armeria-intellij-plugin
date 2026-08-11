@@ -1,10 +1,13 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.testFramework.PsiTestUtil
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaGrpcRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaProtocolRouteContributor
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaProtoRouteDiscoverySupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 import kotlin.test.assertEquals
@@ -214,6 +217,57 @@ class ArmeriaGrpcRouteCollectorGateTest : ArmeriaFixtureTestBase() {
                 )
             assertEquals(first.map { it.path }, afterRootChange.map { it.path })
             assertTrue(ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned > 0)
+        } finally {
+            PsiTestUtil.removeSourceRoot(module, extraRoot)
+        }
+    }
+
+    fun testIsGrpcOnClasspathMemoizedForProjectScope() {
+        val scope = GlobalSearchScope.projectScope(project)
+        assertFalse(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
+        assertFalse(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
+
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.grpc;
+
+            public final class GrpcService {
+                public static GrpcServiceBuilder builder(Object bindableService) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
+        assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
+    }
+
+    fun testIsGrpcOnClasspathInvalidatesOnProjectRootChange() {
+        val scope = GlobalSearchScope.projectScope(project)
+        val grpcClass =
+            myFixture.addClass(
+                """
+                package com.linecorp.armeria.server.grpc;
+
+                public final class GrpcService {
+                    public static GrpcServiceBuilder builder(Object bindableService) {
+                        return null;
+                    }
+                }
+                """.trimIndent(),
+            )
+        assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
+        assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
+
+        val extraRoot = myFixture.tempDirFixture.findOrCreateDir("grpc-extra-root")
+        try {
+            PsiTestUtil.addSourceRoot(module, extraRoot, false)
+            ApplicationManager.getApplication().runWriteAction {
+                grpcClass.containingFile.virtualFile.delete(this)
+            }
+            PsiDocumentManager.getInstance(project).commitAllDocuments()
+            assertFalse(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
         } finally {
             PsiTestUtil.removeSourceRoot(module, extraRoot)
         }
