@@ -77,6 +77,11 @@ internal object ArmeriaBlockingClientPathSupport {
     }
 
     private fun resolveKotlinStringConstant(reference: KtNameReferenceExpression): String? {
+        JavaPsiFacade
+            .getInstance(reference.project)
+            .constantEvaluationHelper
+            .computeConstantExpression(reference)
+            ?.let { return it as? String }
         when (val resolved = reference.reference?.resolve()) {
             is PsiField -> return staticFinalStringLiteral(resolved)
             is KtProperty -> {
