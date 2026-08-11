@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer.collector
 
 import com.intellij.ide.highlighter.JavaFileType
+import com.intellij.java.library.JavaLibraryModificationTracker
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootModificationTracker
@@ -79,19 +80,28 @@ object ArmeriaRouteCollector {
     private fun cachedProjectRoutesWithProto(
         project: Project,
         contributors: List<RouteContributor>,
-    ): List<ArmeriaRoute> =
-        CachedValuesManager.getManager(project).getCachedValue(
+    ): List<ArmeriaRoute> {
+        val manager = CachedValuesManager.getManager(project)
+        val baseKey = cacheKey(contributors)
+        return manager.getCachedValue(
             project,
             cacheKeyWithProto(contributors),
             CachedValueProvider {
                 val baseRoutes = cachedProjectRoutes(project, contributors)
+                // CachedValuesManager stores the base CachedValue in project user data under [baseKey];
+                // depend on it so proto overlay invalidates when the base route cache does.
+                val baseCachedValue =
+                    project.getUserData(baseKey)
+                        ?: error("base route cache not registered for $baseKey")
                 CachedValueProvider.Result.create(
                     mergeProtoRoutes(project, baseRoutes, contributors),
+                    baseCachedValue,
                     *routeCacheInvalidators(project),
                 )
             },
             false,
         )
+    }
 
     private fun cacheKey(contributors: List<RouteContributor>): Key<CachedValue<List<ArmeriaRoute>>> {
         val id = contributorCacheId(contributors)
@@ -181,7 +191,12 @@ object ArmeriaRouteCollector {
         )
     }
 
-    /** Invalidators shared by base, proto-overlay, and downstream route memo caches. */
+    /**
+     * Invalidators shared by base, proto-overlay, and downstream route memo caches.
+     *
+     * [JavaLibraryModificationTracker] conservatively refreshes routes when Gradle sync or library
+     * roots change (e.g. gRPC stubs added), not only on PSI edits.
+     */
     fun routeCacheDependencies(project: Project): Array<Any> = routeCacheInvalidators(project)
 
     private fun routeCacheInvalidators(project: Project): Array<Any> =
@@ -189,6 +204,7 @@ object ArmeriaRouteCollector {
             PsiModificationTracker.MODIFICATION_COUNT,
             ProjectRootModificationTracker.getInstance(project),
             DumbService.getInstance(project).modificationTracker,
+            JavaLibraryModificationTracker.getInstance(project),
         )
 
     private fun buildCollectContext(
