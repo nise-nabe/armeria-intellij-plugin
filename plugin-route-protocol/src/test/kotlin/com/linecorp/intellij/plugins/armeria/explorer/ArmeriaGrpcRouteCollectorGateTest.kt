@@ -91,6 +91,76 @@ class ArmeriaGrpcRouteCollectorGateTest : ArmeriaFixtureTestBase() {
         assertTrue(ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned > 0)
     }
 
+    fun testProtoRouteMergeCacheInvalidatesOnProtoEdit() {
+        registerArmeriaServerStubs()
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.grpc;
+
+            public final class GrpcService {
+                public static GrpcServiceBuilder builder(Object bindableService) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "greeter.proto",
+            """
+            syntax = "proto3";
+            package com.example;
+
+            service Greeter {
+              rpc SayHello(HelloRequest) returns (HelloResponse);
+            }
+            """.trimIndent(),
+        )
+
+        val contributors = listOf(ArmeriaProtocolRouteContributor)
+        val first =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = contributors,
+            )
+        assertEquals(listOf("/com.example.Greeter/SayHello"), first.map { it.path })
+        assertTrue(ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned > 0)
+
+        val cached =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = contributors,
+            )
+        assertEquals(first.map { it.path }, cached.map { it.path })
+        assertEquals(0, ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned)
+
+        myFixture.configureByText(
+            "greeter.proto",
+            """
+            syntax = "proto3";
+            package com.example;
+
+            service Greeter {
+              rpc SayHello(HelloRequest) returns (HelloResponse);
+              rpc SayGoodbye(GoodbyeRequest) returns (GoodbyeResponse);
+            }
+            """.trimIndent(),
+        )
+
+        val afterEdit =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = contributors,
+            )
+        assertEquals(
+            listOf("/com.example.Greeter/SayGoodbye", "/com.example.Greeter/SayHello"),
+            afterEdit.map { it.path },
+        )
+        assertTrue(ArmeriaRouteCollectionMetrics.lastSnapshot!!.filesScanned > 0)
+    }
+
     fun testWarmProtoOverlayCacheInvalidatesOnProjectRootChange() {
         registerArmeriaServerStubs()
         myFixture.addClass(

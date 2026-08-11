@@ -88,6 +88,8 @@ object ArmeriaRouteCollector {
             cacheKeyWithProto(contributors),
             CachedValueProvider {
                 val baseRoutes = cachedProjectRoutes(project, contributors)
+                // CachedValuesManager stores the base CachedValue in project user data under [baseKey];
+                // depend on it so proto overlay invalidates when the base route cache does.
                 val baseCachedValue =
                     project.getUserData(baseKey)
                         ?: error("base route cache not registered for $baseKey")
@@ -189,7 +191,12 @@ object ArmeriaRouteCollector {
         )
     }
 
-    /** Invalidators shared by base, proto-overlay, and downstream route memo caches. */
+    /**
+     * Invalidators shared by base, proto-overlay, and downstream route memo caches.
+     *
+     * [JavaLibraryModificationTracker] conservatively refreshes routes when Gradle sync or library
+     * roots change (e.g. gRPC stubs added), not only on PSI edits.
+     */
     fun routeCacheDependencies(project: Project): Array<Any> = routeCacheInvalidators(project)
 
     private fun routeCacheInvalidators(project: Project): Array<Any> =

@@ -20,14 +20,14 @@ internal class ArmeriaProtoRpcLineMarkerProvider : LineMarkerProvider {
         if (DumbService.isDumb(element.project)) {
             return null
         }
-        if (!ArmeriaProtoRouteDiscoverySupport.isEnabled()) {
-            return null
-        }
         val project = element.project
-        if (!ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, GlobalSearchScope.projectScope(project))) {
-            return null
-        }
         return try {
+            if (!ArmeriaProtoRouteDiscoverySupport.isEnabled()) {
+                return null
+            }
+            if (!ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, GlobalSearchScope.projectScope(project))) {
+                return null
+            }
             protoRpcMarker(element)
         } catch (_: IndexNotReadyException) {
             null

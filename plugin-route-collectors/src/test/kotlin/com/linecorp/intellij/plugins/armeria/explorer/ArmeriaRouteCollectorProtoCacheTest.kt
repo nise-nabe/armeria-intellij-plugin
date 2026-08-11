@@ -1,7 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.intellij.psi.PsiManager
-import com.intellij.testFramework.PsiTestUtil
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.support.RouteCollectContext
@@ -25,9 +24,11 @@ class ArmeriaRouteCollectorProtoCacheTest : ArmeriaFixtureTestBase() {
     fun testProtoOverlayIsCachedAcrossCollectCalls() {
         val first =
             collectWithProtoOverlay()
+        assertTrue(first.any { it.path == OVERLAY_PATH })
         assertEquals(1, TestProtoOverlayContributor.overlayInvocations.get())
 
-        collectWithProtoOverlay()
+        val second = collectWithProtoOverlay()
+        assertTrue(second.any { it.path == OVERLAY_PATH })
         assertEquals(1, TestProtoOverlayContributor.overlayInvocations.get())
 
         val withoutProto =
@@ -106,23 +107,6 @@ class ArmeriaRouteCollectorProtoCacheTest : ArmeriaFixtureTestBase() {
         assertTrue(afterEdit.none { it.path == "/hello" })
         assertTrue(afterEdit.any { it.path == OVERLAY_PATH })
         assertEquals(2, TestProtoOverlayContributor.overlayInvocations.get())
-    }
-
-    fun testWarmProtoOverlayCacheInvalidatesOnProjectRootChange() {
-        collectWithProtoOverlay()
-        assertEquals(1, TestProtoOverlayContributor.overlayInvocations.get())
-
-        collectWithProtoOverlay()
-        assertEquals(1, TestProtoOverlayContributor.overlayInvocations.get())
-
-        val extraRoot = myFixture.tempDirFixture.findOrCreateDir("extra-root")
-        try {
-            PsiTestUtil.addSourceRoot(module, extraRoot, false)
-            collectWithProtoOverlay()
-            assertEquals(2, TestProtoOverlayContributor.overlayInvocations.get())
-        } finally {
-            PsiTestUtil.removeSourceRoot(module, extraRoot)
-        }
     }
 
     private fun collectWithProtoOverlay() =
