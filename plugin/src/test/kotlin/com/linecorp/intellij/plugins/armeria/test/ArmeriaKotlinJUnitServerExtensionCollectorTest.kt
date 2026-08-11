@@ -172,7 +172,7 @@ class ArmeriaKotlinJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsig
         assertEquals("server()", extensions.single().serverReceiver)
     }
 
-    fun testIgnoresInstanceRegisterExtensionFactoryMethod() {
+    fun testCollectsInstanceRegisterExtensionFactoryMethod() {
         myFixture.configureByText(
             "ExampleServiceTest.kt",
             """
@@ -190,6 +190,9 @@ class ArmeriaKotlinJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsig
 
         val extensions = ArmeriaJUnitServerExtensionCollector.collect(project)
 
-        assertTrue(extensions.isEmpty())
+        assertEquals(1, extensions.size)
+        assertEquals("server", extensions.single().variableName)
+        assertTrue(extensions.single().isFactoryMethod)
+        assertEquals("server()", extensions.single().serverReceiver)
     }
 }

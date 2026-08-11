@@ -4,6 +4,7 @@
 
 ### Added
 
+- `@RegisterExtension` factory methods on Java static/instance methods and Kotlin `@JvmStatic` companion or instance methods are discovered for gutter run markers, blocking-client inspection scoping, and Generate Test Method.
 - PSI fixture regression tests for duplicate annotated route and duplicate route registration inspections (Java route highlighting, Java/Kotlin registration inspection scenarios).
 - ktlint via `com.linecorp.intellij.ktlint` convention (`ktlint_official` style); `ktlintCheck` runs as part of `check` / `build`.
 - gRPC Route Explorer discovery uses Proto Editor PSI when `idea.plugin.protoeditor` is available (RPC-level navigation), with fallback to the existing `.proto` text parser.

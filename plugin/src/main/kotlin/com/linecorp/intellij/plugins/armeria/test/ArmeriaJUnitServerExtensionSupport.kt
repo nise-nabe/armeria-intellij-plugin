@@ -13,7 +13,6 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
-import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiModifierListOwner
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiThisExpression
@@ -116,9 +115,6 @@ internal object ArmeriaJUnitServerExtensionSupport {
         method: PsiMethod,
         scope: GlobalSearchScope,
     ): ArmeriaJUnitServerExtension? {
-        if (!method.hasModifierProperty(PsiModifier.STATIC)) {
-            return null
-        }
         if (method.parameterList.parametersCount > 0) {
             return null
         }
@@ -644,8 +640,10 @@ internal object ArmeriaJUnitServerExtensionSupport {
         if (function.valueParameters.isNotEmpty()) {
             return false
         }
-        val containingObject = function.getParentOfType<KtObjectDeclaration>(strict = false) ?: return false
-        return containingObject.isCompanion() && function.hasJvmStaticAnnotation()
+        function.getParentOfType<KtObjectDeclaration>(strict = false)?.let { containingObject ->
+            return containingObject.isCompanion() && function.hasJvmStaticAnnotation()
+        }
+        return function.getParentOfType<KtClass>(strict = false) != null
     }
 
     private fun KtNamedFunction.hasJvmStaticAnnotation(): Boolean = annotationEntries.any { it.shortName?.asString() == "JvmStatic" }
