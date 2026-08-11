@@ -34,6 +34,10 @@ internal object ArmeriaBlockingClientPathSupport {
             .computeConstantExpression(reference)
             ?.let { return it as? String }
         val field = reference.resolve() as? PsiField ?: return null
+        return staticFinalStringLiteral(field)
+    }
+
+    private fun staticFinalStringLiteral(field: PsiField): String? {
         if (!field.hasModifierProperty(PsiModifier.STATIC) || !field.hasModifierProperty(PsiModifier.FINAL)) {
             return null
         }
@@ -62,17 +66,22 @@ internal object ArmeriaBlockingClientPathSupport {
     }
 
     private fun resolveKotlinStringConstant(reference: KtNameReferenceExpression): String? {
-        val resolved = reference.reference?.resolve() as? KtProperty ?: return null
-        if (!resolved.hasModifier(KtTokens.CONST_KEYWORD)) {
-            return null
+        when (val resolved = reference.reference?.resolve()) {
+            is PsiField -> return staticFinalStringLiteral(resolved)
+            is KtProperty -> {
+                if (!resolved.hasModifier(KtTokens.CONST_KEYWORD)) {
+                    return null
+                }
+                val initializer = resolved.initializer as? KtStringTemplateExpression ?: return null
+                if (initializer.entries.size != 1) {
+                    return null
+                }
+                return initializer.entries
+                    .single()
+                    .text
+                    .removeSurrounding("\"")
+            }
+            else -> return null
         }
-        val initializer = resolved.initializer as? KtStringTemplateExpression ?: return null
-        if (initializer.entries.size != 1) {
-            return null
-        }
-        return initializer.entries
-            .single()
-            .text
-            .removeSurrounding("\"")
     }
 }

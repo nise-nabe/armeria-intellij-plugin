@@ -16,6 +16,7 @@ import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiModifierListOwner
 import com.intellij.psi.PsiReferenceExpression
+import com.intellij.psi.PsiThisExpression
 import com.intellij.psi.PsiType
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
@@ -32,6 +33,7 @@ import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtObjectDeclaration
 import org.jetbrains.kotlin.psi.KtObjectLiteralExpression
 import org.jetbrains.kotlin.psi.KtProperty
+import org.jetbrains.kotlin.psi.KtThisExpression
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 internal object ArmeriaJUnitServerExtensionSupport {
@@ -500,10 +502,18 @@ internal object ArmeriaJUnitServerExtensionSupport {
             is PsiReferenceExpression -> expression.referenceName == serverVariableName
             is PsiMethodCallExpression ->
                 expression.methodExpression.referenceName == serverVariableName &&
-                    expression.methodExpression.qualifierExpression == null &&
-                    expression.argumentList.expressionCount == 0
+                    expression.argumentList.expressionCount == 0 &&
+                    isUnqualifiedOrThisQualifier(expression.methodExpression.qualifierExpression)
             else -> false
         }
+
+    private fun isUnqualifiedOrThisQualifier(qualifier: PsiElement?): Boolean {
+        qualifier ?: return true
+        if (qualifier is PsiThisExpression) {
+            return true
+        }
+        return qualifier is PsiReferenceExpression && qualifier.referenceName == "this"
+    }
 
     private fun isKotlinServerExtensionInitializer(
         initializer: KtExpression,
@@ -568,11 +578,34 @@ internal object ArmeriaJUnitServerExtensionSupport {
     ): Boolean =
         when (expression) {
             is KtNameReferenceExpression -> expression.getReferencedName() == serverVariableName
-            is KtCallExpression ->
-                expression.calleeExpression?.text == serverVariableName &&
-                    expression.valueArguments.isEmpty()
+            is KtCallExpression -> matchesKotlinFactoryCall(expression, serverVariableName, requireThisReceiver = false)
+            is KtDotQualifiedExpression -> {
+                val factoryCall = expression.selectorExpression as? KtCallExpression ?: return false
+                if (!matchesKotlinFactoryCall(factoryCall, serverVariableName, requireThisReceiver = true)) {
+                    return false
+                }
+                expression.receiverExpression is KtThisExpression
+            }
             else -> false
         }
+
+    private fun matchesKotlinFactoryCall(
+        expression: KtCallExpression,
+        serverVariableName: String,
+        requireThisReceiver: Boolean,
+    ): Boolean {
+        if (expression.calleeExpression?.text != serverVariableName || expression.valueArguments.isNotEmpty()) {
+            return false
+        }
+        if (!requireThisReceiver) {
+            val parent = expression.parent as? KtDotQualifiedExpression ?: return true
+            if (parent.selectorExpression != expression) {
+                return true
+            }
+            return parent.receiverExpression is KtThisExpression
+        }
+        return true
+    }
 
     private fun resolveScopedExtension(
         element: PsiElement,
