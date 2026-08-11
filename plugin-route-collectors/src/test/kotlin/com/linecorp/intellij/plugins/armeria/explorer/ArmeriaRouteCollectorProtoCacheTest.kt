@@ -22,6 +22,22 @@ class ArmeriaRouteCollectorProtoCacheTest : ArmeriaFixtureTestBase() {
     }
 
     fun testProtoOverlayIsCachedAcrossCollectCalls() {
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class HelloService {
+                @Get("/hello")
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+
         val first =
             collectWithProtoOverlay()
         assertTrue(first.any { it.path == OVERLAY_PATH })
