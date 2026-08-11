@@ -13,6 +13,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
+import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiModifierListOwner
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiType
@@ -113,6 +114,9 @@ internal object ArmeriaJUnitServerExtensionSupport {
         method: PsiMethod,
         scope: GlobalSearchScope,
     ): ArmeriaJUnitServerExtension? {
+        if (!method.hasModifierProperty(PsiModifier.STATIC)) {
+            return null
+        }
         if (!hasRegisterExtensionAnnotation(method) || !isServerExtensionType(method.returnType, method.project, scope)) {
             return null
         }
@@ -494,7 +498,10 @@ internal object ArmeriaJUnitServerExtensionSupport {
     ): Boolean =
         when (expression) {
             is PsiReferenceExpression -> expression.referenceName == serverVariableName
-            is PsiMethodCallExpression -> expression.methodExpression.referenceName == serverVariableName
+            is PsiMethodCallExpression ->
+                expression.methodExpression.referenceName == serverVariableName &&
+                    expression.methodExpression.qualifierExpression == null &&
+                    expression.argumentList.expressionCount == 0
             else -> false
         }
 
@@ -561,7 +568,9 @@ internal object ArmeriaJUnitServerExtensionSupport {
     ): Boolean =
         when (expression) {
             is KtNameReferenceExpression -> expression.getReferencedName() == serverVariableName
-            is KtCallExpression -> expression.calleeExpression?.text == serverVariableName
+            is KtCallExpression ->
+                expression.calleeExpression?.text == serverVariableName &&
+                    expression.valueArguments.isEmpty()
             else -> false
         }
 

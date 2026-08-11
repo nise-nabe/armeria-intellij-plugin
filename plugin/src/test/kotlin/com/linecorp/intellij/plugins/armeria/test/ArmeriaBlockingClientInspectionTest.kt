@@ -579,4 +579,55 @@ class ArmeriaBlockingClientInspectionTest : ArmeriaLightJavaCodeInsightFixtureTe
 
         myFixture.testHighlighting(true, false, true)
     }
+
+    fun testDoesNotWarnWhenQualifiedServerFactoryCallDiffersFromExtensionName() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Blocking
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "SlowServiceTest.java",
+            """
+            package example;
+
+            import org.junit.jupiter.api.extension.RegisterExtension;
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+            public class SlowServiceTest {
+                @RegisterExtension
+                static ServerExtension server = new ServerExtension() {};
+
+                static ServerExtension server(String ignored) {
+                    return new ServerExtension() {};
+                }
+
+                void testSlow() {
+                    server("x").webClient().get("/slow");
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val getCall =
+            PsiTreeUtil
+                .collectElementsOfType(myFixture.file, com.intellij.psi.PsiMethodCallExpression::class.java)
+                .first { it.methodExpression.referenceName == "get" }
+        val manager = InspectionManager.getInstance(project)
+        val holder = ProblemsHolder(manager, myFixture.file, false)
+        val visitor = ArmeriaBlockingClientInspection().buildVisitor(holder, false)
+        getCall.accept(visitor)
+        assertTrue(holder.results.isEmpty())
+    }
 }

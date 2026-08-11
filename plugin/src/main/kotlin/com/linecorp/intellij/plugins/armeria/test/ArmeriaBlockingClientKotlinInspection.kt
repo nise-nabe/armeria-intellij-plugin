@@ -76,7 +76,7 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
                 methodName in HTTP_METHOD_NAMES && isAsyncWebClientReference(qualifier, serverVariableName)
             }
             is KtCallExpression ->
-                if (qualifier.calleeExpression?.text == serverVariableName) {
+                if (ArmeriaJUnitServerExtensionSupport.matchesKotlinServerReceiver(qualifier, serverVariableName)) {
                     methodName in setOf("webClient", "httpUri")
                 } else {
                     usesAsyncWebClientOnQualifier(qualifier, serverVariableName, methodName)

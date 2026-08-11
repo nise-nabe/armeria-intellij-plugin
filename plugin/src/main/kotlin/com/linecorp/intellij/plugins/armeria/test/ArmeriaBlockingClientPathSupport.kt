@@ -7,6 +7,7 @@ import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiReferenceExpression
 import org.jetbrains.kotlin.lexer.KtTokens
+import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtProperty
@@ -52,6 +53,10 @@ internal object ArmeriaBlockingClientPathSupport {
                     .removeSurrounding("\"")
             }
             is KtNameReferenceExpression -> resolveKotlinStringConstant(argument)
+            is KtDotQualifiedExpression -> {
+                val reference = argument.selectorExpression as? KtNameReferenceExpression ?: return null
+                resolveKotlinStringConstant(reference)
+            }
             else -> null
         }
     }
