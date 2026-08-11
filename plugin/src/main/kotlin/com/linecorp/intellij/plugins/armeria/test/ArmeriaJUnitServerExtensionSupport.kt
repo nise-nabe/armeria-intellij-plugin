@@ -645,7 +645,7 @@ internal object ArmeriaJUnitServerExtensionSupport {
             return false
         }
         val containingObject = function.getParentOfType<KtObjectDeclaration>(strict = false) ?: return false
-        return !containingObject.isCompanion() || function.hasJvmStaticAnnotation()
+        return containingObject.isCompanion() && function.hasJvmStaticAnnotation()
     }
 
     private fun KtNamedFunction.hasJvmStaticAnnotation(): Boolean = annotationEntries.any { it.shortName?.asString() == "JvmStatic" }

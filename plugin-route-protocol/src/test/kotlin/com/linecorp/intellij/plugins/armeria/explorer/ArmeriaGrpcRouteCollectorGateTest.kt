@@ -1,5 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.testFramework.PsiTestUtil
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
@@ -243,26 +245,29 @@ class ArmeriaGrpcRouteCollectorGateTest : ArmeriaFixtureTestBase() {
 
     fun testIsGrpcOnClasspathInvalidatesOnProjectRootChange() {
         val scope = GlobalSearchScope.projectScope(project)
-        assertFalse(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
+        val grpcClass =
+            myFixture.addClass(
+                """
+                package com.linecorp.armeria.server.grpc;
 
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.grpc;
-
-            public final class GrpcService {
-                public static GrpcServiceBuilder builder(Object bindableService) {
-                    return null;
+                public final class GrpcService {
+                    public static GrpcServiceBuilder builder(Object bindableService) {
+                        return null;
+                    }
                 }
-            }
-            """.trimIndent(),
-        )
+                """.trimIndent(),
+            )
         assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
         assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
 
         val extraRoot = myFixture.tempDirFixture.findOrCreateDir("grpc-extra-root")
         try {
             PsiTestUtil.addSourceRoot(module, extraRoot, false)
-            assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
+            ApplicationManager.getApplication().runWriteAction {
+                grpcClass.containingFile.virtualFile.delete(this)
+            }
+            PsiDocumentManager.getInstance(project).commitAllDocuments()
+            assertFalse(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
         } finally {
             PsiTestUtil.removeSourceRoot(module, extraRoot)
         }
