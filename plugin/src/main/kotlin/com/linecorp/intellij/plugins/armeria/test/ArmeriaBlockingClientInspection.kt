@@ -7,7 +7,6 @@ import com.intellij.openapi.util.Key
 import com.intellij.psi.JavaElementVisitor
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElementVisitor
-import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.search.GlobalSearchScope
@@ -21,6 +20,8 @@ import com.linecorp.intellij.plugins.armeria.message
 
 class ArmeriaBlockingClientInspection : LocalInspectionTool() {
     override fun getDisplayName(): String = message("inspection.blocking.client.display.name")
+
+    override fun getStaticDescription(): String = message("inspection.blocking.client.description")
 
     override fun buildVisitor(
         holder: ProblemsHolder,
@@ -62,12 +63,12 @@ class ArmeriaBlockingClientInspection : LocalInspectionTool() {
         serverVariableName: String,
     ): Boolean {
         val qualifier = expression.methodExpression.qualifierExpression ?: return false
-        if (qualifier is PsiReferenceExpression && qualifier.referenceName == serverVariableName) {
+        if (ArmeriaJUnitServerExtensionSupport.matchesServerReceiver(qualifier, serverVariableName)) {
             return expression.methodExpression.referenceName in setOf("webClient", "httpUri")
         }
         if (qualifier is PsiMethodCallExpression) {
-            val receiver = qualifier.methodExpression.qualifierExpression as? PsiReferenceExpression
-            if (receiver?.referenceName == serverVariableName &&
+            val receiver = qualifier.methodExpression.qualifierExpression
+            if (ArmeriaJUnitServerExtensionSupport.matchesServerReceiver(receiver ?: return false, serverVariableName) &&
                 qualifier.methodExpression.referenceName == "webClient"
             ) {
                 return expression.methodExpression.referenceName in HTTP_METHOD_NAMES
@@ -100,8 +101,8 @@ class ArmeriaBlockingClientInspection : LocalInspectionTool() {
         if (initializer is PsiMethodCallExpression) {
             when (initializer.methodExpression.referenceName) {
                 "webClient" -> {
-                    val receiver = initializer.methodExpression.qualifierExpression as? PsiReferenceExpression
-                    return receiver?.referenceName == serverVariableName
+                    val receiver = initializer.methodExpression.qualifierExpression
+                    return ArmeriaJUnitServerExtensionSupport.matchesServerReceiver(receiver ?: return false, serverVariableName)
                 }
                 "of" -> {
                     val ofArgument = initializer.argumentList.expressions.firstOrNull() ?: return false
@@ -127,7 +128,11 @@ class ArmeriaBlockingClientInspection : LocalInspectionTool() {
         if (methodName !in HTTP_METHOD_NAMES) {
             return null
         }
-        return (expression.argumentList.expressions.firstOrNull() as? PsiLiteralExpression)?.value as? String
+        return (
+            expression.argumentList.expressions
+                .firstOrNull()
+                ?.let(ArmeriaBlockingClientPathSupport::extractJavaRequestPath)
+        )
     }
 
     companion object {

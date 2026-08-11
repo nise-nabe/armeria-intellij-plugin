@@ -9,19 +9,26 @@ data class ArmeriaJUnitServerExtension(
     val containingClassName: String,
     val moduleName: String,
     val pointer: SmartPsiElementPointer<PsiElement>,
+    val isFactoryMethod: Boolean = false,
 ) {
+    /** Receiver used in generated tests and client-call matching (`server` vs `server()`). */
+    val serverReceiver: String
+        get() = if (isFactoryMethod) "$variableName()" else variableName
+
     companion object {
         fun create(
             element: PsiElement,
             variableName: String,
             containingClassName: String,
             moduleName: String,
+            isFactoryMethod: Boolean = false,
         ): ArmeriaJUnitServerExtension =
             ArmeriaJUnitServerExtension(
                 variableName = variableName,
                 containingClassName = containingClassName,
                 moduleName = moduleName,
                 pointer = SmartPointerManager.createPointer(element),
+                isFactoryMethod = isFactoryMethod,
             )
     }
 }

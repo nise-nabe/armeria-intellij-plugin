@@ -41,7 +41,7 @@ class ArmeriaTestMethodGeneratorTest {
         val generated =
             ArmeriaTestMethodGenerator.generateTestMethod(
                 route = route(path = "/slow", executionHints = listOf(message("route.explorer.execution.blocking"))),
-                serverVariableName = "server",
+                serverReceiver = "server",
                 language = ArmeriaTestLanguage.JAVA,
             )
         assertTrue(generated.contains("blockingWebClient"))
@@ -52,17 +52,28 @@ class ArmeriaTestMethodGeneratorTest {
         val generated =
             ArmeriaTestMethodGenerator.generateTestMethod(
                 route = route(path = "/api\"quoted"),
-                serverVariableName = "server",
+                serverReceiver = "server",
                 language = ArmeriaTestLanguage.JAVA,
             )
         assertTrue(generated.contains("\"/api\\\"quoted\""))
+    }
+
+    @Test
+    fun generateJavaTestMethodUsesFactoryMethodReceiver() {
+        val generated =
+            ArmeriaTestMethodGenerator.generateTestMethod(
+                route = route(path = "/slow", executionHints = listOf(message("route.explorer.execution.blocking"))),
+                serverReceiver = "server()",
+                language = ArmeriaTestLanguage.JAVA,
+            )
+        assertTrue(generated.contains("server().blockingWebClient()"))
     }
 
     fun generateKotlinTestMethodEscapesPathCharacters() {
         val generated =
             ArmeriaTestMethodGenerator.generateTestMethod(
                 route = route(path = "/legacy/\$id"),
-                serverVariableName = "server",
+                serverReceiver = "server",
                 language = ArmeriaTestLanguage.KOTLIN,
             )
         assertTrue(generated.contains("\"/legacy\\\$id\""))

@@ -105,7 +105,7 @@ internal object ArmeriaTestMethodInserter {
                 return false
             }
         }
-        val methodText = ArmeriaTestMethodGenerator.generateTestMethod(route, extension.variableName, language)
+        val methodText = ArmeriaTestMethodGenerator.generateTestMethod(route, extension.serverReceiver, language)
         if (project.isDisposed) {
             return false
         }

@@ -7,8 +7,10 @@ import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiManager
+import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnalysisCollector
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
+import com.linecorp.intellij.plugins.armeria.message
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -476,6 +478,100 @@ class ArmeriaBlockingClientInspectionTest : ArmeriaLightJavaCodeInsightFixtureTe
 
                 void testSlow() {
                     server1.webClient().get("/slow");
+                }
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.testHighlighting(true, false, true)
+    }
+
+    fun testWarnsWhenAsyncWebClientUsesStaticFinalPathConstant() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Blocking
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "SlowServiceTest.java",
+            """
+            package example;
+
+            import org.junit.jupiter.api.extension.RegisterExtension;
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+            public class SlowServiceTest {
+                static final String SLOW_PATH = "/slow";
+
+                @RegisterExtension
+                static ServerExtension server = new ServerExtension() {};
+
+                void testSlow() {
+                    server.webClient().get(SLOW_PATH);
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val getCall =
+            PsiTreeUtil
+                .collectElementsOfType(myFixture.file, com.intellij.psi.PsiMethodCallExpression::class.java)
+                .first { it.methodExpression.referenceName == "get" }
+        val manager = InspectionManager.getInstance(project)
+        val holder = ProblemsHolder(manager, myFixture.file, false)
+        val visitor = ArmeriaBlockingClientInspection().buildVisitor(holder, false)
+        getCall.accept(visitor)
+        assertEquals(1, holder.results.size)
+        assertEquals(
+            message("inspection.blocking.client.problem", "/slow"),
+            holder.results.single().descriptionTemplate,
+        )
+    }
+
+    fun testWarnsWhenAsyncWebClientUsesFactoryMethodExtension() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Blocking
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "SlowServiceTest.java",
+            """
+            package example;
+
+            import org.junit.jupiter.api.extension.RegisterExtension;
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+            public class SlowServiceTest {
+                @RegisterExtension
+                static ServerExtension server() {
+                    return new ServerExtension() {};
+                }
+
+                void testSlow() {
+                    server().webClient().<warning descr="Route /slow is marked @Blocking; use blockingWebClient() in tests instead of async WebClient.">get</warning>("/slow");
                 }
             }
             """.trimIndent(),
