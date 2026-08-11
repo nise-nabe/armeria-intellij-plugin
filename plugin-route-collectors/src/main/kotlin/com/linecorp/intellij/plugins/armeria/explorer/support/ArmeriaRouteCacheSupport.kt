@@ -8,7 +8,7 @@ import com.intellij.psi.util.PsiModificationTracker
 
 /**
  * Shared [CachedValuesManager] invalidators for route collection and derived memo caches
- * (blocking inspection paths, gRPC classpath gate, proto overlay).
+ * (route collector, blocking inspection paths, gRPC classpath gate).
  */
 object ArmeriaRouteCacheSupport {
     fun invalidators(project: Project): Array<Any> =

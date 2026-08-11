@@ -240,4 +240,31 @@ class ArmeriaGrpcRouteCollectorGateTest : ArmeriaFixtureTestBase() {
         assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
         assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
     }
+
+    fun testIsGrpcOnClasspathInvalidatesOnProjectRootChange() {
+        val scope = GlobalSearchScope.projectScope(project)
+        assertFalse(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
+
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.grpc;
+
+            public final class GrpcService {
+                public static GrpcServiceBuilder builder(Object bindableService) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
+        assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
+
+        val extraRoot = myFixture.tempDirFixture.findOrCreateDir("grpc-extra-root")
+        try {
+            PsiTestUtil.addSourceRoot(module, extraRoot, false)
+            assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
+        } finally {
+            PsiTestUtil.removeSourceRoot(module, extraRoot)
+        }
+    }
 }

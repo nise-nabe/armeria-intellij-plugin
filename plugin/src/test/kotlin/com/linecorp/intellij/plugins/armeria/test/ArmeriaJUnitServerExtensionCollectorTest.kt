@@ -80,4 +80,27 @@ class ArmeriaJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsightFixt
         assertTrue(extensions.single().isFactoryMethod)
         assertEquals("server()", extensions.single().serverReceiver)
     }
+
+    fun testIgnoresParameterizedJavaFactoryMethod() {
+        myFixture.configureByText(
+            "ExampleServiceTest.java",
+            """
+            package example;
+
+            import org.junit.jupiter.api.extension.RegisterExtension;
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+            public class ExampleServiceTest {
+                @RegisterExtension
+                static ServerExtension server(String ignored) {
+                    return new ServerExtension() {};
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val extensions = ArmeriaJUnitServerExtensionCollector.collect(project)
+
+        assertTrue(extensions.isEmpty())
+    }
 }

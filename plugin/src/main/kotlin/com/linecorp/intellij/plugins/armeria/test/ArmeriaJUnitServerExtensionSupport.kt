@@ -119,6 +119,9 @@ internal object ArmeriaJUnitServerExtensionSupport {
         if (!method.hasModifierProperty(PsiModifier.STATIC)) {
             return null
         }
+        if (method.parameterList.parametersCount > 0) {
+            return null
+        }
         if (!hasRegisterExtensionAnnotation(method) || !isServerExtensionType(method.returnType, method.project, scope)) {
             return null
         }
@@ -152,6 +155,9 @@ internal object ArmeriaJUnitServerExtensionSupport {
         function: KtNamedFunction,
         scope: GlobalSearchScope,
     ): ArmeriaJUnitServerExtension? {
+        if (!isValidKotlinRegisterExtensionFactory(function)) {
+            return null
+        }
         if (!function.annotationEntries.any { it.isRegisterExtensionAnnotation() }) {
             return null
         }
@@ -503,16 +509,22 @@ internal object ArmeriaJUnitServerExtensionSupport {
             is PsiMethodCallExpression ->
                 expression.methodExpression.referenceName == serverVariableName &&
                     expression.argumentList.expressionCount == 0 &&
-                    isUnqualifiedOrThisQualifier(expression.methodExpression.qualifierExpression)
+                    isValidFactoryQualifier(expression.methodExpression.qualifierExpression)
             else -> false
         }
 
-    private fun isUnqualifiedOrThisQualifier(qualifier: PsiElement?): Boolean {
+    private fun isValidFactoryQualifier(qualifier: PsiElement?): Boolean {
         qualifier ?: return true
         if (qualifier is PsiThisExpression) {
             return true
         }
-        return qualifier is PsiReferenceExpression && qualifier.referenceName == "this"
+        if (qualifier is PsiReferenceExpression) {
+            if (qualifier.referenceName == "this") {
+                return true
+            }
+            return qualifier.resolve() is PsiClass
+        }
+        return false
     }
 
     private fun isKotlinServerExtensionInitializer(
@@ -578,13 +590,13 @@ internal object ArmeriaJUnitServerExtensionSupport {
     ): Boolean =
         when (expression) {
             is KtNameReferenceExpression -> expression.getReferencedName() == serverVariableName
-            is KtCallExpression -> matchesKotlinFactoryCall(expression, serverVariableName, requireThisReceiver = false)
+            is KtCallExpression -> matchesKotlinFactoryCall(expression, serverVariableName)
             is KtDotQualifiedExpression -> {
                 val factoryCall = expression.selectorExpression as? KtCallExpression ?: return false
-                if (!matchesKotlinFactoryCall(factoryCall, serverVariableName, requireThisReceiver = true)) {
+                if (!matchesKotlinFactoryCall(factoryCall, serverVariableName)) {
                     return false
                 }
-                expression.receiverExpression is KtThisExpression
+                isValidKotlinFactoryReceiver(expression.receiverExpression)
             }
             else -> false
         }
@@ -592,20 +604,51 @@ internal object ArmeriaJUnitServerExtensionSupport {
     private fun matchesKotlinFactoryCall(
         expression: KtCallExpression,
         serverVariableName: String,
-        requireThisReceiver: Boolean,
     ): Boolean {
-        if (expression.calleeExpression?.text != serverVariableName || expression.valueArguments.isNotEmpty()) {
+        if (expression.valueArguments.isNotEmpty()) {
             return false
         }
-        if (!requireThisReceiver) {
-            val parent = expression.parent as? KtDotQualifiedExpression ?: return true
-            if (parent.selectorExpression != expression) {
-                return true
-            }
-            return parent.receiverExpression is KtThisExpression
+        val callee = expression.calleeExpression ?: return false
+        if (callee.text == serverVariableName) {
+            return true
         }
-        return true
+        if (callee is KtDotQualifiedExpression) {
+            val nameRef = callee.selectorExpression as? KtNameReferenceExpression ?: return false
+            if (nameRef.getReferencedName() != serverVariableName) {
+                return false
+            }
+            return isValidKotlinFactoryReceiver(callee.receiverExpression)
+        }
+        return false
     }
+
+    private fun isValidKotlinFactoryReceiver(receiver: KtExpression): Boolean =
+        when (receiver) {
+            is KtThisExpression -> true
+            is KtNameReferenceExpression -> isKotlinClassReference(receiver)
+            else -> false
+        }
+
+    private fun isKotlinClassReference(reference: KtNameReferenceExpression): Boolean {
+        when (val resolved = reference.reference?.resolve()) {
+            is PsiClass, is KtClass -> return true
+        }
+        val name = reference.getReferencedName() ?: return false
+        return reference.containingKtFile.declarations.any { declaration ->
+            (declaration is KtClass && declaration.name == name) ||
+                (declaration is KtObjectDeclaration && declaration.name == name)
+        }
+    }
+
+    private fun isValidKotlinRegisterExtensionFactory(function: KtNamedFunction): Boolean {
+        if (function.valueParameters.isNotEmpty()) {
+            return false
+        }
+        val containingObject = function.getParentOfType<KtObjectDeclaration>(strict = false) ?: return false
+        return !containingObject.isCompanion() || function.hasJvmStaticAnnotation()
+    }
+
+    private fun KtNamedFunction.hasJvmStaticAnnotation(): Boolean = annotationEntries.any { it.shortName?.asString() == "JvmStatic" }
 
     private fun resolveScopedExtension(
         element: PsiElement,
