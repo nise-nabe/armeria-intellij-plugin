@@ -16,6 +16,25 @@ import kotlin.test.assertNotNull as kotlinAssertNotNull
 class ArmeriaProtoRpcLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     private val provider = ArmeriaProtoRpcLineMarkerProvider()
 
+    override fun setUp() {
+        super.setUp()
+        registerGrpcClasspathStub()
+    }
+
+    private fun registerGrpcClasspathStub() {
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.grpc;
+
+            public final class GrpcService {
+                public static GrpcServiceBuilder builder(Object bindableService) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+    }
+
     fun testProtoRpcMarkerShowsGrpcPath() {
         myFixture.configureByText(
             "greeter.proto",

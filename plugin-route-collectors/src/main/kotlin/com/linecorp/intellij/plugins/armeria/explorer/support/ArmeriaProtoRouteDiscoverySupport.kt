@@ -12,6 +12,9 @@ import java.util.MissingResourceException
  * Defaults to enabled when the registry key is absent (e.g. in lightweight test environments).
  * The registry value is checked outside route caches so toggling the kill-switch takes effect
  * immediately without waiting for PSI or project-root invalidation.
+ *
+ * Route Explorer proto collection and proto RPC gutter markers both require [isEnabled] and
+ * [isGrpcOnClasspath].
  */
 object ArmeriaProtoRouteDiscoverySupport {
     private const val GRPC_SERVICE_CLASS = "com.linecorp.armeria.server.grpc.GrpcService"

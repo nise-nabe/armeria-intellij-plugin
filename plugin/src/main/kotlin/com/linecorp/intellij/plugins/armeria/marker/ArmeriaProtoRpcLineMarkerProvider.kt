@@ -7,8 +7,9 @@ import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.protobuf.lang.psi.PbServiceMethod
 import com.intellij.protobuf.lang.psi.ProtoTokenTypes
 import com.intellij.psi.PsiElement
-import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaGrpcRouteCollector
+import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.explorer.resolveProtoGrpcMethod
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaProtoRouteDiscoverySupport
 import com.linecorp.intellij.plugins.armeria.message
 
 internal class ArmeriaProtoRpcLineMarkerProvider : LineMarkerProvider {
@@ -19,7 +20,11 @@ internal class ArmeriaProtoRpcLineMarkerProvider : LineMarkerProvider {
         if (DumbService.isDumb(element.project)) {
             return null
         }
-        if (!ArmeriaGrpcRouteCollector.isProtoRouteDiscoveryEnabled()) {
+        if (!ArmeriaProtoRouteDiscoverySupport.isEnabled()) {
+            return null
+        }
+        val project = element.project
+        if (!ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, GlobalSearchScope.projectScope(project))) {
             return null
         }
         return try {
