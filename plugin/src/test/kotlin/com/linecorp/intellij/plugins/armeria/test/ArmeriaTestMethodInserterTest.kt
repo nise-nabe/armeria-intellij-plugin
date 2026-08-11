@@ -110,7 +110,7 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
                     ktClass,
                     ArmeriaTestMethodGenerator.generateTestMethod(
                         route(path = "/api"),
-                        serverVariableName = "server",
+                        serverReceiver = "server",
                         language = ArmeriaTestLanguage.KOTLIN,
                     ),
                 )
@@ -360,7 +360,7 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
                     ktObject,
                     ArmeriaTestMethodGenerator.generateTestMethod(
                         route(path = "/api"),
-                        serverVariableName = "server",
+                        serverReceiver = "server",
                         language = ArmeriaTestLanguage.KOTLIN,
                     ),
                 )

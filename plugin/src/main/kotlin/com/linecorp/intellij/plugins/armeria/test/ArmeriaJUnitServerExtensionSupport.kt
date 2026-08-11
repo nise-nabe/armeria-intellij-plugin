@@ -11,9 +11,12 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiJavaFile
+import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
+import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiModifierListOwner
 import com.intellij.psi.PsiReferenceExpression
+import com.intellij.psi.PsiThisExpression
 import com.intellij.psi.PsiType
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
@@ -26,9 +29,11 @@ import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
+import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtObjectDeclaration
 import org.jetbrains.kotlin.psi.KtObjectLiteralExpression
 import org.jetbrains.kotlin.psi.KtProperty
+import org.jetbrains.kotlin.psi.KtThisExpression
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 internal object ArmeriaJUnitServerExtensionSupport {
@@ -107,6 +112,27 @@ internal object ArmeriaJUnitServerExtensionSupport {
         )
     }
 
+    fun serverExtensionFromMethod(
+        method: PsiMethod,
+        scope: GlobalSearchScope,
+    ): ArmeriaJUnitServerExtension? {
+        if (!method.hasModifierProperty(PsiModifier.STATIC)) {
+            return null
+        }
+        if (!hasRegisterExtensionAnnotation(method) || !isServerExtensionType(method.returnType, method.project, scope)) {
+            return null
+        }
+        val variableName = method.name ?: return null
+        val containingClass = method.containingClass ?: return null
+        return ArmeriaJUnitServerExtension.create(
+            element = method,
+            variableName = variableName,
+            containingClassName = containingClass.qualifiedName.orEmpty(),
+            moduleName = ArmeriaTestMetadata.moduleName(method),
+            isFactoryMethod = true,
+        )
+    }
+
     fun serverExtensionsInClass(
         psiClass: PsiClass,
         scope: GlobalSearchScope,
@@ -116,7 +142,41 @@ internal object ArmeriaJUnitServerExtensionSupport {
         }
         return psiClass.fields.mapNotNull {
             serverExtensionFromField(it, scope)
+        } +
+            psiClass.methods.mapNotNull {
+                serverExtensionFromMethod(it, scope)
+            }
+    }
+
+    fun serverExtensionFromKotlinFunction(
+        function: KtNamedFunction,
+        scope: GlobalSearchScope,
+    ): ArmeriaJUnitServerExtension? {
+        if (!function.annotationEntries.any { it.isRegisterExtensionAnnotation() }) {
+            return null
         }
+        if (!isKotlinServerExtensionFunction(function, function.project, scope)) {
+            return null
+        }
+        val variableName = function.name ?: return null
+        val containingDeclaration = function.getParentOfType<KtClassOrObject>(true) ?: return null
+        val containingClassName =
+            when (containingDeclaration) {
+                is KtObjectDeclaration ->
+                    if (containingDeclaration.isCompanion()) {
+                        containingDeclaration.getParentOfType<KtClass>(true)?.fqName?.asString()
+                    } else {
+                        containingDeclaration.fqName?.asString()
+                    }
+                else -> containingDeclaration.fqName?.asString()
+            }.orEmpty()
+        return ArmeriaJUnitServerExtension.create(
+            element = function,
+            variableName = variableName,
+            containingClassName = containingClassName,
+            moduleName = ArmeriaTestMetadata.moduleName(function),
+            isFactoryMethod = true,
+        )
     }
 
     fun serverExtensionFromKotlinProperty(
@@ -415,6 +475,46 @@ internal object ArmeriaJUnitServerExtensionSupport {
         return isKotlinServerExtensionInitializer(initializer, project, scope)
     }
 
+    private fun isKotlinServerExtensionFunction(
+        function: KtNamedFunction,
+        project: Project,
+        scope: GlobalSearchScope,
+    ): Boolean {
+        function.typeReference?.let { typeReference ->
+            when (val resolved = typeReference.references.firstOrNull()?.resolve()) {
+                is PsiClass -> return isServerExtensionClass(resolved, project, scope)
+                is KtClass ->
+                    return resolved.toLightClass()?.let { isServerExtensionClass(it, project, scope) } == true
+            }
+            if (typeReference.text.contains("ServerExtension")) {
+                return true
+            }
+        }
+        val bodyExpression = function.bodyExpression ?: return false
+        return isKotlinServerExtensionInitializer(bodyExpression, project, scope)
+    }
+
+    fun matchesServerReceiver(
+        expression: PsiElement,
+        serverVariableName: String,
+    ): Boolean =
+        when (expression) {
+            is PsiReferenceExpression -> expression.referenceName == serverVariableName
+            is PsiMethodCallExpression ->
+                expression.methodExpression.referenceName == serverVariableName &&
+                    expression.argumentList.expressionCount == 0 &&
+                    isUnqualifiedOrThisQualifier(expression.methodExpression.qualifierExpression)
+            else -> false
+        }
+
+    private fun isUnqualifiedOrThisQualifier(qualifier: PsiElement?): Boolean {
+        qualifier ?: return true
+        if (qualifier is PsiThisExpression) {
+            return true
+        }
+        return qualifier is PsiReferenceExpression && qualifier.referenceName == "this"
+    }
+
     private fun isKotlinServerExtensionInitializer(
         initializer: KtExpression,
         project: Project,
@@ -445,8 +545,10 @@ internal object ArmeriaJUnitServerExtensionSupport {
         serverVariableName: String,
     ): Boolean {
         (expression as? PsiMethodCallExpression)?.let { call ->
-            val receiver = call.methodExpression.qualifierExpression as? PsiReferenceExpression
-            if (receiver?.referenceName == serverVariableName && call.methodExpression.referenceName == "httpUri") {
+            val receiver = call.methodExpression.qualifierExpression ?: return@let
+            if (matchesServerReceiver(receiver, serverVariableName) &&
+                call.methodExpression.referenceName == "httpUri"
+            ) {
                 return true
             }
         }
@@ -458,18 +560,51 @@ internal object ArmeriaJUnitServerExtensionSupport {
             if (parent.selectorExpression != call) {
                 return false
             }
-            val receiver = parent.receiverExpression as? KtNameReferenceExpression ?: return false
-            return receiver.getReferencedName() == serverVariableName
+            return matchesKotlinServerReceiver(parent.receiverExpression, serverVariableName)
         }
         (expression as? KtDotQualifiedExpression)?.let { qualified ->
             val call = qualified.selectorExpression as? KtCallExpression ?: return false
             if (call.calleeExpression?.text != "httpUri") {
                 return false
             }
-            val receiver = qualified.receiverExpression as? KtNameReferenceExpression ?: return false
-            return receiver.getReferencedName() == serverVariableName
+            return matchesKotlinServerReceiver(qualified.receiverExpression, serverVariableName)
         }
         return false
+    }
+
+    fun matchesKotlinServerReceiver(
+        expression: KtExpression,
+        serverVariableName: String,
+    ): Boolean =
+        when (expression) {
+            is KtNameReferenceExpression -> expression.getReferencedName() == serverVariableName
+            is KtCallExpression -> matchesKotlinFactoryCall(expression, serverVariableName, requireThisReceiver = false)
+            is KtDotQualifiedExpression -> {
+                val factoryCall = expression.selectorExpression as? KtCallExpression ?: return false
+                if (!matchesKotlinFactoryCall(factoryCall, serverVariableName, requireThisReceiver = true)) {
+                    return false
+                }
+                expression.receiverExpression is KtThisExpression
+            }
+            else -> false
+        }
+
+    private fun matchesKotlinFactoryCall(
+        expression: KtCallExpression,
+        serverVariableName: String,
+        requireThisReceiver: Boolean,
+    ): Boolean {
+        if (expression.calleeExpression?.text != serverVariableName || expression.valueArguments.isNotEmpty()) {
+            return false
+        }
+        if (!requireThisReceiver) {
+            val parent = expression.parent as? KtDotQualifiedExpression ?: return true
+            if (parent.selectorExpression != expression) {
+                return true
+            }
+            return parent.receiverExpression is KtThisExpression
+        }
+        return true
     }
 
     private fun resolveScopedExtension(

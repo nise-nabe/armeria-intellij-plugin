@@ -7,6 +7,7 @@ import com.intellij.psi.search.GlobalSearchScope
 import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtObjectDeclaration
 import org.jetbrains.kotlin.psi.KtProperty
 
@@ -23,6 +24,7 @@ internal object ArmeriaKotlinJUnitServerExtensionCollector {
                 continue
             }
             collectProperties(file.declarations.filterIsInstance<KtProperty>(), scope, extensions, seen)
+            collectFunctions(file.declarations.filterIsInstance<KtNamedFunction>(), scope, extensions, seen)
             for (ktClass in file.declarations.filterIsInstance<KtClass>()) {
                 collectFromKotlinClass(ktClass, scope, extensions, seen)
             }
@@ -31,6 +33,7 @@ internal object ArmeriaKotlinJUnitServerExtensionCollector {
                     continue
                 }
                 collectProperties(objectDeclaration.declarations.filterIsInstance<KtProperty>(), scope, extensions, seen)
+                collectFunctions(objectDeclaration.declarations.filterIsInstance<KtNamedFunction>(), scope, extensions, seen)
             }
         }
     }
@@ -46,6 +49,17 @@ internal object ArmeriaKotlinJUnitServerExtensionCollector {
         }
     }
 
+    private fun collectFunctions(
+        functions: List<KtNamedFunction>,
+        scope: GlobalSearchScope,
+        extensions: MutableList<ArmeriaJUnitServerExtension>,
+        seen: MutableSet<String>,
+    ) {
+        for (function in functions) {
+            fromFunction(function, scope)?.let { ArmeriaJUnitServerExtensionCollector.add(it, extensions, seen) }
+        }
+    }
+
     private fun collectFromKotlinClass(
         ktClass: KtClass,
         scope: GlobalSearchScope,
@@ -53,8 +67,10 @@ internal object ArmeriaKotlinJUnitServerExtensionCollector {
         seen: MutableSet<String>,
     ) {
         collectProperties(ktClass.declarations.filterIsInstance<KtProperty>(), scope, extensions, seen)
+        collectFunctions(ktClass.declarations.filterIsInstance<KtNamedFunction>(), scope, extensions, seen)
         ktClass.companionObjects.forEach { companion ->
             collectProperties(companion.declarations.filterIsInstance<KtProperty>(), scope, extensions, seen)
+            collectFunctions(companion.declarations.filterIsInstance<KtNamedFunction>(), scope, extensions, seen)
         }
         for (nestedClass in ktClass.declarations.filterIsInstance<KtClass>()) {
             collectFromKotlinClass(nestedClass, scope, extensions, seen)
@@ -65,4 +81,9 @@ internal object ArmeriaKotlinJUnitServerExtensionCollector {
         property: KtProperty,
         scope: GlobalSearchScope,
     ): ArmeriaJUnitServerExtension? = ArmeriaJUnitServerExtensionSupport.serverExtensionFromKotlinProperty(property, scope)
+
+    private fun fromFunction(
+        function: KtNamedFunction,
+        scope: GlobalSearchScope,
+    ): ArmeriaJUnitServerExtension? = ArmeriaJUnitServerExtensionSupport.serverExtensionFromKotlinFunction(function, scope)
 }

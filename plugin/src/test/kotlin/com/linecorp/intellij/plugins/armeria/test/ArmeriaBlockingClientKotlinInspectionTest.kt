@@ -648,6 +648,300 @@ class ArmeriaBlockingClientKotlinInspectionTest : ArmeriaLightJavaCodeInsightFix
         assertTrue(holder.results.isEmpty())
     }
 
+    fun testWarnsWhenAsyncWebClientUsesConstValPathConstant() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Blocking
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "SlowServiceTest.kt",
+            """
+            package example
+
+            import org.junit.jupiter.api.extension.RegisterExtension
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+            private const val SLOW_PATH = "/slow"
+
+            class SlowServiceTest {
+                @RegisterExtension
+                val server: ServerExtension = object : ServerExtension() {}
+
+                fun testSlow() {
+                    server.webClient().get(SLOW_PATH)
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val getCall = findGetCall(myFixture.file as KtFile)
+        val manager = InspectionManager.getInstance(project)
+        val holder = ProblemsHolder(manager, myFixture.file, false)
+        val visitor = ArmeriaBlockingClientKotlinInspection().buildVisitor(holder, false)
+        getCall.accept(visitor)
+        assertEquals(1, holder.results.size)
+        assertEquals(
+            message("inspection.blocking.client.problem", "/slow"),
+            holder.results.single().descriptionTemplate,
+        )
+    }
+
+    fun testWarnsWhenAsyncWebClientUsesFactoryMethodExtension() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Blocking
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "SlowServiceTest.kt",
+            """
+            package example
+
+            import org.junit.jupiter.api.extension.RegisterExtension
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+            class SlowServiceTest {
+                @RegisterExtension
+                fun server(): ServerExtension = object : ServerExtension() {}
+
+                fun testSlow() {
+                    server().webClient().get("/slow")
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val getCall = findGetCall(myFixture.file as KtFile)
+        val manager = InspectionManager.getInstance(project)
+        val holder = ProblemsHolder(manager, myFixture.file, false)
+        val visitor = ArmeriaBlockingClientKotlinInspection().buildVisitor(holder, false)
+        getCall.accept(visitor)
+        assertEquals(1, holder.results.size)
+        assertEquals(
+            message("inspection.blocking.client.problem", "/slow"),
+            holder.results.single().descriptionTemplate,
+        )
+    }
+
+    fun testWarnsWhenAsyncWebClientUsesCompanionConstValPath() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Blocking
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "SlowServiceTest.kt",
+            """
+            package example
+
+            import org.junit.jupiter.api.extension.RegisterExtension
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+            class SlowServiceTest {
+                @RegisterExtension
+                val server: ServerExtension = object : ServerExtension() {}
+
+                fun testSlow() {
+                    server.webClient().get(Companion.SLOW_PATH)
+                }
+
+                companion object {
+                    private const val SLOW_PATH = "/slow"
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val getCall = findGetCall(myFixture.file as KtFile)
+        val manager = InspectionManager.getInstance(project)
+        val holder = ProblemsHolder(manager, myFixture.file, false)
+        val visitor = ArmeriaBlockingClientKotlinInspection().buildVisitor(holder, false)
+        getCall.accept(visitor)
+        assertEquals(1, holder.results.size)
+        assertEquals(
+            message("inspection.blocking.client.problem", "/slow"),
+            holder.results.single().descriptionTemplate,
+        )
+    }
+
+    fun testDoesNotWarnWhenFactoryCallHasArguments() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Blocking
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "SlowServiceTest.kt",
+            """
+            package example
+
+            import org.junit.jupiter.api.extension.RegisterExtension
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+            class SlowServiceTest {
+                @RegisterExtension
+                fun server(): ServerExtension = object : ServerExtension() {}
+
+                fun server(label: String): ServerExtension = object : ServerExtension() {}
+
+                fun testSlow() {
+                    server("x").webClient().get("/slow")
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val getCall = findGetCall(myFixture.file as KtFile)
+        val manager = InspectionManager.getInstance(project)
+        val holder = ProblemsHolder(manager, myFixture.file, false)
+        val visitor = ArmeriaBlockingClientKotlinInspection().buildVisitor(holder, false)
+        getCall.accept(visitor)
+        assertTrue(holder.results.isEmpty())
+    }
+
+    fun testWarnsWhenAsyncWebClientUsesThisQualifiedFactoryMethodExtension() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Blocking
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "SlowServiceTest.kt",
+            """
+            package example
+
+            import org.junit.jupiter.api.extension.RegisterExtension
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+            class SlowServiceTest {
+                @RegisterExtension
+                fun server(): ServerExtension = object : ServerExtension() {}
+
+                fun testSlow() {
+                    this.server().webClient().get("/slow")
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val getCall = findGetCall(myFixture.file as KtFile)
+        val manager = InspectionManager.getInstance(project)
+        val holder = ProblemsHolder(manager, myFixture.file, false)
+        val visitor = ArmeriaBlockingClientKotlinInspection().buildVisitor(holder, false)
+        getCall.accept(visitor)
+        assertEquals(1, holder.results.size)
+        assertEquals(
+            message("inspection.blocking.client.problem", "/slow"),
+            holder.results.single().descriptionTemplate,
+        )
+    }
+
+    fun testWarnsWhenAsyncWebClientUsesJavaStaticFinalPathConstant() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Blocking;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                public static final String SLOW_PATH = "/slow";
+
+                @Blocking
+                @Get("/slow")
+                public String slow() {
+                    return "slow";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "SlowServiceTest.kt",
+            """
+            package example
+
+            import org.junit.jupiter.api.extension.RegisterExtension
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+            class SlowServiceTest {
+                @RegisterExtension
+                val server: ServerExtension = object : ServerExtension() {}
+
+                fun testSlow() {
+                    server.webClient().get(SlowService.SLOW_PATH)
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val getCall = findGetCall(myFixture.file as KtFile)
+        val manager = InspectionManager.getInstance(project)
+        val holder = ProblemsHolder(manager, myFixture.file, false)
+        val visitor = ArmeriaBlockingClientKotlinInspection().buildVisitor(holder, false)
+        getCall.accept(visitor)
+        assertEquals(1, holder.results.size)
+        assertEquals(
+            message("inspection.blocking.client.problem", "/slow"),
+            holder.results.single().descriptionTemplate,
+        )
+    }
+
     private fun findGetCall(file: KtFile): KtCallExpression =
         PsiTreeUtil
             .collectElementsOfType(file, KtCallExpression::class.java)

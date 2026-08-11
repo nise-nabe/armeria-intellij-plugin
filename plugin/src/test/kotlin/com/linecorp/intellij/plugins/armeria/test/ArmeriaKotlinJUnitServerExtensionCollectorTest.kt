@@ -2,6 +2,7 @@ package com.linecorp.intellij.plugins.armeria.test
 
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ArmeriaKotlinJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
     fun testCollectsRegisterExtensionFromClassProperty() {
@@ -142,5 +143,29 @@ class ArmeriaKotlinJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsig
         assertEquals(1, extensions.size)
         assertEquals("server", extensions.single().variableName)
         assertEquals("example.ExampleServiceTest", extensions.single().containingClassName)
+    }
+
+    fun testCollectsRegisterExtensionFromFactoryMethod() {
+        myFixture.configureByText(
+            "ExampleServiceTest.kt",
+            """
+            package example
+
+            import org.junit.jupiter.api.extension.RegisterExtension
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+            class ExampleServiceTest {
+                @RegisterExtension
+                fun server(): ServerExtension = object : ServerExtension() {}
+            }
+            """.trimIndent(),
+        )
+
+        val extensions = ArmeriaJUnitServerExtensionCollector.collect(project)
+
+        assertEquals(1, extensions.size)
+        assertEquals("server", extensions.single().variableName)
+        assertTrue(extensions.single().isFactoryMethod)
+        assertEquals("server()", extensions.single().serverReceiver)
     }
 }

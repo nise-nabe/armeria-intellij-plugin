@@ -29,7 +29,7 @@ internal object ArmeriaTestMethodGenerator {
 
     fun generateTestMethod(
         route: ArmeriaRoute,
-        serverVariableName: String,
+        serverReceiver: String,
         language: ArmeriaTestLanguage,
     ): String {
         val methodName = suggestMethodName(route)
@@ -43,7 +43,7 @@ internal object ArmeriaTestMethodGenerator {
                     """
                     @org.junit.jupiter.api.Test
                     void $methodName() {
-                        ${ArmeriaJUnitServerExtensionSupport.BLOCKING_WEB_CLIENT_CLASS} client = $serverVariableName.blockingWebClient();
+                        ${ArmeriaJUnitServerExtensionSupport.BLOCKING_WEB_CLIENT_CLASS} client = $serverReceiver.blockingWebClient();
                         com.linecorp.armeria.common.AggregatedHttpResponse response = client.$call("$path").aggregate().join();
                         org.junit.jupiter.api.Assertions.assertEquals(200, response.status().code());
                     }
@@ -52,7 +52,7 @@ internal object ArmeriaTestMethodGenerator {
                     """
                     @org.junit.jupiter.api.Test
                     void $methodName() {
-                        ${ArmeriaJUnitServerExtensionSupport.WEB_CLIENT_CLASS} client = ${ArmeriaJUnitServerExtensionSupport.WEB_CLIENT_CLASS}.of($serverVariableName.httpUri());
+                        ${ArmeriaJUnitServerExtensionSupport.WEB_CLIENT_CLASS} client = ${ArmeriaJUnitServerExtensionSupport.WEB_CLIENT_CLASS}.of($serverReceiver.httpUri());
                         com.linecorp.armeria.common.AggregatedHttpResponse response = client.$call("$path").aggregate().join();
                         org.junit.jupiter.api.Assertions.assertEquals(200, response.status().code());
                     }
@@ -65,7 +65,7 @@ internal object ArmeriaTestMethodGenerator {
                     """
                     @Test
                     fun $methodName() {
-                        val client = $serverVariableName.blockingWebClient()
+                        val client = $serverReceiver.blockingWebClient()
                         val response = client.$call("$path").aggregate().join()
                         assertEquals(200, response.status().code())
                     }
@@ -74,7 +74,7 @@ internal object ArmeriaTestMethodGenerator {
                     """
                     @Test
                     fun $methodName() {
-                        val client = WebClient.of($serverVariableName.httpUri())
+                        val client = WebClient.of($serverReceiver.httpUri())
                         val response = client.$call("$path").aggregate().join()
                         assertEquals(200, response.status().code())
                     }
