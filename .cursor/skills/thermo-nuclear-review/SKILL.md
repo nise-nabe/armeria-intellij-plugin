@@ -79,7 +79,7 @@ Tier controls cost; each tier still completes in one invocation.
 |------|------|----------|
 | **A** | Docs / scripts / ≤2 files and ≤30 net lines | **Skip** — Phase 1 table is the audit |
 | **B** | Typical code PR | **One** audit subagent |
-| **C** | Large diff or many files | **One** audit subagent + **one** post-fix closure subagent (Phase 5 only) |
+| **C** | Large diff or many files | **One** audit subagent; closure subagent in Phase 5 only for `/thermos` Tier C |
 
 ### Subagent input (mandatory — simulates a new session)
 
