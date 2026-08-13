@@ -44,18 +44,23 @@ object ArmeriaKnownHttpServiceClassifier {
                 .trim()
         val packagePrefix = className.substringBeforeLast('.', missingDelimiterValue = "")
         if (packagePrefix.startsWith(ARMERIA_PACKAGE_PREFIX)) {
-            return kindForSimpleName(canonicalSimpleName(className.substringAfterLast('.')))
-                ?: KnownHttpServiceKind.HTTP
+            kindForSimpleName(canonicalSimpleName(className.substringAfterLast('.')))
+                ?.let { return it }
+            return if ('(' in typeName && '#' !in typeName) {
+                classifyByIdentifierTokens(typeName)
+            } else {
+                KnownHttpServiceKind.HTTP
+            }
         }
         if (packagePrefix.isNotEmpty()) {
-            return if ('(' in typeName) {
+            return if (isUnqualifiedCallChain(typeName, className)) {
                 classifyByIdentifierTokens(typeName)
             } else {
                 KnownHttpServiceKind.HTTP
             }
         }
         kindForSimpleName(canonicalSimpleName(className))?.let { return it }
-        if ('(' in typeName) {
+        if (isUnqualifiedCallChain(typeName, className)) {
             return classifyByIdentifierTokens(typeName)
         }
         return KnownHttpServiceKind.HTTP
@@ -136,6 +141,23 @@ object ArmeriaKnownHttpServiceClassifier {
         } else {
             "$packagePrefix.$serviceSimpleName"
         }
+    }
+
+    /**
+     * Scala registrations pass PSI call-chain text (`DocService.builder().build()`).
+     * Annotated targets (`example.FileService#get()`) and user FQCNs must not be
+     * token-scanned: `#method()` contains parentheses, and `example.FileService.of()`
+     * contains a known simple name after a non-Armeria package.
+     */
+    private fun isUnqualifiedCallChain(
+        typeName: String,
+        className: String,
+    ): Boolean {
+        if ('(' !in typeName || '#' in typeName) {
+            return false
+        }
+        val firstSegment = className.substringBefore('.')
+        return firstSegment.firstOrNull()?.isUpperCase() == true
     }
 
     private fun classifyByIdentifierTokens(typeName: String): KnownHttpServiceKind {

@@ -63,6 +63,10 @@ class ArmeriaKnownHttpServiceClassifierTest {
             KnownHttpServiceKind.HTTP,
             ArmeriaKnownHttpServiceClassifier.classify("example.FileService#get()"),
         )
+        assertEquals(
+            KnownHttpServiceKind.HTTP,
+            ArmeriaKnownHttpServiceClassifier.classify("example.FileService.of()"),
+        )
     }
 
     @Test
@@ -74,6 +78,12 @@ class ArmeriaKnownHttpServiceClassifierTest {
         assertEquals(
             KnownHttpServiceKind.GRPC,
             ArmeriaKnownHttpServiceClassifier.classify("GrpcService.builder().addService(svc).build()"),
+        )
+        assertEquals(
+            KnownHttpServiceKind.DOC_SERVICE,
+            ArmeriaKnownHttpServiceClassifier.classify(
+                "com.linecorp.armeria.server.docs.DocService.builder().build()",
+            ),
         )
     }
 
