@@ -59,7 +59,7 @@ changelog {
 
 intellijPlatform {
     pluginConfiguration {
-        id = "com.linecorp.intellij.armeria-intellij-plugin"
+        id = "com.linecorp.armeria"
         name = "Armeria"
         version = project.version.toString()
         vendor {
