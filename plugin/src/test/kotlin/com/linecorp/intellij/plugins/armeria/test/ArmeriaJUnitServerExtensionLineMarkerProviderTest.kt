@@ -227,4 +227,29 @@ class ArmeriaJUnitServerExtensionLineMarkerProviderTest : ArmeriaLightJavaCodeIn
                 .single { it.name == "server" }
         assertNull(kotlinProvider.getLineMarkerInfo(function.nameIdentifier!!))
     }
+
+    fun testKotlinLocalRegisterExtensionPropertyHasNoMarker() {
+        myFixture.configureByText(
+            "ExampleServiceTest.kt",
+            """
+            package example
+
+            import org.junit.jupiter.api.extension.RegisterExtension
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+            class ExampleServiceTest {
+                fun testSomething() {
+                    @RegisterExtension
+                    val server: ServerExtension = object : ServerExtension() {}
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val property =
+            PsiTreeUtil
+                .findChildrenOfType(myFixture.file, KtProperty::class.java)
+                .single { it.name == "server" }
+        assertNull(kotlinProvider.getLineMarkerInfo(property.nameIdentifier!!))
+    }
 }

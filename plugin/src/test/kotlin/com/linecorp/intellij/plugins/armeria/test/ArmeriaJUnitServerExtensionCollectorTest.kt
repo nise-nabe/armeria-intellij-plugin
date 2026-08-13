@@ -105,6 +105,7 @@ class ArmeriaJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsightFixt
         assertEquals("server", extensions.single().variableName)
         assertTrue(extensions.single().isFactoryMethod)
         assertEquals("server()", extensions.single().serverReceiver)
+        assertEquals("example.ExampleServiceTest", extensions.single().containingClassName)
     }
 
     fun testIgnoresParameterizedJavaFactoryMethod() {

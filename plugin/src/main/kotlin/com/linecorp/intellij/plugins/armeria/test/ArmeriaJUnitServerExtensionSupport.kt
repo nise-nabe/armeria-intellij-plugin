@@ -25,6 +25,7 @@ import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtClassBody
 import org.jetbrains.kotlin.psi.KtClassOrObject
+import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
@@ -156,7 +157,13 @@ internal object ArmeriaJUnitServerExtensionSupport {
         if (function.valueParameters.isNotEmpty()) {
             return null
         }
-        val containingDeclaration = kotlinRegisterExtensionFactoryOwner(function) ?: return null
+        val containingDeclaration = kotlinClassBodyOwner(function) ?: return null
+        if (containingDeclaration is KtObjectDeclaration &&
+            containingDeclaration.isCompanion() &&
+            !function.hasJvmStaticAnnotation()
+        ) {
+            return null
+        }
         if (!function.annotationEntries.any { it.isRegisterExtensionAnnotation() }) {
             return null
         }
@@ -164,10 +171,11 @@ internal object ArmeriaJUnitServerExtensionSupport {
             return null
         }
         val variableName = function.name ?: return null
+        val containingClassName = kotlinContainingClassName(containingDeclaration) ?: return null
         return ArmeriaJUnitServerExtension.create(
             element = function,
             variableName = variableName,
-            containingClassName = kotlinContainingClassName(containingDeclaration),
+            containingClassName = containingClassName,
             moduleName = ArmeriaTestMetadata.moduleName(function),
             isFactoryMethod = true,
         )
@@ -184,11 +192,12 @@ internal object ArmeriaJUnitServerExtensionSupport {
             return null
         }
         val variableName = property.name ?: return null
-        val containingDeclaration = property.getParentOfType<KtClassOrObject>(true) ?: return null
+        val containingDeclaration = kotlinClassBodyOwner(property) ?: return null
+        val containingClassName = kotlinContainingClassName(containingDeclaration) ?: return null
         return ArmeriaJUnitServerExtension.create(
             element = property,
             variableName = variableName,
-            containingClassName = kotlinContainingClassName(containingDeclaration),
+            containingClassName = containingClassName,
             moduleName = ArmeriaTestMetadata.moduleName(property),
         )
     }
@@ -618,22 +627,17 @@ internal object ArmeriaJUnitServerExtensionSupport {
         }
     }
 
-    private fun kotlinRegisterExtensionFactoryOwner(function: KtNamedFunction): KtClassOrObject? {
-        val owner = (function.parent as? KtClassBody)?.parent as? KtClassOrObject ?: return null
-        if (owner is KtObjectDeclaration && owner.isCompanion() && !function.hasJvmStaticAnnotation()) {
-            return null
-        }
-        return owner
-    }
+    private fun kotlinClassBodyOwner(declaration: KtDeclaration): KtClassOrObject? =
+        (declaration.parent as? KtClassBody)?.parent as? KtClassOrObject
 
-    private fun kotlinContainingClassName(declaration: KtClassOrObject): String {
+    private fun kotlinContainingClassName(declaration: KtClassOrObject): String? {
         val attributed =
             if (declaration is KtObjectDeclaration && declaration.isCompanion()) {
-                (declaration.parent as? KtClassBody)?.parent as? KtClass ?: declaration
+                kotlinClassBodyOwner(declaration) as? KtClass ?: return null
             } else {
                 declaration
             }
-        return attributed.fqName?.asString().orEmpty()
+        return attributed.fqName?.asString()
     }
 
     private fun KtNamedFunction.hasJvmStaticAnnotation(): Boolean = annotationEntries.any { it.shortName?.asString() == "JvmStatic" }
