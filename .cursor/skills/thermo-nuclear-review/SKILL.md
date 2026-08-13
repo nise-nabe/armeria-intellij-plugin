@@ -116,11 +116,11 @@ No SHIP with open P3 rows marked "later".
 
 ## Phase 5 — Closure pass (replaces a second session)
 
-Run **after** fixes are committed (before push). Mandatory for Cloud Agent self-verification
-(all tiers) and Tier B/C `/thermos` audits. Tier A runs findings closure and deterministic
-re-scan only (no closure subagent). Tier C `/thermos` adds one closure subagent.
+Run **after** fixes are committed (before push). **Always** run findings closure and
+deterministic re-scan (steps 1–3 below). Closure subagent (step 5) only for Tier C `/thermos`
+audits.
 
-1. `git diff origin/<baseRefName>...HEAD` — post-fix diff only.
+1. `git diff origin/<baseRefName or $BASE>...HEAD` — post-fix diff only.
 2. **Findings closure:** every row from Phases 1–2 has a terminal status.
 3. **Deterministic re-scan:** re-run Phase 1 checklist on **newly changed hunks** only.
 4. **Tests:** rerun only if fix commit touched production or test code (`git diff START_HEAD..HEAD --name-only`).

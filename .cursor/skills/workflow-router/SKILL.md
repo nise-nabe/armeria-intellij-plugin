@@ -33,7 +33,7 @@ Pick **one** path below. Do **not** read unrelated skills in full.
 | Task | Resume IDLE session? |
 |------|---------------------|
 | `/thermos PR N` (audit) | **No** — run full one-shot pipeline at current `HEAD` (Phases 0–6 in `thermo-nuclear-review`) |
-| Cloud Agent implementation → verify → PR | **No** — run thermo self-verification (Phases 1–5) after Gradle verify, before final push/PR |
+| Cloud Agent implementation → verify → PR | **No** — commit implementation, then Gradle verify (when applicable), then thermo Phases 1–5 before first push/PR |
 | PR comment triage | Optional — resume if same branch and threads already fetched |
 | Issue → PR continuation | Yes — push, PR polish, issue comment **only after** thermo Phases 1–5 completed on first push/PR |
 | Push / link issues only | Yes — no re-audit |
