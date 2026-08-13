@@ -202,4 +202,29 @@ class ArmeriaJUnitServerExtensionLineMarkerProviderTest : ArmeriaLightJavaCodeIn
         val function = PsiTreeUtil.findChildOfType(myFixture.file, org.jetbrains.kotlin.psi.KtNamedFunction::class.java)!!
         kotlinAssertNotNull(kotlinProvider.getLineMarkerInfo(function.nameIdentifier!!))
     }
+
+    fun testKotlinLocalRegisterExtensionFactoryMethodHasNoMarker() {
+        myFixture.configureByText(
+            "ExampleServiceTest.kt",
+            """
+            package example
+
+            import org.junit.jupiter.api.extension.RegisterExtension
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+            class ExampleServiceTest {
+                fun testSomething() {
+                    @RegisterExtension
+                    fun server(): ServerExtension = object : ServerExtension() {}
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val function =
+            PsiTreeUtil
+                .findChildrenOfType(myFixture.file, org.jetbrains.kotlin.psi.KtNamedFunction::class.java)
+                .single { it.name == "server" }
+        assertNull(kotlinProvider.getLineMarkerInfo(function.nameIdentifier!!))
+    }
 }

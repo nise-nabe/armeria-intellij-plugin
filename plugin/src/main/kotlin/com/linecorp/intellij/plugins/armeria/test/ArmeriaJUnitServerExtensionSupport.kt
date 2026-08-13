@@ -23,6 +23,7 @@ import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtClassBody
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
@@ -151,9 +152,7 @@ internal object ArmeriaJUnitServerExtensionSupport {
         function: KtNamedFunction,
         scope: GlobalSearchScope,
     ): ArmeriaJUnitServerExtension? {
-        if (!isValidKotlinRegisterExtensionFactory(function)) {
-            return null
-        }
+        val containingDeclaration = kotlinRegisterExtensionFactoryOwner(function) ?: return null
         if (!function.annotationEntries.any { it.isRegisterExtensionAnnotation() }) {
             return null
         }
@@ -161,7 +160,6 @@ internal object ArmeriaJUnitServerExtensionSupport {
             return null
         }
         val variableName = function.name ?: return null
-        val containingDeclaration = function.getParentOfType<KtClassOrObject>(true) ?: return null
         val containingClassName =
             when (containingDeclaration) {
                 is KtObjectDeclaration ->
@@ -636,15 +634,15 @@ internal object ArmeriaJUnitServerExtensionSupport {
         }
     }
 
-    private fun isValidKotlinRegisterExtensionFactory(function: KtNamedFunction): Boolean {
+    private fun kotlinRegisterExtensionFactoryOwner(function: KtNamedFunction): KtClassOrObject? {
         if (function.valueParameters.isNotEmpty()) {
-            return false
+            return null
         }
-        return when (val containingDeclaration = function.getParentOfType<KtClassOrObject>(strict = true)) {
-            null -> false
-            is KtObjectDeclaration -> !containingDeclaration.isCompanion() || function.hasJvmStaticAnnotation()
-            else -> true
+        val owner = (function.parent as? KtClassBody)?.parent as? KtClassOrObject ?: return null
+        if (owner is KtObjectDeclaration && owner.isCompanion() && !function.hasJvmStaticAnnotation()) {
+            return null
         }
+        return owner
     }
 
     private fun KtNamedFunction.hasJvmStaticAnnotation(): Boolean = annotationEntries.any { it.shortName?.asString() == "JvmStatic" }

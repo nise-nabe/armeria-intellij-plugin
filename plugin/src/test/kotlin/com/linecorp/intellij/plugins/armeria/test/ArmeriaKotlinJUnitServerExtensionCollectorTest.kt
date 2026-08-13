@@ -244,6 +244,29 @@ class ArmeriaKotlinJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsig
         assertTrue(extensions.isEmpty())
     }
 
+    fun testIgnoresLocalKotlinFactoryMethod() {
+        myFixture.configureByText(
+            "ExampleServiceTest.kt",
+            """
+            package example
+
+            import org.junit.jupiter.api.extension.RegisterExtension
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+            class ExampleServiceTest {
+                fun testSomething() {
+                    @RegisterExtension
+                    fun server(): ServerExtension = object : ServerExtension() {}
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val extensions = ArmeriaJUnitServerExtensionCollector.collect(project)
+
+        assertTrue(extensions.isEmpty())
+    }
+
     fun testIgnoresParameterizedKotlinFactoryMethod() {
         myFixture.configureByText(
             "ExampleServiceTest.kt",
