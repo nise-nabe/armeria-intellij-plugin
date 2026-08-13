@@ -3,6 +3,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiVariable
 import com.linecorp.intellij.plugins.armeria.explorer.model.ServiceRegistrationMethod
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -48,18 +49,18 @@ internal object ArmeriaKotlinBuilderCallHeuristics {
         if (looksLikeKotlinBuilderCall(call)) {
             return true
         }
-        var current = kotlinParentCallExpression(call)
+        var current = ArmeriaKotlinRegistrationChainSupport.parentCallExpression(call)
         while (current != null) {
-            if (resolveKotlinCallName(current) == "route") {
+            if (ArmeriaKotlinExpressionSupport.resolveCallName(current) == "route") {
                 return looksLikeKotlinBuilderCall(current)
             }
-            current = kotlinParentCallExpression(current)
+            current = ArmeriaKotlinRegistrationChainSupport.parentCallExpression(current)
         }
         return false
     }
 
     fun isClearlyNonArmeriaKotlinRegistrationCall(call: KtCallExpression): Boolean {
-        val methodName = resolveKotlinCallName(call) ?: return false
+        val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return false
         if (methodName !in ServiceRegistrationMethod.METHOD_NAMES && methodName != "build") {
             return false
         }
@@ -68,28 +69,6 @@ internal object ArmeriaKotlinBuilderCallHeuristics {
         }
         val resolvedClass = resolveKotlinRegistrationMethodClass(call) ?: return false
         return !resolvedClass.startsWith(ArmeriaRouteSupport.ARMERIA_SERVER_PACKAGE_PREFIX)
-    }
-
-    fun resolveKotlinCallName(call: KtCallExpression): String? {
-        val callee = call.calleeExpression ?: return null
-        return when (callee) {
-            is KtDotQualifiedExpression -> callee.selectorExpression?.text
-            else -> callee.text
-        }
-    }
-
-    fun kotlinParentCallExpression(call: KtCallExpression): KtCallExpression? {
-        val parent = call.parent
-        return when (parent) {
-            is KtDotQualifiedExpression -> {
-                when (val receiver = parent.receiverExpression) {
-                    is KtCallExpression -> receiver
-                    is KtDotQualifiedExpression -> receiver.selectorExpression as? KtCallExpression
-                    else -> null
-                }
-            }
-            else -> null
-        }
     }
 
     private fun resolveKotlinRegistrationMethodClass(call: KtCallExpression): String? {
@@ -191,7 +170,7 @@ internal object ArmeriaKotlinBuilderCallHeuristics {
         val lambda = call.getParentOfType<KtLambdaExpression>(strict = true) ?: return false
         val lambdaArgument = lambda.parent as? KtValueArgument ?: return false
         val scopeCall = lambdaArgument.parent as? KtCallExpression ?: return false
-        val scopeMethod = resolveKotlinCallName(scopeCall) ?: return false
+        val scopeMethod = ArmeriaKotlinExpressionSupport.resolveCallName(scopeCall) ?: return false
         if (scopeMethod !in BUILDER_SCOPE_METHOD_NAMES) {
             return false
         }

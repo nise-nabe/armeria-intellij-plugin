@@ -24,7 +24,6 @@ import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
-import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtValueArgument
 
@@ -70,7 +69,7 @@ object ArmeriaKotlinRouteCollector {
         root.forEachDescendant { element ->
             val call = element as? KtCallExpression ?: return@forEachDescendant
             ArmeriaRouteCollectionMetrics.current()?.methodCallsVisited?.incrementAndGet()
-            val methodName = resolveCallName(call) ?: return@forEachDescendant
+            val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return@forEachDescendant
             if (methodName !in CoreServiceRegistrationMethod.METHOD_NAMES) {
                 return@forEachDescendant
             }
@@ -90,14 +89,6 @@ object ArmeriaKotlinRouteCollector {
         ArmeriaKotlinExtendedRegistrationCollector.collectFromFile(file, routes, seenServiceRegistrations)
     }
 
-    private fun resolveCallName(call: KtCallExpression): String? {
-        val callee = call.calleeExpression ?: return null
-        return when (callee) {
-            is KtDotQualifiedExpression -> callee.selectorExpression?.text
-            else -> callee.text
-        }
-    }
-
     fun looksLikeArmeriaBuilderCall(call: KtCallExpression): Boolean = ArmeriaBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)
 
     fun addServiceRegistrationFromCall(
@@ -105,7 +96,7 @@ object ArmeriaKotlinRouteCollector {
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
     ): Boolean {
-        val methodName = resolveCallName(call) ?: return false
+        val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return false
         if (methodName !in CoreServiceRegistrationMethod.METHOD_NAMES) {
             return false
         }
@@ -130,7 +121,7 @@ object ArmeriaKotlinRouteCollector {
         val arguments = call.valueArguments
         val path = extractRegistrationPath(methodName, arguments) ?: return
         val implementationExpression = resolveServiceExpression(methodName, arguments) ?: return
-        val unwrappedImplementation = unwrapKotlinExpression(implementationExpression) ?: return
+        val unwrappedImplementation = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(implementationExpression) ?: return
         val targetExpression = extractKotlinTargetExpression(unwrappedImplementation)
         val target = renderKotlinTarget(targetExpression)
         val targetUnresolved = isUnresolvedKotlinTarget(targetExpression, target)
@@ -154,32 +145,19 @@ object ArmeriaKotlinRouteCollector {
     ): KtExpression? =
         when (CoreServiceRegistrationMethod.fromMethodName(methodName)) {
             CoreServiceRegistrationMethod.ANNOTATED_SERVICE ->
-                findArgumentExpression(arguments, "service", 1)
-                    ?: findArgumentExpression(arguments, "service", 0)
+                ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 1)
+                    ?: ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 0)
             CoreServiceRegistrationMethod.SERVICE, CoreServiceRegistrationMethod.SERVICE_UNDER ->
-                findArgumentExpression(arguments, "service", 1)
+                ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 1)
             null -> null
         }
-
-    private fun findArgumentExpression(
-        arguments: List<KtValueArgument>,
-        parameterName: String,
-        positionalIndex: Int,
-    ): KtExpression? {
-        arguments
-            .firstOrNull { argument ->
-                argument.getArgumentName()?.asName?.identifier == parameterName
-            }?.getArgumentExpression()
-            ?.let { return it }
-        return arguments.getOrNull(positionalIndex)?.getArgumentExpression()
-    }
 
     private fun findPathPrefixArgument(
         arguments: List<KtValueArgument>,
         positionalIndex: Int,
     ): KtExpression? =
-        findArgumentExpression(arguments, "pathPrefix", positionalIndex)
-            ?: findArgumentExpression(arguments, "prefix", positionalIndex)
+        ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "pathPrefix", positionalIndex)
+            ?: ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "prefix", positionalIndex)
 
     private fun extractRegistrationPath(
         methodName: String,
@@ -187,12 +165,14 @@ object ArmeriaKotlinRouteCollector {
     ): String? =
         when (CoreServiceRegistrationMethod.fromMethodName(methodName)) {
             CoreServiceRegistrationMethod.SERVICE ->
-                extractKotlinString(findArgumentExpression(arguments, "path", 0))
+                ArmeriaKotlinExpressionSupport.extractKotlinString(
+                    ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "path", 0),
+                )
             CoreServiceRegistrationMethod.SERVICE_UNDER ->
-                extractKotlinString(findPathPrefixArgument(arguments, 0))
+                ArmeriaKotlinExpressionSupport.extractKotlinString(findPathPrefixArgument(arguments, 0))
             CoreServiceRegistrationMethod.ANNOTATED_SERVICE -> {
                 if (arguments.size > 1) {
-                    extractKotlinString(findPathPrefixArgument(arguments, 0))
+                    ArmeriaKotlinExpressionSupport.extractKotlinString(findPathPrefixArgument(arguments, 0))
                 } else {
                     "/"
                 }
@@ -200,25 +180,12 @@ object ArmeriaKotlinRouteCollector {
             null -> null
         }
 
-    private fun extractKotlinString(expression: KtExpression?): String? = ArmeriaKotlinExpressionSupport.extractKotlinString(expression)
-
     fun extractKotlinStrings(expression: KtExpression?): List<String> {
-        val unwrapped = unwrapKotlinExpression(expression) ?: return emptyList()
+        val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: return emptyList()
         if (unwrapped is KtCollectionLiteralExpression) {
-            return unwrapped.getInnerExpressions().mapNotNull(::extractKotlinString)
+            return unwrapped.getInnerExpressions().mapNotNull(ArmeriaKotlinExpressionSupport::extractKotlinString)
         }
-        return extractKotlinString(unwrapped)?.let { listOf(it) }.orEmpty()
-    }
-
-    private fun unwrapKotlinExpression(expression: KtExpression?): KtExpression? {
-        var current = expression ?: return null
-        while (true) {
-            current =
-                when (current) {
-                    is KtParenthesizedExpression -> current.expression ?: return null
-                    else -> return current
-                }
-        }
+        return ArmeriaKotlinExpressionSupport.extractKotlinString(unwrapped)?.let { listOf(it) }.orEmpty()
     }
 
     private fun extractKotlinTargetExpression(expression: KtExpression): KtExpression {
@@ -229,21 +196,16 @@ object ArmeriaKotlinRouteCollector {
             }
         }
         if (expression is KtCallExpression) {
-            val callee = expression.calleeExpression
-            val methodName =
-                when (callee) {
-                    is KtDotQualifiedExpression -> callee.selectorExpression?.text
-                    else -> callee?.text
-                }
+            val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(expression)
             if (methodName == "build") {
-                val receiver = dotQualifiedReceiver(callee, expression) ?: return expression
+                val receiver = dotQualifiedReceiver(expression.calleeExpression, expression) ?: return expression
                 return extractKotlinTargetExpression(receiver)
             }
             if (methodName == "builder") {
                 expression.valueArguments.firstOrNull()?.getArgumentExpression()?.let { serviceArg ->
                     return extractKotlinTargetExpression(serviceArg)
                 }
-                val receiver = dotQualifiedReceiver(callee, expression)
+                val receiver = dotQualifiedReceiver(expression.calleeExpression, expression)
                 if (receiver is KtNameReferenceExpression) {
                     val resolved = receiver.references.firstOrNull()?.resolve()
                     if (isResolvedKotlinClass(resolved)) {
@@ -285,17 +247,13 @@ object ArmeriaKotlinRouteCollector {
         expression: KtExpression,
         extractedTarget: String,
     ): Boolean {
-        val unwrapped = unwrapKotlinExpression(expression) ?: return true
+        val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: return true
         val rawTarget = expression.text.trim()
         return when (unwrapped) {
             is KtCallExpression -> {
                 ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
                 val callee = unwrapped.calleeExpression
-                val methodName =
-                    when (callee) {
-                        is KtDotQualifiedExpression -> callee.selectorExpression?.text
-                        else -> callee?.text
-                    }
+                val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(unwrapped)
                 if (methodName != null && extractedTarget == methodName) {
                     true
                 } else {

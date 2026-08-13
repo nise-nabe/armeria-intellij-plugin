@@ -2,6 +2,7 @@ package com.linecorp.intellij.plugins.armeria.explorer.collector.decorator
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiVariable
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -56,16 +57,8 @@ internal object ArmeriaKotlinDecoratorChainSupport {
             else -> null
         }
 
-    fun resolveKotlinCallName(call: KtCallExpression): String? {
-        val callee = call.calleeExpression ?: return null
-        return when (callee) {
-            is KtDotQualifiedExpression -> callee.selectorExpression?.text
-            else -> callee.text
-        }
-    }
-
     fun isKotlinArmeriaDecoratorCall(call: KtCallExpression): Boolean {
-        if (resolveKotlinCallName(call) != "decorator") {
+        if (ArmeriaKotlinExpressionSupport.resolveCallName(call) != "decorator") {
             return false
         }
         val dotQualifiedParent = call.parent as? KtDotQualifiedExpression

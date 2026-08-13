@@ -2,11 +2,11 @@ package com.linecorp.intellij.plugins.armeria.client
 
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiVariable
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
-import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtProperty
 
 internal object ArmeriaKotlinClientDecoratorSupport {
@@ -71,7 +71,7 @@ internal object ArmeriaKotlinClientDecoratorSupport {
         }
 
     private fun isKotlinClientDecoratorCall(call: KtCallExpression): Boolean {
-        if (resolveKotlinCallName(call) != "decorator") {
+        if (ArmeriaKotlinExpressionSupport.resolveCallName(call) != "decorator") {
             return false
         }
         val references =
@@ -120,14 +120,6 @@ internal object ArmeriaKotlinClientDecoratorSupport {
             else -> expression.text
         }
 
-    private fun resolveKotlinCallName(call: KtCallExpression): String? {
-        val callee = call.calleeExpression ?: return null
-        return when (callee) {
-            is KtDotQualifiedExpression -> callee.selectorExpression?.text
-            else -> callee.text
-        }
-    }
-
     private fun kotlinChainReceiver(expression: KtExpression): KtExpression? {
         val receiver =
             when (expression) {
@@ -145,14 +137,6 @@ internal object ArmeriaKotlinClientDecoratorSupport {
                 }
                 else -> null
             } ?: return null
-        return unwrapKotlinExpression(receiver)
-    }
-
-    private fun unwrapKotlinExpression(expression: KtExpression): KtExpression {
-        var current = expression
-        while (current is KtParenthesizedExpression) {
-            current = current.expression ?: return expression
-        }
-        return current
+        return ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(receiver) ?: receiver
     }
 }
