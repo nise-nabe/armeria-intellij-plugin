@@ -31,6 +31,10 @@ Do not put collector logic in `plugin/` when it belongs in `plugin-route-analysi
 Do not add route-analysis tests under `plugin/src/test` when the class under test lives
 in `plugin-route-analysis/`.
 
+The `plugin` module composes `plugin-shared`, `plugin-wizard`, and route modules into the
+main plugin JAR via `pluginComposedModule`. Do not use bare `implementation(project(...))`
+for those modules — that ships extra JARs and can pull Kotlin stdlib into the ZIP.
+
 ## Internationalization (i18n)
 
 All user-visible strings must go through `message(...)` with keys in
