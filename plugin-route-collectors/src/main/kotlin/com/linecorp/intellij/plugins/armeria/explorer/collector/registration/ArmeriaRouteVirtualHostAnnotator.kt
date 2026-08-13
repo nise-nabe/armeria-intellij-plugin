@@ -23,6 +23,23 @@ internal object ArmeriaRouteVirtualHostAnnotator {
         annotateRouteAt(routes, index, hostname)
     }
 
+    fun annotateMatchingKeys(
+        routes: MutableList<ArmeriaRoute>,
+        registrationKeys: Set<String>,
+        hostname: String,
+        routeKey: (ArmeriaRoute) -> String?,
+    ) {
+        if (registrationKeys.isEmpty()) {
+            return
+        }
+        for (index in routes.indices) {
+            val key = routeKey(routes[index]) ?: continue
+            if (key in registrationKeys) {
+                annotateRouteAt(routes, index, hostname)
+            }
+        }
+    }
+
     fun annotateRouteAt(
         routes: MutableList<ArmeriaRoute>,
         index: Int,

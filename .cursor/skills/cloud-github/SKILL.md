@@ -73,8 +73,14 @@ Do not install `gh` via apt, brew, or curl in agent sessions.
 GitHub Actions runs `./gradlew build` (see `.github/workflows/main.yml`).
 For agent-side verification, prefer:
 
-1. **Gradle MCP** — `gradle_connection_status`, then `gradle_run_tasks` / `gradle_run_tests` with `background: true` + poll (see `gradle-tapi-mcp` skill)
-2. Shell `./gradlew build` only when MCP is unresponsive, returns `BUILD_ALREADY_RUNNING` that cannot be cancelled, or for final CI parity after MCP passes
+1. **Commit implementation** — thermo diffs use committed history (`origin/<base>...HEAD`).
+2. **Gradle MCP** — when Kotlin/plugin code changed: `gradle_connection_status`, then
+   `gradle_run_tasks` / `gradle_run_tests` with `background: true` + poll (see `gradle-tapi-mcp`
+   skill). Docs-only tasks may skip Gradle.
+3. **Thermo self-verification** — mandatory before the final push / `create_pr` even when Gradle
+   was skipped (Tier A for docs-only). Run `.cursor/skills/thermo-nuclear-review/SKILL.md`
+   Phases 1–5 on the feature branch (see `agent-workflow.mdc` **Cloud Agent self-verification**)
+4. Shell `./gradlew build` only when MCP is unresponsive, returns `BUILD_ALREADY_RUNNING` that cannot be cancelled, or for final CI parity after MCP passes
 
 For GitHub-attached check status on a PR, use **ManagePullRequest** `get_ci_status` (not `gh pr checks`).
 Fall back to `gh pr checks` only when `get_ci_status` fails and `gh auth status` succeeds.

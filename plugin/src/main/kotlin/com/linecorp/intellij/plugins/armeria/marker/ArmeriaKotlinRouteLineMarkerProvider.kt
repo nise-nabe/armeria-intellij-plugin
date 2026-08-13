@@ -48,7 +48,7 @@ internal class ArmeriaKotlinRouteLineMarkerProvider : LineMarkerProvider {
         if (!isOnReferenceName(element, referenceNameElement)) {
             return null
         }
-        val methodName = kotlinCallName(call) ?: return null
+        val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return null
         if (methodName !in ArmeriaRouteLineMarkerSupport.SERVICE_REGISTRATION_METHODS) {
             return null
         }
@@ -72,13 +72,6 @@ internal class ArmeriaKotlinRouteLineMarkerProvider : LineMarkerProvider {
             is KtDotQualifiedExpression -> callee.selectorExpression
             is KtNameReferenceExpression -> callee
             else -> null
-        }
-
-    private fun kotlinCallName(call: KtCallExpression): String? =
-        when (val callee = call.calleeExpression) {
-            is KtDotQualifiedExpression -> callee.selectorExpression?.text
-            is KtNameReferenceExpression -> callee.text
-            else -> callee?.text
         }
 
     private fun kotlinRegistrationPath(

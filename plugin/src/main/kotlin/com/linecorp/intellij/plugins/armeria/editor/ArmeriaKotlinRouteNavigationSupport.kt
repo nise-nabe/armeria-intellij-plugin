@@ -9,6 +9,7 @@ import com.intellij.psi.PsiVariable
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaKotlinRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ServiceRegistrationMethod
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
 import com.linecorp.intellij.plugins.armeria.inspection.ArmeriaKotlinMethodRoute
 import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -19,7 +20,6 @@ import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtProperty
-import org.jetbrains.kotlin.psi.KtValueArgument
 
 internal object ArmeriaKotlinRouteNavigationSupport {
     fun annotatedRouteHandler(element: PsiElement): PsiElement? = annotatedKotlinRouteFunction(element)
@@ -101,7 +101,7 @@ internal object ArmeriaKotlinRouteNavigationSupport {
 
     fun isKotlinServiceRegistrationCall(call: PsiElement): Boolean {
         val kotlinCall = call as? KtCallExpression ?: return false
-        val methodName = kotlinCallName(kotlinCall) ?: return false
+        val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(kotlinCall) ?: return false
         if (methodName !in ArmeriaRouteNavigationSupport.serviceRegistrationMethodNames) {
             return false
         }
@@ -208,34 +208,16 @@ internal object ArmeriaKotlinRouteNavigationSupport {
 
     private fun kotlinServiceImplementationExpression(call: KtCallExpression): KtExpression? {
         val arguments = call.valueArguments
-        return when (ServiceRegistrationMethod.fromMethodName(kotlinCallName(call) ?: return null)) {
+        val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return null
+        return when (ServiceRegistrationMethod.fromMethodName(methodName)) {
             ServiceRegistrationMethod.ANNOTATED_SERVICE ->
-                findKotlinArgumentExpression(arguments, "service", 1)
-                    ?: findKotlinArgumentExpression(arguments, "service", 0)
+                ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 1)
+                    ?: ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 0)
             ServiceRegistrationMethod.SERVICE, ServiceRegistrationMethod.SERVICE_UNDER ->
-                findKotlinArgumentExpression(arguments, "service", 1)
+                ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 1)
             else -> null
         }
     }
-
-    private fun findKotlinArgumentExpression(
-        arguments: List<KtValueArgument>,
-        parameterName: String,
-        positionalIndex: Int,
-    ): KtExpression? {
-        arguments
-            .firstOrNull { it.getArgumentName()?.asName?.identifier == parameterName }
-            ?.getArgumentExpression()
-            ?.let { return it }
-        return arguments.getOrNull(positionalIndex)?.getArgumentExpression()
-    }
-
-    private fun kotlinCallName(call: KtCallExpression): String? =
-        when (val callee = call.calleeExpression) {
-            is KtDotQualifiedExpression -> callee.selectorExpression?.text
-            is KtNameReferenceExpression -> callee.text
-            else -> callee?.text
-        }
 
     private fun kotlinCallReferenceNameElement(call: KtCallExpression): PsiElement? =
         when (val callee = call.calleeExpression) {

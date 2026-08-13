@@ -16,13 +16,7 @@ internal object ArmeriaKotlinRegistrationChainSupport {
         )
     }
 
-    fun resolveCallName(call: KtCallExpression): String? {
-        val callee = call.calleeExpression ?: return null
-        return when (callee) {
-            is KtDotQualifiedExpression -> callee.selectorExpression?.text
-            else -> callee.text
-        }
-    }
+    fun resolveCallName(call: KtCallExpression): String? = ArmeriaKotlinExpressionSupport.resolveCallName(call)
 
     fun toChainStep(call: KtCallExpression): RegistrationChainStep =
         RegistrationChainStep(

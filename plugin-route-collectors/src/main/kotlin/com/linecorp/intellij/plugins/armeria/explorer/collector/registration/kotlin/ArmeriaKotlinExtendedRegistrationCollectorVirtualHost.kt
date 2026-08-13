@@ -71,26 +71,9 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorVirtualHost {
                 scopedKeys,
             )
         }
-        annotateRoutesByKeys(routes, scopedKeys, hostname) { route ->
-            val element = route.pointer.element as? KtCallExpression ?: return@annotateRoutesByKeys null
+        ArmeriaRouteVirtualHostAnnotator.annotateMatchingKeys(routes, scopedKeys, hostname) { route ->
+            val element = route.pointer.element as? KtCallExpression ?: return@annotateMatchingKeys null
             ArmeriaKotlinRegistrationChainSupport.registrationKey(element)
-        }
-    }
-
-    private fun annotateRoutesByKeys(
-        routes: MutableList<ArmeriaRoute>,
-        registrationKeys: Set<String>,
-        hostname: String,
-        routeKey: (ArmeriaRoute) -> String?,
-    ) {
-        if (registrationKeys.isEmpty()) {
-            return
-        }
-        for (index in routes.indices) {
-            val key = routeKey(routes[index]) ?: continue
-            if (key in registrationKeys) {
-                ArmeriaRouteVirtualHostAnnotator.annotateRouteAt(routes, index, hostname)
-            }
         }
     }
 

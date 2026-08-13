@@ -14,6 +14,7 @@
 ### Changed
 
 - Plugin ID is `com.linecorp.armeria` (was `com.linecorp.intellij.armeria-intellij-plugin`) so the descriptor no longer includes the word `intellij`. Existing installs are treated as a different plugin.
+- Kotlin PSI helpers for call names, named or positional arguments, and string extraction live on `ArmeriaKotlinExpressionSupport` and are reused by route collectors, client collectors, navigation, and line markers. Virtual-host annotation of a registration-key set lives on `ArmeriaRouteVirtualHostAnnotator`.
 - Route Explorer caches proto route merging so Refresh no longer re-scans `.proto` files on every collect.
 - Route Explorer reads Spring Boot `application.yml` / `.yaml` via IntelliJ YAML PSI (key-level navigation); `.properties` parsing is unchanged. YAML config is skipped when the YAML plugin is unavailable.
 - Split `plugin-route-analysis` `explorer` sources into focused packages (`model`, `collector`, `spring`, `protocol`, `docservice`, `support`, `duplicate`, `navigation`, `ui`).
