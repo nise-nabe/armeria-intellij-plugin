@@ -640,10 +640,11 @@ internal object ArmeriaJUnitServerExtensionSupport {
         if (function.valueParameters.isNotEmpty()) {
             return false
         }
-        function.getParentOfType<KtObjectDeclaration>(strict = false)?.let { containingObject ->
-            return containingObject.isCompanion() && function.hasJvmStaticAnnotation()
+        return when (val containingDeclaration = function.getParentOfType<KtClassOrObject>(strict = true)) {
+            null -> false
+            is KtObjectDeclaration -> !containingDeclaration.isCompanion() || function.hasJvmStaticAnnotation()
+            else -> true
         }
-        return function.getParentOfType<KtClass>(strict = false) != null
     }
 
     private fun KtNamedFunction.hasJvmStaticAnnotation(): Boolean = annotationEntries.any { it.shortName?.asString() == "JvmStatic" }
