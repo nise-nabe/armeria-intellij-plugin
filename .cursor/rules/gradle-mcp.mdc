@@ -21,19 +21,21 @@ Read `.cursor/skills/gradle-tapi-mcp/SKILL.md` for the full workflow.
 | Environment / versions | `gradle_get_build_environment` |
 | Module tree | `gradle_get_project_overview` |
 | Compile | `gradle_run_tasks` with `[":plugin:compileKotlin"]` |
-| Lint Kotlin (commit-time when Kotlin/`.editorconfig` staged; also in `build`/`check`) | `gradle_run_tasks` with `["ktlintCheck"]`, `background: true` + poll — see **Before committing** |
-| Tests (batch classes/methods in one call) | `gradle_run_tests` with `background: true` + poll |
-| Full verify | `gradle_run_tasks` with `["build"]`, `background: true` + poll |
+| Lint Kotlin (commit-time when Kotlin/`.editorconfig` staged; also in `build`/`check`) | `gradle_run_tasks` with `["ktlintCheck"]`, `background: true`, `queueIfBusy: true` + poll — see **Before committing** |
+| Tests (selected classes/methods) | `gradle_run_tests` with selectors + `taskPath` (not `:plugin:test` — see below), `background: true`, `queueIfBusy: true` |
+| Whole test suite / `:plugin:test` | `gradle_run_tasks` with `[":mod:test"]` (or `[":plugin:test"]`), `background: true`, `queueIfBusy: true` |
+| Full verify | `gradle_run_tasks` with `["build"]`, `background: true`, `queueIfBusy: true` |
 
-Use `background: true` and poll `gradle_get_build_status` for anything that may exceed ~30s (cold start, `:plugin:test`, `build`).
+Use `background: true` and `queueIfBusy: true` together, then poll `gradle_get_build_status`, for anything that may exceed ~30s (cold start, `:plugin:test`, `build`). `gradle_run_tests` requires `testClasses` / `testMethods` / `includePatterns` — a whole suite is `gradle_run_tasks`. Do **not** call `gradle_run_tests` with `taskPath: ":plugin:test"`; TestLauncher often returns `Requested test task with path ':plugin:test' cannot be found` (empty `failedTasks`). Use `gradle_run_tasks` `{ "tasks": [":plugin:test"], "arguments": ["--tests", "FQCN"], "background": true, "queueIfBusy": true }` for selected `:plugin` tests.
 
 ## On MCP build failure
 
 When `gradle_get_build_status` returns `status: failed`, fetch details from the **same `buildId`** — do **not** re-run the task via shell `./gradlew` just to read compiler or test output.
 
-1. **Compile / task failure** (`failureCategory: GRADLE_TASK`, `failedTasks` non-empty): re-poll with `includeProblems: true` (Kotlin/Java messages via Gradle Problems API).
+1. **Compile / task failure** (`failureCategory: GRADLE_TASK`, or `error` wrapping `Could not execute build using connection to Gradle distribution` while `failedTasks` is non-empty): re-poll with `includeProblems: true` (Kotlin/Java messages via Gradle Problems API). Default status payloads omit `problems` and stdout tails often stop at `Compilation error. See log for more details`.
 2. **Test failure** (`failureCategory: TEST`): re-poll with `includeTestDetails: true` (`testFailures` with class, method, source line).
-3. **Still insufficient**: re-poll with `includeOutput: true`, or read `recordDirectory` / `.gradle/mcp-builds/<buildId>/stdout.log`.
+3. **`Requested test task with path ':…:test' cannot be found`** (often ~instant, empty `failedTasks`): do **not** shell; retry with `gradle_run_tasks` on that task (add `arguments: ["--tests", "FQCN"]` when selecting classes).
+4. **Still insufficient**: re-poll with `includeOutput: true`, or read `recordDirectory` / `.gradle/mcp-builds/<buildId>/stdout.log`.
 
 While `status: running`, poll with `waitUntilComplete: true` (short `waitTimeoutMs`) — do **not** `sleep` then poll.
 
@@ -44,7 +46,7 @@ When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-em
 ## Shell fallback only when
 
 - MCP tools time out or the server is unresponsive (poll `gradle_list_builds` / `gradle_get_build_status` first)
-- `BUILD_ALREADY_RUNNING` and you cannot cancel the in-flight MCP build
+- `BUILD_ALREADY_RUNNING` after `queueIfBusy: true` still fails (`BUILD_QUEUE_FULL`) and you cannot cancel the in-flight MCP build
 - PR / CI parity requires `./gradlew build` after MCP verification passes
 
 **Not** for reading compile errors, test failures, or task logs from a build MCP already executed — use **On MCP build failure** above.

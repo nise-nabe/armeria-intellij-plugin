@@ -23,9 +23,9 @@ Default workflow:
 1. `gradle_connection_status` — confirm connected (`connectedAny: true`)
 2. `gradle_get_build_environment` for resolved Gradle/Java versions
 3. `gradle_get_project_overview` for module hierarchy
-4. `gradle_run_tasks` / `gradle_run_tests` for verification (`background: true` + poll `gradle_get_build_status` when a run may exceed ~30s)
+4. `gradle_run_tasks` / `gradle_run_tests` for verification (`background: true`, `queueIfBusy: true`, poll `gradle_get_build_status` when a run may exceed ~30s)
 
-Shell `./gradlew` is fallback only: MCP server unresponsive, or final CI parity before merge — **not** to read compile/test output from an MCP build that already failed (re-poll the same `buildId` with `includeProblems` / `includeTestDetails` first; see `gradle-mcp.mdc`). Do not run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` at the same time (sandbox contention). If MCP stops responding, poll with `gradle_get_build_status` or `gradle_list_builds` (reconciles disk records), then fall back to shell. Task discovery: `gradle_get_build_invocations` / `gradle_get_project_model` (see `gradle-tapi-mcp` skill).
+Shell `./gradlew` is fallback only: MCP server unresponsive, or final CI parity before merge — **not** to read compile/test output from an MCP build that already failed (re-poll the same `buildId` with `includeProblems` / `includeTestDetails` first; see `gradle-mcp.mdc`). Do not run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` at the same time (sandbox contention). Do not call `gradle_run_tests` with `taskPath: ":plugin:test"` (TestLauncher often cannot find that task — use `gradle_run_tasks` `[":plugin:test"]` and `arguments: ["--tests", "FQCN"]` for selected classes). Whole suites use `gradle_run_tasks`, not selector-less `gradle_run_tests`. If MCP stops responding, poll with `gradle_get_build_status` or `gradle_list_builds` (reconciles disk records), then fall back to shell. Task discovery: `gradle_get_build_invocations` / `gradle_get_project_model` (see `gradle-tapi-mcp` skill).
 
 ### GitHub and pull requests (Cursor Cloud)
 
@@ -67,7 +67,7 @@ Prefer **Gradle MCP** for the tasks below. Use `background: true` and poll `grad
 | Lint Kotlin (commit-time when Kotlin/`.editorconfig` staged; also in `build`/`check`) | `gradle_run_tasks` `["ktlintCheck"]` + background/poll — see **Commit workflow** below | `./gradlew ktlintCheck` |
 | Format Kotlin | `gradle_run_tasks` `["ktlintFormat"]` + background/poll | `./gradlew ktlintFormat` |
 | Compile plugin | `gradle_run_tasks` `[":plugin:compileKotlin"]` | `./gradlew :plugin:compileKotlin` |
-| Plugin fixture tests | `gradle_run_tasks` `[":plugin:test"]` or `gradle_run_tests` per class + background/poll | `./gradlew :plugin:test` |
+| Plugin fixture tests | `gradle_run_tasks` `[":plugin:test"]` (`background: true`, `queueIfBusy: true`); selected classes via `arguments: ["--tests", "FQCN"]` — not `gradle_run_tests` | `./gradlew :plugin:test` |
 | Route collectors fixture tests | `gradle_run_tasks` `[":plugin-route-collectors:test"]` + background/poll | `./gradlew :plugin-route-collectors:test` |
 | Route spring fixture tests | `gradle_run_tasks` `[":plugin-route-spring:test"]` + background/poll | `./gradlew :plugin-route-spring:test` |
 | Route protocol fixture tests | `gradle_run_tasks` `[":plugin-route-protocol:test"]` + background/poll | `./gradlew :plugin-route-protocol:test` |

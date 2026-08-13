@@ -182,9 +182,9 @@ git commit -m "fix: address PR <N> review comments"
 Follow **`gradle-tapi-mcp`** constraints:
 
 1. `gradle_connection_status` — stop if not connected.
-2. **One** `gradle_run_tasks` batching `compileKotlin` plus the test source-set compile task for the suite you will run (`compileTestKotlin` for `:test`; `compileFastTestKotlin` or `fastTestClasses` for `:fastTest` — `src/fastTest` is not covered by `compileTestKotlin`), `background: true` on cold start.
+2. **One** `gradle_run_tasks` batching `compileKotlin` plus the test source-set compile task for the suite you will run (`compileTestKotlin` for `:test`; `compileFastTestKotlin` or `fastTestClasses` for `:fastTest` — `src/fastTest` is not covered by `compileTestKotlin`), `background: true` and `queueIfBusy: true` on cold start.
 3. Poll `gradle_get_build_status` until terminal — omit `includeOutput` while `status: running` unless you need live logs (use `sinceStdoutOffset` / `sinceStderrOffset` for incremental deltas). On failure, re-poll same `buildId` with `includeProblems: true` (compile/task) or `includeTestDetails: true` (tests) before `includeOutput: true` — do **not** shell `./gradlew` for logs.
-4. **One** `gradle_run_tests` batching all affected test classes/methods in a single call.
+4. **One** test run: `gradle_run_tests` with selectors for route modules; for `:plugin` use `gradle_run_tasks` `{ "tasks": [":plugin:test"], "arguments": ["--tests", "FQCN"] }` (`background: true`, `queueIfBusy: true`). Do not call `gradle_run_tests` without selectors or with `taskPath: ":plugin:test"`.
 5. On failure, rerun **only** the failing method(s) — not the full class suite.
 
 | Changed code in | Compile | Tests |
