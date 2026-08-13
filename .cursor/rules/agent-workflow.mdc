@@ -13,8 +13,8 @@ For PR work (`/thermos`, review fixes), **fetch and checkout the PR head branch 
 
 - **`/thermos`:** one invocation runs the full pipeline in `thermo-nuclear-review` (deterministic
   scan → blind audit → fix → **closure pass** → SHIP). Closure always includes findings closure
-  and deterministic re-scan; closure subagent only for Tier C. Do not ask for a second session
-  for a fresh look — closure pass is the second check.
+  and deterministic re-scan; `/thermos` closure subagent only for Tier C. Do not ask for a
+  second session for a fresh look — closure pass is the second check.
 - **Cloud Agent self-verification:** **commit implementation** on the feature branch first
   (thermo diffs use `origin/<base>...HEAD`). Then run Gradle verify when Kotlin/plugin code
   changed, then `thermo-nuclear-review` Phases 1–5 **before** the final push that opens or
