@@ -118,15 +118,16 @@ When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-em
 1. Read the specialized skill for your change area.
 2. Run compile/tests via Gradle MCP when Kotlin/plugin code changed (see `gradle-tapi-mcp`).
    Docs-only changes may skip Gradle.
-3. Run `thermo-nuclear-review` self-verification (Phases 1–5) before the first push / `create_pr`
-   — mandatory even when Gradle was skipped.
+3. Run `.cursor/skills/thermo-nuclear-review/SKILL.md` self-verification (Phases 1–5) before
+   the first push / `create_pr` — mandatory even when Gradle was skipped.
 4. Scan the diff for `expression.text`, hard-coded `"` strings in UI code (including
    documentation maps), Kotlin imports in shared collectors, tool windows registered only
    under optional `*-integration.xml`, renderer state that is set but never cleared, and
    (for config parsers) missing comment stripping / `:`-in-list-scalar handling / first-match
    `.properties` reads / `getAllFilesByExt` scans / hard-coded UTF-8 `contentsToByteArray`.
 5. Write the PR body as Summary / Changes / Test plan — fold any review-driven edits into
-   **Changes**, do not add "Copilot review fixes" sections.
+   **Changes**, do not add "Copilot review fixes" sections. Post thermo findings tables via
+   `post_comment`, not in the PR body (`pr-description-format.mdc`).
 
 ## Test plan template
 

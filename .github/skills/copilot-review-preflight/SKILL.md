@@ -111,22 +111,23 @@ final pass before requesting review.
 
 ## Commit workflow (coding agents)
 
-When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-empty, before each `git commit` run `gradle_run_tasks` with `["ktlintCheck"]` (`background: true` + poll `gradle_get_build_status` until terminal success). Fix failures with `gradle_run_tasks` `["ktlintFormat"]` (same poll) or manual edits, `git add` the changed files, re-run until clean. Wait for any in-flight MCP build to finish or cancel it (`gradle_cancel_build`) first. `ktlintFormat` is project-wide — re-stage only intended paths. Omit ktlint when the staged index contains none of those paths. Root `ktlintCheck` does not cover `build-logic/` or `settings.gradle.kts`; when all staged Kotlin is in those locations, manually review style; when a commit mixes those paths with plugin-module Kotlin, manually review the `build-logic/` and `settings.gradle.kts` portions even if `ktlintCheck` passes — see `.github/skills/gradle-tapi-mcp/SKILL.md`.
+When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-empty, before each `git commit` run `gradle_run_tasks` with `["ktlintCheck"]` (`background: true` + poll `gradle_get_build_status` until terminal success). Fix failures with `gradle_run_tasks` `["ktlintFormat"]` (same poll) or manual edits, `git add` the changed files, re-run until clean. Wait for any in-flight MCP build to finish or cancel it (`gradle_cancel_build`) first. `ktlintFormat` is project-wide — re-stage only intended paths. Omit ktlint when the staged index contains none of those paths. Root `ktlintCheck` does not cover `build-logic/` or `settings.gradle.kts`; when all staged Kotlin is in those locations, manually review style; when a commit mixes those paths with plugin-module Kotlin, manually review the `build-logic/` and `settings.gradle.kts` portions even if `ktlintCheck` passes — see `AGENTS.md` **Commit workflow (coding agents)**.
 
 ## Verification before PR
 
 1. Read the specialized skill for your change area.
 2. Run compile/tests via Gradle MCP when Kotlin/plugin code changed (see `gradle-tapi-mcp`).
    Docs-only changes may skip Gradle.
-3. Run `thermo-nuclear-review` self-verification (Phases 1–5) before the first push / `create_pr`
-   — mandatory even when Gradle was skipped.
+3. Run `.cursor/skills/thermo-nuclear-review/SKILL.md` self-verification (Phases 1–5) before
+   the first push / `create_pr` — mandatory even when Gradle was skipped.
 4. Scan the diff for `expression.text`, hard-coded `"` strings in UI code (including
    documentation maps), Kotlin imports in shared collectors, tool windows registered only
    under optional `*-integration.xml`, renderer state that is set but never cleared, and
    (for config parsers) missing comment stripping / `:`-in-list-scalar handling / first-match
    `.properties` reads / `getAllFilesByExt` scans / hard-coded UTF-8 `contentsToByteArray`.
 5. Write the PR body as Summary / Changes / Test plan — fold any review-driven edits into
-   **Changes**, do not add "Copilot review fixes" sections.
+   **Changes**, do not add "Copilot review fixes" sections. Post thermo findings tables via
+   `post_comment`, not in the PR body (`pr-description-format.mdc`).
 
 ## Test plan template
 

@@ -106,5 +106,5 @@ git push -u origin cursor/issue-<N>-...
 - [ ] ≤1 explore pass (Grep, not subagent) for simple issues
 - [ ] Gradle: compile + one test batch (skip when docs-only)
 - [ ] Thermo self-verification (Phases 1–5) before first push/PR — Tier A skips audit subagent;
-  Tier B/C may add one audit subagent and a second diff poll
+  Tier B/C may add one audit subagent; Tier C may add one closure subagent and a second diff poll
 - [ ] Did not read `pr-review-response` or full `gradle-tapi-mcp`

@@ -20,7 +20,7 @@ Read `workflow-router` only if you have not already routed here.
 | Mode | When | Phase 0 base |
 |------|------|--------------|
 | **`/thermos PR N`** | User or automation requests branch audit on an existing PR | `baseRefName` from PR metadata |
-| **Cloud Agent self-verification** | After implementation + Gradle verify, **before** final push / `create_pr` | `main` (or `base_branch` from cloud task instructions) |
+| **Cloud Agent self-verification** | After commit of implementation (+ Gradle verify when Kotlin/plugin code changed), **before** final push / `create_pr` | `main` (or `base_branch` from cloud task instructions) |
 
 Both modes run the **same Phases 1–6**. Self-verification is mandatory for Cloud Agents even
 when Gradle compile/tests already passed — the closure pass is the built-in second look.
@@ -116,7 +116,9 @@ No SHIP with open P3 rows marked "later".
 
 ## Phase 5 — Closure pass (replaces a second session)
 
-Run **after** fixes are committed (before push). Mandatory for Tier B/C; Tier A when code changed.
+Run **after** fixes are committed (before push). Mandatory for Cloud Agent self-verification
+(all tiers) and Tier B/C `/thermos` audits. Tier A runs findings closure and deterministic
+re-scan only (no closure subagent). Tier C `/thermos` adds one closure subagent.
 
 1. `git diff origin/<baseRefName>...HEAD` — post-fix diff only.
 2. **Findings closure:** every row from Phases 1–2 has a terminal status.
