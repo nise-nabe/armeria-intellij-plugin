@@ -37,11 +37,19 @@ fun JavaCodeInsightTestFixture.registerArmeriaServiceStubs() {
         }
         """.trimIndent(),
     )
+    registerKnownHttpServiceStubs()
+}
+
+fun JavaCodeInsightTestFixture.registerKnownHttpServiceStubs() {
     this.addClass(
         """
         package com.linecorp.armeria.server.grpc;
 
         public final class GrpcService {
+            public static GrpcServiceBuilder builder() {
+                return null;
+            }
+
             public static GrpcServiceBuilder builder(Object bindableService) {
                 return null;
             }
@@ -53,6 +61,14 @@ fun JavaCodeInsightTestFixture.registerArmeriaServiceStubs() {
         package com.linecorp.armeria.server.grpc;
 
         public final class GrpcServiceBuilder {
+            public GrpcServiceBuilder addService(Object bindableService) {
+                return this;
+            }
+
+            public GrpcServiceBuilder addServices(Object... bindableServices) {
+                return this;
+            }
+
             public com.linecorp.armeria.server.grpc.GrpcService build() {
                 return null;
             }
@@ -64,6 +80,9 @@ fun JavaCodeInsightTestFixture.registerArmeriaServiceStubs() {
         package com.linecorp.armeria.server.docs;
 
         public final class DocService {
+            public DocService() {
+            }
+
             public static DocServiceBuilder builder() {
                 return null;
             }
@@ -76,6 +95,28 @@ fun JavaCodeInsightTestFixture.registerArmeriaServiceStubs() {
 
         public final class DocServiceBuilder {
             public com.linecorp.armeria.server.docs.DocService build() {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.metric;
+
+        public final class PrometheusExpositionService {
+            public static PrometheusExpositionService of(Object collectorRegistry) {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.file;
+
+        public final class FileService {
+            public static FileService of(java.io.File root) {
                 return null;
             }
         }

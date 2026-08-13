@@ -19,10 +19,10 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.jav
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.CoreServiceRegistrationMethod
 import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
-import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaBuilderMetadataSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaDelegationSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKnownHttpServiceClassifier
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteTargetExtractor
@@ -125,6 +125,8 @@ object ArmeriaRouteCollectorServiceRegistration {
                 null -> null
             } ?: return false
         val target = ArmeriaRouteTargetExtractor.extractTarget(implementationExpression)
+        val serviceTypeHint =
+            ArmeriaRouteTargetExtractor.extractKnownServiceType(implementationExpression) ?: target
         return addServiceRegistrationRoute(
             element = expression,
             registrationKey = registrationKey,
@@ -132,7 +134,7 @@ object ArmeriaRouteCollectorServiceRegistration {
             path = path,
             target = target,
             targetUnresolved = ArmeriaRouteTargetExtractor.isUnresolvedTarget(implementationExpression, target),
-            implementationText = implementationExpression.text,
+            serviceTypeHint = serviceTypeHint,
             argumentCount = arguments.size,
             routes = routes,
             seenServiceRegistrations = seenServiceRegistrations,
@@ -146,7 +148,7 @@ object ArmeriaRouteCollectorServiceRegistration {
         path: String,
         target: String,
         targetUnresolved: Boolean,
-        implementationText: String,
+        serviceTypeHint: String,
         argumentCount: Int,
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
@@ -157,8 +159,9 @@ object ArmeriaRouteCollectorServiceRegistration {
             return false
         }
         val registrationMethod = CoreServiceRegistrationMethod.fromMethodName(methodName) ?: return false
-        val protocol = ArmeriaRouteTargetExtractor.detectProtocol(implementationText)
-        val routeMatch = resolveRouteMatch(registrationMethod, protocol)
+        val kind = ArmeriaKnownHttpServiceClassifier.classify(serviceTypeHint, target)
+        val protocol = ArmeriaKnownHttpServiceClassifier.protocol(kind)
+        val routeMatch = ArmeriaKnownHttpServiceClassifier.routeMatch(kind, registrationMethod)
         val annotatedServiceHasPathPrefix =
             registrationMethod == CoreServiceRegistrationMethod.ANNOTATED_SERVICE && argumentCount > 1
         val normalizedPath = ArmeriaRouteSupport.normalizePath(path)
@@ -179,7 +182,7 @@ object ArmeriaRouteCollectorServiceRegistration {
                 target = target,
                 routeMatch = routeMatch,
                 targetUnresolved = targetUnresolved,
-                isDocService = protocol == RouteProtocol.DOC_SERVICE,
+                isDocService = ArmeriaKnownHttpServiceClassifier.isDocService(kind),
                 annotatedServiceHasPathPrefix = annotatedServiceHasPathPrefix,
                 decorators = programmaticDecorators,
                 timeoutHints = timeoutHints,
@@ -187,20 +190,6 @@ object ArmeriaRouteCollectorServiceRegistration {
                 sourceOffset = sourceOffset,
             )
         return true
-    }
-
-    private fun resolveRouteMatch(
-        registrationMethod: CoreServiceRegistrationMethod,
-        protocol: RouteProtocol,
-    ): RouteMatch {
-        if (protocol != RouteProtocol.HTTP) {
-            return RouteMatch.NON_HTTP
-        }
-        return when (registrationMethod) {
-            CoreServiceRegistrationMethod.SERVICE -> RouteMatch.SERVICE
-            CoreServiceRegistrationMethod.ANNOTATED_SERVICE -> RouteMatch.ANNOTATED_SERVICE
-            CoreServiceRegistrationMethod.SERVICE_UNDER -> RouteMatch.SERVICE_UNDER
-        }
     }
 
     private fun serviceRegistrationKey(expression: PsiMethodCallExpression): String? {

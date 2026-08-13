@@ -14,6 +14,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnal
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKnownHttpServiceClassifier
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 
 /**
@@ -21,7 +22,8 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSuppor
  *
  * Includes annotated HTTP methods, ServerBuilder `.service`, `.serviceUnder`, and
  * `.annotatedService` registrations, fluent `.route()` chains, and `.healthCheckService()`.
- * Excludes non-HTTP protocols such as gRPC and mount-only registrations such as file services.
+ * Excludes non-HTTP protocols such as gRPC, DocService / Prometheus exposition mounts,
+ * and mount-only registrations such as file services.
  *
  * Cross-registration conflicts are detected, for example `@Get("/foo")` versus
  * `.service("/foo", …)`. In-class annotated duplicate HTTP routes are excluded because
@@ -55,7 +57,12 @@ object ArmeriaRouteDuplicateIndex {
 
     fun findDuplicateGroups(routes: List<ArmeriaRoute>): List<DuplicateRegistrationGroup> {
         val groups = mutableListOf<DuplicateRegistrationGroup>()
-        for ((_, moduleRoutes) in routes.filter { it.routeMatch in CHECKED_MATCHES }.groupBy { it.moduleName }) {
+        val moduleRoutesByName =
+            routes
+                .filter { it.routeMatch in CHECKED_MATCHES }
+                .filterNot { it.isDocService || ArmeriaKnownHttpServiceClassifier.excludeFromDuplicateIndex(it.target) }
+                .groupBy { it.moduleName }
+        for ((_, moduleRoutes) in moduleRoutesByName) {
             if (moduleRoutes.size < 2) {
                 continue
             }

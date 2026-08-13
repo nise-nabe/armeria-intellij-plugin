@@ -7,16 +7,33 @@ import com.intellij.psi.PsiParenthesizedExpression
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiTypeCastExpression
 import com.intellij.psi.PsiVariable
-import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 
 internal object ArmeriaRouteTargetExtractor {
-    fun detectProtocol(expressionText: String): RouteProtocol =
-        when {
-            expressionText.contains("GrpcService") -> RouteProtocol.GRPC
-            expressionText.contains("DocService") -> RouteProtocol.DOC_SERVICE
-            expressionText.contains("Thrift", ignoreCase = true) -> RouteProtocol.THRIFT
-            else -> RouteProtocol.HTTP
+    private val BUILDER_CHAIN_METHODS = setOf("build", "addService", "addServices")
+
+    fun extractKnownServiceType(expression: PsiExpression): String? {
+        val unwrapped = unwrapCast(expression) ?: return null
+        return when (unwrapped) {
+            is PsiNewExpression -> {
+                val classReference =
+                    unwrapped.classReference?.qualifiedName ?: unwrapped.classReference?.referenceName
+                classReference?.let(ArmeriaKnownHttpServiceClassifier::canonicalServiceTypeName)
+            }
+            is PsiMethodCallExpression -> extractKnownServiceTypeFromCall(unwrapped)
+            is PsiReferenceExpression -> {
+                ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
+                when (val resolved = unwrapped.resolve()) {
+                    is PsiVariable ->
+                        resolved.type.canonicalText.let(ArmeriaKnownHttpServiceClassifier::canonicalServiceTypeName)
+                    is PsiClass ->
+                        resolved.qualifiedName?.let(ArmeriaKnownHttpServiceClassifier::canonicalServiceTypeName)
+                            ?: resolved.name
+                    else -> null
+                }
+            }
+            else -> null
         }
+    }
 
     fun isUnresolvedTarget(
         expression: PsiExpression,
@@ -86,12 +103,44 @@ internal object ArmeriaRouteTargetExtractor {
         }
     }
 
+    private fun extractKnownServiceTypeFromCall(call: PsiMethodCallExpression): String? {
+        val methodName = call.methodExpression.referenceName
+        if (methodName in BUILDER_CHAIN_METHODS) {
+            val qualifier = call.methodExpression.qualifierExpression
+            if (qualifier != null) {
+                extractKnownServiceType(qualifier)?.let { return it }
+            }
+        }
+        if (methodName == "builder" || methodName == "of") {
+            serviceTypeFromResolvedCall(call)?.let { return it }
+            val qualifier = call.methodExpression.qualifierExpression
+            if (qualifier != null) {
+                extractKnownServiceType(qualifier)?.let { return it }
+            }
+        }
+        serviceTypeFromResolvedCall(call)?.let { return it }
+        val qualifier = call.methodExpression.qualifierExpression
+        return if (qualifier != null) extractKnownServiceType(qualifier) else null
+    }
+
+    private fun serviceTypeFromResolvedCall(call: PsiMethodCallExpression): String? {
+        ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
+        val resolvedClass = call.resolveMethod()?.containingClass ?: return null
+        val serviceClassName =
+            resolvedClass.qualifiedName?.let(ArmeriaKnownHttpServiceClassifier::canonicalServiceTypeName)
+                ?: resolvedClass.name?.let(ArmeriaKnownHttpServiceClassifier::canonicalServiceTypeName)
+                ?: return null
+        return serviceClassName.takeIf {
+            ArmeriaKnownHttpServiceClassifier.classify(it) != KnownHttpServiceKind.HTTP
+        }
+    }
+
     private fun extractMethodCallTarget(
         call: PsiMethodCallExpression,
         fallbackExpression: PsiExpression,
     ): String {
         val methodName = call.methodExpression.referenceName
-        if (methodName == "build") {
+        if (methodName in BUILDER_CHAIN_METHODS) {
             val qualifier = call.methodExpression.qualifierExpression
             if (qualifier != null) {
                 return extractTarget(qualifier)
@@ -110,8 +159,8 @@ internal object ArmeriaRouteTargetExtractor {
         ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
         val resolvedClass = call.resolveMethod()?.containingClass
         val serviceClassName =
-            resolvedClass?.qualifiedName?.let(::builderTypeToServiceName)
-                ?: resolvedClass?.name?.let(::builderTypeToServiceName)
+            resolvedClass?.qualifiedName?.let(ArmeriaKnownHttpServiceClassifier::canonicalServiceTypeName)
+                ?: resolvedClass?.name?.let(ArmeriaKnownHttpServiceClassifier::canonicalServiceTypeName)
         if (serviceClassName != null) {
             return serviceClassName
         }
@@ -126,26 +175,12 @@ internal object ArmeriaRouteTargetExtractor {
         }
         val builderClass = builderCall.resolveMethod()?.containingClass ?: return null
         val serviceName =
-            builderClass.qualifiedName?.let(::builderTypeToServiceName)
-                ?: builderClass.name?.let(::builderTypeToServiceName)
+            builderClass.qualifiedName?.let(ArmeriaKnownHttpServiceClassifier::canonicalServiceTypeName)
+                ?: builderClass.name?.let(ArmeriaKnownHttpServiceClassifier::canonicalServiceTypeName)
         return if (argumentTarget.isNotBlank()) {
             "$serviceName($argumentTarget)"
         } else {
             serviceName
-        }
-    }
-
-    private fun builderTypeToServiceName(qualifiedOrSimpleName: String): String {
-        val simpleName = qualifiedOrSimpleName.substringAfterLast('.')
-        if (!simpleName.endsWith("Builder")) {
-            return qualifiedOrSimpleName
-        }
-        val serviceSimpleName = simpleName.removeSuffix("Builder")
-        val packagePrefix = qualifiedOrSimpleName.substringBeforeLast('.', missingDelimiterValue = "")
-        return if (packagePrefix.isEmpty()) {
-            serviceSimpleName
-        } else {
-            "$packagePrefix.$serviceSimpleName"
         }
     }
 }

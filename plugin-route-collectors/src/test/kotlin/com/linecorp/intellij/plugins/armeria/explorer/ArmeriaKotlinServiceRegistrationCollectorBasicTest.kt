@@ -1,7 +1,9 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -328,5 +330,137 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
 
         val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
         kotlinAssertNotNull(serviceRoute)
+    }
+
+    fun testCollectDocServiceRegistrationWithConstructor() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.docs.DocService
+
+            fun main() {
+                Server.builder()
+                    .service("/docs", DocService())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val docRoute = ArmeriaRouteCollector.collect(project).firstOrNull { it.isDocService }
+        kotlinAssertNotNull(docRoute)
+        assertEquals("/docs", docRoute.path)
+        assertEquals("com.linecorp.armeria.server.docs.DocService", docRoute.target)
+        assertEquals(RouteMatch.NON_HTTP, docRoute.routeMatch)
+        assertEquals(RouteProtocol.DOC_SERVICE.presentableName(), docRoute.protocol)
+    }
+
+    fun testCollectDocServiceRegistrationFromVariable() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.docs.DocService
+
+            fun main() {
+                val docs = DocService()
+                Server.builder()
+                    .service("/docs", docs)
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val docRoute = ArmeriaRouteCollector.collect(project).firstOrNull { it.isDocService }
+        kotlinAssertNotNull(docRoute)
+        assertEquals(RouteMatch.NON_HTTP, docRoute.routeMatch)
+    }
+
+    fun testCollectPrometheusExpositionService() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.metric.PrometheusExpositionService
+
+            fun main() {
+                Server.builder()
+                    .service("/metrics", PrometheusExpositionService.of(null))
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val metricsRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/metrics" }
+        assertEquals(RouteMatch.SERVICE, metricsRoute.routeMatch)
+        assertEquals(RouteProtocol.HTTP.presentableName(), metricsRoute.protocol)
+        assertFalse(metricsRoute.isDocService)
+        assertEquals(
+            "com.linecorp.armeria.server.metric.PrometheusExpositionService",
+            metricsRoute.target,
+        )
+    }
+
+    fun testCollectGrpcServiceRegistrationWithAddService() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.grpc.GrpcService
+
+            fun main() {
+                Server.builder()
+                    .service("/grpc", GrpcService.builder().addService(HelloGrpcService()).build())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloGrpcService {
+            }
+            """.trimIndent(),
+        )
+
+        val grpcRoute = ArmeriaRouteCollector.collect(project).firstOrNull { it.routeMatch == RouteMatch.NON_HTTP }
+        kotlinAssertNotNull(grpcRoute)
+        assertEquals("/grpc", grpcRoute.path)
+        assertEquals(RouteProtocol.GRPC.presentableName(), grpcRoute.protocol)
+        assertFalse(grpcRoute.target.equals("addService", ignoreCase = true))
+        assertFalse(grpcRoute.target.equals("build", ignoreCase = true))
+    }
+
+    fun testCollectJettyServiceRegistration() {
+        registerServletServiceStubs()
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.jetty.JettyService
+
+            fun main() {
+                Server.builder()
+                    .service("/app", JettyService.of(null))
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val servletRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/app" }
+        assertEquals(RouteMatch.SERVICE, servletRoute.routeMatch)
+        assertEquals(DelegationKind.SERVLET, servletRoute.delegationKind)
+        assertEquals(RouteProtocol.HTTP.presentableName(), servletRoute.protocol)
     }
 }

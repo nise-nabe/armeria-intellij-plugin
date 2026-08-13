@@ -60,7 +60,7 @@ internal object ArmeriaScalaRouteCollector {
                 path = match.path,
                 target = target,
                 targetUnresolved = targetUnresolved,
-                implementationText = match.targetText,
+                serviceTypeHint = match.targetText,
                 argumentCount = match.argumentCount,
                 routes = routes,
                 seenServiceRegistrations = seenServiceRegistrations,

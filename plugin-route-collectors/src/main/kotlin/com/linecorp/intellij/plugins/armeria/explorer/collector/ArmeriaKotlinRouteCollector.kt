@@ -11,6 +11,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.Arm
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.kotlin.ArmeriaKotlinExtendedRegistrationCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.CoreServiceRegistrationMethod
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKnownHttpServiceClassifier
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
@@ -28,6 +29,8 @@ import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtValueArgument
 
 object ArmeriaKotlinRouteCollector {
+    private val BUILDER_CHAIN_METHODS = setOf("build", "addService", "addServices")
+
     fun referencesArmeriaKotlinContent(file: KtFile): Boolean {
         val hasArmeriaImports =
             file.importList?.imports?.any { import ->
@@ -125,6 +128,7 @@ object ArmeriaKotlinRouteCollector {
         val targetExpression = extractKotlinTargetExpression(unwrappedImplementation)
         val target = renderKotlinTarget(targetExpression)
         val targetUnresolved = isUnresolvedKotlinTarget(targetExpression, target)
+        val serviceTypeHint = extractKotlinKnownServiceType(unwrappedImplementation) ?: target
         ArmeriaRouteCollectorServiceRegistration.addServiceRegistrationRoute(
             element = call,
             registrationKey = registrationKey,
@@ -132,7 +136,7 @@ object ArmeriaKotlinRouteCollector {
             path = path,
             target = target,
             targetUnresolved = targetUnresolved,
-            implementationText = implementationExpression.text,
+            serviceTypeHint = serviceTypeHint,
             argumentCount = arguments.size,
             routes = routes,
             seenServiceRegistrations = seenServiceRegistrations,
@@ -188,6 +192,46 @@ object ArmeriaKotlinRouteCollector {
         return ArmeriaKotlinExpressionSupport.extractKotlinString(unwrapped)?.let { listOf(it) }.orEmpty()
     }
 
+    private fun extractKotlinKnownServiceType(
+        expression: KtExpression,
+        visitedProperties: MutableSet<KtProperty> = mutableSetOf(),
+    ): String? {
+        val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: return null
+        if (unwrapped is KtDotQualifiedExpression) {
+            unwrapped.selectorExpression?.let { selector ->
+                extractKotlinKnownServiceType(selector, visitedProperties)?.let { return it }
+            }
+            return extractKotlinKnownServiceType(unwrapped.receiverExpression, visitedProperties)
+        }
+        if (unwrapped is KtCallExpression) {
+            val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(unwrapped)
+            if (methodName in BUILDER_CHAIN_METHODS || methodName == "builder" || methodName == "of") {
+                val receiver = dotQualifiedReceiver(unwrapped.calleeExpression, unwrapped)
+                if (receiver != null) {
+                    extractKotlinKnownServiceType(receiver, visitedProperties)?.let { return it }
+                }
+            }
+            val callee = unwrapped.calleeExpression
+            val reference =
+                callee as? KtNameReferenceExpression ?: callee?.let {
+                    if (it is KtDotQualifiedExpression) it.selectorExpression as? KtNameReferenceExpression else null
+                }
+            val resolved = reference?.references?.firstOrNull()?.resolve()
+            return resolveQualifiedClassName(resolved)?.let(ArmeriaKnownHttpServiceClassifier::canonicalServiceTypeName)
+        }
+        if (unwrapped is KtNameReferenceExpression) {
+            ArmeriaKotlinDecoratorChainSupport
+                .resolveKotlinTypedNameTarget(
+                    unwrapped,
+                    visitedProperties,
+                ) { initializer, visited ->
+                    extractKotlinKnownServiceType(initializer, visited) ?: renderKotlinTarget(initializer, visited)
+                }?.let { return it }
+            return resolveQualifiedClassName(unwrapped.references.firstOrNull()?.resolve())
+        }
+        return null
+    }
+
     private fun extractKotlinTargetExpression(expression: KtExpression): KtExpression {
         if (expression is KtDotQualifiedExpression) {
             val selector = expression.selectorExpression
@@ -197,7 +241,7 @@ object ArmeriaKotlinRouteCollector {
         }
         if (expression is KtCallExpression) {
             val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(expression)
-            if (methodName == "build") {
+            if (methodName in BUILDER_CHAIN_METHODS) {
                 val receiver = dotQualifiedReceiver(expression.calleeExpression, expression) ?: return expression
                 return extractKotlinTargetExpression(receiver)
             }
