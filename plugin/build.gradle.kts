@@ -90,21 +90,24 @@ intellijPlatform {
     }
 }
 
-val pluginVersion = providers.gradleProperty("pluginVersion")
-val pluginZip =
-    layout.buildDirectory.file(
-        pluginVersion.map { "distributions/plugin-$it.zip" },
-    )
-
 tasks.register("verifyPluginPackaging") {
     group = "verification"
     description =
         "Fails if the plugin ZIP lib/ contains Kotlin stdlib, JetBrains annotations, or sibling module JARs."
     dependsOn("buildPlugin")
-    inputs.file(pluginZip)
-    val expectedJarName = pluginVersion.map { "plugin-$it.jar" }
+    val zipFile =
+        layout.buildDirectory.file(
+            providers.gradleProperty("pluginVersion").map { version ->
+                "distributions/plugin-$version.zip"
+            },
+        )
+    val expectedJarName =
+        providers.gradleProperty("pluginVersion").map { version ->
+            "plugin-$version.jar"
+        }
+    inputs.file(zipFile)
     doLast {
-        val zipPath = pluginZip.get().asFile
+        val zipPath = zipFile.get().asFile
         check(zipPath.isFile) { "Plugin ZIP not found: $zipPath" }
         val expectedJar = expectedJarName.get()
         ZipFile(zipPath).use { zip ->
@@ -118,7 +121,10 @@ tasks.register("verifyPluginPackaging") {
             check(jarEntries.size == 1 && jarEntries.single().endsWith("/$expectedJar")) {
                 "Expected a single lib/$expectedJar, found $jarEntries in $zipPath"
             }
-            val pluginJar = zip.getEntry(jarEntries.single())
+            val pluginJar =
+                checkNotNull(zip.getEntry(jarEntries.single())) {
+                    "ZIP entry missing: ${jarEntries.single()}"
+                }
             val descriptor =
                 zip.getInputStream(pluginJar).use { jarStream ->
                     ZipInputStream(jarStream).use { nested ->
