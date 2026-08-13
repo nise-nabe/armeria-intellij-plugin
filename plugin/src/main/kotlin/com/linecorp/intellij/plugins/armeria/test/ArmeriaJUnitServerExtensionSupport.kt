@@ -320,10 +320,7 @@ internal object ArmeriaJUnitServerExtensionSupport {
 
     fun enclosingTestClassName(element: PsiElement): String? {
         element.getParentOfType<KtObjectDeclaration>(true)?.let { objectDeclaration ->
-            if (objectDeclaration.isCompanion()) {
-                return objectDeclaration.getParentOfType<KtClass>(true)?.fqName?.asString()
-            }
-            return objectDeclaration.fqName?.asString()
+            return kotlinContainingClassName(objectDeclaration)
         }
         return element.getParentOfType<KtClass>(true)?.fqName?.asString()
             ?: PsiTreeUtil.getParentOfType(element, PsiClass::class.java)?.qualifiedName
