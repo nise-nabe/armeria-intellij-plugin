@@ -1,6 +1,8 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.date
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import java.util.zip.ZipFile
+import java.util.zip.ZipInputStream
 
 plugins {
     id("com.linecorp.intellij.platform-plugin")
@@ -86,4 +88,66 @@ intellijPlatform {
                 }
             }
     }
+}
+
+val pluginVersion = providers.gradleProperty("pluginVersion")
+val pluginZip =
+    layout.buildDirectory.file(
+        pluginVersion.map { "distributions/plugin-$it.zip" },
+    )
+
+tasks.register("verifyPluginPackaging") {
+    group = "verification"
+    description =
+        "Fails if the plugin ZIP lib/ contains Kotlin stdlib, JetBrains annotations, or sibling module JARs."
+    dependsOn("buildPlugin")
+    inputs.file(pluginZip)
+    val expectedJarName = pluginVersion.map { "plugin-$it.jar" }
+    doLast {
+        val zipPath = pluginZip.get().asFile
+        check(zipPath.isFile) { "Plugin ZIP not found: $zipPath" }
+        val expectedJar = expectedJarName.get()
+        ZipFile(zipPath).use { zip ->
+            val jarEntries =
+                zip
+                    .entries()
+                    .asSequence()
+                    .map { it.name }
+                    .filter { it.endsWith(".jar") }
+                    .toList()
+            check(jarEntries.size == 1 && jarEntries.single().endsWith("/$expectedJar")) {
+                "Expected a single lib/$expectedJar, found $jarEntries in $zipPath"
+            }
+            val pluginJar = zip.getEntry(jarEntries.single())
+            val descriptor =
+                zip.getInputStream(pluginJar).use { jarStream ->
+                    ZipInputStream(jarStream).use { nested ->
+                        generateSequence { nested.nextEntry }
+                            .firstOrNull { it.name == "META-INF/plugin.xml" }
+                            ?.let { nested.readBytes().toString(Charsets.UTF_8) }
+                    }
+                }
+            check(!descriptor.isNullOrBlank()) {
+                "META-INF/plugin.xml missing from $expectedJar"
+            }
+            check("<id>com.linecorp.armeria</id>" in descriptor) {
+                "Patched plugin.xml must use id com.linecorp.armeria"
+            }
+            val description =
+                Regex(
+                    "<description(?:\\s[^>]*)?>(?:<!\\[CDATA\\[)?(.*?)(?:]]>)?</description>",
+                    setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE),
+                ).find(descriptor)
+                    ?.groupValues
+                    ?.get(1)
+                    ?.trim()
+            check(!description.isNullOrBlank()) {
+                "Patched plugin.xml is missing a non-empty <description>"
+            }
+        }
+    }
+}
+
+tasks.named("check") {
+    dependsOn("verifyPluginPackaging")
 }
