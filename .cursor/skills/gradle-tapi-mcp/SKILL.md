@@ -101,10 +101,9 @@ Use `projectPath` on model tools to scope to a submodule and avoid huge response
 
 ```json
 {
-  "taskPath": ":plugin-route-analysis:test",
+  "taskPath": ":plugin-route-analysis:fastTest",
   "testMethods": {
-    "com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteTreeBuilderTest": ["buildRoot_groupsRoutesByModule"],
-    "com.linecorp.intellij.plugins.armeria.other.OtherTest": ["testX"]
+    "com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteTreeBuilderTest": ["buildRoot_groupsRoutesByModule"]
   },
   "background": true,
   "queueIfBusy": true
@@ -123,9 +122,9 @@ In multi-project builds, prefer explicit `taskPath` or `tasks` (e.g. `taskPath: 
 | Compile check (`:plugin:compileKotlin`), daemon warm | MCP `gradle_run_tasks` foreground — sub-second to ~2s, clean JSON |
 | Compile check, cold start (first MCP build in session) | MCP `gradle_run_tasks` with `background: true` + poll |
 | Full `build` or `:plugin:test` | MCP with `background: true` + poll `gradle_get_build_status` |
-| Single test class in a route module | MCP `gradle_run_tests` with **one** class and `taskPath: ":plugin-route-analysis:test"`, `background: true`, `queueIfBusy: true` |
+| Single test class in a route `:test` suite | MCP `gradle_run_tests` with **one** class and `taskPath: ":plugin-route-collectors:test"`, `background: true`, `queueIfBusy: true` |
 | Single test class/method in `:plugin` | MCP `gradle_run_tasks` `{ "tasks": [":plugin:test"], "arguments": ["--tests", "FQCN"], "background": true, "queueIfBusy": true }` |
-| Single test method in a route module | MCP `gradle_run_tests` with `taskPath: ":plugin-route-*:test"` and `testMethods: { "ClassName": ["methodName"] }` |
+| Single test method in a route `:fastTest` suite | MCP `gradle_run_tests` with `taskPath: ":plugin-route-analysis:fastTest"` and `testMethods: { "ClassName": ["methodName"] }` |
 | MCP server unresponsive / all tools timeout | **Shell** `./gradlew` after `gradle_list_builds` / disk recovery |
 | PR / CI parity check (after MCP verify) | Shell `./gradlew build` when you need exact CI command parity |
 
@@ -180,11 +179,11 @@ Foreground builds auto-detach before the MCP client times out, returning a `buil
 }
 ```
 
-Or for selected tests in a route module (`gradle_run_tests`):
+Or for selected tests in a route `fastTest` suite (`gradle_run_tests`; classes under `src/fastTest` are not `:test`):
 
 ```json
 {
-  "taskPath": ":plugin-route-analysis:test",
+  "taskPath": ":plugin-route-analysis:fastTest",
   "testMethods": {
     "com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteTreeBuilderTest": ["buildRoot_groupsRoutesByModule"]
   },
