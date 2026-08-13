@@ -59,7 +59,7 @@ release workflow — tag and publish with `gh release create` after merging a ve
 
 ### Build, test, lint
 
-Prefer **Gradle MCP** for the tasks below. Use `background: true` and poll `gradle_get_build_status` for long runs. Fall back to shell `./gradlew` only when MCP is unavailable or for CI parity — not to read errors from a failed MCP build (re-poll with `includeProblems` / `includeTestDetails`; see `gradle-mcp.mdc`).
+Prefer **Gradle MCP** for the tasks below. Use `background: true` and `queueIfBusy: true`, then poll `gradle_get_build_status` for long runs. Fall back to shell `./gradlew` only when MCP is unavailable or for CI parity — not to read errors from a failed MCP build (re-poll with `includeProblems` / `includeTestDetails`; see `gradle-mcp.mdc`).
 
 | Goal | MCP (preferred) | Shell fallback |
 |------|---------------|----------------|
@@ -93,7 +93,7 @@ Detect staged Kotlin or style config:
 git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'
 ```
 
-When that output is non-empty, before `git commit` run `ktlintCheck` via Gradle MCP (`gradle_run_tasks` with `["ktlintCheck"]`, `background: true` + poll `gradle_get_build_status` until terminal success). If it fails, fix violations with `gradle_run_tasks` `["ktlintFormat"]` (same poll pattern) or manual edits, `git add` the changed files, re-run `ktlintCheck`, and only commit once it passes. Wait for any in-flight MCP build to finish or cancel it (`gradle_cancel_build`) before starting commit-time ktlint — the repo allows only one MCP build per project directory. Shell fallback: `./gradlew ktlintCheck` / `./gradlew ktlintFormat` (then `git add` formatted files). Omit ktlint when the staged index contains none of `*.kt`, `*.kts`, or `.editorconfig` (e.g. only `.md`, YAML, or properties). Do not skip based on commit message or PR title alone.
+When that output is non-empty, before `git commit` run `ktlintCheck` via Gradle MCP (`gradle_run_tasks` with `["ktlintCheck"]`, `background: true`, `queueIfBusy: true` + poll `gradle_get_build_status` until terminal success). If it fails, fix violations with `gradle_run_tasks` `["ktlintFormat"]` (same poll pattern) or manual edits, `git add` the changed files, re-run `ktlintCheck`, and only commit once it passes. Wait for any in-flight MCP build to finish or cancel it (`gradle_cancel_build`) before starting commit-time ktlint — the repo allows only one MCP build per project directory. Shell fallback: `./gradlew ktlintCheck` / `./gradlew ktlintFormat` (then `git add` formatted files). Omit ktlint when the staged index contains none of `*.kt`, `*.kts`, or `.editorconfig` (e.g. only `.md`, YAML, or properties). Do not skip based on commit message or PR title alone.
 
 `ktlintFormat` runs project-wide across all ktlint-enabled subprojects, not only staged files. Re-stage only the intended commit paths after format; if format touched other files, leave them unstaged or restore them — do not broaden `git add`.
 
