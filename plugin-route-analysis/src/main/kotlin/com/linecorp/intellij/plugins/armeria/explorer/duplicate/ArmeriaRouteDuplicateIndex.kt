@@ -14,7 +14,6 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnal
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
-import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKnownHttpServiceClassifier
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 
 /**
@@ -41,15 +40,7 @@ object ArmeriaRouteDuplicateIndex {
             RouteMatch.HEALTH_CHECK,
         )
 
-    private fun isBuiltInServiceRegistration(route: ArmeriaRoute): Boolean {
-        if (route.isDocService) {
-            return true
-        }
-        if (route.routeMatch != RouteMatch.SERVICE && route.routeMatch != RouteMatch.SERVICE_UNDER) {
-            return false
-        }
-        return ArmeriaKnownHttpServiceClassifier.excludeFromDuplicateIndex(route.target)
-    }
+    private fun isBuiltInServiceRegistration(route: ArmeriaRoute): Boolean = route.isDocService || route.excludeFromDuplicateIndex
 
     fun duplicateHitsInFile(
         project: Project,

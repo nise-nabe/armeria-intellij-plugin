@@ -126,7 +126,7 @@ object ArmeriaRouteCollectorServiceRegistration {
             } ?: return false
         val target = ArmeriaRouteTargetExtractor.extractTarget(implementationExpression)
         val serviceTypeHint =
-            ArmeriaRouteTargetExtractor.extractKnownServiceType(implementationExpression) ?: target
+            ArmeriaRouteTargetExtractor.extractKnownServiceType(implementationExpression).orEmpty()
         return addServiceRegistrationRoute(
             element = expression,
             registrationKey = registrationKey,
@@ -159,7 +159,7 @@ object ArmeriaRouteCollectorServiceRegistration {
             return false
         }
         val registrationMethod = CoreServiceRegistrationMethod.fromMethodName(methodName) ?: return false
-        val kind = ArmeriaKnownHttpServiceClassifier.classify(serviceTypeHint, target)
+        val kind = ArmeriaKnownHttpServiceClassifier.classify(serviceTypeHint)
         val protocol = ArmeriaKnownHttpServiceClassifier.protocol(kind)
         val routeMatch = ArmeriaKnownHttpServiceClassifier.routeMatch(kind, registrationMethod)
         val annotatedServiceHasPathPrefix =
@@ -183,6 +183,7 @@ object ArmeriaRouteCollectorServiceRegistration {
                 routeMatch = routeMatch,
                 targetUnresolved = targetUnresolved,
                 isDocService = ArmeriaKnownHttpServiceClassifier.isDocService(kind),
+                excludeFromDuplicateIndex = ArmeriaKnownHttpServiceClassifier.excludeFromDuplicateIndex(kind),
                 annotatedServiceHasPathPrefix = annotatedServiceHasPathPrefix,
                 decorators = programmaticDecorators,
                 timeoutHints = timeoutHints,

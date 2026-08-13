@@ -43,6 +43,14 @@ class ArmeriaKnownHttpServiceClassifierTest {
             KnownHttpServiceKind.FILE,
             ArmeriaKnownHttpServiceClassifier.classify("FileService"),
         )
+        assertEquals(
+            KnownHttpServiceKind.FILE,
+            ArmeriaKnownHttpServiceClassifier.classify("new FileService()"),
+        )
+        assertEquals(
+            KnownHttpServiceKind.DOC_SERVICE,
+            ArmeriaKnownHttpServiceClassifier.classify("new DocService()"),
+        )
     }
 
     @Test
@@ -66,6 +74,10 @@ class ArmeriaKnownHttpServiceClassifierTest {
         assertEquals(
             KnownHttpServiceKind.HTTP,
             ArmeriaKnownHttpServiceClassifier.classify("example.FileService.of()"),
+        )
+        assertEquals(
+            KnownHttpServiceKind.HTTP,
+            ArmeriaKnownHttpServiceClassifier.classify("new example.FileService()"),
         )
     }
 

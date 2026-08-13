@@ -113,7 +113,7 @@ fun JavaCodeInsightTestFixture.registerKnownHttpServiceStubs() {
         """
         package com.linecorp.armeria.server.metric;
 
-        public final class PrometheusExpositionService {
+        public final class PrometheusExpositionService implements com.linecorp.armeria.server.HttpService {
             public static PrometheusExpositionService of(Object collectorRegistry) {
                 return null;
             }

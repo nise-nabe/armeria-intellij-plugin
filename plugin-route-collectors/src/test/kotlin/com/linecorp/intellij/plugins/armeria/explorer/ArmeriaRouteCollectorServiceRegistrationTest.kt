@@ -518,4 +518,36 @@ class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
         assertEquals(RouteMatch.SERVICE, fileRoute.routeMatch)
         assertEquals("example.FileService", fileRoute.target)
     }
+
+    fun testUserFileServiceVariableIsNotArmeriaFileService() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    FileService files = new FileService();
+                    Server.builder()
+                        .service("/files", files)
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class FileService {
+            }
+            """.trimIndent(),
+        )
+
+        val fileRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/files" }
+        assertEquals(RouteMatch.SERVICE, fileRoute.routeMatch)
+        assertFalse(fileRoute.excludeFromDuplicateIndex)
+    }
 }

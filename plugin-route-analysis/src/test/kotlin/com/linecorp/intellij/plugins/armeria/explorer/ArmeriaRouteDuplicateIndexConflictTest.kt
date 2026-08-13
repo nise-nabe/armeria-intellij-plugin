@@ -359,6 +359,44 @@ class ArmeriaRouteDuplicateIndexConflictTest : ArmeriaFixtureTestBase() {
         assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
     }
 
+    fun testPrometheusExpositionFromHttpServiceVariableDoesNotConflict() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.HttpService;
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.metric.PrometheusExpositionService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    HttpService metrics = PrometheusExpositionService.of(null);
+                    Server.builder()
+                        .service("/metrics", metrics)
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class MetricsHandler {
+                @Get("/metrics")
+                public String metrics() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
+    }
+
     fun testDocServiceDoesNotConflictWithAnnotatedRoute() {
         myFixture.configureByText(
             "Main.java",

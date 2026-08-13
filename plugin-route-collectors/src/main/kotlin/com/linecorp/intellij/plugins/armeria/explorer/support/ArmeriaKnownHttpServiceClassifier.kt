@@ -39,6 +39,9 @@ object ArmeriaKnownHttpServiceClassifier {
     fun classify(typeName: String): KnownHttpServiceKind {
         val className =
             typeName
+                .trim()
+                .removePrefix("new ")
+                .trim()
                 .substringBefore('#')
                 .substringBefore('(')
                 .trim()

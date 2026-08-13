@@ -510,4 +510,58 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         kotlinAssertNotNull(docRoute)
         assertEquals(RouteMatch.NON_HTTP, docRoute.routeMatch)
     }
+
+    fun testUserFileServiceTypedPropertyIsNotArmeriaFileService() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                val files: FileService = FileService()
+                Server.builder()
+                    .service("/files", files)
+                    .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class FileService {
+            }
+            """.trimIndent(),
+        )
+
+        val fileRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/files" }
+        assertEquals(RouteMatch.SERVICE, fileRoute.routeMatch)
+        assertFalse(fileRoute.excludeFromDuplicateIndex)
+    }
+
+    fun testCollectDocServiceRegistrationFromCast() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.HttpService
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.docs.DocService
+
+            fun main() {
+                val docs = DocService()
+                Server.builder()
+                    .service("/docs", docs as HttpService)
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val docRoute = ArmeriaRouteCollector.collect(project).firstOrNull { it.isDocService }
+        kotlinAssertNotNull(docRoute)
+        assertEquals(RouteMatch.NON_HTTP, docRoute.routeMatch)
+    }
 }
