@@ -159,7 +159,7 @@ For optional Kotlin plugin issues, follow the **`ArmeriaClientCollector` / `Arme
 3. Add/adjust tests only when the comment is about missing coverage or you fixed a bug.
 4. For test fixtures: **reuse `setUp()` stubs** — do not duplicate Java FQCN annotations as Kotlin `annotation class` in the same fixture.
 
-When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-empty, run `gradle_run_tasks` with `["ktlintCheck"]` (`background: true` + poll) before committing (see `AGENTS.md` **Commit workflow (coding agents)**). Wait for any in-flight MCP build to finish or cancel it (`gradle_cancel_build`) first. Re-stage the same `<paths>` after `ktlintFormat` — `ktlintFormat` is project-wide, so do not use a broad `git add -u -- '*.kt'` pathspec, which can pick up unrelated Kotlin edits. If `ktlintCheck` still fails after format, apply manual fixes, `git add` those files, and re-run until clean. Commit once before verification:
+When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-empty, run `gradle_run_tasks` with `["ktlintCheck"]` (`background: true`, `queueIfBusy: true` + poll) before committing (see `AGENTS.md` **Commit workflow (coding agents)**). Wait for any in-flight MCP build to finish or cancel it (`gradle_cancel_build`) first. Re-stage the same `<paths>` after `ktlintFormat` — `ktlintFormat` is project-wide, so do not use a broad `git add -u -- '*.kt'` pathspec, which can pick up unrelated Kotlin edits. If `ktlintCheck` still fails after format, apply manual fixes, `git add` those files, and re-run until clean. Commit once before verification:
 
 ```bash
 set -e
@@ -182,9 +182,9 @@ git commit -m "fix: address PR <N> review comments"
 Follow **`gradle-tapi-mcp`** constraints:
 
 1. `gradle_connection_status` — stop if not connected.
-2. **One** `gradle_run_tasks` batching `compileKotlin` plus the test source-set compile task for the suite you will run (`compileTestKotlin` for `:test`; `compileFastTestKotlin` or `fastTestClasses` for `:fastTest` — `src/fastTest` is not covered by `compileTestKotlin`), `background: true` on cold start.
+2. **One** `gradle_run_tasks` batching `compileKotlin` plus the test source-set compile task for the suite you will run (`compileTestKotlin` for `:test`; `compileFastTestKotlin` or `fastTestClasses` for `:fastTest` — `src/fastTest` is not covered by `compileTestKotlin`), `background: true` and `queueIfBusy: true` on cold start.
 3. Poll `gradle_get_build_status` until terminal — omit `includeOutput` while `status: running` unless you need live logs (use `sinceStdoutOffset` / `sinceStderrOffset` for incremental deltas). On failure, re-poll same `buildId` with `includeProblems: true` (compile/task) or `includeTestDetails: true` (tests) before `includeOutput: true` — do **not** shell `./gradlew` for logs.
-4. **One** `gradle_run_tests` batching all affected test classes/methods in a single call.
+4. **One** test run: `gradle_run_tests` with selectors for route modules; for `:plugin` use `gradle_run_tasks` `{ "tasks": [":plugin:test"], "arguments": ["--tests", "FQCN"] }` (`background: true`, `queueIfBusy: true`). Do not call `gradle_run_tests` without selectors or with `taskPath: ":plugin:test"`.
 5. On failure, rerun **only** the failing method(s) — not the full class suite.
 
 | Changed code in | Compile | Tests |

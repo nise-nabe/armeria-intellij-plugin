@@ -37,8 +37,9 @@ A terminal poll with only `failedTasks` / `error` is **not** enough to fix compi
 
 | Failure kind | First re-poll flags | If still insufficient |
 |--------------|---------------------|-------------------------|
-| Compile / task (`GRADLE_TASK`, `compile*Kotlin` in `failedTasks`) | `includeProblems: true` | `includeOutput: true`, or read `recordDirectory`/`.gradle/mcp-builds/<buildId>/stdout.log` |
+| Compile / task (`GRADLE_TASK`, including TAPI wrapper `Could not execute build using connection…` when `failedTasks` is non-empty) | `includeProblems: true` | `includeOutput: true`, or read `recordDirectory`/`.gradle/mcp-builds/<buildId>/stdout.log` |
 | Test (`TEST`, or `testFailures` expected) | `includeTestDetails: true` | `includeOutput: true` |
+| Instant `Requested test task with path ':…:test' cannot be found` | Retry `gradle_run_tasks` on that path (`arguments: ["--tests", "FQCN"]` if selecting) — not shell | — |
 | Any | `includeProblems: true` + `includeTestDetails: true` when both may apply | disk logs above |
 
 **Do not** run shell `./gradlew <same-task>` to obtain error text MCP already captured. Shell `./gradlew` is for MCP unresponsiveness or CI parity only.
@@ -89,27 +90,29 @@ Use `projectPath` on model tools to scope to a submodule and avoid huge response
 
 | Goal | Approach |
 |------|----------|
-| Verify several changed tests | **Batch** them in **one** `gradle_run_tests` via `testMethods`, `testClasses`, or `includePatterns` |
+| Verify several changed tests | **Batch** them in **one** `gradle_run_tests` via `testMethods`, `testClasses`, or `includePatterns` (selectors required) |
+| Run a whole `:test` / `:fastTest` suite | `gradle_run_tasks` with `tasks: [":mod:test"]` (or `[":mod:fastTest"]`) — do **not** call `gradle_run_tests` without selectors |
+| Selected tests in `:plugin` | `gradle_run_tasks` `{ "tasks": [":plugin:test"], "arguments": ["--tests", "FQCN"], "background": true, "queueIfBusy": true }` — `gradle_run_tests` + `taskPath: ":plugin:test"` often fails instantly (`Requested test task … cannot be found`) |
 | Verify both `:test` and custom `JvmTestSuite` (`fastTest`) | **One** `gradle_run_tests` with `tasks: [":mod:test", ":mod:fastTest"]` + `includePatterns` |
-| Chain compile → test without manual wait | **One** `gradle_run_tasks` with `background: true` and `queueIfBusy: true` on the second call (queue depth max 3 per project) |
+| Chain compile → ktlint → test without manual wait | Each call `background: true` **and** `queueIfBusy: true` (queue depth max 3 per project) |
 | Parallel MCP test calls on this repo | **Not supported** — wait for the current build, `gradle_cancel_build`, or use `queueIfBusy: true` |
 | Isolate a single failing class/method | One call per class/method; wait for terminal status before the next |
 | Parallel tests across different repos | Each `projectDirectory` with `gradle_connect` + `background: true` (server pool limit) |
 
 ```json
 {
-  "taskPath": ":plugin:test",
+  "taskPath": ":plugin-route-analysis:fastTest",
   "testMethods": {
-    "com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteTreeBuilderTest": ["buildRoot_groupsRoutesByModule"],
-    "com.linecorp.intellij.plugins.armeria.other.OtherTest": ["testX"]
+    "com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteTreeBuilderTest": ["buildRoot_groupsRoutesByModule"]
   },
-  "background": true
+  "background": true,
+  "queueIfBusy": true
 }
 ```
 
 Do **not** run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` on the same checkout concurrently — IntelliJ Platform test workers compete for the same sandbox and can hang for many minutes.
 
-In multi-project builds, prefer explicit `taskPath` or `tasks` (e.g. `taskPath: ":plugin:test"`). Unscoped `testClasses`/`testMethods` auto-infer `taskPath` when unambiguous (single JVM test task, or all classes resolve to one subproject with one suite); successful inference sets `taskPathInferred: true`. When inference is ambiguous, `INVALID_ARGUMENT` includes `suggestedTaskPaths` (capped) and a `hint`.
+In multi-project builds, prefer explicit `taskPath` or `tasks` (e.g. `taskPath: ":plugin-route-analysis:test"`). Unscoped `testClasses`/`testMethods` auto-infer `taskPath` when unambiguous (single JVM test task, or all classes resolve to one subproject with one suite); successful inference sets `taskPathInferred: true`. When inference is ambiguous, `INVALID_ARGUMENT` includes `suggestedTaskPaths` (capped) and a `hint`. `INVALID_ARGUMENT` with no selectors means you wanted a whole suite — switch to `gradle_run_tasks`.
 
 ## When to use MCP vs shell
 
@@ -117,14 +120,15 @@ In multi-project builds, prefer explicit `taskPath` or `tasks` (e.g. `taskPath: 
 |----------|--------|
 | Any Gradle task (default) | **MCP** `gradle_run_tasks` / `gradle_run_tests` |
 | Compile check (`:plugin:compileKotlin`), daemon warm | MCP `gradle_run_tasks` foreground — sub-second to ~2s, clean JSON |
-| Compile check, cold start (first MCP build in session) | MCP `gradle_run_tasks` with `background: true` + poll |
-| Full `build` or `:plugin:test` | MCP with `background: true` + poll `gradle_get_build_status` |
-| Single test class (daemon + sandbox warm) | MCP `gradle_run_tests` with **one** class and `taskPath: ":plugin:test"`, `background: true` + polling — often ~5s |
-| Single test method | MCP `gradle_run_tests` with `taskPath: ":plugin:test"` and `testMethods: { "ClassName": ["methodName"] }`, or `testClasses: ["ClassName.methodName"]` (auto-normalized) |
+| Compile check, cold start (first MCP build in session) | MCP `gradle_run_tasks` with `background: true`, `queueIfBusy: true` + poll |
+| Full `build` or `:plugin:test` | MCP `gradle_run_tasks` with `background: true`, `queueIfBusy: true` + poll `gradle_get_build_status` |
+| Single test class in a route `:test` suite | MCP `gradle_run_tests` with **one** class and `taskPath: ":plugin-route-collectors:test"`, `background: true`, `queueIfBusy: true` |
+| Single test class/method in `:plugin` | MCP `gradle_run_tasks` `{ "tasks": [":plugin:test"], "arguments": ["--tests", "FQCN"], "background": true, "queueIfBusy": true }` |
+| Single test method in a route `:fastTest` suite | MCP `gradle_run_tests` with `taskPath: ":plugin-route-analysis:fastTest"` and `testMethods: { "FQCN": ["methodName"] }`, `background: true`, `queueIfBusy: true` |
 | MCP server unresponsive / all tools timeout | **Shell** `./gradlew` after `gradle_list_builds` / disk recovery |
 | PR / CI parity check (after MCP verify) | Shell `./gradlew build` when you need exact CI command parity |
 
-On `BUILD_ALREADY_RUNNING`: poll `gradle_get_build_status` with `error.activeBuildId`, `gradle_cancel_build` if the run is stale, batch pending tests into one `gradle_run_tests`, or enqueue with `queueIfBusy: true` and `background: true`.
+On `BUILD_ALREADY_RUNNING`: prefer not hitting it — pass `queueIfBusy: true` with every `background: true` call. If it still happens, poll `gradle_get_build_status` with `error.activeBuildId`, or `gradle_cancel_build` if the run is stale.
 
 ## Recovering from hung or stuck tests
 
@@ -146,7 +150,7 @@ rm -rf .intellijPlatform/sandbox/plugin/IU-*/system-test
 ```
 
 3. Retry **one** verification path only:
-   - MCP: a **single** `gradle_run_tests` (batch multiple classes/methods when needed), `background: true`, then poll `gradle_get_build_status`
+   - MCP: a **single** `gradle_run_tasks` `{ "tasks": [":plugin:test"], "arguments": ["--tests", "FQCN"], "background": true, "queueIfBusy": true }`, then poll `gradle_get_build_status`. Route-module classes: `gradle_run_tests` with selectors (not `taskPath: ":plugin:test"`).
    - Shell: `./gradlew :plugin:test --tests 'fully.qualified.ClassName'`
 
 After the sandbox is warm, single-class MCP runs often finish in a few seconds. The first cold run can take several minutes when the IDE distribution is not yet cached.
@@ -163,26 +167,39 @@ After the sandbox is warm, single-class MCP runs often finish in a few seconds. 
 
 ### Long or cold builds: background + poll (or rely on auto-detach)
 
-Foreground builds auto-detach before the MCP client times out, returning a `buildId` you can poll. For cold starts (`build`, `:plugin:test`) or anything that may exceed ~30s, prefer explicit `background: true` so polling starts immediately.
+Foreground builds auto-detach before the MCP client times out, returning a `buildId` you can poll. For cold starts (`build`, `:plugin:test`) or anything that may exceed ~30s, prefer explicit `background: true` and `queueIfBusy: true` so polling starts immediately.
 
-1. Start with `background: true`:
+1. Start with `background: true` and `queueIfBusy: true`:
 
 ```json
 {
   "tasks": [":plugin:compileKotlin"],
-  "background": true
+  "background": true,
+  "queueIfBusy": true
 }
 ```
 
-Or for test selection:
+Or for selected tests in a route `fastTest` suite (`gradle_run_tests`; classes under `src/fastTest` are not `:test`):
 
 ```json
 {
-  "taskPath": ":plugin:test",
+  "taskPath": ":plugin-route-analysis:fastTest",
   "testMethods": {
     "com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteTreeBuilderTest": ["buildRoot_groupsRoutesByModule"]
   },
-  "background": true
+  "background": true,
+  "queueIfBusy": true
+}
+```
+
+For selected tests in `:plugin`, use `gradle_run_tasks` instead of `gradle_run_tests`:
+
+```json
+{
+  "tasks": [":plugin:test"],
+  "arguments": ["--tests", "com.linecorp.intellij.plugins.armeria.test.ArmeriaTestMethodInserterTest"],
+  "background": true,
+  "queueIfBusy": true
 }
 ```
 
@@ -201,8 +218,9 @@ If you lose the `buildId`, use `gradle_list_builds` and poll the most recent ent
 ```bash
 ./gradlew :plugin:compileKotlin
 ./gradlew :plugin:test
-# or a single class:
-./gradlew :plugin:test --tests 'com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteTreeBuilderTest'
+# or a single class (match the suite that contains it):
+./gradlew :plugin:test --tests 'com.linecorp.intellij.plugins.armeria.test.ArmeriaTestMethodInserterTest'
+./gradlew :plugin-route-analysis:fastTest --tests 'com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteTreeBuilderTest'
 ./gradlew build
 ```
 
@@ -229,31 +247,33 @@ If every MCP call times out but `./gradlew` still works:
 
 | Goal | MCP tool (preferred) | Shell fallback |
 |------|---------------------|----------------|
-| Full verify | `gradle_run_tasks` `{ "tasks": ["build"], "background": true }` | `./gradlew build` |
-| Plugin fixture tests | `gradle_run_tasks` `{ "tasks": [":plugin:test"], "background": true }` | `./gradlew :plugin:test` |
-| Route-analysis fixture tests | `gradle_run_tasks` `{ "tasks": [":plugin-route-analysis:test"], "background": true }` | `./gradlew :plugin-route-analysis:test` |
-| Fast unit tests | `gradle_run_tasks` `{ "tasks": [":plugin-route-analysis:fastTest"], "background": true }` | `./gradlew :plugin-route-analysis:fastTest` |
-| Route-analysis fixture + fast in one MCP build | `gradle_run_tests` `{ "tasks": [":plugin-route-analysis:test", ":plugin-route-analysis:fastTest"], "includePatterns": ["FQCN"], "background": true }` | `./gradlew :plugin-route-analysis:test :plugin-route-analysis:fastTest --tests 'FQCN'` |
-| Route-analysis checks (fixture + fast) | `gradle_run_tasks` `{ "tasks": [":plugin-route-analysis:check"], "background": true }` | `./gradlew :plugin-route-analysis:check` |
-| Single test class | `gradle_run_tests` `{ "taskPath": ":plugin-route-analysis:test", "testClasses": ["FQCN"], "background": true }` | `./gradlew :plugin-route-analysis:test --tests 'FQCN'` |
-| Multiple test classes/methods | `gradle_run_tests` `{ "taskPath": ":plugin-route-analysis:test", "testMethods": { ... }, "background": true }` | `./gradlew :plugin-route-analysis:test --tests 'FQCN'` per class |
-| Single test method | `gradle_run_tests` `{ "taskPath": ":plugin-route-analysis:test", "testMethods": { "FQCN": ["method"] }, "background": true }` | `./gradlew :plugin-route-analysis:test --tests 'FQCN.method'` |
+| Full verify | `gradle_run_tasks` `{ "tasks": ["build"], "background": true, "queueIfBusy": true }` | `./gradlew build` |
+| Plugin fixture tests | `gradle_run_tasks` `{ "tasks": [":plugin:test"], "background": true, "queueIfBusy": true }` — not `gradle_run_tests` | `./gradlew :plugin:test` |
+| Selected `:plugin` tests | `gradle_run_tasks` `{ "tasks": [":plugin:test"], "arguments": ["--tests", "FQCN"], "background": true, "queueIfBusy": true }` | `./gradlew :plugin:test --tests 'FQCN'` |
+| Route-analysis fixture tests | `gradle_run_tasks` `{ "tasks": [":plugin-route-analysis:test"], "background": true, "queueIfBusy": true }` | `./gradlew :plugin-route-analysis:test` |
+| Fast unit tests | `gradle_run_tasks` `{ "tasks": [":plugin-route-analysis:fastTest"], "background": true, "queueIfBusy": true }` | `./gradlew :plugin-route-analysis:fastTest` |
+| Route-analysis fixture + fast in one MCP build | `gradle_run_tests` `{ "tasks": [":plugin-route-analysis:test", ":plugin-route-analysis:fastTest"], "includePatterns": ["FQCN"], "background": true, "queueIfBusy": true }` | `./gradlew :plugin-route-analysis:test :plugin-route-analysis:fastTest --tests 'FQCN'` |
+| Route-analysis checks (fixture + fast) | `gradle_run_tasks` `{ "tasks": [":plugin-route-analysis:check"], "background": true, "queueIfBusy": true }` | `./gradlew :plugin-route-analysis:check` |
+| Single test class (route modules) | `gradle_run_tests` `{ "taskPath": ":plugin-route-analysis:test", "testClasses": ["FQCN"], "background": true, "queueIfBusy": true }` | `./gradlew :plugin-route-analysis:test --tests 'FQCN'` |
+| Multiple test classes/methods | `gradle_run_tests` `{ "taskPath": ":plugin-route-analysis:test", "testMethods": { ... }, "background": true, "queueIfBusy": true }` | `./gradlew :plugin-route-analysis:test --tests 'FQCN'` per class |
+| Single test method | `gradle_run_tests` `{ "taskPath": ":plugin-route-analysis:test", "testMethods": { "FQCN": ["method"] }, "background": true, "queueIfBusy": true }` | `./gradlew :plugin-route-analysis:test --tests 'FQCN.method'` |
 | Fast compile gate | `gradle_run_tasks` `{ "tasks": [":plugin:compileKotlin"] }` | `./gradlew :plugin:compileKotlin` |
-| Lint Kotlin (when Kotlin/`.editorconfig` staged) | `gradle_run_tasks` `{ "tasks": ["ktlintCheck"], "background": true }` | `./gradlew ktlintCheck` |
+| Lint Kotlin (when Kotlin/`.editorconfig` staged) | `gradle_run_tasks` `{ "tasks": ["ktlintCheck"], "background": true, "queueIfBusy": true }` | `./gradlew ktlintCheck` |
 
 Prefer MCP for all verification. Use shell only when MCP is unresponsive or for final CI parity before merge.
 
 ### Recommended agent workflow (IntelliJ plugin changes)
 
 1. `gradle_connection_status` — confirm MCP is connected.
-2. `gradle_run_tasks` with `[":plugin:compileKotlin", ":plugin:compileTestKotlin"]` (foreground if warm, else `background: true` + poll).
-3. Before each `git commit` when `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-empty, run `gradle_run_tasks` with `["ktlintCheck"]` (`background: true` + poll). On failure, apply `gradle_run_tasks` `["ktlintFormat"]` or manual fixes, `git add` the changed files, and re-run until clean. Wait for any in-flight MCP build to finish or cancel it (`gradle_cancel_build`) first. `ktlintFormat` is project-wide — re-stage only intended paths. Root `ktlintCheck` does not cover `build-logic/` or `settings.gradle.kts`; when all staged Kotlin is in those locations, manually review style; when a commit mixes those paths with plugin-module Kotlin, manually review the `build-logic/` and `settings.gradle.kts` portions even if `ktlintCheck` passes — see `AGENTS.md` **Commit workflow (coding agents)**.
+2. `gradle_run_tasks` with `[":plugin:compileKotlin", ":plugin:compileTestKotlin"]` (foreground if warm, else `background: true`, `queueIfBusy: true` + poll).
+3. Before each `git commit` when `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-empty, run `gradle_run_tasks` with `["ktlintCheck"]` (`background: true`, `queueIfBusy: true` + poll). On failure, apply `gradle_run_tasks` `["ktlintFormat"]` or manual fixes, `git add` the changed files, and re-run until clean. Wait for any in-flight MCP build to finish or cancel it (`gradle_cancel_build`) first. `ktlintFormat` is project-wide — re-stage only intended paths. Root `ktlintCheck` does not cover `build-logic/` or `settings.gradle.kts`; when all staged Kotlin is in those locations, manually review style; when a commit mixes those paths with plugin-module Kotlin, manually review the `build-logic/` and `settings.gradle.kts` portions even if `ktlintCheck` passes — see `AGENTS.md` **Commit workflow (coding agents)**.
 4. Verify tests via MCP (one build at a time on this repo):
-   - Batch all changed classes/methods into **one** `gradle_run_tests` when doing a verification pass.
+   - Batch all changed classes/methods into **one** `gradle_run_tests` when doing a verification pass (selectors required; not `:plugin:test`).
+   - For `:plugin` tests, use `gradle_run_tasks` `[":plugin:test"]` plus `arguments: ["--tests", "FQCN"]` when selecting classes.
    - When isolating failures, run one class or method per call; wait for terminal status (or `gradle_cancel_build`) before the next.
-   - Use `background: true`; on failure follow **Failure diagnosis** (`includeProblems` / `includeTestDetails`, then `includeOutput` if needed) — do not shell `./gradlew` for logs.
+   - Use `background: true` and `queueIfBusy: true`; on failure follow **Failure diagnosis** (`includeProblems` / `includeTestDetails`, then `includeOutput` if needed) — do not shell `./gradlew` for logs.
    - Do not overlap MCP runs with shell `./gradlew :plugin:test`.
-5. Before opening a PR, run `gradle_run_tasks` with `["build"]` and `background: true`, poll to completion, then optionally shell `./gradlew build` for exact CI parity if MCP already passed.
+5. Before opening a PR, run `gradle_run_tasks` with `["build"]`, `background: true`, and `queueIfBusy: true`, poll to completion, then optionally shell `./gradlew build` for exact CI parity if MCP already passed.
 
 ### JDK / toolchain debugging
 
@@ -276,18 +296,20 @@ If `:plugin:test` fails with many unrelated test errors and a stack trace mentio
 rm -rf .intellijPlatform/sandbox/plugin/IU-*/system-test
 ```
 
-Then rerun `:plugin:test` or `build` via shell or MCP (background + polling).
+Then rerun `:plugin:test` or `build` via shell or MCP (`background: true`, `queueIfBusy: true` + poll).
 
 ## Troubleshooting
 
 | Symptom | Action |
 |---------|--------|
-| `status: failed` but only `failedTasks` / generic `error` | Re-poll same `buildId` with `includeProblems: true` (compile) or `includeTestDetails: true` (tests); then `includeOutput: true` or read `recordDirectory`/stdout.log — **do not** shell `./gradlew` |
+| `status: failed` but only `failedTasks` / generic `error` (including TAPI `Could not execute build using connection…` with non-empty `failedTasks`) | Re-poll same `buildId` with `includeProblems: true` (compile/ktlint) or `includeTestDetails: true` (tests); then `includeOutput: true` or read `recordDirectory`/stdout.log — **do not** shell `./gradlew`. Default polls omit `problems`; Kotlin stdout tails often stop at `Compilation error. See log for more details`. |
+| `Requested test task with path ':plugin:test' cannot be found` | Instant TestLauncher miss. Retry `gradle_run_tasks` `{ "tasks": [":plugin:test"], "arguments": ["--tests", "FQCN"] }` — **do not** shell |
+| `At least one of testClasses, testMethods, or includePattern… must be provided` | Whole-suite intent. Use `gradle_run_tasks` `{ "tasks": [":mod:test"] }`, not empty `gradle_run_tests` |
 | Agent used `sleep` then polled | Use `waitUntilComplete: true` on `gradle_get_build_status` instead |
 | `error.code: NOT_CONNECTED` | `gradle_connect` or restart the MCP server |
-| `error.code: BUILD_ALREADY_RUNNING` | Poll `gradle_get_build_status` with `error.activeBuildId`, `gradle_cancel_build` if stale (`not_running` = already finished), batch tests into one `gradle_run_tests`, or use `queueIfBusy: true` with `background: true` |
+| `error.code: BUILD_ALREADY_RUNNING` | Pass `queueIfBusy: true` with `background: true` on the next call; or poll `error.activeBuildId` / `gradle_cancel_build` if stale (`not_running` = already finished) |
 | `error.code: BUILD_QUEUE_FULL` | Queue saturated (max 3 queued per project). Use `error.activeBuildId` to identify the occupying build; `gradle_cancel_build` or wait for completion |
-| `error.code: INVALID_ARGUMENT` on `gradle_run_tests` | Prefer explicit `taskPath` or `tasks` in this multi-project repo; when omitted, use `suggestedTaskPaths` / `hint` from the error, or `gradle_get_project_model` with `includeTasks=true` |
+| `error.code: INVALID_ARGUMENT` on `gradle_run_tests` | Prefer explicit `taskPath` or `tasks`; when omitted, use `suggestedTaskPaths` / `hint`. Missing selectors → `gradle_run_tasks` for the suite |
 | MCP call timed out but Gradle may still be running | Foreground runs auto-detach; use `gradle_list_builds` and poll `gradle_get_build_status` (short polls; do not rely on one long `waitUntilComplete`) |
 | Huge MCP responses | Keep `includeTasks` / `includeTaskSelectors` false unless filtering |
 | Declared Java vs daemon Java differ | Report both toolchain declaration (files) and daemon Java (MCP) |

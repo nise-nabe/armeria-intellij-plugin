@@ -23,9 +23,9 @@ Default workflow:
 1. `gradle_connection_status` — confirm connected (`connectedAny: true`)
 2. `gradle_get_build_environment` for resolved Gradle/Java versions
 3. `gradle_get_project_overview` for module hierarchy
-4. `gradle_run_tasks` / `gradle_run_tests` for verification (`background: true` + poll `gradle_get_build_status` when a run may exceed ~30s)
+4. `gradle_run_tasks` / `gradle_run_tests` for verification (`background: true`, `queueIfBusy: true`, poll `gradle_get_build_status` when a run may exceed ~30s)
 
-Shell `./gradlew` is fallback only: MCP server unresponsive, or final CI parity before merge — **not** to read compile/test output from an MCP build that already failed (re-poll the same `buildId` with `includeProblems` / `includeTestDetails` first; see `gradle-mcp.mdc`). Do not run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` at the same time (sandbox contention). If MCP stops responding, poll with `gradle_get_build_status` or `gradle_list_builds` (reconciles disk records), then fall back to shell. Task discovery: `gradle_get_build_invocations` / `gradle_get_project_model` (see `gradle-tapi-mcp` skill).
+Shell `./gradlew` is fallback only: MCP server unresponsive, or final CI parity before merge — **not** to read compile/test output from an MCP build that already failed (re-poll the same `buildId` with `includeProblems` / `includeTestDetails` first; see `gradle-mcp.mdc`). Do not run MCP `gradle_run_tests` and shell `./gradlew :plugin:test` at the same time (sandbox contention). Do not call `gradle_run_tests` with `taskPath: ":plugin:test"` (TestLauncher often cannot find that task — use `gradle_run_tasks` `[":plugin:test"]` and `arguments: ["--tests", "FQCN"]` for selected classes). Whole suites use `gradle_run_tasks`, not selector-less `gradle_run_tests`. If MCP stops responding, poll with `gradle_get_build_status` or `gradle_list_builds` (reconciles disk records), then fall back to shell. Task discovery: `gradle_get_build_invocations` / `gradle_get_project_model` (see `gradle-tapi-mcp` skill).
 
 ### GitHub and pull requests (Cursor Cloud)
 
@@ -59,7 +59,7 @@ release workflow — tag and publish with `gh release create` after merging a ve
 
 ### Build, test, lint
 
-Prefer **Gradle MCP** for the tasks below. Use `background: true` and poll `gradle_get_build_status` for long runs. Fall back to shell `./gradlew` only when MCP is unavailable or for CI parity — not to read errors from a failed MCP build (re-poll with `includeProblems` / `includeTestDetails`; see `gradle-mcp.mdc`).
+Prefer **Gradle MCP** for the tasks below. Use `background: true` and `queueIfBusy: true`, then poll `gradle_get_build_status` for long runs. Fall back to shell `./gradlew` only when MCP is unavailable or for CI parity — not to read errors from a failed MCP build (re-poll with `includeProblems` / `includeTestDetails`; see `gradle-mcp.mdc`).
 
 | Goal | MCP (preferred) | Shell fallback |
 |------|---------------|----------------|
@@ -67,7 +67,7 @@ Prefer **Gradle MCP** for the tasks below. Use `background: true` and poll `grad
 | Lint Kotlin (commit-time when Kotlin/`.editorconfig` staged; also in `build`/`check`) | `gradle_run_tasks` `["ktlintCheck"]` + background/poll — see **Commit workflow** below | `./gradlew ktlintCheck` |
 | Format Kotlin | `gradle_run_tasks` `["ktlintFormat"]` + background/poll | `./gradlew ktlintFormat` |
 | Compile plugin | `gradle_run_tasks` `[":plugin:compileKotlin"]` | `./gradlew :plugin:compileKotlin` |
-| Plugin fixture tests | `gradle_run_tasks` `[":plugin:test"]` or `gradle_run_tests` per class + background/poll | `./gradlew :plugin:test` |
+| Plugin fixture tests | `gradle_run_tasks` `[":plugin:test"]` (`background: true`, `queueIfBusy: true`); selected classes via `arguments: ["--tests", "FQCN"]` — not `gradle_run_tests` | `./gradlew :plugin:test` |
 | Route collectors fixture tests | `gradle_run_tasks` `[":plugin-route-collectors:test"]` + background/poll | `./gradlew :plugin-route-collectors:test` |
 | Route spring fixture tests | `gradle_run_tasks` `[":plugin-route-spring:test"]` + background/poll | `./gradlew :plugin-route-spring:test` |
 | Route protocol fixture tests | `gradle_run_tasks` `[":plugin-route-protocol:test"]` + background/poll | `./gradlew :plugin-route-protocol:test` |
@@ -99,7 +99,7 @@ Detect staged Kotlin or style config:
 git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'
 ```
 
-When that output is non-empty, before `git commit` run `ktlintCheck` via Gradle MCP (`gradle_run_tasks` with `["ktlintCheck"]`, `background: true` + poll `gradle_get_build_status` until terminal success). If it fails, fix violations with `gradle_run_tasks` `["ktlintFormat"]` (same poll pattern) or manual edits, `git add` the changed files, re-run `ktlintCheck`, and only commit once it passes. Wait for any in-flight MCP build to finish or cancel it (`gradle_cancel_build`) before starting commit-time ktlint — the repo allows only one MCP build per project directory. Shell fallback: `./gradlew ktlintCheck` / `./gradlew ktlintFormat` (then `git add` formatted files). Omit ktlint when the staged index contains none of `*.kt`, `*.kts`, or `.editorconfig` (e.g. only `.md`, YAML, or properties). Do not skip based on commit message or PR title alone.
+When that output is non-empty, before `git commit` run `ktlintCheck` via Gradle MCP (`gradle_run_tasks` with `["ktlintCheck"]`, `background: true`, `queueIfBusy: true` + poll `gradle_get_build_status` until terminal success). If it fails, fix violations with `gradle_run_tasks` `["ktlintFormat"]` (same poll pattern) or manual edits, `git add` the changed files, re-run `ktlintCheck`, and only commit once it passes. Wait for any in-flight MCP build to finish or cancel it (`gradle_cancel_build`) before starting commit-time ktlint — the repo allows only one MCP build per project directory. Shell fallback: `./gradlew ktlintCheck` / `./gradlew ktlintFormat` (then `git add` formatted files). Omit ktlint when the staged index contains none of `*.kt`, `*.kts`, or `.editorconfig` (e.g. only `.md`, YAML, or properties). Do not skip based on commit message or PR title alone.
 
 `ktlintFormat` runs project-wide across all ktlint-enabled subprojects, not only staged files. Re-stage only the intended commit paths after format; if format touched other files, leave them unstaged or restore them — do not broaden `git add`.
 
