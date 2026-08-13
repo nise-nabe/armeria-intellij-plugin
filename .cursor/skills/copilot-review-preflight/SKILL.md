@@ -32,6 +32,7 @@ final pass before requesting review.
 | Route/client PSI collectors, Spring YAML/properties, virtualHost | `armeria-route-psi-analysis` |
 | Gradle build/test via MCP | `gradle-tapi-mcp` |
 | PR body format | `.cursor/rules/pr-description-format.mdc` |
+| Comments / KDoc in Kotlin | `semantic-comments` |
 
 ## Quick checklist by change type
 

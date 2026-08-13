@@ -1,0 +1,13 @@
+---
+description: Semantic comments and KDoc for Kotlin — specification-style comments, not syntax narration
+globs: "**/*.kt,**/*.kts"
+alwaysApply: false
+---
+
+# Semantic comments
+
+When adding or editing comments in Kotlin sources, follow `.github/instructions/semantic-comments.instructions.md`.
+
+- Document observable behavior, constraints, and non-obvious rationale.
+- KDoc on public API; user-visible text via `message()` + `ArmeriaBundle.properties`.
+- For complex collectors/PSI logic, outline the spec in comments before implementing.

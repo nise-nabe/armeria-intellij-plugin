@@ -26,6 +26,7 @@ Pick **one** path below. Do **not** read unrelated skills in full.
 | Route collectors, PSI, Spring config | `armeria-route-psi-analysis` |
 | Gradle verify (after you know the task) | `gradle-tapi-mcp` — verification table only |
 | Pre-PR Copilot patterns | `copilot-review-preflight` — checklist for changed area only |
+| Comments / KDoc in Kotlin | `semantic-comments` |
 
 ## Session reuse
 

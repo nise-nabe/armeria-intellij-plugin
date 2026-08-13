@@ -85,6 +85,8 @@ Prefer **Gradle MCP** for the tasks below. Use `background: true` and poll `grad
 
 Kotlin style is enforced by ktlint (`com.linecorp.intellij.ktlint` convention, `ktlint_official`). `ktlintCheck` is part of `check` / `build`.
 
+**Semantic comments:** coding agents should write specification-style comments and KDoc (observable behavior, constraints, non-obvious rationale)—not syntax narration or user-visible UI text. See `.github/instructions/semantic-comments.instructions.md` and `.cursor/skills/semantic-comments/SKILL.md`.
+
 ### Commit workflow (coding agents)
 
 Detect staged Kotlin or style config:
