@@ -24,7 +24,11 @@ final pass before requesting review.
 
 | Area | Skill |
 |------|-------|
+| **Route task first** | `workflow-router` |
+| **`/thermos` branch audit** | `thermo-nuclear-review` |
+| **Cloud Agent post-implementation verify** | `thermo-nuclear-review` (self-verification) |
 | **Addressing PR review comments** | `pr-review-response` |
+| **Issue → PR** | `issue-to-pr` |
 | UI, run configs, tool windows, inspections, module placement | `intellij-armeria-plugin` |
 | Route/client PSI collectors, Spring YAML/properties, virtualHost | `armeria-route-psi-analysis` |
 | Gradle build/test via MCP | `gradle-tapi-mcp` |
@@ -112,13 +116,16 @@ When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-em
 ## Verification before PR
 
 1. Read the specialized skill for your change area.
-2. Run compile/tests via Gradle MCP with the correct module `taskPath` (see `gradle-tapi-mcp`).
-3. Scan the diff for `expression.text`, hard-coded `"` strings in UI code (including
+2. Run compile/tests via Gradle MCP when Kotlin/plugin code changed (see `gradle-tapi-mcp`).
+   Docs-only changes may skip Gradle.
+3. Run `thermo-nuclear-review` self-verification (Phases 1–5) before the first push / `create_pr`
+   — mandatory even when Gradle was skipped.
+4. Scan the diff for `expression.text`, hard-coded `"` strings in UI code (including
    documentation maps), Kotlin imports in shared collectors, tool windows registered only
    under optional `*-integration.xml`, renderer state that is set but never cleared, and
    (for config parsers) missing comment stripping / `:`-in-list-scalar handling / first-match
    `.properties` reads / `getAllFilesByExt` scans / hard-coded UTF-8 `contentsToByteArray`.
-4. Write the PR body as Summary / Changes / Test plan — fold any review-driven edits into
+5. Write the PR body as Summary / Changes / Test plan — fold any review-driven edits into
    **Changes**, do not add "Copilot review fixes" sections.
 
 ## Test plan template

@@ -42,22 +42,23 @@ Agent is already on the feature branch after implementation:
 
 ```bash
 git fetch origin main   # or the cloud task base_branch
-BASE=<baseRefName>      # usually main
+BASE=main               # or cloud task base_branch
 git diff origin/$BASE...HEAD > /tmp/pr-diff.txt
 ```
 
 Use `git diff --name-only origin/$BASE...HEAD` for the changed-file list when no PR exists yet.
 
 - **ManagePullRequest** `get_ci_status` once when a PR already exists and merge-readiness matters.
-- Record `BASE_SHA=$(git merge-base origin/<baseRefName> HEAD)` and `START_HEAD=$(git rev-parse HEAD)`.
+- Record `BASE_SHA=$(git merge-base origin/$BASE HEAD)` and `START_HEAD=$(git rev-parse HEAD)`.
 
 Do not explore on `main`. Do not pass prior session conclusions into later phases.
 
 ## Phase 1 — Deterministic scan (objective, no judgment)
 
-Map `files` from PR metadata to **one** `copilot-review-preflight` subsection. Run only
-checklist items verifiable by Grep / targeted `Read` on changed paths — not a subjective
-P0–P3 essay in the parent agent.
+Map changed paths to **one** `copilot-review-preflight` subsection. When a PR exists, use
+`files` from PR metadata; for Cloud Agent self-verification with no PR yet, use
+`git diff --name-only origin/$BASE...HEAD`. Run only checklist items verifiable by Grep /
+targeted `Read` on changed paths — not a subjective P0–P3 essay in the parent agent.
 
 | Changed area | Preflight section |
 |--------------|-------------------|
@@ -144,12 +145,14 @@ User summary: findings table, SHIP verdict, PR link. State that closure pass ran
 Typical sequence on a feature branch:
 
 1. Implement minimal diff.
-2. **Gradle verify** — compile + targeted tests (`gradle-tapi-mcp`; `issue-to-pr` §4).
-3. **Thermo self-verification** — Phases 1–5 on `origin/<base>...HEAD`; fix P0–P2 on branch.
-4. `ktlintCheck` when `*.kt` / `*.kts` staged; commit fix batches.
+2. **Commit implementation** — thermo diffs use committed history (`origin/<base>...HEAD`).
+3. **Gradle verify** — compile + targeted tests when Kotlin/plugin code changed (`gradle-tapi-mcp`;
+   `issue-to-pr` §5). Skip for docs-only changes.
+4. **Thermo self-verification** — Phases 1–5; fix P0–P2 (and file/fix P3) on branch;
+   `ktlintCheck` before each fix commit when Kotlin is staged.
 5. **Ship** — Phase 6: push, `create_pr` / `update_pr`, optional `post_comment` with findings table.
 
-Do not open or finalize the PR until Phases 1–5 complete with no open P0–P2 rows.
+Do not push or open/finalize the PR until Phases 1–5 complete with no open P0–P2 rows.
 
 ## `/thermos` and session resume
 

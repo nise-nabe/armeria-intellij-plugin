@@ -16,7 +16,7 @@ Pick **one** path below. Do **not** read unrelated skills in full.
 | Cloud Agent post-implementation verification (before final PR) | `thermo-nuclear-review` (self-verification mode) | `pr-review-response` |
 | Address PR review comments / resolve threads | `pr-review-response` | `thermo-nuclear-review` |
 | Fix an issue → open PR | `issue-to-pr` | `pr-review-response` |
-| Docs / `.cursor/` / `AGENTS.md` only | `cloud-github` + target files via Grep | `gradle-tapi-mcp` (full) |
+| Docs / `.cursor/` / `AGENTS.md` only | `thermo-nuclear-review` (self-verification) + `cloud-github` + target files via Grep | `gradle-tapi-mcp` (full) |
 | Plugin / route code (implementation) | Area skill from table below | Full `AGENTS.md` |
 
 ## Area skills (implementation only)
@@ -35,7 +35,7 @@ Pick **one** path below. Do **not** read unrelated skills in full.
 | `/thermos PR N` (audit) | **No** — run full one-shot pipeline at current `HEAD` (Phases 0–6 in `thermo-nuclear-review`) |
 | Cloud Agent implementation → verify → PR | **No** — run thermo self-verification (Phases 1–5) after Gradle verify, before final push/PR |
 | PR comment triage | Optional — resume if same branch and threads already fetched |
-| Issue → PR continuation | Yes — push, PR polish, issue comment |
+| Issue → PR continuation | Yes — push, PR polish, issue comment **only after** thermo Phases 1–5 completed on first push/PR |
 | Push / link issues only | Yes — no re-audit |
 
 **Do not** start a second Cloud session for a "fresh" Thermo look — the skill's closure pass
