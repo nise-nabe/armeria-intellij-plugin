@@ -13,10 +13,11 @@
 
 ### Changed
 
+- Plugin ID is `com.linecorp.armeria` (was `com.linecorp.intellij.armeria-intellij-plugin`) so the descriptor no longer includes the word `intellij`. Existing installs are treated as a different plugin.
 - Route Explorer caches proto route merging so Refresh no longer re-scans `.proto` files on every collect.
 - Route Explorer reads Spring Boot `application.yml` / `.yaml` via IntelliJ YAML PSI (key-level navigation); `.properties` parsing is unchanged. YAML config is skipped when the YAML plugin is unavailable.
 - Split `plugin-route-analysis` `explorer` sources into focused packages (`model`, `collector`, `spring`, `protocol`, `docservice`, `support`, `duplicate`, `navigation`, `ui`).
-- Split the route-analysis codebase into five acyclic Gradle modules: `plugin-route-model` (leaf domain types), `plugin-route-collectors` (annotated / service-registration collectors, decorator/timeout support, `RouteContributor` SPI, public `ArmeriaRouteCollector`, shared test fixtures), `plugin-route-spring` (Spring MVC / Boot / config collectors), `plugin-route-protocol` (GraphQL / gRPC / Thrift), and `plugin-route-analysis` (UI helpers, DocService, navigation, duplicate index, `ArmeriaRouteAnalysisCollector`). `plugin` depends only on `plugin-route-analysis` (transitively `api`-exported to the rest); test fixtures are consumed from `plugin-route-collectors`.
+- Split the route-analysis codebase into five acyclic Gradle modules: `plugin-route-model` (leaf domain types), `plugin-route-collectors` (annotated / service-registration collectors, decorator/timeout support, `RouteContributor` SPI, public `ArmeriaRouteCollector`, shared test fixtures), `plugin-route-spring` (Spring MVC / Boot / config collectors), `plugin-route-protocol` (GraphQL / gRPC / Thrift), and `plugin-route-analysis` (UI helpers, DocService, navigation, duplicate index, `ArmeriaRouteAnalysisCollector`). `plugin-route-analysis` `api`-exports the other route modules for compile; `plugin` composes `plugin-shared`, `plugin-wizard`, and all `plugin-route-*` modules into the main plugin JAR. Test fixtures are consumed from `plugin-route-collectors`.
 - Move DocService runtime route pointer/factory from `explorer.navigation` to `explorer.model.runtime` in `plugin-route-model` so `navigation` is jump-to-source only.
 
 ### Deprecated
@@ -25,6 +26,7 @@
 
 ### Fixed
 
+- Stop packaging Kotlin stdlib and JetBrains annotations into the plugin ZIP so a real IntelliJ IDEA install no longer hits a stdlib classloader conflict at plugin load. Sibling modules (`plugin-wizard`, `plugin-route-*`) are composed into the main plugin JAR, and `plugin.xml` now includes the required description.
 - Blocking-client inspection resolves compile-time path constants (Java `static final`, Kotlin `const val`, and const-interpolated Kotlin string templates) instead of only string literals.
 - Test helper resolution and blocking-client inspection no longer guess which `ServerExtension` applies when multiple `@RegisterExtension` fields are in scope.
 - Spring MVC Route Explorer discovery finds mappings declared on generic base types/interfaces when the concrete controller substitutes type parameters (e.g. `Handler<T>` → `StringHandler`), including multi-level unannotated overrides and interface mappings satisfied by an inherited superclass method.

@@ -1,5 +1,5 @@
 <idea-plugin>
-    <id>com.linecorp.intellij.armeria-intellij-plugin</id>
+    <id>com.linecorp.armeria</id>
     <name>Armeria</name>
     <vendor email="nise.nabe@gmail.com" url="https://github.com/nise-nabe/armeria-intellij-plugin">nise_nabe</vendor>
 

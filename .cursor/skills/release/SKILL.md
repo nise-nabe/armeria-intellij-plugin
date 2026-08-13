@@ -17,7 +17,7 @@ JetBrains Marketplace publishing (`publishPlugin` / `signPlugin`) is **not** con
 |------|----------|
 | Plugin version | `gradle.properties` → `pluginVersion` |
 | Changelog | `plugin/CHANGELOG.md` |
-| Plugin ID | `com.linecorp.intellij.armeria-intellij-plugin` (`plugin/build.gradle.kts`) |
+| Plugin ID | `com.linecorp.armeria` (`plugin/build.gradle.kts`) |
 | Built ZIP | `plugin/build/distributions/plugin-<version>.zip` |
 
 Changelog Gradle settings live in `plugin/build.gradle.kts` and must stay aligned with Keep a Changelog style:

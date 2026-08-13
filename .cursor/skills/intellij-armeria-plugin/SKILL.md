@@ -42,9 +42,11 @@ Cross-module rules to keep the dependency graph acyclic:
 - `plugin-route-spring` and `plugin-route-protocol` may depend on `plugin-route-collectors`
   (transitively `plugin-route-model` + `plugin-shared`). Neither may depend on the other or on
   `plugin-route-analysis`.
-- `plugin-route-analysis` `api`s the four modules above so `plugin/` can consume them transitively.
-- `plugin/` only depends on `plugin-route-analysis` for production wiring; test-side it consumes
-  `testFixtures(project(":plugin-route-collectors"))`.
+- `plugin-route-analysis` `api`s the four modules above so analysis can compile against them.
+- `plugin/` composes `plugin-shared`, `plugin-wizard`, and all `plugin-route-*` modules into the
+  main plugin JAR via `pluginComposedModule`. Do not use bare `implementation(project(...))` for
+  those modules — that ships extra JARs and can pull Kotlin stdlib into the ZIP. Test-side it
+  consumes `testFixtures(project(":plugin-route-collectors"))`.
 
 ## Internationalization (i18n)
 
