@@ -24,6 +24,7 @@
 
 ### Fixed
 
+- Stop packaging Kotlin stdlib and JetBrains annotations into the plugin ZIP so a real IntelliJ IDEA install no longer hits a stdlib classloader conflict at plugin load. Sibling modules (`plugin-wizard`, `plugin-route-*`) are composed into the main plugin JAR, and `plugin.xml` now includes the required description.
 - Blocking-client inspection resolves compile-time path constants (Java `static final`, Kotlin `const val`, and const-interpolated Kotlin string templates) instead of only string literals.
 - Test helper resolution and blocking-client inspection no longer guess which `ServerExtension` applies when multiple `@RegisterExtension` fields are in scope.
 - Spring MVC Route Explorer discovery finds mappings declared on generic base types/interfaces when the concrete controller substitutes type parameters (e.g. `Handler<T>` → `StringHandler`), including multi-level unannotated overrides and interface mappings satisfied by an inherited superclass method.

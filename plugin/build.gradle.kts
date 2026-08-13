@@ -10,10 +10,14 @@ group = "com.linecorp.intellij"
 version = providers.gradleProperty("pluginVersion").get()
 
 dependencies {
-    implementation(project(":plugin-route-analysis"))
-    implementation(project(":plugin-wizard"))
     intellijPlatform {
         pluginComposedModule(implementation(project(":plugin-shared")))
+        pluginComposedModule(implementation(project(":plugin-wizard")))
+        pluginComposedModule(implementation(project(":plugin-route-model")))
+        pluginComposedModule(implementation(project(":plugin-route-collectors")))
+        pluginComposedModule(implementation(project(":plugin-route-spring")))
+        pluginComposedModule(implementation(project(":plugin-route-protocol")))
+        pluginComposedModule(implementation(project(":plugin-route-analysis")))
         intellijIdeaUltimate(
             libs.versions.idea.platform
                 .get(),
@@ -63,6 +67,12 @@ intellijPlatform {
             email = "nise.nabe@gmail.com"
             url = "https://github.com/nise-nabe/armeria-intellij-plugin"
         }
+        description =
+            """
+            IntelliJ IDEA plugin for the Armeria microservice framework.
+            Discover annotated services and client calls, inspect duplicate routes,
+            generate Armeria projects, and run Armeria servers from the IDE.
+            """.trimIndent()
         val changelog = project.changelog
         changeNotes =
             providers.gradleProperty("pluginVersion").map { pluginVersion ->
