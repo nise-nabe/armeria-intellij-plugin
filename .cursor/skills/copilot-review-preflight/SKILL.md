@@ -26,6 +26,7 @@ final pass before requesting review.
 |------|-------|
 | **Route task first** | `workflow-router` |
 | **`/thermos` branch audit** | `thermo-nuclear-review` |
+| **Cloud Agent post-implementation verify** | `thermo-nuclear-review` (self-verification) |
 | **Addressing PR review comments** | `pr-review-response` |
 | **Issue → PR** | `issue-to-pr` |
 | UI, run configs, tool windows, inspections, module placement | `intellij-armeria-plugin` |

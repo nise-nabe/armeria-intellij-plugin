@@ -83,6 +83,8 @@ Prefer **Gradle MCP** for the tasks below. Use `background: true` and poll `grad
 
 **JUnit 5** is enabled on every module `test` suite via `platform-library` / `platform-plugin` conventions (`useJUnitJupiter()` with JUnit Vintage for legacy `fun test*()` cases). New table-driven PSI tests should extend `ArmeriaFixtureTestBase5` / `ArmeriaLightJavaCodeInsightFixtureTestCase5` and use `@ParameterizedTest` where cases differ only by inputs. Route-module `fastTest` suites remain on JUnit 4 (`useJUnit`); use the `test` suite for Jupiter `@ParameterizedTest` with PSI fixtures.
 
+**Cloud Agent self-verification:** after Gradle compile/tests pass on a feature branch, run `thermo-nuclear-review` self-verification (Phases 1–5) before the final push that opens or updates the PR. Fix P0–P2 on branch; closure pass is mandatory. See `.cursor/skills/thermo-nuclear-review/SKILL.md` and `.cursor/rules/agent-workflow.mdc`.
+
 Kotlin style is enforced by ktlint (`com.linecorp.intellij.ktlint` convention, `ktlint_official`). `ktlintCheck` is part of `check` / `build`.
 
 ### Commit workflow (coding agents)

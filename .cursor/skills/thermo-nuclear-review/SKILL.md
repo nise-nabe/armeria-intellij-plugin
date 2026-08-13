@@ -1,12 +1,12 @@
 ---
 name: thermo-nuclear-review
 description: >-
-  One-shot Thermo-nuclear branch audit for /thermos PR N. Independent audit pass,
-  fix P0–P2, file P3 issues, closure verification, SHIP — no second session needed.
-  Not for GitHub inline review-thread triage.
+  One-shot Thermo-nuclear branch audit for /thermos PR N and Cloud Agent post-implementation
+  self-verification. Independent audit pass, fix P0–P2, file P3 issues, closure verification,
+  SHIP — no second session needed. Not for GitHub inline review-thread triage.
 ---
 
-# Thermo-nuclear review (`/thermos PR N`) — one-shot complete
+# Thermo-nuclear review — one-shot complete
 
 For **GitHub review comment threads**, use `pr-review-response` instead.
 
@@ -15,7 +15,19 @@ session. Use **independent passes** inside the session — not IDLE resume acros
 
 Read `workflow-router` only if you have not already routed here.
 
+## Entry modes
+
+| Mode | When | Phase 0 base |
+|------|------|--------------|
+| **`/thermos PR N`** | User or automation requests branch audit on an existing PR | `baseRefName` from PR metadata |
+| **Cloud Agent self-verification** | After implementation + Gradle verify, **before** final push / `create_pr` | `main` (or `base_branch` from cloud task instructions) |
+
+Both modes run the **same Phases 1–6**. Self-verification is mandatory for Cloud Agents even
+when Gradle compile/tests already passed — the closure pass is the built-in second look.
+
 ## Phase 0 — Setup (once)
+
+### `/thermos PR N`
 
 ```bash
 gh pr view N --json headRefName,baseRefName,title,files
@@ -24,7 +36,19 @@ git checkout -B <headRefName> origin/<headRefName>
 git diff origin/<baseRefName>...HEAD > /tmp/pr-diff.txt
 ```
 
-- **ManagePullRequest** `get_ci_status` once when merge-readiness matters.
+### Cloud Agent self-verification
+
+Agent is already on the feature branch after implementation:
+
+```bash
+git fetch origin main   # or the cloud task base_branch
+BASE=<baseRefName>      # usually main
+git diff origin/$BASE...HEAD > /tmp/pr-diff.txt
+```
+
+Use `git diff --name-only origin/$BASE...HEAD` for the changed-file list when no PR exists yet.
+
+- **ManagePullRequest** `get_ci_status` once when a PR already exists and merge-readiness matters.
 - Record `BASE_SHA=$(git merge-base origin/<baseRefName> HEAD)` and `START_HEAD=$(git rev-parse HEAD)`.
 
 Do not explore on `main`. Do not pass prior session conclusions into later phases.
@@ -110,9 +134,22 @@ git push -u origin <headRefName>
 
 - **ManagePullRequest** `update_pr` when behavior changed (fold into Summary/Changes per `pr-description-format.mdc`).
 - **ManagePullRequest** `post_comment` — findings table (fixed / issue / skipped) + test commands.
+  Post the findings table in a **PR comment**, not in the PR body (`pr-description-format.mdc`).
 - Link created P3 issues.
 
 User summary: findings table, SHIP verdict, PR link. State that closure pass ran (no second session required).
+
+## Cloud Agent ordering (with implementation workflows)
+
+Typical sequence on a feature branch:
+
+1. Implement minimal diff.
+2. **Gradle verify** — compile + targeted tests (`gradle-tapi-mcp`; `issue-to-pr` §4).
+3. **Thermo self-verification** — Phases 1–5 on `origin/<base>...HEAD`; fix P0–P2 on branch.
+4. `ktlintCheck` when `*.kt` / `*.kts` staged; commit fix batches.
+5. **Ship** — Phase 6: push, `create_pr` / `update_pr`, optional `post_comment` with findings table.
+
+Do not open or finalize the PR until Phases 1–5 complete with no open P0–P2 rows.
 
 ## `/thermos` and session resume
 

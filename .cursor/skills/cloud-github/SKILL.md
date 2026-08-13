@@ -74,7 +74,8 @@ GitHub Actions runs `./gradlew build` (see `.github/workflows/main.yml`).
 For agent-side verification, prefer:
 
 1. **Gradle MCP** — `gradle_connection_status`, then `gradle_run_tasks` / `gradle_run_tests` with `background: true` + poll (see `gradle-tapi-mcp` skill)
-2. Shell `./gradlew build` only when MCP is unresponsive, returns `BUILD_ALREADY_RUNNING` that cannot be cancelled, or for final CI parity after MCP passes
+2. **Thermo self-verification** — after Gradle verify passes, run `thermo-nuclear-review` Phases 1–5 on the feature branch before the final push / `create_pr` (see `agent-workflow.mdc` and `thermo-nuclear-review` **Cloud Agent self-verification**)
+3. Shell `./gradlew build` only when MCP is unresponsive, returns `BUILD_ALREADY_RUNNING` that cannot be cancelled, or for final CI parity after MCP passes
 
 For GitHub-attached check status on a PR, use **ManagePullRequest** `get_ci_status` (not `gh pr checks`).
 Fall back to `gh pr checks` only when `get_ci_status` fails and `gh auth status` succeeds.

@@ -12,7 +12,8 @@ For PR work (`/thermos`, review fixes), **fetch and checkout the PR head branch 
 ## No duplicate work
 
 - **`/thermos`:** one invocation runs the full pipeline in `thermo-nuclear-review` (deterministic scan → blind audit → fix → **closure pass** → SHIP). Do not ask for a second session for a fresh look — closure pass is the second check.
-- **Resume** IDLE sessions only for continuations (push, issue comment, PR polish) — not to skip Thermo phases on a new `/thermos` request.
+- **Cloud Agent self-verification:** after implementation and Gradle verify, run `thermo-nuclear-review` Phases 1–5 on the feature branch **before** the final push that opens or updates the PR. Fix P0–P2 on branch; closure pass is mandatory. Gradle passing alone is not sufficient to skip thermo.
+- **Resume** IDLE sessions only for continuations (push, issue comment, PR polish) — not to skip Thermo phases on a new `/thermos` request or a new implementation verification.
 - Push-only / link-only follow-ups: create issues or push — **do not** re-run audit or tests.
 
 ## Gradle test tasks
@@ -23,4 +24,4 @@ Modules use the JVM Test Suite plugin (`testing { suites { … } }` in `build-lo
 
 ## Skill routing
 
-Read `workflow-router` first for `/thermos`, PR comment triage, or issue fixes — then only the matching on-demand skill (`thermo-nuclear-review`, `pr-review-response`, or `issue-to-pr`).
+Read `workflow-router` first for `/thermos`, PR comment triage, issue fixes, or Cloud Agent post-implementation verification — then only the matching on-demand skill (`thermo-nuclear-review`, `pr-review-response`, or `issue-to-pr`).
