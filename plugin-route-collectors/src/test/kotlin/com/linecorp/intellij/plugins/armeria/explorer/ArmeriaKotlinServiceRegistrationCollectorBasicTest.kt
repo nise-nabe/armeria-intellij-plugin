@@ -463,4 +463,51 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         assertEquals(DelegationKind.SERVLET, servletRoute.delegationKind)
         assertEquals(RouteProtocol.HTTP.presentableName(), servletRoute.protocol)
     }
+
+    fun testCollectDocServiceRegistrationFromHttpServiceVariable() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.HttpService
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.docs.DocService
+
+            fun main() {
+                val docs: HttpService = DocService()
+                Server.builder()
+                    .service("/docs", docs)
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val docRoute = ArmeriaRouteCollector.collect(project).firstOrNull { it.isDocService }
+        kotlinAssertNotNull(docRoute)
+        assertEquals(RouteMatch.NON_HTTP, docRoute.routeMatch)
+    }
+
+    fun testCollectDocServiceRegistrationWithDecorate() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.docs.DocService
+            import com.linecorp.armeria.server.logging.LoggingService
+
+            fun main() {
+                Server.builder()
+                    .service("/docs", DocService().decorate(LoggingService.newDecorator()))
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val docRoute = ArmeriaRouteCollector.collect(project).firstOrNull { it.isDocService }
+        kotlinAssertNotNull(docRoute)
+        assertEquals(RouteMatch.NON_HTTP, docRoute.routeMatch)
+    }
 }

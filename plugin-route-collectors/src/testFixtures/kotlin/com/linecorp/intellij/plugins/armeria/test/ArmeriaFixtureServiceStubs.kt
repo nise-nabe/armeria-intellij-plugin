@@ -43,6 +43,15 @@ fun JavaCodeInsightTestFixture.registerArmeriaServiceStubs() {
 fun JavaCodeInsightTestFixture.registerKnownHttpServiceStubs() {
     this.addClass(
         """
+        package com.linecorp.armeria.server;
+
+        public interface HttpService {
+            HttpService decorate(Object decorator);
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
         package com.linecorp.armeria.server.grpc;
 
         public final class GrpcService {
@@ -79,7 +88,7 @@ fun JavaCodeInsightTestFixture.registerKnownHttpServiceStubs() {
         """
         package com.linecorp.armeria.server.docs;
 
-        public final class DocService {
+        public final class DocService implements com.linecorp.armeria.server.HttpService {
             public DocService() {
             }
 

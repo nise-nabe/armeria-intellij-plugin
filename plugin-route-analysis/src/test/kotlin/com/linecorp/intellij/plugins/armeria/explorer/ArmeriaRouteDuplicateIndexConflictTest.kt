@@ -394,4 +394,42 @@ class ArmeriaRouteDuplicateIndexConflictTest : ArmeriaFixtureTestBase() {
 
         assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
     }
+
+    fun testAnnotatedFileServiceStillConflictsWithServiceRegistration() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/shared", new HelloService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class FileService {
+                @Get("/shared")
+                public String shared() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class HelloService {}")
+
+        val groups = ArmeriaRouteDuplicateIndex.duplicateGroups(project)
+        assertEquals(1, groups.size)
+        assertEquals(2, groups.single().routes.size)
+    }
 }

@@ -41,6 +41,16 @@ object ArmeriaRouteDuplicateIndex {
             RouteMatch.HEALTH_CHECK,
         )
 
+    private fun isBuiltInServiceRegistration(route: ArmeriaRoute): Boolean {
+        if (route.isDocService) {
+            return true
+        }
+        if (route.routeMatch != RouteMatch.SERVICE && route.routeMatch != RouteMatch.SERVICE_UNDER) {
+            return false
+        }
+        return ArmeriaKnownHttpServiceClassifier.excludeFromDuplicateIndex(route.target)
+    }
+
     fun duplicateHitsInFile(
         project: Project,
         file: PsiFile,
@@ -60,7 +70,7 @@ object ArmeriaRouteDuplicateIndex {
         val moduleRoutesByName =
             routes
                 .filter { it.routeMatch in CHECKED_MATCHES }
-                .filterNot { it.isDocService || ArmeriaKnownHttpServiceClassifier.excludeFromDuplicateIndex(it.target) }
+                .filterNot(::isBuiltInServiceRegistration)
                 .groupBy { it.moduleName }
         for ((_, moduleRoutes) in moduleRoutesByName) {
             if (moduleRoutes.size < 2) {

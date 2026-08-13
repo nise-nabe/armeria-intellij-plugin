@@ -55,6 +55,14 @@ class ArmeriaKnownHttpServiceClassifierTest {
             KnownHttpServiceKind.HTTP,
             ArmeriaKnownHttpServiceClassifier.classify("MyDocServiceHelper"),
         )
+        assertEquals(
+            KnownHttpServiceKind.HTTP,
+            ArmeriaKnownHttpServiceClassifier.classify("example.FileService"),
+        )
+        assertEquals(
+            KnownHttpServiceKind.HTTP,
+            ArmeriaKnownHttpServiceClassifier.classify("example.FileService#get()"),
+        )
     }
 
     @Test

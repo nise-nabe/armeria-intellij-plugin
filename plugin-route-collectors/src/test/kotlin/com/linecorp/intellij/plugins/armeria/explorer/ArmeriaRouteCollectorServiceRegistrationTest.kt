@@ -437,4 +437,85 @@ class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
         assertEquals(RouteProtocol.HTTP.presentableName(), fileRoute.protocol)
         assertEquals("com.linecorp.armeria.server.file.FileService", fileRoute.target)
     }
+
+    fun testCollectDocServiceRegistrationFromHttpServiceVariable() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.HttpService;
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.docs.DocService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    HttpService docs = new DocService();
+                    Server.builder()
+                        .service("/docs", docs)
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val docRoute = ArmeriaRouteCollector.collect(project).firstOrNull { it.isDocService }
+        kotlinAssertNotNull(docRoute)
+        assertEquals(RouteMatch.NON_HTTP, docRoute.routeMatch)
+    }
+
+    fun testCollectDocServiceRegistrationWithDecorate() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.docs.DocService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/docs", new DocService().decorate(null))
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val docRoute = ArmeriaRouteCollector.collect(project).firstOrNull { it.isDocService }
+        kotlinAssertNotNull(docRoute)
+        assertEquals(RouteMatch.NON_HTTP, docRoute.routeMatch)
+    }
+
+    fun testUserFileServiceIsNotArmeriaFileService() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/files", new FileService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class FileService {
+            }
+            """.trimIndent(),
+        )
+
+        val fileRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/files" }
+        assertEquals(RouteMatch.SERVICE, fileRoute.routeMatch)
+        assertEquals("example.FileService", fileRoute.target)
+    }
 }

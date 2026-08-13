@@ -18,8 +18,12 @@ enum class KnownHttpServiceKind {
  * Maps resolved Armeria `HttpService` type names to Route Explorer protocol / match.
  *
  * Classification is by identifier (FQCN or simple name), not raw PSI `.text`.
+ * User types outside `com.linecorp.armeria` are not classified by simple name
+ * (`example.FileService` stays HTTP). Call-chain text (`DocService.builder().build()`)
+ * is classified by identifier tokens for Scala registrations.
  */
 object ArmeriaKnownHttpServiceClassifier {
+    private const val ARMERIA_PACKAGE_PREFIX = "com.linecorp.armeria"
     private val IDENTIFIER = Regex("[A-Za-z_][A-Za-z0-9_]*")
 
     private val KIND_BY_SIMPLE_NAME =
@@ -33,9 +37,26 @@ object ArmeriaKnownHttpServiceClassifier {
         )
 
     fun classify(typeName: String): KnownHttpServiceKind {
-        kindForSimpleName(simpleName(typeName))?.let { return it }
-        IDENTIFIER.findAll(typeName).forEach { match ->
-            kindForSimpleName(canonicalSimpleName(match.value))?.let { return it }
+        val className =
+            typeName
+                .substringBefore('#')
+                .substringBefore('(')
+                .trim()
+        val packagePrefix = className.substringBeforeLast('.', missingDelimiterValue = "")
+        if (packagePrefix.startsWith(ARMERIA_PACKAGE_PREFIX)) {
+            return kindForSimpleName(canonicalSimpleName(className.substringAfterLast('.')))
+                ?: KnownHttpServiceKind.HTTP
+        }
+        if (packagePrefix.isNotEmpty()) {
+            return if ('(' in typeName) {
+                classifyByIdentifierTokens(typeName)
+            } else {
+                KnownHttpServiceKind.HTTP
+            }
+        }
+        kindForSimpleName(canonicalSimpleName(className))?.let { return it }
+        if ('(' in typeName) {
+            return classifyByIdentifierTokens(typeName)
         }
         return KnownHttpServiceKind.HTTP
     }
@@ -52,6 +73,10 @@ object ArmeriaKnownHttpServiceClassifier {
         }
         return KnownHttpServiceKind.HTTP
     }
+
+    fun isKnownServiceType(typeName: String): Boolean = classify(typeName) != KnownHttpServiceKind.HTTP
+
+    fun knownServiceTypeNameOrNull(typeName: String?): String? = typeName?.takeIf(::isKnownServiceType)
 
     fun protocol(kind: KnownHttpServiceKind): RouteProtocol =
         when (kind) {
@@ -94,7 +119,12 @@ object ArmeriaKnownHttpServiceClassifier {
     fun excludeFromDuplicateIndex(target: String): Boolean = excludeFromDuplicateIndex(classify(target))
 
     fun canonicalServiceTypeName(qualifiedOrSimpleName: String): String {
-        val trimmed = qualifiedOrSimpleName.substringBefore('(').trim().trimEnd('?')
+        val trimmed =
+            qualifiedOrSimpleName
+                .substringBefore('#')
+                .substringBefore('(')
+                .trim()
+                .trimEnd('?')
         val simpleName = trimmed.substringAfterLast('.')
         if (!simpleName.endsWith("Builder")) {
             return trimmed
@@ -108,7 +138,12 @@ object ArmeriaKnownHttpServiceClassifier {
         }
     }
 
-    private fun simpleName(typeName: String): String = canonicalSimpleName(canonicalServiceTypeName(typeName).substringAfterLast('.'))
+    private fun classifyByIdentifierTokens(typeName: String): KnownHttpServiceKind {
+        IDENTIFIER.findAll(typeName).forEach { match ->
+            kindForSimpleName(canonicalSimpleName(match.value))?.let { return it }
+        }
+        return KnownHttpServiceKind.HTTP
+    }
 
     private fun canonicalSimpleName(simpleName: String): String =
         if (simpleName.endsWith("Builder")) {

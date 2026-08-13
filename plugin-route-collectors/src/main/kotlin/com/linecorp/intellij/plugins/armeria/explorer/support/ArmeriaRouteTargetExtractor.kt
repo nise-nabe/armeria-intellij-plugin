@@ -1,4 +1,5 @@
 package com.linecorp.intellij.plugins.armeria.explorer.support
+
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiMethodCallExpression
@@ -11,7 +12,12 @@ import com.intellij.psi.PsiVariable
 internal object ArmeriaRouteTargetExtractor {
     private val BUILDER_CHAIN_METHODS = setOf("build", "addService", "addServices")
 
-    fun extractKnownServiceType(expression: PsiExpression): String? {
+    fun extractKnownServiceType(expression: PsiExpression): String? = extractKnownServiceType(expression, mutableSetOf())
+
+    private fun extractKnownServiceType(
+        expression: PsiExpression,
+        visitedVariables: MutableSet<PsiVariable>,
+    ): String? {
         val unwrapped = unwrapCast(expression) ?: return null
         return when (unwrapped) {
             is PsiNewExpression -> {
@@ -19,12 +25,11 @@ internal object ArmeriaRouteTargetExtractor {
                     unwrapped.classReference?.qualifiedName ?: unwrapped.classReference?.referenceName
                 classReference?.let(ArmeriaKnownHttpServiceClassifier::canonicalServiceTypeName)
             }
-            is PsiMethodCallExpression -> extractKnownServiceTypeFromCall(unwrapped)
+            is PsiMethodCallExpression -> extractKnownServiceTypeFromCall(unwrapped, visitedVariables)
             is PsiReferenceExpression -> {
                 ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
                 when (val resolved = unwrapped.resolve()) {
-                    is PsiVariable ->
-                        resolved.type.canonicalText.let(ArmeriaKnownHttpServiceClassifier::canonicalServiceTypeName)
+                    is PsiVariable -> extractKnownServiceTypeFromVariable(resolved, visitedVariables)
                     is PsiClass ->
                         resolved.qualifiedName?.let(ArmeriaKnownHttpServiceClassifier::canonicalServiceTypeName)
                             ?: resolved.name
@@ -33,6 +38,21 @@ internal object ArmeriaRouteTargetExtractor {
             }
             else -> null
         }
+    }
+
+    private fun extractKnownServiceTypeFromVariable(
+        variable: PsiVariable,
+        visitedVariables: MutableSet<PsiVariable>,
+    ): String? {
+        val declaredType = ArmeriaKnownHttpServiceClassifier.canonicalServiceTypeName(variable.type.canonicalText)
+        ArmeriaKnownHttpServiceClassifier.knownServiceTypeNameOrNull(declaredType)?.let { return it }
+        val initializer = variable.initializer ?: return declaredType
+        if (!visitedVariables.add(variable)) {
+            return declaredType
+        }
+        return extractKnownServiceType(initializer, visitedVariables)
+            ?.let(ArmeriaKnownHttpServiceClassifier::knownServiceTypeNameOrNull)
+            ?: declaredType
     }
 
     fun isUnresolvedTarget(
@@ -103,24 +123,23 @@ internal object ArmeriaRouteTargetExtractor {
         }
     }
 
-    private fun extractKnownServiceTypeFromCall(call: PsiMethodCallExpression): String? {
+    private fun extractKnownServiceTypeFromCall(
+        call: PsiMethodCallExpression,
+        visitedVariables: MutableSet<PsiVariable>,
+    ): String? {
         val methodName = call.methodExpression.referenceName
-        if (methodName in BUILDER_CHAIN_METHODS) {
-            val qualifier = call.methodExpression.qualifierExpression
-            if (qualifier != null) {
-                extractKnownServiceType(qualifier)?.let { return it }
-            }
+        val qualifier = call.methodExpression.qualifierExpression
+        if (methodName in BUILDER_CHAIN_METHODS && qualifier != null) {
+            ArmeriaKnownHttpServiceClassifier
+                .knownServiceTypeNameOrNull(extractKnownServiceType(qualifier, visitedVariables))
+                ?.let { return it }
         }
         if (methodName == "builder" || methodName == "of") {
             serviceTypeFromResolvedCall(call)?.let { return it }
-            val qualifier = call.methodExpression.qualifierExpression
-            if (qualifier != null) {
-                extractKnownServiceType(qualifier)?.let { return it }
-            }
+            return if (qualifier != null) extractKnownServiceType(qualifier, visitedVariables) else null
         }
         serviceTypeFromResolvedCall(call)?.let { return it }
-        val qualifier = call.methodExpression.qualifierExpression
-        return if (qualifier != null) extractKnownServiceType(qualifier) else null
+        return if (qualifier != null) extractKnownServiceType(qualifier, visitedVariables) else null
     }
 
     private fun serviceTypeFromResolvedCall(call: PsiMethodCallExpression): String? {
