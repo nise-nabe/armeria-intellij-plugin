@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer.collector.decorator
 import com.intellij.psi.util.PsiTreeUtil
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
@@ -21,7 +22,7 @@ internal object ArmeriaKotlinDecoratorScopeSupport {
         var current: KtExpression? = ArmeriaKotlinDecoratorChainSupport.kotlinChainReceiver(registrationCall)
         while (current != null) {
             val scopeCall = ArmeriaKotlinDecoratorChainSupport.asKotlinCallExpression(current)
-            if (scopeCall != null && ArmeriaKotlinDecoratorChainSupport.resolveKotlinCallName(scopeCall) in BUILDER_SCOPE_METHODS) {
+            if (scopeCall != null && ArmeriaKotlinExpressionSupport.resolveCallName(scopeCall) in BUILDER_SCOPE_METHODS) {
                 val scopeReceiver = extractScopeReceiver(scopeCall)
                 if (scopeReceiver != null &&
                     (
@@ -61,7 +62,7 @@ internal object ArmeriaKotlinDecoratorScopeSupport {
     fun enclosingBuilderScopeCall(registrationCall: KtCallExpression): KtCallExpression? {
         val lambda = registrationCall.getParentOfType<KtLambdaExpression>(strict = true) ?: return null
         val scopeCall = (lambda.parent as? KtValueArgument)?.parent as? KtCallExpression ?: return null
-        val scopeMethod = ArmeriaKotlinDecoratorChainSupport.resolveKotlinCallName(scopeCall) ?: return null
+        val scopeMethod = ArmeriaKotlinExpressionSupport.resolveCallName(scopeCall) ?: return null
         return scopeCall.takeIf { scopeMethod in BUILDER_SCOPE_METHODS }
     }
 
@@ -69,7 +70,7 @@ internal object ArmeriaKotlinDecoratorScopeSupport {
         val lambda = call.getParentOfType<KtLambdaExpression>(strict = true) ?: return false
         val lambdaArgument = lambda.parent as? KtValueArgument ?: return false
         val scopeCall = lambdaArgument.parent as? KtCallExpression ?: return false
-        val scopeMethod = ArmeriaKotlinDecoratorChainSupport.resolveKotlinCallName(scopeCall) ?: return false
+        val scopeMethod = ArmeriaKotlinExpressionSupport.resolveCallName(scopeCall) ?: return false
         if (scopeMethod !in BUILDER_SCOPE_METHODS) {
             return false
         }
@@ -93,7 +94,7 @@ internal object ArmeriaKotlinDecoratorScopeSupport {
         val lambda = registrationCall.getParentOfType<KtLambdaExpression>(strict = true) ?: return
         val lambdaArgument = lambda.parent as? KtValueArgument ?: return
         val scopeCall = lambdaArgument.parent as? KtCallExpression ?: return
-        val scopeMethod = ArmeriaKotlinDecoratorChainSupport.resolveKotlinCallName(scopeCall) ?: return
+        val scopeMethod = ArmeriaKotlinExpressionSupport.resolveCallName(scopeCall) ?: return
         if (scopeMethod !in BUILDER_SCOPE_METHODS) {
             return
         }

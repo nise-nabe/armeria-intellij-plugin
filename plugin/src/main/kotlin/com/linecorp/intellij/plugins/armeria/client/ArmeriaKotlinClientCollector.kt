@@ -10,7 +10,7 @@ import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaKotlinRouteCollector
-import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
 import org.jetbrains.kotlin.idea.KotlinFileType
@@ -19,9 +19,7 @@ import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
-import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtProperty
-import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 
 internal object ArmeriaKotlinClientCollector {
     fun collect(
@@ -50,7 +48,7 @@ internal object ArmeriaKotlinClientCollector {
         if (isNestedInsideClientFactoryArgument(call)) {
             return
         }
-        val methodName = resolveCallName(call) ?: return
+        val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return
         if (methodName !in ArmeriaClientSupport.FACTORY_METHOD_NAMES) {
             return
         }
@@ -90,7 +88,7 @@ internal object ArmeriaKotlinClientCollector {
                 when (protocol) {
                     ClientProtocol.RETROFIT -> extractRetrofitMetadata(arguments, decorators)
                     else -> {
-                        val uri = extractKotlinString(arguments.firstOrNull()) ?: return null
+                        val uri = ArmeriaKotlinExpressionSupport.extractKotlinString(arguments.firstOrNull()) ?: return null
                         ClientMetadata(uri = uri, decorators = decorators)
                     }
                 }
@@ -112,7 +110,7 @@ internal object ArmeriaKotlinClientCollector {
                     }
                     protocol == ClientProtocol.RETROFIT -> extractRetrofitMetadata(arguments, decorators)
                     else -> {
-                        val uri = extractKotlinString(arguments.firstOrNull()) ?: return null
+                        val uri = ArmeriaKotlinExpressionSupport.extractKotlinString(arguments.firstOrNull()) ?: return null
                         ClientMetadata(uri = uri, decorators = decorators)
                     }
                 }
@@ -146,7 +144,7 @@ internal object ArmeriaKotlinClientCollector {
                 endpointGroup = endpointGroup,
             )
         }
-        val uri = extractKotlinString(firstArg) ?: return null
+        val uri = ArmeriaKotlinExpressionSupport.extractKotlinString(firstArg) ?: return null
         return ClientMetadata(uri = uri, decorators = decorators)
     }
 
@@ -157,10 +155,10 @@ internal object ArmeriaKotlinClientCollector {
     )
 
     private fun extractWebClientTransport(expression: KtExpression): WebClientTransportInfo? {
-        val unwrapped = unwrapKotlinExpression(expression) ?: return null
+        val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: return null
         val call = callExpressionInChain(unwrapped)
         if (call != null) {
-            val methodName = resolveCallName(call)
+            val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call)
             val resolvedClass = resolveContainingClass(call)
             if (methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES &&
                 (ArmeriaClientSupport.isWebClientClass(resolvedClass) || looksLikeWebClientFactoryReceiver(call))
@@ -176,7 +174,7 @@ internal object ArmeriaKotlinClientCollector {
                             ?: endpointGroup
                     return WebClientTransportInfo(uri = uri, decorators = decorators, endpointGroup = endpointGroup)
                 }
-                val uri = extractKotlinString(arguments.firstOrNull()) ?: return null
+                val uri = ArmeriaKotlinExpressionSupport.extractKotlinString(arguments.firstOrNull()) ?: return null
                 return WebClientTransportInfo(uri = uri, decorators = decorators)
             }
             // Unwrap fluent WebClientBuilder chains passed to Retrofit, e.g.
@@ -222,7 +220,7 @@ internal object ArmeriaKotlinClientCollector {
         while (current != null) {
             val factoryCall = callExpressionInChain(current)
             if (factoryCall != null) {
-                val methodName = resolveCallName(factoryCall)
+                val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(factoryCall)
                 val resolvedClass = resolveContainingClass(factoryCall)
                 if (methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES &&
                     (
@@ -275,7 +273,7 @@ internal object ArmeriaKotlinClientCollector {
                     element = element.parent
                     continue
                 }
-            val methodName = resolveCallName(outerCall)
+            val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(outerCall)
             if (methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES &&
                 ArmeriaClientSupport.protocolForClass(resolveContainingClass(outerCall)) != null &&
                 isDescendantOfValueArgument(call, outerCall)
@@ -303,14 +301,6 @@ internal object ArmeriaKotlinClientCollector {
                 else -> (call.parent as? KtDotQualifiedExpression)?.receiverExpression
             }
         return receiver?.text
-    }
-
-    private fun resolveCallName(call: KtCallExpression): String? {
-        val callee = call.calleeExpression ?: return null
-        return when (callee) {
-            is KtDotQualifiedExpression -> callee.selectorExpression?.text
-            else -> callee.text
-        }
     }
 
     private fun resolveContainingClass(call: KtCallExpression): String? {
@@ -361,50 +351,5 @@ internal object ArmeriaKotlinClientCollector {
                 }?.importedFqName
                 ?.asString()
         return importFqcn?.takeIf { ArmeriaClientSupport.protocolForClass(it) != null }
-    }
-
-    private fun extractKotlinString(expression: KtExpression?): String? {
-        val unwrapped = unwrapKotlinExpression(expression) ?: return null
-        return when (unwrapped) {
-            is KtStringTemplateExpression -> {
-                if (unwrapped.entries.size == 1) {
-                    unwrapped.entries[0].text.trim('"')
-                } else {
-                    unwrapped.text.trim('"')
-                }
-            }
-            is KtDotQualifiedExpression -> extractKotlinStringFromReference(unwrapped)
-            is KtNameReferenceExpression -> extractKotlinStringFromReference(unwrapped)
-            else -> unwrapped.text.trim('"').takeIf { it.isNotEmpty() }
-        }
-    }
-
-    private fun extractKotlinStringFromReference(expression: KtExpression): String? {
-        val resolved = expression.references.firstOrNull()?.resolve()
-        when (resolved) {
-            is KtProperty -> extractKotlinString(resolved.initializer)?.let { return it }
-            is PsiVariable -> ArmeriaRouteSupport.evaluateJavaStringConstant(resolved)?.let { return it }
-        }
-        if (expression is KtDotQualifiedExpression) {
-            val selector = expression.selectorExpression as? KtNameReferenceExpression ?: return null
-            val receiver = expression.receiverExpression as? KtNameReferenceExpression ?: return null
-            val containingClass = receiver.references.firstOrNull()?.resolve() as? PsiClass ?: return null
-            val field = containingClass.findFieldByName(selector.getReferencedName(), true)
-            if (field != null) {
-                ArmeriaRouteSupport.evaluateJavaStringConstant(field)?.let { return it }
-            }
-        }
-        return expression.text.trim('"').takeIf { it.isNotEmpty() }
-    }
-
-    private fun unwrapKotlinExpression(expression: KtExpression?): KtExpression? {
-        var current = expression ?: return null
-        while (true) {
-            current =
-                when (current) {
-                    is KtParenthesizedExpression -> current.expression ?: return null
-                    else -> return current
-                }
-        }
     }
 }

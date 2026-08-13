@@ -1,7 +1,5 @@
 package com.linecorp.intellij.plugins.armeria.explorer.collector.registration.java
-import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethodCallExpression
-import com.intellij.psi.PsiReferenceExpression
 import com.linecorp.intellij.plugins.armeria.explorer.model.ServiceRegistrationMethod
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
@@ -20,12 +18,12 @@ internal object ArmeriaJavaBuilderCallHeuristics {
         if (looksLikeJavaBuilderCall(expression)) {
             return true
         }
-        var current = javaPreviousMethodCallInChain(expression)
+        var current = ArmeriaJavaRegistrationChainSupport.previousMethodCallInChain(expression)
         while (current != null) {
             if (current.methodExpression.referenceName == "route") {
                 return looksLikeJavaBuilderCall(current)
             }
-            current = javaPreviousMethodCallInChain(current)
+            current = ArmeriaJavaRegistrationChainSupport.previousMethodCallInChain(current)
         }
         return false
     }
@@ -46,17 +44,5 @@ internal object ArmeriaJavaBuilderCallHeuristics {
         ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
         val resolvedClass = expression.resolveMethod()?.containingClass?.qualifiedName
         return resolvedClass?.startsWith(ArmeriaRouteSupport.ARMERIA_SERVER_PACKAGE_PREFIX) == true
-    }
-
-    private fun javaPreviousMethodCallInChain(call: PsiMethodCallExpression): PsiMethodCallExpression? {
-        var expression: PsiElement? = call.methodExpression.qualifierExpression
-        while (expression != null) {
-            when (expression) {
-                is PsiMethodCallExpression -> return expression
-                is PsiReferenceExpression -> expression = expression.qualifier
-                else -> return null
-            }
-        }
-        return null
     }
 }

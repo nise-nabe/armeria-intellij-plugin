@@ -11,9 +11,7 @@
 - IDE support for Armeria JUnit 5 integration tests: `@RegisterExtension` `ServerExtension` gutter markers, blocking-route inspection in tests, and Generate Test Method from Route Explorer.
 - gRPC gutter icons on `rpc` keywords in `.proto` files (when Proto Editor is installed), showing the resolved gRPC path in the tooltip.
 
-### Changed
-
-- Plugin ID is `com.linecorp.armeria` (was `com.linecorp.intellij.armeria-intellij-plugin`) so the descriptor no longer includes the word `intellij`. Existing installs are treated as a different plugin.
+- Kotlin PSI helpers for call names, named or positional arguments, and string extraction live on `ArmeriaKotlinExpressionSupport` and are reused by route collectors, client collectors, navigation, and line markers. Virtual-host annotation of a registration-key set lives on `ArmeriaRouteVirtualHostAnnotator`.
 - Route Explorer caches proto route merging so Refresh no longer re-scans `.proto` files on every collect.
 - Route Explorer reads Spring Boot `application.yml` / `.yaml` via IntelliJ YAML PSI (key-level navigation); `.properties` parsing is unchanged. YAML config is skipped when the YAML plugin is unavailable.
 - Split `plugin-route-analysis` `explorer` sources into focused packages (`model`, `collector`, `spring`, `protocol`, `docservice`, `support`, `duplicate`, `navigation`, `ui`).

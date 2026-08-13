@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
+import org.jetbrains.kotlin.psi.KtValueArgument
 
 object ArmeriaKotlinExpressionSupport {
     fun containingKotlinExpressionScope(call: KtCallExpression): PsiElement {
@@ -34,6 +35,27 @@ object ArmeriaKotlinExpressionSupport {
             current = parent
         }
         return call
+    }
+
+    fun resolveCallName(call: KtCallExpression): String? {
+        val callee = call.calleeExpression ?: return null
+        return when (callee) {
+            is KtDotQualifiedExpression -> callee.selectorExpression?.text
+            else -> callee.text
+        }
+    }
+
+    fun findArgumentExpression(
+        arguments: List<KtValueArgument>,
+        parameterName: String,
+        positionalIndex: Int,
+    ): KtExpression? {
+        arguments
+            .firstOrNull { argument ->
+                argument.getArgumentName()?.asName?.identifier == parameterName
+            }?.getArgumentExpression()
+            ?.let { return it }
+        return arguments.getOrNull(positionalIndex)?.getArgumentExpression()
     }
 
     fun extractKotlinString(expression: KtExpression?): String? {
@@ -72,7 +94,7 @@ object ArmeriaKotlinExpressionSupport {
         return expression.text.trim('"').takeIf { it.isNotEmpty() }
     }
 
-    private fun unwrapKotlinExpression(expression: KtExpression?): KtExpression? {
+    fun unwrapKotlinExpression(expression: KtExpression?): KtExpression? {
         var current = expression ?: return null
         while (true) {
             current =
