@@ -124,10 +124,11 @@ internal object ArmeriaJUnitServerExtensionSupport {
         }
         val variableName = method.name ?: return null
         val containingClass = method.containingClass ?: return null
+        val containingClassName = containingClass.qualifiedName ?: return null
         return ArmeriaJUnitServerExtension.create(
             element = method,
             variableName = variableName,
-            containingClassName = containingClass.qualifiedName.orEmpty(),
+            containingClassName = containingClassName,
             moduleName = ArmeriaTestMetadata.moduleName(method),
             isFactoryMethod = true,
         )
@@ -152,6 +153,9 @@ internal object ArmeriaJUnitServerExtensionSupport {
         function: KtNamedFunction,
         scope: GlobalSearchScope,
     ): ArmeriaJUnitServerExtension? {
+        if (function.valueParameters.isNotEmpty()) {
+            return null
+        }
         val containingDeclaration = kotlinRegisterExtensionFactoryOwner(function) ?: return null
         if (!function.annotationEntries.any { it.isRegisterExtensionAnnotation() }) {
             return null
@@ -160,20 +164,10 @@ internal object ArmeriaJUnitServerExtensionSupport {
             return null
         }
         val variableName = function.name ?: return null
-        val containingClassName =
-            when (containingDeclaration) {
-                is KtObjectDeclaration ->
-                    if (containingDeclaration.isCompanion()) {
-                        containingDeclaration.getParentOfType<KtClass>(true)?.fqName?.asString()
-                    } else {
-                        containingDeclaration.fqName?.asString()
-                    }
-                else -> containingDeclaration.fqName?.asString()
-            }.orEmpty()
         return ArmeriaJUnitServerExtension.create(
             element = function,
             variableName = variableName,
-            containingClassName = containingClassName,
+            containingClassName = kotlinContainingClassName(containingDeclaration),
             moduleName = ArmeriaTestMetadata.moduleName(function),
             isFactoryMethod = true,
         )
@@ -191,20 +185,10 @@ internal object ArmeriaJUnitServerExtensionSupport {
         }
         val variableName = property.name ?: return null
         val containingDeclaration = property.getParentOfType<KtClassOrObject>(true) ?: return null
-        val containingClassName =
-            when (containingDeclaration) {
-                is KtObjectDeclaration ->
-                    if (containingDeclaration.isCompanion()) {
-                        containingDeclaration.getParentOfType<KtClass>(true)?.fqName?.asString()
-                    } else {
-                        containingDeclaration.fqName?.asString()
-                    }
-                else -> containingDeclaration.fqName?.asString()
-            }.orEmpty()
         return ArmeriaJUnitServerExtension.create(
             element = property,
             variableName = variableName,
-            containingClassName = containingClassName,
+            containingClassName = kotlinContainingClassName(containingDeclaration),
             moduleName = ArmeriaTestMetadata.moduleName(property),
         )
     }
@@ -635,14 +619,21 @@ internal object ArmeriaJUnitServerExtensionSupport {
     }
 
     private fun kotlinRegisterExtensionFactoryOwner(function: KtNamedFunction): KtClassOrObject? {
-        if (function.valueParameters.isNotEmpty()) {
-            return null
-        }
         val owner = (function.parent as? KtClassBody)?.parent as? KtClassOrObject ?: return null
         if (owner is KtObjectDeclaration && owner.isCompanion() && !function.hasJvmStaticAnnotation()) {
             return null
         }
         return owner
+    }
+
+    private fun kotlinContainingClassName(declaration: KtClassOrObject): String {
+        val attributed =
+            if (declaration is KtObjectDeclaration && declaration.isCompanion()) {
+                (declaration.parent as? KtClassBody)?.parent as? KtClass ?: declaration
+            } else {
+                declaration
+            }
+        return attributed.fqName?.asString().orEmpty()
     }
 
     private fun KtNamedFunction.hasJvmStaticAnnotation(): Boolean = annotationEntries.any { it.shortName?.asString() == "JvmStatic" }
