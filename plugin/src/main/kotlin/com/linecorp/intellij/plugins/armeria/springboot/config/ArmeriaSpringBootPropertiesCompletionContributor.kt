@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.springboot.config
 import com.intellij.codeInsight.completion.CompletionContributor
 import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.completion.CompletionResultSet
-import com.intellij.openapi.util.TextRange
 
 class ArmeriaSpringBootPropertiesCompletionContributor : CompletionContributor() {
     override fun fillCompletionVariants(
@@ -17,8 +16,8 @@ class ArmeriaSpringBootPropertiesCompletionContributor : CompletionContributor()
         if (!fileName.endsWith(".properties")) {
             return
         }
-        val lineToCaret = lineToCaret(parameters)
-        val separator = lineToCaret.indexOfFirst { it == '=' || it == ':' }
+        val lineToCaret = ArmeriaSpringBootCompletionSupport.lineToCaret(parameters)
+        val separator = ArmeriaSpringBootCompletionSupport.propertiesValueSeparatorIndex(lineToCaret)
         if (separator >= 0) {
             val key =
                 ArmeriaSpringBootCompletionSupport.stripDummy(lineToCaret.substring(0, separator).trim())
@@ -31,12 +30,5 @@ class ArmeriaSpringBootPropertiesCompletionContributor : CompletionContributor()
             return
         }
         ArmeriaSpringBootCompletionSupport.addPropertiesKeyCompletions(result)
-    }
-
-    private fun lineToCaret(parameters: CompletionParameters): String {
-        val document = parameters.editor.document
-        val offset = parameters.offset.coerceAtMost(document.textLength)
-        val lineStart = document.getLineStartOffset(document.getLineNumber(offset))
-        return document.getText(TextRange(lineStart, offset))
     }
 }

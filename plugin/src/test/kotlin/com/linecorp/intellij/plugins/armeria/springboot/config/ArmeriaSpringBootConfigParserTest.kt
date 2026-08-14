@@ -184,6 +184,32 @@ class ArmeriaSpringBootConfigParserTest {
     }
 
     @Test
+    fun incompleteYamlKeyPrefix_detectsNestedKeyWithoutColon() {
+        assertEquals("i", ArmeriaSpringBootCompletionSupport.incompleteYamlKeyPrefix("  i"))
+        assertEquals("p", ArmeriaSpringBootCompletionSupport.incompleteYamlKeyPrefix("    - p"))
+        assertEquals("", ArmeriaSpringBootCompletionSupport.incompleteYamlKeyPrefix("  "))
+        assertNull(ArmeriaSpringBootCompletionSupport.incompleteYamlKeyPrefix("  include: "))
+        assertNull(ArmeriaSpringBootCompletionSupport.incompleteYamlKeyPrefix("    - port: 8"))
+    }
+
+    @Test
+    fun propertiesValueSeparatorIndex_acceptsEqualsColonAndWhitespace() {
+        assertEquals(-1, ArmeriaSpringBootCompletionSupport.propertiesValueSeparatorIndex("armeria.docs-path"))
+        assertEquals(
+            "armeria.internal-services.include=".indexOf('='),
+            ArmeriaSpringBootCompletionSupport.propertiesValueSeparatorIndex("armeria.internal-services.include="),
+        )
+        assertEquals(
+            "armeria.internal-services.include:".indexOf(':'),
+            ArmeriaSpringBootCompletionSupport.propertiesValueSeparatorIndex("armeria.internal-services.include:"),
+        )
+        assertEquals(
+            "armeria.internal-services.include ".indexOf(' '),
+            ArmeriaSpringBootCompletionSupport.propertiesValueSeparatorIndex("armeria.internal-services.include "),
+        )
+    }
+
+    @Test
     fun completionInsertText_usesNextSegmentUnderNestedPath() {
         assertEquals(
             "internal-services",

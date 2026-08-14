@@ -20,6 +20,45 @@ class ArmeriaSpringBootConfigCompletionTest : ArmeriaLightJavaCodeInsightFixture
         assertContainsAll(lookups, "internal-services", "idle-timeout")
     }
 
+    fun testYamlCompletionWithoutColonSuggestsNestedKeys() {
+        myFixture.configureByText(
+            "application.yml",
+            """
+            armeria:
+              i<caret>
+            """.trimIndent(),
+        )
+        val lookups = lookupStrings()
+        assertContainsAll(lookups, "internal-services", "idle-timeout")
+    }
+
+    fun testYamlCompletionNestedPathWithoutColon() {
+        myFixture.configureByText(
+            "application.yml",
+            """
+            armeria:
+              internal-services:
+                i<caret>
+            """.trimIndent(),
+        )
+        val lookups = lookupStrings()
+        assertContainsAll(lookups, "include")
+        assertTrue("docs-path" !in lookups, lookups.toString())
+    }
+
+    fun testYamlCompletionSequenceItemKeysWithoutColon() {
+        myFixture.configureByText(
+            "application.yml",
+            """
+            armeria:
+              ports:
+                - p<caret>
+            """.trimIndent(),
+        )
+        val lookups = lookupStrings()
+        assertContainsAll(lookups, "port", "protocols")
+    }
+
     fun testYamlCompletionNestedPathInsertsLeafSegment() {
         myFixture.configureByText(
             "application.yml",
@@ -72,6 +111,17 @@ class ArmeriaSpringBootConfigCompletionTest : ArmeriaLightJavaCodeInsightFixture
             myFixture.configureByText(
                 "application.properties",
                 "armeria.internal-services.include=",
+            )
+        myFixture.editor.caretModel.moveToOffset(file.textLength)
+        val lookups = lookupStrings()
+        assertContainsAll(lookups, "docs", "health", "metrics", "actuator", "all")
+    }
+
+    fun testPropertiesIncludeValueCompletionAcceptsWhitespaceSeparator() {
+        val file =
+            myFixture.configureByText(
+                "application.properties",
+                "armeria.internal-services.include ",
             )
         myFixture.editor.caretModel.moveToOffset(file.textLength)
         val lookups = lookupStrings()

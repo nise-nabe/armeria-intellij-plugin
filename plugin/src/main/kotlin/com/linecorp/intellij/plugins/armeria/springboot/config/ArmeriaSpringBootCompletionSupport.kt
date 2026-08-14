@@ -1,8 +1,10 @@
 package com.linecorp.intellij.plugins.armeria.springboot.config
 
+import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.completion.CompletionUtilCore
 import com.intellij.codeInsight.lookup.LookupElementBuilder
+import com.intellij.openapi.util.TextRange
 
 internal object ArmeriaSpringBootCompletionSupport {
     fun addYamlKeyCompletions(
@@ -58,6 +60,40 @@ internal object ArmeriaSpringBootCompletionSupport {
     fun lastIncludeToken(rawValue: String): String {
         val sanitized = stripDummy(rawValue)
         return sanitized.substringAfterLast(',').trim()
+    }
+
+    fun lineToCaret(parameters: CompletionParameters): String {
+        val document = parameters.editor.document
+        val offset = parameters.offset.coerceAtMost(document.textLength)
+        val lineStart = document.getLineStartOffset(document.getLineNumber(offset))
+        return document.getText(TextRange(lineStart, offset))
+    }
+
+    /**
+     * Index of the `.properties` key/value delimiter in [lineToCaret], or `-1` while still
+     * typing the key. `Properties.load` accepts `=`, `:`, or whitespace.
+     */
+    fun propertiesValueSeparatorIndex(lineToCaret: String): Int {
+        val explicit = lineToCaret.indexOfFirst { it == '=' || it == ':' }
+        if (explicit >= 0) {
+            return explicit
+        }
+        return lineToCaret.indexOfFirst { it.isWhitespace() }
+    }
+
+    /**
+     * Prefix of a nested YAML key being typed on its own line (no `:` yet). Null when the
+     * caret is in a real value (`key: value` or `include: …`).
+     */
+    fun incompleteYamlKeyPrefix(lineToCaret: String): String? {
+        var content = stripDummy(lineToCaret)
+        if (content.startsWith("-")) {
+            content = content.removePrefix("-").trim()
+        }
+        if (content.contains(':') || content.contains('=')) {
+            return null
+        }
+        return content
     }
 
     fun stripDummy(raw: String): String =

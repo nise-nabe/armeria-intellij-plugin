@@ -38,7 +38,24 @@ class ArmeriaSpringBootYamlCompletionContributor : CompletionContributor() {
                                 result,
                                 parameters.position.text,
                             )
+                            return
                         }
+                        val keyPrefix =
+                            ArmeriaSpringBootCompletionSupport.incompleteYamlKeyPrefix(
+                                ArmeriaSpringBootCompletionSupport.lineToCaret(parameters),
+                            ) ?: return
+                        val completionPath =
+                            ArmeriaSpringBootConfigSupport.normalizeIndexedKeyPath(target.path)
+                        if (!ArmeriaSpringBootConfigKeys.isRelevantCompletionPath(completionPath)) {
+                            return
+                        }
+                        val prefixed =
+                            if (keyPrefix.isEmpty()) {
+                                result
+                            } else {
+                                result.withPrefixMatcher(keyPrefix)
+                            }
+                        ArmeriaSpringBootCompletionSupport.addYamlKeyCompletions(prefixed, completionPath)
                         return
                     }
                     val completionPath =
