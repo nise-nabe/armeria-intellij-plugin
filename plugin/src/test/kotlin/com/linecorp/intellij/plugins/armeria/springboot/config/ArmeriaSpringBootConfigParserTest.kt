@@ -184,27 +184,6 @@ class ArmeriaSpringBootConfigParserTest {
     }
 
     @Test
-    fun configuratorClassForKey_mapsInternalServicePaths() {
-        assertEquals(
-            "com.linecorp.armeria.spring.DocServiceConfigurator",
-            ArmeriaSpringBootConfigKeys.configuratorClassForKey("armeria.docs-path"),
-        )
-        assertEquals(
-            "com.linecorp.armeria.spring.HealthCheckServiceConfigurator",
-            ArmeriaSpringBootConfigKeys.configuratorClassForKey("armeria.health-check-path"),
-        )
-        assertEquals(
-            "com.linecorp.armeria.spring.MetricCollectingServiceConfigurator",
-            ArmeriaSpringBootConfigKeys.configuratorClassForKey("armeria.metrics-path"),
-        )
-        assertEquals(
-            "com.linecorp.armeria.spring.ArmeriaServerConfigurator",
-            ArmeriaSpringBootConfigKeys.configuratorClassForKey("armeria.ports[0].port"),
-        )
-        assertNull(ArmeriaSpringBootConfigKeys.configuratorClassForKey("server.port"))
-    }
-
-    @Test
     fun completionInsertText_usesNextSegmentUnderNestedPath() {
         assertEquals(
             "internal-services",

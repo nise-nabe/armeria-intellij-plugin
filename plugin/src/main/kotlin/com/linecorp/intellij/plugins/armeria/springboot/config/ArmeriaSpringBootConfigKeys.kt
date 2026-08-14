@@ -1,7 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.springboot.config
 
 import com.linecorp.intellij.plugins.armeria.explorer.spring.SpringArmeriaConfigSemantics
-import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.message
 
 object ArmeriaSpringBootConfigKeys {
@@ -180,23 +179,4 @@ object ArmeriaSpringBootConfigKeys {
             INCLUDE_ALL -> message("springboot.config.doc.include.all")
             else -> null
         }
-
-    /**
-     * Configurator bean type that customizes the service behind [key], when present.
-     */
-    fun configuratorClassForKey(key: String): String? {
-        val normalized = ArmeriaSpringBootConfigSupport.normalizeIndexedKeyPath(key)
-        return when (normalized) {
-            "armeria.docs-path" -> ArmeriaRouteSupport.DOC_SERVICE_CONFIGURATOR_CLASS
-            "armeria.health-check-path" -> ArmeriaRouteSupport.HEALTH_CHECK_SERVICE_CONFIGURATOR_CLASS
-            "armeria.metrics-path", "armeria.enable-metrics" ->
-                ArmeriaRouteSupport.METRIC_COLLECTING_SERVICE_CONFIGURATOR_CLASS
-            else ->
-                if (normalized == ARMERIA_ROOT || normalized.startsWith(ARMERIA_PREFIX)) {
-                    ArmeriaRouteSupport.ARMERIA_SERVER_CONFIGURATOR_CLASS
-                } else {
-                    null
-                }
-        }
-    }
 }

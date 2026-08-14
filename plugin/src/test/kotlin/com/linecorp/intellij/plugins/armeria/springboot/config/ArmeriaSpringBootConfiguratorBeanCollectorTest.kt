@@ -65,10 +65,6 @@ class ArmeriaSpringBootConfiguratorBeanCollectorTest : ArmeriaFixtureTestBase5()
         assertNotNull(byFqn[ArmeriaRouteSupport.HEALTH_CHECK_SERVICE_CONFIGURATOR_CLASS])
         assertNotNull(byFqn[ArmeriaRouteSupport.METRIC_COLLECTING_SERVICE_CONFIGURATOR_CLASS])
         assertTrue(beans.all { it.navigationPointer?.element != null })
-        assertEquals(
-            ArmeriaRouteSupport.DOC_SERVICE_CONFIGURATOR_CLASS,
-            ArmeriaSpringBootConfigKeys.configuratorClassForKey("armeria.docs-path"),
-        )
     }
 
     @Test
@@ -96,6 +92,37 @@ class ArmeriaSpringBootConfiguratorBeanCollectorTest : ArmeriaFixtureTestBase5()
                 .entries
         assertEquals(1, beans.size)
         assertEquals("RoutingConfigurator", beans.single().key)
+        assertEquals("ArmeriaServerConfigurator", beans.single().value)
+        assertNotNull(beans.single().navigationPointer?.element)
+    }
+
+    @Test
+    fun collectsKotlinBeanFunction() {
+        myFixture.configureByText(
+            "ArmeriaConfiguration.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.spring.ArmeriaServerConfigurator
+            import org.springframework.context.annotation.Bean
+            import org.springframework.context.annotation.Configuration
+
+            @Configuration
+            class ArmeriaConfiguration {
+                @Bean
+                fun armeriaServerConfigurator(): ArmeriaServerConfigurator =
+                    ArmeriaServerConfigurator { _ -> }
+            }
+            """.trimIndent(),
+        )
+
+        val beans =
+            ArmeriaSpringBootConfiguratorBeanCollector
+                .collect(project)
+                .single()
+                .entries
+        assertEquals(1, beans.size)
+        assertEquals("armeriaServerConfigurator", beans.single().key)
         assertEquals("ArmeriaServerConfigurator", beans.single().value)
         assertNotNull(beans.single().navigationPointer?.element)
     }

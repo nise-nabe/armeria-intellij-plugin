@@ -46,26 +46,31 @@ object ArmeriaSpringBootConfiguratorBeanCollector {
     }
 
     private fun collectBeans(project: Project): List<ArmeriaSpringBootConfigEntry> {
-        val scope = GlobalSearchScope.projectScope(project)
+        val projectScope = GlobalSearchScope.projectScope(project)
+        // `@Bean` and Armeria configurator types live in library jars (spring-context /
+        // armeria-spring). Resolve them with allScope; search annotated methods and
+        // inheritors only in project content so library examples are not listed.
+        val classpathScope = GlobalSearchScope.allScope(project)
         val psiFacade = JavaPsiFacade.getInstance(project)
         val seen = linkedMapOf<String, ArmeriaSpringBootConfigEntry>()
-        val beanAnnotation = psiFacade.findClass(ArmeriaRouteSupport.SPRING_BEAN_ANNOTATION, scope)
+        val beanAnnotation = psiFacade.findClass(ArmeriaRouteSupport.SPRING_BEAN_ANNOTATION, classpathScope)
         if (beanAnnotation != null) {
-            AnnotatedElementsSearch.searchPsiMethods(beanAnnotation, scope).forEach { method ->
-                val configuratorFqn = matchingConfiguratorFqn(method, psiFacade, scope) ?: return@forEach
+            AnnotatedElementsSearch.searchPsiMethods(beanAnnotation, projectScope).forEach { method ->
+                val configuratorFqn = matchingConfiguratorFqn(method, psiFacade, classpathScope) ?: return@forEach
                 addBean(seen, configuratorFqn, method.name, navigationTarget(method), method)
             }
         }
         for (fqn in CONFIGURATOR_TYPES) {
-            val iface = psiFacade.findClass(fqn, scope) ?: continue
-            ClassInheritorsSearch.search(iface, scope, true).forEach { psiClass ->
+            val iface = psiFacade.findClass(fqn, classpathScope) ?: continue
+            ClassInheritorsSearch.search(iface, projectScope, true).forEach { psiClass ->
                 if (psiClass.isInterface || psiClass.hasModifierProperty(PsiModifier.ABSTRACT)) {
                     return@forEach
                 }
-                if (psiClass.name.isNullOrBlank()) {
+                val className = psiClass.name
+                if (className.isNullOrBlank()) {
                     return@forEach
                 }
-                addBean(seen, fqn, psiClass.name!!, navigationTarget(psiClass), psiClass)
+                addBean(seen, fqn, className, navigationTarget(psiClass), psiClass)
             }
         }
         return seen.values.toList()

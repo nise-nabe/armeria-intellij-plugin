@@ -18,7 +18,6 @@ import com.intellij.ui.table.JBTable
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
 import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaRouteNavigation
-import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.message
 import java.awt.BorderLayout
 import java.awt.Component
@@ -147,19 +146,6 @@ class ArmeriaSpringBootConfigPanel(
             ArmeriaRouteNavigation.navigateToPointer(project, pointer, parentDisposable = this)
             return
         }
-        val preferred = ArmeriaSpringBootConfigKeys.configuratorClassForKey(row.entry.key)
-        if (preferred != null) {
-            val beans = tableModel.beanEntries()
-            val match =
-                beans.firstOrNull { it.configuratorFqn == preferred }
-                    ?: beans.firstOrNull {
-                        it.configuratorFqn == ArmeriaRouteSupport.ARMERIA_SERVER_CONFIGURATOR_CLASS
-                    }
-            match?.navigationPointer?.let { pointer ->
-                ArmeriaRouteNavigation.navigateToPointer(project, pointer, parentDisposable = this)
-                return
-            }
-        }
         if (row.filePath.isEmpty()) {
             return
         }
@@ -202,8 +188,6 @@ class ArmeriaSpringBootConfigPanel(
         }
 
         fun rowAt(i: Int) = rows.getOrNull(i)
-
-        fun beanEntries(): List<ArmeriaSpringBootConfigEntry> = rows.map { it.entry }.filter { it.configuratorFqn != null }
     }
 
     private inner class ConfigTableCellRenderer : DefaultTableCellRenderer() {
