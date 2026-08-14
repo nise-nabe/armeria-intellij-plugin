@@ -36,6 +36,15 @@ fun JavaCodeInsightTestFixture.registerArmeriaAnnotationStubs() {
         """
         package com.linecorp.armeria.server.annotation;
 
+        public @interface Path {
+            String[] value() default {};
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.annotation;
+
         public @interface Decorator {
             Class<?>[] value();
         }

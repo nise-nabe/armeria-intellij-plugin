@@ -75,7 +75,7 @@ internal object ArmeriaParamPathVariableMismatch {
                         ArmeriaRouteSupport
                             .extractStrings(annotation.findDeclaredAttributeValue("value"))
                             .firstOrNull { it.isNotBlank() }
-                    val name = explicit ?: parameter.name ?: return@forEach
+                    val name = explicit ?: parameter.name
                     add(ArmeriaParamBinding(name))
                     return@forEach
                 }
@@ -103,6 +103,14 @@ internal object ArmeriaParamPathVariableMismatch {
                     ?: method.parameterList.parameters[0].getAnnotation(ArmeriaRouteSupport.PARAM_ANNOTATION)
             val property = propertyNameFromSetter(method.name) ?: return@forEach
             paramName(annotation, property)?.let { names += it }
+        }
+        type.constructors.forEach { constructor ->
+            constructor.parameterList.parameters.forEach { parameter ->
+                paramName(
+                    parameter.getAnnotation(ArmeriaRouteSupport.PARAM_ANNOTATION),
+                    parameter.name,
+                )?.let { names += it }
+            }
         }
         return names.map(::ArmeriaParamBinding)
     }
