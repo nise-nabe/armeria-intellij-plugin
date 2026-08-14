@@ -13,15 +13,25 @@ internal object ArmeriaRouteMethodStub {
         kind: ArmeriaRouteStubKind,
         methodName: String,
         path: String,
-    ): String {
-        val annotations = javaAnnotations(kind, path)
-        return """
-            $annotations
-            public String $methodName() {
-                return "";
-            }
-            """.trimIndent()
-    }
+    ): String =
+        when (kind) {
+            ArmeriaRouteStubKind.GET ->
+                """
+                @${ArmeriaRouteSupport.GET_ANNOTATION}("$path")
+                public String $methodName() {
+                    return "";
+                }
+                """.trimIndent()
+            ArmeriaRouteStubKind.POST_JSON ->
+                """
+                @${ArmeriaRouteSupport.POST_ANNOTATION}("$path")
+                @${ArmeriaRouteSupport.CONSUMES_JSON_ANNOTATION}
+                @${ArmeriaRouteSupport.PRODUCES_JSON_ANNOTATION}
+                public String $methodName() {
+                    return "";
+                }
+                """.trimIndent()
+        }
 
     fun kotlinFunctionText(
         kind: ArmeriaRouteStubKind,
@@ -29,14 +39,25 @@ internal object ArmeriaRouteMethodStub {
         path: String,
         suspend: Boolean,
     ): String {
-        val annotations = kotlinAnnotations(kind, path)
         val modifier = if (suspend) "suspend " else ""
-        return """
-            $annotations
-            ${modifier}fun $methodName(): String {
-                return ""
-            }
-            """.trimIndent()
+        return when (kind) {
+            ArmeriaRouteStubKind.GET ->
+                """
+                @Get("$path")
+                ${modifier}fun $methodName(): String {
+                    return ""
+                }
+                """.trimIndent()
+            ArmeriaRouteStubKind.POST_JSON ->
+                """
+                @Post("$path")
+                @ConsumesJson
+                @ProducesJson
+                ${modifier}fun $methodName(): String {
+                    return ""
+                }
+                """.trimIndent()
+        }
     }
 
     fun kotlinImports(kind: ArmeriaRouteStubKind): List<String> =
@@ -83,32 +104,4 @@ internal object ArmeriaRouteMethodStub {
                 }
                 ArmeriaRouteSupport.extractPrimaryPath(annotation).takeIf { it.isNotEmpty() }
             }
-
-    private fun javaAnnotations(
-        kind: ArmeriaRouteStubKind,
-        path: String,
-    ): String =
-        when (kind) {
-            ArmeriaRouteStubKind.GET -> "@${ArmeriaRouteSupport.GET_ANNOTATION}(\"$path\")"
-            ArmeriaRouteStubKind.POST_JSON ->
-                """
-                @${ArmeriaRouteSupport.POST_ANNOTATION}("$path")
-                @${ArmeriaRouteSupport.CONSUMES_JSON_ANNOTATION}
-                @${ArmeriaRouteSupport.PRODUCES_JSON_ANNOTATION}
-                """.trimIndent()
-        }
-
-    private fun kotlinAnnotations(
-        kind: ArmeriaRouteStubKind,
-        path: String,
-    ): String =
-        when (kind) {
-            ArmeriaRouteStubKind.GET -> "@Get(\"$path\")"
-            ArmeriaRouteStubKind.POST_JSON ->
-                """
-                @Post("$path")
-                @ConsumesJson
-                @ProducesJson
-                """.trimIndent()
-        }
 }

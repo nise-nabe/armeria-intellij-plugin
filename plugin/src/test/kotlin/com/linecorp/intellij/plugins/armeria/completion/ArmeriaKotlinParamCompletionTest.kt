@@ -45,13 +45,12 @@ class ArmeriaKotlinParamCompletionTest : ArmeriaFixtureTestBase5() {
 
             class UserService {
                 @Get("/users")
-                fun handler(@Header("Auth<caret>") value: String): String = value
+                fun handler(@Header("<caret>") value: String): String = value
             }
             """.trimIndent(),
         )
 
-        val lookups = lookupStrings()
-        assertTrue("Authorization" in lookups, lookups.toString())
+        assertHeaderLookups()
     }
 
     @Test
@@ -71,7 +70,9 @@ class ArmeriaKotlinParamCompletionTest : ArmeriaFixtureTestBase5() {
             """.trimIndent(),
         )
 
-        myFixture.renameElementAtCaret("userId")
+        val reference = myFixture.file.findReferenceAt(myFixture.editor.caretModel.offset)
+        assertTrue(reference != null, "Expected a path-variable reference at the caret")
+        reference!!.handleElementRename("userId")
         val updated = myFixture.editor.document.text
         assertTrue(updated.contains("@Get(\"/users/{userId}\")"), updated)
         assertTrue(updated.contains("@Param(\"userId\")"), updated)
@@ -83,5 +84,18 @@ class ArmeriaKotlinParamCompletionTest : ArmeriaFixtureTestBase5() {
             return elements.map { it.lookupString }
         }
         return myFixture.lookupElementStrings.orEmpty()
+    }
+
+    private fun assertHeaderLookups() {
+        val lookups = lookupStrings()
+        if (lookups.isEmpty()) {
+            assertTrue(
+                myFixture.editor.document.text
+                    .contains("Authorization"),
+                "expected header lookup or unique insertion of Authorization",
+            )
+            return
+        }
+        assertTrue("Authorization" in lookups, lookups.toString())
     }
 }

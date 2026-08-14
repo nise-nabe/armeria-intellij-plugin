@@ -20,20 +20,26 @@ class ArmeriaKotlinAnnotationValueCompletionContributor : CompletionContributor(
     init {
         extend(
             CompletionType.BASIC,
-            PlatformPatterns.psiElement().inside(KtStringTemplateExpression::class.java),
+            PlatformPatterns.psiElement().inside(KtAnnotationEntry::class.java),
             object : CompletionProvider<CompletionParameters>() {
                 override fun addCompletions(
                     parameters: CompletionParameters,
                     context: ProcessingContext,
                     result: CompletionResultSet,
                 ) {
+                    val start = parameters.originalPosition ?: parameters.position
                     val template =
-                        PsiTreeUtil.getParentOfType(parameters.position, KtStringTemplateExpression::class.java)
+                        PsiTreeUtil.getParentOfType(start, KtStringTemplateExpression::class.java, false)
+                            ?: PsiTreeUtil.getParentOfType(
+                                parameters.position,
+                                KtStringTemplateExpression::class.java,
+                                false,
+                            )
                             ?: return
-                    if (!template.isConstantString()) {
-                        return
-                    }
-                    val entry = PsiTreeUtil.getParentOfType(template, KtAnnotationEntry::class.java) ?: return
+                    val entry =
+                        PsiTreeUtil.getParentOfType(template, KtAnnotationEntry::class.java)
+                            ?: PsiTreeUtil.getParentOfType(start, KtAnnotationEntry::class.java)
+                            ?: return
                     val qualifiedName = ArmeriaKotlinAnnotationSupport.qualifiedName(entry) ?: return
                     when (qualifiedName) {
                         ArmeriaRouteSupport.HEADER_ANNOTATION -> addHeaderCompletions(result)

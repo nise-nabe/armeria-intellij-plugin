@@ -19,17 +19,25 @@ class ArmeriaAnnotationValueCompletionContributor : CompletionContributor() {
     init {
         extend(
             CompletionType.BASIC,
-            PlatformPatterns.psiElement().inside(PsiLiteralExpression::class.java),
+            PlatformPatterns.psiElement().inside(PsiAnnotation::class.java),
             object : CompletionProvider<CompletionParameters>() {
                 override fun addCompletions(
                     parameters: CompletionParameters,
                     context: ProcessingContext,
                     result: CompletionResultSet,
                 ) {
+                    val start = parameters.originalPosition ?: parameters.position
                     val literal =
-                        PsiTreeUtil.getParentOfType(parameters.position, PsiLiteralExpression::class.java)
+                        PsiTreeUtil.getParentOfType(start, PsiLiteralExpression::class.java, false)
+                            ?: PsiTreeUtil.getParentOfType(parameters.position, PsiLiteralExpression::class.java, false)
                             ?: return
-                    val annotation = PsiTreeUtil.getParentOfType(literal, PsiAnnotation::class.java) ?: return
+                    if (literal.value != null && literal.value !is String) {
+                        return
+                    }
+                    val annotation =
+                        PsiTreeUtil.getParentOfType(literal, PsiAnnotation::class.java)
+                            ?: PsiTreeUtil.getParentOfType(start, PsiAnnotation::class.java)
+                            ?: return
                     val qualifiedName = annotation.qualifiedName ?: return
                     when (qualifiedName) {
                         ArmeriaRouteSupport.HEADER_ANNOTATION -> addHeaderCompletions(result)
