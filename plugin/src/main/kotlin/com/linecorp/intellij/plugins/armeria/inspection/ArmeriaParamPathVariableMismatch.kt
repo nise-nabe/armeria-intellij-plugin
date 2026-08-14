@@ -7,7 +7,6 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSuppor
 
 internal data class ArmeriaParamBinding(
     val name: String,
-    val highlight: PsiElement,
 )
 
 internal data class ArmeriaParamPathVariableFinding(
@@ -30,25 +29,13 @@ internal object ArmeriaParamPathVariableMismatch {
         if (missing.isEmpty()) {
             return emptyList()
         }
-        val unused = bindings.filter { it.name !in pathVariables }
-        return buildList {
-            add(
-                ArmeriaParamPathVariableFinding(
-                    highlight = missingHighlight,
-                    messageKey = "inspection.param.path.variable.missing",
-                    messageArg = missing.joinToString(),
-                ),
-            )
-            for (binding in unused) {
-                add(
-                    ArmeriaParamPathVariableFinding(
-                        highlight = binding.highlight,
-                        messageKey = "inspection.param.path.variable.unused",
-                        messageArg = binding.name,
-                    ),
-                )
-            }
-        }
+        return listOf(
+            ArmeriaParamPathVariableFinding(
+                highlight = missingHighlight,
+                messageKey = "inspection.param.path.variable.missing",
+                messageArg = missing.joinToString(),
+            ),
+        )
     }
 
     fun pathVariables(method: PsiMethod): Set<String> {
@@ -72,6 +59,6 @@ internal object ArmeriaParamPathVariableMismatch {
                     .extractStrings(annotation.findDeclaredAttributeValue("value"))
                     .firstOrNull { it.isNotBlank() }
             val name = explicit ?: parameter.name ?: return@mapNotNull null
-            ArmeriaParamBinding(name, annotation.nameReferenceElement ?: annotation)
+            ArmeriaParamBinding(name)
         }
 }

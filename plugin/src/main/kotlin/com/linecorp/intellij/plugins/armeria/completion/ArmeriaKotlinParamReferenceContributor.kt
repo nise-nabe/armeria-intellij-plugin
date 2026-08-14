@@ -18,8 +18,10 @@ import com.linecorp.intellij.plugins.armeria.inspection.ArmeriaKotlinAnnotationS
 import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtClassOrObject
+import org.jetbrains.kotlin.psi.KtEscapeStringTemplateEntry
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtParameter
+import org.jetbrains.kotlin.psi.KtStringTemplateEntryWithExpression
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 
 class ArmeriaKotlinParamReferenceContributor : PsiReferenceContributor() {
@@ -37,34 +39,45 @@ private class ArmeriaKotlinParamReferenceProvider : PsiReferenceProvider() {
         context: ProcessingContext,
     ): Array<PsiReference> {
         val template = element as? KtStringTemplateExpression ?: return PsiReference.EMPTY_ARRAY
-        if (!template.isConstantString()) {
-            return PsiReference.EMPTY_ARRAY
-        }
-        val value = template.constantStringValue() ?: return PsiReference.EMPTY_ARRAY
+        val value = template.decodedConstantString() ?: return PsiReference.EMPTY_ARRAY
         val entry = PsiTreeUtil.getParentOfType(template, KtAnnotationEntry::class.java) ?: return PsiReference.EMPTY_ARRAY
         val qualifiedName = ArmeriaKotlinAnnotationSupport.qualifiedName(entry) ?: return PsiReference.EMPTY_ARRAY
-        val function = PsiTreeUtil.getParentOfType(entry, KtNamedFunction::class.java) ?: return PsiReference.EMPTY_ARRAY
+        val function = PsiTreeUtil.getParentOfType(entry, KtNamedFunction::class.java)
+        val owner = PsiTreeUtil.getParentOfType(entry, KtClassOrObject::class.java)
         val valueRange = ElementManipulators.getValueTextRange(template)
         if (qualifiedName == ArmeriaRouteSupport.PARAM_ANNOTATION) {
+            if (function == null) {
+                return PsiReference.EMPTY_ARRAY
+            }
             return arrayOf(ArmeriaKotlinParamNameReference(template, valueRange, function, value))
         }
         if (!isKotlinPathAnnotation(qualifiedName)) {
             return PsiReference.EMPTY_ARRAY
         }
-        return ArmeriaPathVariableSupport
-            .pathVariableOccurrences(value)
-            .map { occurrence ->
-                ArmeriaKotlinPathVariableReference(
-                    template = template,
-                    rangeInElement =
-                        TextRange(
-                            valueRange.startOffset + occurrence.startOffset,
-                            valueRange.startOffset + occurrence.endOffset,
-                        ),
-                    function = function,
-                    variableName = occurrence.name,
-                )
-            }.toTypedArray()
+        val occurrences = ArmeriaPathVariableSupport.pathVariableOccurrences(value)
+        if (function != null) {
+            return occurrences
+                .map { occurrence ->
+                    ArmeriaKotlinPathVariableReference(
+                        template = template,
+                        rangeInElement = kotlinOccurrenceRange(valueRange, occurrence),
+                        function = function,
+                        variableName = occurrence.name,
+                    )
+                }.toTypedArray()
+        }
+        if (qualifiedName == ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION && owner != null) {
+            return occurrences
+                .map { occurrence ->
+                    ArmeriaKotlinPathPrefixVariableReference(
+                        template = template,
+                        rangeInElement = kotlinOccurrenceRange(valueRange, occurrence),
+                        owner = owner,
+                        variableName = occurrence.name,
+                    )
+                }.toTypedArray()
+        }
+        return PsiReference.EMPTY_ARRAY
     }
 }
 
@@ -72,6 +85,15 @@ private fun isKotlinPathAnnotation(qualifiedName: String): Boolean =
     qualifiedName in ArmeriaRouteSupport.routeAnnotations ||
         qualifiedName == ArmeriaRouteSupport.PATH_ANNOTATION ||
         qualifiedName == ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION
+
+private fun kotlinOccurrenceRange(
+    valueRange: TextRange,
+    occurrence: ArmeriaPathVariableSupport.PathVariableOccurrence,
+): TextRange =
+    TextRange(
+        valueRange.startOffset + occurrence.startOffset,
+        valueRange.startOffset + occurrence.endOffset,
+    )
 
 private class ArmeriaKotlinParamNameReference(
     template: KtStringTemplateExpression,
@@ -110,6 +132,20 @@ private class ArmeriaKotlinPathVariableReference(
     }
 }
 
+private class ArmeriaKotlinPathPrefixVariableReference(
+    template: KtStringTemplateExpression,
+    rangeInElement: TextRange,
+    private val owner: KtClassOrObject,
+    private val variableName: String,
+) : PsiReferenceBase<KtStringTemplateExpression>(template, rangeInElement, true) {
+    override fun resolve(): PsiElement = element
+
+    override fun handleElementRename(newElementName: String): PsiElement {
+        renameKotlinClassPathVariable(owner, variableName, newElementName)
+        return element
+    }
+}
+
 internal fun renameKotlinPathVariable(
     function: KtNamedFunction,
     oldName: String,
@@ -118,15 +154,60 @@ internal fun renameKotlinPathVariable(
     if (oldName.isEmpty() || oldName == newName) {
         return
     }
+    val owner = PsiTreeUtil.getParentOfType(function, KtClassOrObject::class.java)
+    if (owner != null && kotlinClassPrefixHasVariable(owner, oldName)) {
+        renameKotlinClassPathVariable(owner, oldName, newName)
+        return
+    }
+    rewriteKotlinPathVariableEntries(kotlinEntriesOnFunction(function), oldName, newName)
+}
+
+internal fun renameKotlinClassPathVariable(
+    owner: KtClassOrObject,
+    oldName: String,
+    newName: String,
+) {
+    if (oldName.isEmpty() || oldName == newName) {
+        return
+    }
     val entries = mutableListOf<KtAnnotationEntry>()
-    entries += function.annotationEntries
-    PsiTreeUtil.getParentOfType(function, KtClassOrObject::class.java)?.annotationEntries?.let { entries += it }
-    function.valueParameters.forEach { parameter -> entries += parameter.annotationEntries }
+    entries += owner.annotationEntries
+    owner.declarations.filterIsInstance<KtNamedFunction>().forEach { entries += kotlinEntriesOnFunction(it) }
+    rewriteKotlinPathVariableEntries(entries, oldName, newName)
+}
+
+private fun kotlinClassPrefixHasVariable(
+    owner: KtClassOrObject,
+    name: String,
+): Boolean {
+    val prefixEntry =
+        owner.annotationEntries.firstOrNull {
+            ArmeriaKotlinAnnotationSupport.qualifiedName(it) == ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION
+        } ?: return false
+    return name in
+        ArmeriaKotlinAnnotationSupport.extractStrings(prefixEntry).flatMap {
+            ArmeriaPathVariableSupport.extractPathVariables(it)
+        }
+}
+
+private fun kotlinEntriesOnFunction(function: KtNamedFunction): List<KtAnnotationEntry> =
+    buildList {
+        addAll(function.annotationEntries)
+        function.valueParameters.forEach { parameter -> addAll(parameter.annotationEntries) }
+    }
+
+private fun rewriteKotlinPathVariableEntries(
+    entries: List<KtAnnotationEntry>,
+    oldName: String,
+    newName: String,
+) {
     for (entry in entries) {
         val qualifiedName = ArmeriaKotlinAnnotationSupport.qualifiedName(entry) ?: continue
         when {
             isKotlinPathAnnotation(qualifiedName) ->
-                replaceKotlinAnnotationStrings(entry) { ArmeriaPathVariableSupport.replacePathVariableName(it, oldName, newName) }
+                replaceKotlinAnnotationStrings(entry) {
+                    ArmeriaPathVariableSupport.replacePathVariableName(it, oldName, newName)
+                }
             qualifiedName == ArmeriaRouteSupport.PARAM_ANNOTATION ->
                 replaceKotlinAnnotationStrings(entry) { current -> if (current == oldName) newName else current }
         }
@@ -139,10 +220,7 @@ private fun replaceKotlinAnnotationStrings(
 ) {
     for (argument in entry.valueArguments) {
         val expression = argument.getArgumentExpression() as? KtStringTemplateExpression ?: continue
-        if (!expression.isConstantString()) {
-            continue
-        }
-        val current = expression.constantStringValue() ?: continue
+        val current = expression.decodedConstantString() ?: continue
         val updated = transform(current)
         if (updated != current) {
             ElementManipulators.handleContentChange(expression, updated)
@@ -150,16 +228,21 @@ private fun replaceKotlinAnnotationStrings(
     }
 }
 
-internal fun KtStringTemplateExpression.isConstantString(): Boolean = entries.size <= 1
-
-internal fun KtStringTemplateExpression.constantStringValue(): String? {
+internal fun KtStringTemplateExpression.decodedConstantString(): String? {
+    if (entries.any { it is KtStringTemplateEntryWithExpression }) {
+        return null
+    }
     if (entries.isEmpty()) {
         return ""
     }
-    if (entries.size != 1) {
-        return null
+    return buildString {
+        for (entry in entries) {
+            when (entry) {
+                is KtEscapeStringTemplateEntry -> append(entry.unescapedValue)
+                else -> append(entry.text)
+            }
+        }
     }
-    return entries[0].text
 }
 
 internal fun cookieNamesInKotlinClass(owner: KtClassOrObject): Set<String> {

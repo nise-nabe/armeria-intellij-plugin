@@ -76,7 +76,7 @@ class ArmeriaParamPathVariableKotlinInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
-    fun highlightsUnusedParamWhenPathVariableIsMissing() {
+    fun allowsQueryParamWhenPathVariableIsMissing() {
         myFixture.configureByText(
             "MismatchService.kt",
             """
@@ -87,13 +87,13 @@ class ArmeriaParamPathVariableKotlinInspectionTest : ArmeriaFixtureTestBase5() {
 
             class MismatchService {
                 @Get("/users/{id}")
-                fun handler(@Param("userId") userId: String): String = userId
+                fun handler(@Param("userId") userId: String, @Param("page") page: Int): String = userId
             }
             """.trimIndent(),
         )
         val descriptions = myFixture.doHighlighting().mapNotNull { it.description }.toSet()
         assertTrue(message("inspection.param.path.variable.missing", "id") in descriptions)
-        assertTrue(message("inspection.param.path.variable.unused", "userId") in descriptions)
+        assertTrue(descriptions.none { it.startsWith("@Param") })
     }
 
     private fun assertNoParamMismatchHighlights() {

@@ -26,6 +26,7 @@ class ArmeriaParamPathVariableInspectionTest : ArmeriaFixtureTestBase5() {
             "@Get(\"/users/{id}\")|id",
             "@Get(\"/hello/:name\")|name",
             "@Get(\"/users/{id:[0-9]+}\")|id",
+            "@Get(\"/years/{year:[0-9]{4}}\")|year",
             "@Get(\"regex:^(?<userId>\\\\d+)$\")|userId",
         ],
     )
@@ -94,11 +95,32 @@ class ArmeriaParamPathVariableInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
-    fun highlightsUnusedParamWhenPathVariableIsMissing() {
-        configureUsersGet("""public String handler(@Param("userId") String userId) { return userId; }""")
+    fun allowsQueryParamWhenPathVariableIsMissing() {
+        configureUsersGet("""public String handler(@Param("userId") String userId, @Param("page") int page) { return userId; }""")
         val descriptions = myFixture.doHighlighting().mapNotNull { it.description }.toSet()
         assertTrue(message("inspection.param.path.variable.missing", "id") in descriptions)
-        assertTrue(message("inspection.param.path.variable.unused", "userId") in descriptions)
+        assertTrue(descriptions.none { it.startsWith("@Param") })
+    }
+
+    @Test
+    fun treatsNestedBraceQuantifierAsConstraintNotName() {
+        myFixture.configureByText(
+            "YearService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.Param;
+
+            public class YearService {
+                @Get("/years/{year:[0-9]{4}}")
+                public String handler(@Param("year") String year) {
+                    return year;
+                }
+            }
+            """.trimIndent(),
+        )
+        assertNoParamMismatchHighlights()
     }
 
     @Test

@@ -62,7 +62,7 @@ internal object ArmeriaKotlinAnnotationSupport {
                 } ?: return@mapNotNull null
             val explicit = extractStrings(entry).firstOrNull { it.isNotBlank() }
             val name = explicit ?: parameter.name ?: return@mapNotNull null
-            ArmeriaParamBinding(name, entry.calleeExpression ?: entry)
+            ArmeriaParamBinding(name)
         }
 
     private fun resolveAnnotationType(entry: KtAnnotationEntry): String? {

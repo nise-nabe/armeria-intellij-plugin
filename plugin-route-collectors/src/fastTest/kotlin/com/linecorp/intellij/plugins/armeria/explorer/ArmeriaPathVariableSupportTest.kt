@@ -12,8 +12,31 @@ class ArmeriaPathVariableSupportTest {
     }
 
     @Test
-    fun extractBraceConstraintUsesNameOnly() {
+    fun extractNestedBraceQuantifierUsesNameOnly() {
+        assertEquals(listOf("year"), ArmeriaPathVariableSupport.extractPathVariables("/years/{year:[0-9]{4}}"))
+        assertEquals(listOf("id"), ArmeriaPathVariableSupport.extractPathVariables("/users/{id:[0-9]{1,10}}"))
         assertEquals(listOf("id"), ArmeriaPathVariableSupport.extractPathVariables("/users/{id:[0-9]+}"))
+    }
+
+    @Test
+    fun colonInsideBraceConstraintIsNotAVariable() {
+        assertEquals(listOf("id"), ArmeriaPathVariableSupport.extractPathVariables("/users/{id:uuid}"))
+    }
+
+    @Test
+    fun replaceNestedBraceQuantifierPreservesConstraint() {
+        assertEquals(
+            "/years/{fullYear:[0-9]{4}}",
+            ArmeriaPathVariableSupport.replacePathVariableName("/years/{year:[0-9]{4}}", "year", "fullYear"),
+        )
+    }
+
+    @Test
+    fun occurrencesPointAtNestedBraceName() {
+        val path = "/years/{year:[0-9]{4}}"
+        val occurrences = ArmeriaPathVariableSupport.pathVariableOccurrences(path)
+        assertEquals(listOf("year"), occurrences.map { it.name })
+        assertEquals("year", path.substring(occurrences[0].startOffset, occurrences[0].endOffset))
     }
 
     @Test

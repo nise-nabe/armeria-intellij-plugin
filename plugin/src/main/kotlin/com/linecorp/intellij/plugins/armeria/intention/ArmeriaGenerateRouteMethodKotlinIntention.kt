@@ -6,7 +6,6 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiElement
-import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.inspection.ArmeriaKotlinAnnotationSupport
@@ -130,7 +129,7 @@ open class ArmeriaGenerateRouteMethodKotlinIntention : PsiElementBaseIntentionAc
         }
         return JavaPsiFacade.getInstance(project).findClass(
             ARMERIA_KOTLIN_MARKER_CLASS,
-            GlobalSearchScope.allScope(project),
+            serviceClass.resolveScope,
         ) != null
     }
 

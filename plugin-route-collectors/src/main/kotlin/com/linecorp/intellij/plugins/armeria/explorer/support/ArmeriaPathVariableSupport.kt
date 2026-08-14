@@ -3,10 +3,13 @@ package com.linecorp.intellij.plugins.armeria.explorer.support
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 
 object ArmeriaPathVariableSupport {
-    private val BRACE_PATH_VARIABLE_PATTERN = Regex("""\{([^{}]+)}""")
     private val COLON_PATH_VARIABLE_PATTERN = Regex(""":([A-Za-z_][A-Za-z0-9_]*)""")
     private val REGEX_NAMED_GROUP_PATTERN = Regex("""\(\?<([A-Za-z_][A-Za-z0-9_]*)>""")
 
+    /**
+     * Names bound from brace (`{id}`), colon (`:name`), and regex named groups.
+     * Glob wildcards (`*` / `**`) are not extracted; Armeria binds those as `"0"`, `"1"`, …
+     */
     fun extractPathVariables(rawPath: String): List<String> {
         val (pathType, normalized) = ArmeriaRouteAnnotationSupport.parsePathType(rawPath)
         return extractPathVariables(normalized, pathType)
@@ -15,21 +18,7 @@ object ArmeriaPathVariableSupport {
     fun extractPathVariables(
         path: String,
         pathType: PathType,
-    ): List<String> {
-        val names = linkedSetOf<String>()
-        when (pathType) {
-            PathType.GLOB -> return emptyList()
-            PathType.REGEX ->
-                REGEX_NAMED_GROUP_PATTERN.findAll(path).forEach { names += it.groupValues[1] }
-            PathType.EXACT, PathType.PREFIX -> {
-                BRACE_PATH_VARIABLE_PATTERN.findAll(path).forEach { match ->
-                    braceVariableName(match.groupValues[1])?.let { names += it }
-                }
-                COLON_PATH_VARIABLE_PATTERN.findAll(path).forEach { names += it.groupValues[1] }
-            }
-        }
-        return names.toList()
-    }
+    ): List<String> = pathVariableOccurrences(path, pathType).map { it.name }.distinct()
 
     fun replacePathVariableName(
         path: String,
@@ -39,12 +28,18 @@ object ArmeriaPathVariableSupport {
         if (oldName.isEmpty() || oldName == newName) {
             return path
         }
-        val quoted = Regex.escape(oldName)
-        return path
-            .replace(Regex("""\{(\*?)$quoted(:[^{}]+)?}""")) { match ->
-                "{${match.groupValues[1]}$newName${match.groupValues[2]}}"
-            }.replace(Regex(""":$quoted(?![A-Za-z0-9_])"""), ":$newName")
-            .replace(Regex("""\(\?<$quoted>"""), "(?<$newName>")
+        val (pathType, normalized) = ArmeriaRouteAnnotationSupport.parsePathType(path)
+        val prefixLength = pathPrefixOffset(path, pathType)
+        val replaced =
+            when (pathType) {
+                PathType.GLOB -> normalized
+                PathType.REGEX -> replaceRegexNamedGroup(normalized, oldName, newName)
+                PathType.EXACT, PathType.PREFIX -> replaceExactPathVariables(normalized, oldName, newName)
+            }
+        if (replaced == normalized) {
+            return path
+        }
+        return path.substring(0, prefixLength) + replaced
     }
 
     fun pathVariableOccurrences(path: String): List<PathVariableOccurrence> {
@@ -56,50 +51,135 @@ object ArmeriaPathVariableSupport {
         path: String,
         pathType: PathType,
         offsetInOriginal: Int = 0,
+    ): List<PathVariableOccurrence> =
+        when (pathType) {
+            PathType.GLOB -> emptyList()
+            PathType.REGEX ->
+                REGEX_NAMED_GROUP_PATTERN
+                    .findAll(path)
+                    .map { match ->
+                        val name = match.groupValues[1]
+                        val nameStart = match.range.first + 3
+                        PathVariableOccurrence(
+                            name = name,
+                            startOffset = offsetInOriginal + nameStart,
+                            endOffset = offsetInOriginal + nameStart + name.length,
+                        )
+                    }.toList()
+            PathType.EXACT, PathType.PREFIX -> exactPathVariableOccurrences(path, offsetInOriginal)
+        }
+
+    private fun exactPathVariableOccurrences(
+        path: String,
+        offsetInOriginal: Int,
     ): List<PathVariableOccurrence> {
         val occurrences = mutableListOf<PathVariableOccurrence>()
-        when (pathType) {
-            PathType.GLOB -> return emptyList()
-            PathType.REGEX ->
-                REGEX_NAMED_GROUP_PATTERN.findAll(path).forEach { match ->
-                    val name = match.groupValues[1]
-                    val nameStart = match.range.first + 3
-                    occurrences +=
-                        PathVariableOccurrence(
-                            name = name,
-                            startOffset = offsetInOriginal + nameStart,
-                            endOffset = offsetInOriginal + nameStart + name.length,
-                        )
+        var index = 0
+        while (index < path.length) {
+            if (path[index] == '{') {
+                val end = findMatchingBrace(path, index)
+                if (end < 0) {
+                    index++
+                    continue
                 }
-            PathType.EXACT, PathType.PREFIX -> {
-                BRACE_PATH_VARIABLE_PATTERN.findAll(path).forEach { match ->
-                    val raw = match.groupValues[1]
-                    val name = braceVariableName(raw) ?: return@forEach
-                    val nameStartInBrace = raw.indexOf(name)
-                    if (nameStartInBrace < 0) {
-                        return@forEach
+                val inner = path.substring(index + 1, end)
+                val name = braceVariableName(inner)
+                if (name != null) {
+                    val nameStartInInner = inner.indexOf(name)
+                    if (nameStartInInner >= 0) {
+                        val nameStart = index + 1 + nameStartInInner
+                        occurrences +=
+                            PathVariableOccurrence(
+                                name = name,
+                                startOffset = offsetInOriginal + nameStart,
+                                endOffset = offsetInOriginal + nameStart + name.length,
+                            )
                     }
-                    val nameStart = match.range.first + 1 + nameStartInBrace
-                    occurrences +=
-                        PathVariableOccurrence(
-                            name = name,
-                            startOffset = offsetInOriginal + nameStart,
-                            endOffset = offsetInOriginal + nameStart + name.length,
-                        )
                 }
-                COLON_PATH_VARIABLE_PATTERN.findAll(path).forEach { match ->
-                    val name = match.groupValues[1]
-                    val nameStart = match.range.first + 1
-                    occurrences +=
-                        PathVariableOccurrence(
-                            name = name,
-                            startOffset = offsetInOriginal + nameStart,
-                            endOffset = offsetInOriginal + nameStart + name.length,
-                        )
+                index = end + 1
+                continue
+            }
+            val remaining = path.substring(index)
+            val nextBrace = remaining.indexOf('{').let { if (it < 0) remaining.length else it }
+            COLON_PATH_VARIABLE_PATTERN.findAll(remaining.substring(0, nextBrace)).forEach { match ->
+                val name = match.groupValues[1]
+                val nameStart = index + match.range.first + 1
+                occurrences +=
+                    PathVariableOccurrence(
+                        name = name,
+                        startOffset = offsetInOriginal + nameStart,
+                        endOffset = offsetInOriginal + nameStart + name.length,
+                    )
+            }
+            index += nextBrace
+        }
+        return occurrences
+    }
+
+    private fun replaceExactPathVariables(
+        path: String,
+        oldName: String,
+        newName: String,
+    ): String {
+        val result = StringBuilder()
+        var index = 0
+        while (index < path.length) {
+            if (path[index] == '{') {
+                val end = findMatchingBrace(path, index)
+                if (end < 0) {
+                    result.append(path[index])
+                    index++
+                    continue
+                }
+                val inner = path.substring(index + 1, end)
+                val name = braceVariableName(inner)
+                result.append('{')
+                if (name == oldName) {
+                    result.append(inner.replaceFirst(oldName, newName))
+                } else {
+                    result.append(inner)
+                }
+                result.append('}')
+                index = end + 1
+                continue
+            }
+            val remaining = path.substring(index)
+            val nextBrace = remaining.indexOf('{').let { if (it < 0) remaining.length else it }
+            val gap = remaining.substring(0, nextBrace)
+            result.append(
+                gap.replace(Regex(":" + Regex.escape(oldName) + "(?![A-Za-z0-9_])")) { ":$newName" },
+            )
+            index += nextBrace
+        }
+        return result.toString()
+    }
+
+    private fun replaceRegexNamedGroup(
+        path: String,
+        oldName: String,
+        newName: String,
+    ): String = path.replace(Regex("""\(\?<${Regex.escape(oldName)}>"""), "(?<$newName>")
+
+    private fun findMatchingBrace(
+        path: String,
+        start: Int,
+    ): Int {
+        if (start >= path.length || path[start] != '{') {
+            return -1
+        }
+        var depth = 0
+        for (index in start until path.length) {
+            when (path[index]) {
+                '{' -> depth++
+                '}' -> {
+                    depth--
+                    if (depth == 0) {
+                        return index
+                    }
                 }
             }
         }
-        return occurrences
+        return -1
     }
 
     private fun pathPrefixOffset(
