@@ -24,6 +24,13 @@ internal object ArmeriaRouteAnnotationSupport {
     const val PATCH_ANNOTATION = "com.linecorp.armeria.server.annotation.Patch"
     const val TRACE_ANNOTATION = "com.linecorp.armeria.server.annotation.Trace"
 
+    const val PARAM_ANNOTATION = "com.linecorp.armeria.server.annotation.Param"
+    const val HEADER_ANNOTATION = "com.linecorp.armeria.server.annotation.Header"
+    const val COOKIE_ANNOTATION = "com.linecorp.armeria.server.annotation.Cookie"
+    const val MATCHES_HEADER_ANNOTATION = "com.linecorp.armeria.server.annotation.MatchesHeader"
+    const val CONSUMES_JSON_ANNOTATION = "com.linecorp.armeria.server.annotation.ConsumesJson"
+    const val PRODUCES_JSON_ANNOTATION = "com.linecorp.armeria.server.annotation.ProducesJson"
+
     val routeAnnotations =
         mapOf(
             GET_ANNOTATION to "GET",

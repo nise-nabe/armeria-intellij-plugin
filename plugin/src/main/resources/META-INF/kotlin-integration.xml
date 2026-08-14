@@ -14,6 +14,15 @@
                          implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaDuplicateRouteKotlinInspection" />
         <localInspection language="kotlin"
                          bundle="messages.ArmeriaBundle"
+                         key="inspection.param.path.variable.kotlin.display.name"
+                         groupBundle="messages.ArmeriaBundle"
+                         groupKey="inspection.group.armeria"
+                         shortName="ArmeriaParamPathVariableKotlin"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaParamPathVariableKotlinInspection" />
+        <localInspection language="kotlin"
+                         bundle="messages.ArmeriaBundle"
                          key="inspection.duplicate.registration.kotlin.display.name"
                          groupBundle="messages.ArmeriaBundle"
                          groupKey="inspection.group.armeria"
@@ -35,5 +44,19 @@
         <codeInsight.lineMarkerProvider language="kotlin"
                                         implementationClass="com.linecorp.intellij.plugins.armeria.test.ArmeriaKotlinJUnitServerExtensionLineMarkerProvider" />
         <defaultLiveTemplates file="liveTemplates/ArmeriaKotlin.xml"/>
+        <intentionAction>
+            <className>com.linecorp.intellij.plugins.armeria.intention.ArmeriaGenerateRouteMethodKotlinIntention</className>
+            <category>Armeria</category>
+            <language>kotlin</language>
+        </intentionAction>
+        <intentionAction>
+            <className>com.linecorp.intellij.plugins.armeria.intention.ArmeriaGeneratePostJsonRouteMethodKotlinIntention</className>
+            <category>Armeria</category>
+            <language>kotlin</language>
+        </intentionAction>
+        <completion.contributor language="kotlin"
+                                implementationClass="com.linecorp.intellij.plugins.armeria.completion.ArmeriaKotlinAnnotationValueCompletionContributor"/>
+        <psi.referenceContributor language="kotlin"
+                                  implementation="com.linecorp.intellij.plugins.armeria.completion.ArmeriaKotlinParamReferenceContributor"/>
     </extensions>
 </idea-plugin>

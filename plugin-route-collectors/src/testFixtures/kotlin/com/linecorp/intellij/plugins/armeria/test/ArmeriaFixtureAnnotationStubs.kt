@@ -36,6 +36,15 @@ fun JavaCodeInsightTestFixture.registerArmeriaAnnotationStubs() {
         """
         package com.linecorp.armeria.server.annotation;
 
+        public @interface Path {
+            String[] value() default {};
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.annotation;
+
         public @interface Decorator {
             Class<?>[] value();
         }
@@ -110,6 +119,34 @@ fun JavaCodeInsightTestFixture.registerContentAnnotationStubs() {
         package com.linecorp.armeria.server.annotation;
 
         public @interface Description { String value() default ""; }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.annotation;
+
+        public @interface Header { String value() default ""; }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.annotation;
+
+        public @interface Cookie { String value() default ""; }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.annotation;
+
+        public @interface ConsumesJson {}
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.annotation;
+
+        public @interface ProducesJson {}
         """.trimIndent(),
     )
 }

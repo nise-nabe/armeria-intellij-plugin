@@ -5,6 +5,12 @@
     <variable name="PARAMS" expression="" defaultValue="" alwaysStopAt="true"/>
     <context><option name="JAVA_DECLARATION" value="true"/></context>
   </template>
+  <template name="armroute-java-post" key="live.template.annotated.route.method.post.json.description" resource-bundle="messages.ArmeriaBundle" value="@com.linecorp.armeria.server.annotation.Post(&quot;$PATH$&quot;)&#10;@com.linecorp.armeria.server.annotation.ConsumesJson&#10;@com.linecorp.armeria.server.annotation.ProducesJson&#10;public String $NAME$($PARAMS$) {&#10;    return &quot;$END$&quot;;&#10;}" description="Annotated Armeria POST JSON route method" toReformat="true" toShortenFQNames="true">
+    <variable name="PATH" expression="" defaultValue="/" alwaysStopAt="true"/>
+    <variable name="NAME" expression="" defaultValue="create" alwaysStopAt="true"/>
+    <variable name="PARAMS" expression="" defaultValue="" alwaysStopAt="true"/>
+    <context><option name="JAVA_DECLARATION" value="true"/></context>
+  </template>
   <template name="armsrv-java" key="live.template.server.builder.description" resource-bundle="messages.ArmeriaBundle" value="com.linecorp.armeria.server.Server.builder()&#10;      .http($PORT$)&#10;      .annotatedService(new $SERVICE$())&#10;      .build()&#10;      .start()&#10;      .join();" description="Armeria Server.builder skeleton" toReformat="true" toShortenFQNames="true">
     <variable name="PORT" expression="" defaultValue="8080" alwaysStopAt="true"/>
     <variable name="SERVICE" expression="completeSmart()" defaultValue="MyService" alwaysStopAt="true"/>

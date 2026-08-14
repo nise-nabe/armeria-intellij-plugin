@@ -110,6 +110,33 @@ class ArmeriaGenerateRouteMethodIntentionTest : ArmeriaFixtureTestBase() {
         assertFalse(updated.contains("public String handler()"))
     }
 
+    fun testSuggestsUniquePathWhenAdditionalPathAnnotationCollides() {
+        myFixture.configureByText(
+            "PathAnnotationCollisionService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.Path;
+
+            public class PathAnnotationCollisionService {
+                @Get
+                @Path("/handler")
+                public String hello() {
+                    return "exists";
+                }
+                <caret>
+            }
+            """.trimIndent(),
+        )
+
+        assertIntentionAvailableAndInvoke()
+
+        val updated = myFixture.editor.document.text
+        assertTrue(updated.contains("@Get(\"/handler2\")"))
+        assertTrue(updated.contains("public String handler2()"))
+    }
+
     fun testNotAvailableForRecordClass() {
         myFixture.configureByText(
             "RecordService.java",
@@ -205,6 +232,36 @@ class ArmeriaGenerateRouteMethodIntentionTest : ArmeriaFixtureTestBase() {
         )
 
         assertFalse(isIntentionAvailable())
+    }
+
+    fun testGeneratePostJsonRouteMethod() {
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class HelloService {
+                @Get("/hello")
+                public String hello() {
+                    return "hello";
+                }
+                <caret>
+            }
+            """.trimIndent(),
+        )
+
+        val intention = ArmeriaGeneratePostJsonRouteMethodIntention()
+        val element = myFixture.file.findElementAt(myFixture.editor.caretModel.offset)!!
+        assertTrue(intention.isAvailable(myFixture.project, myFixture.editor, element))
+        intention.invoke(myFixture.project, myFixture.editor, element)
+
+        val updated = myFixture.editor.document.text
+        assertTrue(updated.contains("@Post(\"/handler\")"))
+        assertTrue(updated.contains("@ConsumesJson"))
+        assertTrue(updated.contains("@ProducesJson"))
+        assertTrue(updated.contains("public String handler()"))
     }
 
     fun testNotAvailableInsideRouteAnnotationValue() {

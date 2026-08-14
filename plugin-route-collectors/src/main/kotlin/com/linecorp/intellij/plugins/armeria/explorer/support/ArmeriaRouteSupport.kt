@@ -45,6 +45,13 @@ object ArmeriaRouteSupport {
     const val PATCH_ANNOTATION = ArmeriaRouteAnnotationSupport.PATCH_ANNOTATION
     const val TRACE_ANNOTATION = ArmeriaRouteAnnotationSupport.TRACE_ANNOTATION
 
+    const val PARAM_ANNOTATION = ArmeriaRouteAnnotationSupport.PARAM_ANNOTATION
+    const val HEADER_ANNOTATION = ArmeriaRouteAnnotationSupport.HEADER_ANNOTATION
+    const val COOKIE_ANNOTATION = ArmeriaRouteAnnotationSupport.COOKIE_ANNOTATION
+    const val MATCHES_HEADER_ANNOTATION = ArmeriaRouteAnnotationSupport.MATCHES_HEADER_ANNOTATION
+    const val CONSUMES_JSON_ANNOTATION = ArmeriaRouteAnnotationSupport.CONSUMES_JSON_ANNOTATION
+    const val PRODUCES_JSON_ANNOTATION = ArmeriaRouteAnnotationSupport.PRODUCES_JSON_ANNOTATION
+
     val routeAnnotations = ArmeriaRouteAnnotationSupport.routeAnnotations
 
     fun findRouteAnnotation(method: PsiMethod): Pair<PsiAnnotation, String>? = ArmeriaRouteAnnotationSupport.findRouteAnnotation(method)
