@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.springboot.config
 
+import com.intellij.openapi.fileEditor.impl.LoadTextUtil
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -47,7 +48,7 @@ object ArmeriaSpringBootConfigCollector {
         return files.values.sortedBy { it.path }.mapNotNull { vf ->
             val text =
                 try {
-                    String(vf.contentsToByteArray(), vf.charset)
+                    LoadTextUtil.loadText(vf).toString()
                 } catch (exception: ProcessCanceledException) {
                     throw exception
                 } catch (_: Exception) {
@@ -59,6 +60,6 @@ object ArmeriaSpringBootConfigCollector {
             } else {
                 ArmeriaSpringBootConfigFile(vf.name, vf.path, entries)
             }
-        }
+        } + ArmeriaSpringBootConfiguratorBeanCollector.collect(project)
     }
 }
