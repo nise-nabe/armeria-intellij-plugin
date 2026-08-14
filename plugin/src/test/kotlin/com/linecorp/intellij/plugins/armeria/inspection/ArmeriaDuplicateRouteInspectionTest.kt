@@ -92,6 +92,34 @@ class ArmeriaDuplicateRouteInspectionTest : ArmeriaFixtureTestBase() {
         assertNoDuplicateRouteHighlights()
     }
 
+    fun testStillFlagsDuplicatesWhenMatchesHeaderDiffers() {
+        myFixture.configureByText(
+            "HeaderService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.MatchesHeader;
+
+            public class HeaderService {
+                @MatchesHeader("client-type=android")
+                @Get("/dup")
+                public String android() {
+                    return "android";
+                }
+
+                @MatchesHeader("client-type=ios")
+                @Get("/dup")
+                public String ios() {
+                    return "ios";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertDuplicateRouteHighlightsOnMethods("HeaderService", "android", "HeaderService", "ios")
+    }
+
     private fun assertNoDuplicateRouteHighlights() {
         val routeDuplicateHighlights =
             myFixture.doHighlighting().filter {

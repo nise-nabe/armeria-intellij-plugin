@@ -74,6 +74,10 @@ data class ArmeriaRoute(
                 append(target)
                 append(' ')
                 append(moduleName)
+                if (contentHints.isNotEmpty()) {
+                    append(' ')
+                    append(contentHints.joinToString(" "))
+                }
             }
 
     val detailHandlerLabel: String

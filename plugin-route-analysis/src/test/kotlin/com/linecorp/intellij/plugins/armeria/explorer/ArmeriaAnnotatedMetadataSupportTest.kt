@@ -148,6 +148,32 @@ class ArmeriaAnnotatedMetadataSupportTest : ArmeriaFixtureTestBase() {
         assertTrue(route.contentHints.none { it.contains("Path variables") })
     }
 
+    fun testRegexNamedGroupsArePathVariables() {
+        myFixture.configureByText(
+            "RegexService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.*;
+
+            public class RegexService {
+                @Get("regex:^(?<id>\\d+)$")
+                public String match() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val route = routes.single()
+        assertEquals(PathType.REGEX, route.pathType)
+        assertEquals(
+            listOf(message("route.explorer.hint.pathVariables", "id")),
+            route.contentHints,
+        )
+    }
+
     fun testDuplicateDescriptionIsNotRepeated() {
         myFixture.configureByText(
             "DupService.java",

@@ -6,6 +6,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpMethodPill
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteDetailFormatter
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteTreeBuilder
+import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteTreeLabel
 import com.linecorp.intellij.plugins.armeria.message
 import javax.swing.JTree
 
@@ -39,6 +40,10 @@ internal class ArmeriaRouteExplorerTreeRenderer : ColoredTreeCellRenderer() {
                 append(route.methodLabel)
                 append(' ')
                 append(route.path)
+                ArmeriaRouteTreeLabel.headerMatchSuffix(route)?.let { suffix ->
+                    append(" · ")
+                    append(suffix)
+                }
                 append(" → ")
                 append(route.shortTarget)
                 ArmeriaRouteDetailFormatter.tooltipDelegationSuffix(route)?.let { suffix ->
@@ -50,6 +55,10 @@ internal class ArmeriaRouteExplorerTreeRenderer : ColoredTreeCellRenderer() {
         append(ArmeriaHttpMethodPill.pillText(pillLabel), ArmeriaHttpMethodPill.textAttributes(route))
         append("  ", SimpleTextAttributes.REGULAR_ATTRIBUTES)
         append(route.path, SimpleTextAttributes.REGULAR_ATTRIBUTES)
+        ArmeriaRouteTreeLabel.headerMatchSuffix(route)?.let { suffix ->
+            append("  ", SimpleTextAttributes.REGULAR_ATTRIBUTES)
+            append(suffix, SimpleTextAttributes.GRAYED_ATTRIBUTES)
+        }
         ArmeriaRouteDetailFormatter.secondaryDelegationText(route)?.let { secondary ->
             append(secondary, SimpleTextAttributes.GRAYED_ATTRIBUTES)
         }

@@ -207,6 +207,36 @@ class ArmeriaGenerateRouteMethodIntentionTest : ArmeriaFixtureTestBase() {
         assertFalse(isIntentionAvailable())
     }
 
+    fun testGeneratePostJsonRouteMethod() {
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class HelloService {
+                @Get("/hello")
+                public String hello() {
+                    return "hello";
+                }
+                <caret>
+            }
+            """.trimIndent(),
+        )
+
+        val intention = ArmeriaGeneratePostJsonRouteMethodIntention()
+        val element = myFixture.file.findElementAt(myFixture.editor.caretModel.offset)!!
+        assertTrue(intention.isAvailable(myFixture.project, myFixture.editor, element))
+        intention.invoke(myFixture.project, myFixture.editor, element)
+
+        val updated = myFixture.editor.document.text
+        assertTrue(updated.contains("@Post(\"/handler\")"))
+        assertTrue(updated.contains("@ConsumesJson"))
+        assertTrue(updated.contains("@ProducesJson"))
+        assertTrue(updated.contains("public String handler()"))
+    }
+
     fun testNotAvailableInsideRouteAnnotationValue() {
         myFixture.configureByText(
             "AnnotationService.java",

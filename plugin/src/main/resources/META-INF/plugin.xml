@@ -51,6 +51,15 @@
                          enabledByDefault="true"
                          level="WARNING"
                          implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaDuplicateRouteInspection" />
+        <localInspection language="JAVA"
+                         bundle="messages.ArmeriaBundle"
+                         key="inspection.param.path.variable.display.name"
+                         groupBundle="messages.ArmeriaBundle"
+                         groupKey="inspection.group.armeria"
+                         shortName="ArmeriaParamPathVariable"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaParamPathVariableInspection" />
         <consoleFilterProvider implementation="com.linecorp.intellij.plugins.armeria.run.ArmeriaDocServiceConsoleFilterProvider" />
         <registryKey key="armeria.route.explorer.metrics"
                      defaultValue="false"
@@ -83,6 +92,15 @@
             <category>Armeria</category>
             <language>JAVA</language>
         </intentionAction>
+        <intentionAction>
+            <className>com.linecorp.intellij.plugins.armeria.intention.ArmeriaGeneratePostJsonRouteMethodIntention</className>
+            <category>Armeria</category>
+            <language>JAVA</language>
+        </intentionAction>
+        <completion.contributor language="JAVA"
+                                implementationClass="com.linecorp.intellij.plugins.armeria.completion.ArmeriaAnnotationValueCompletionContributor"/>
+        <psi.referenceContributor language="JAVA"
+                                  implementation="com.linecorp.intellij.plugins.armeria.completion.ArmeriaJavaParamReferenceContributor"/>
     </extensions>
 
     <actions>

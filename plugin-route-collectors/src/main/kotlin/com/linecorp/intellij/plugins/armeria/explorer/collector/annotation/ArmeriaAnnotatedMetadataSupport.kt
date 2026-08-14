@@ -4,14 +4,12 @@ import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiMethod
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaPathVariableSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.message
 
 internal object ArmeriaAnnotatedMetadataSupport {
-    private val BRACE_PATH_VARIABLE_PATTERN = Regex("""\{([^}]+)}""")
-    private val COLON_PATH_VARIABLE_PATTERN = Regex(""":([A-Za-z_][A-Za-z0-9_]*)""")
-
-    private const val MATCHES_HEADER_ANNOTATION = "com.linecorp.armeria.server.annotation.MatchesHeader"
+    private const val MATCHES_HEADER_ANNOTATION = ArmeriaRouteSupport.MATCHES_HEADER_ANNOTATION
     private const val STATUS_CODE_ANNOTATION = "com.linecorp.armeria.server.annotation.StatusCode"
     private const val CONSUMES_ANNOTATION = "com.linecorp.armeria.server.annotation.Consumes"
     private const val PRODUCES_ANNOTATION = "com.linecorp.armeria.server.annotation.Produces"
@@ -107,13 +105,5 @@ internal object ArmeriaAnnotatedMetadataSupport {
     private fun collectPathVariables(
         path: String,
         pathType: PathType,
-    ): List<String> {
-        if (pathType == PathType.REGEX || pathType == PathType.GLOB) {
-            return emptyList()
-        }
-        val variables = linkedSetOf<String>()
-        BRACE_PATH_VARIABLE_PATTERN.findAll(path).forEach { variables += it.groupValues[1] }
-        COLON_PATH_VARIABLE_PATTERN.findAll(path).forEach { variables += it.groupValues[1] }
-        return variables.toList()
-    }
+    ): List<String> = ArmeriaPathVariableSupport.extractPathVariables(path, pathType)
 }

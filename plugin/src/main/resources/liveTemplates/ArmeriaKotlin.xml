@@ -5,6 +5,18 @@
     <variable name="PARAMS" expression="" defaultValue="" alwaysStopAt="true"/>
     <context><option name="KOTLIN_CLASS" value="true"/></context>
   </template>
+  <template name="armroute-kotlin-post" key="live.template.annotated.route.method.kotlin.post.json.description" resource-bundle="messages.ArmeriaBundle" value="@com.linecorp.armeria.server.annotation.Post(&quot;$PATH$&quot;)&#10;@com.linecorp.armeria.server.annotation.ConsumesJson&#10;@com.linecorp.armeria.server.annotation.ProducesJson&#10;fun $NAME$($PARAMS$): String {&#10;    return &quot;$END$&quot;&#10;}" description="Annotated Armeria POST JSON route method (Kotlin)" toReformat="true" toShortenFQNames="true">
+    <variable name="PATH" expression="" defaultValue="/" alwaysStopAt="true"/>
+    <variable name="NAME" expression="" defaultValue="create" alwaysStopAt="true"/>
+    <variable name="PARAMS" expression="" defaultValue="" alwaysStopAt="true"/>
+    <context><option name="KOTLIN_CLASS" value="true"/></context>
+  </template>
+  <template name="armroute-kotlin-suspend" key="live.template.annotated.route.method.kotlin.suspend.description" resource-bundle="messages.ArmeriaBundle" value="@com.linecorp.armeria.server.annotation.Get(&quot;$PATH$&quot;)&#10;suspend fun $NAME$($PARAMS$): String {&#10;    return &quot;$END$&quot;&#10;}" description="Annotated Armeria suspend route method (Kotlin)" toReformat="true" toShortenFQNames="true">
+    <variable name="PATH" expression="" defaultValue="/" alwaysStopAt="true"/>
+    <variable name="NAME" expression="" defaultValue="handler" alwaysStopAt="true"/>
+    <variable name="PARAMS" expression="" defaultValue="" alwaysStopAt="true"/>
+    <context><option name="KOTLIN_CLASS" value="true"/></context>
+  </template>
   <template name="armsrv-kotlin" key="live.template.server.builder.kotlin.description" resource-bundle="messages.ArmeriaBundle" value="com.linecorp.armeria.server.Server.builder()&#10;    .http($PORT$)&#10;    .annotatedService($SERVICE$())&#10;    .build()&#10;    .start()&#10;    .join()" description="Armeria Server.builder skeleton (Kotlin)" toReformat="true" toShortenFQNames="true">
     <variable name="PORT" expression="" defaultValue="8080" alwaysStopAt="true"/>
     <variable name="SERVICE" expression="completeSmart()" defaultValue="MyService" alwaysStopAt="true"/>
