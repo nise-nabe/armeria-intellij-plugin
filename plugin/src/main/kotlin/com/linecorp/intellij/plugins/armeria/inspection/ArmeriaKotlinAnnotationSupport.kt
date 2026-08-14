@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.inspection
 
 import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiElement
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaKotlinRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaPathVariableSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
@@ -9,6 +10,7 @@ import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtParameter
 import org.jetbrains.kotlin.psi.KtProperty
+import org.jetbrains.kotlin.psi.KtUserType
 
 internal object ArmeriaKotlinAnnotationSupport {
     fun qualifiedName(entry: KtAnnotationEntry): String? {
@@ -74,16 +76,31 @@ internal object ArmeriaKotlinAnnotationSupport {
         }
 
     private fun beanParamBindings(parameter: KtParameter): List<ArmeriaParamBinding> {
-        val typeRef = parameter.typeReference ?: return emptyList()
-        for (reference in typeRef.references) {
-            when (val resolved = reference.resolve()) {
-                is KtClass -> return kotlinBeanParamBindings(resolved)
-                is PsiClass ->
-                    return (resolved.navigationElement as? KtClass)?.let { kotlinBeanParamBindings(it) }
-                        ?: ArmeriaParamPathVariableMismatch.beanParamBindings(resolved)
-            }
+        val resolved = resolveParameterType(parameter) ?: return emptyList()
+        return when (resolved) {
+            is KtClass -> kotlinBeanParamBindings(resolved)
+            is PsiClass ->
+                (resolved.navigationElement as? KtClass)?.let { kotlinBeanParamBindings(it) }
+                    ?: ArmeriaParamPathVariableMismatch.beanParamBindings(resolved)
+            else -> emptyList()
         }
-        return emptyList()
+    }
+
+    private fun resolveParameterType(parameter: KtParameter): PsiElement? {
+        val typeRef = parameter.typeReference ?: return null
+        val userType = typeRef.typeElement as? KtUserType
+        userType
+            ?.referenceExpression
+            ?.references
+            ?.firstNotNullOfOrNull { it.resolve() }
+            ?.let { return it }
+        typeRef.references
+            .firstNotNullOfOrNull { it.resolve() }
+            ?.let { return it }
+        val shortName = userType?.referencedName ?: return null
+        return typeRef.containingKtFile.declarations
+            .filterIsInstance<KtClass>()
+            .firstOrNull { it.name == shortName }
     }
 
     private fun kotlinBeanParamBindings(klass: KtClass): List<ArmeriaParamBinding> {
