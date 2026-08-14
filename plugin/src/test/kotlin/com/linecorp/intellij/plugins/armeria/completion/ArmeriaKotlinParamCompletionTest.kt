@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.completion
 
 import com.intellij.codeInsight.completion.CompletionType
+import com.intellij.openapi.command.WriteCommandAction
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase5
 import org.junit.jupiter.api.Test
 import kotlin.test.assertTrue
@@ -72,7 +73,9 @@ class ArmeriaKotlinParamCompletionTest : ArmeriaFixtureTestBase5() {
 
         val reference = myFixture.file.findReferenceAt(myFixture.editor.caretModel.offset)
         assertTrue(reference != null, "Expected a path-variable reference at the caret")
-        reference!!.handleElementRename("userId")
+        WriteCommandAction.runWriteCommandAction(myFixture.project) {
+            reference!!.handleElementRename("userId")
+        }
         val updated = myFixture.editor.document.text
         assertTrue(updated.contains("@Get(\"/users/{userId}\")"), updated)
         assertTrue(updated.contains("@Param(\"userId\")"), updated)
