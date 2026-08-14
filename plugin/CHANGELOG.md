@@ -4,6 +4,7 @@
 
 ### Added
 
+- Route Explorer classifies `Server.builder().service()` / `serviceUnder()` targets from resolved Armeria types (`com.linecorp.armeria`), walking constructors, builder/`addService` chains, typed variables, `.decorate()` receivers, and Kotlin `as` casts. User types outside that package stay HTTP even when the display name matches a built-in. `DocService`, `PrometheusExpositionService`, `GrpcService`, `FileService`, and servlet mounts show the correct protocol and Open DocService / duplicate-index behavior.
 - `@RegisterExtension` factory methods on Java static/instance methods and Kotlin class, named-object, or `@JvmStatic` companion methods are discovered for gutter run markers, blocking-client inspection scoping, and Generate Test Method.
 - PSI fixture regression tests for duplicate annotated route and duplicate route registration inspections (Java route highlighting, Java/Kotlin registration inspection scenarios).
 - ktlint via `com.linecorp.intellij.ktlint` convention (`ktlint_official` style); `ktlintCheck` runs as part of `check` / `build`.

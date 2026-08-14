@@ -30,6 +30,7 @@ data class ArmeriaRoute(
      * When set, Explorer navigation and [resolveSourceHint] prefer this offset over the pointer element range.
      */
     val sourceOffset: Int? = null,
+    val excludeFromDuplicateIndex: Boolean = false,
 ) {
     fun resolveSourceHint(): String {
         val element = pointer.element ?: return ""
@@ -108,6 +109,7 @@ data class ArmeriaRoute(
             /** When set, overrides module attribution derived from [element] (e.g. concrete controller). */
             moduleName: String? = null,
             sourceOffset: Int? = null,
+            excludeFromDuplicateIndex: Boolean = false,
         ): ArmeriaRoute =
             ArmeriaRoute(
                 protocol = protocol,
@@ -130,6 +132,7 @@ data class ArmeriaRoute(
                 delegationKind = delegationKind,
                 pointer = SmartPointerManager.createPointer(element),
                 sourceOffset = sourceOffset,
+                excludeFromDuplicateIndex = excludeFromDuplicateIndex,
             )
 
         fun createRuntime(

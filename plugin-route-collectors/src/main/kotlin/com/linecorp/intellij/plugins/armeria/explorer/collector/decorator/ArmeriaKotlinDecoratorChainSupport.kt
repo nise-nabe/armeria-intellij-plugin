@@ -1,4 +1,5 @@
 package com.linecorp.intellij.plugins.armeria.explorer.collector.decorator
+import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiVariable
@@ -134,6 +135,7 @@ internal object ArmeriaKotlinDecoratorChainSupport {
         return when (resolved) {
             is KtTypeAlias -> resolved.getTypeReference()?.text ?: typeReference.text
             is KtClass -> resolved.fqName?.asString() ?: typeReference.text
+            is PsiClass -> resolved.qualifiedName ?: resolved.name ?: typeReference.text
             else -> userType?.text ?: typeReference.text
         }
     }

@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer.support
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiVariable
+import org.jetbrains.kotlin.psi.KtBinaryExpressionWithTypeRHS
 import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
@@ -100,6 +101,7 @@ object ArmeriaKotlinExpressionSupport {
             current =
                 when (current) {
                     is KtParenthesizedExpression -> current.expression ?: return null
+                    is KtBinaryExpressionWithTypeRHS -> current.left ?: return null
                     else -> return current
                 }
         }
