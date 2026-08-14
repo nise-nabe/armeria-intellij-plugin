@@ -109,4 +109,25 @@ class ArmeriaPathVariableSupportTest {
             ArmeriaPathVariableSupport.extractPathVariables("/users/{id}", PathType.PREFIX),
         )
     }
+
+    @Test
+    fun colonVariablesRequireSegmentBoundary() {
+        assertEquals(emptyList(), ArmeriaPathVariableSupport.extractPathVariables("/foo:bar"))
+        assertEquals(listOf("productType"), ArmeriaPathVariableSupport.extractPathVariables("/list/:productType"))
+        assertEquals(emptyList(), ArmeriaPathVariableSupport.extractPathVariables("/foo/\\:colon"))
+        assertEquals(
+            "/foo:bar",
+            ArmeriaPathVariableSupport.replacePathVariableName("/foo:bar", "bar", "id"),
+        )
+    }
+
+    @Test
+    fun exactTypedPathsHaveNoVariables() {
+        assertEquals(emptyList(), ArmeriaPathVariableSupport.extractPathVariables("exact:/users/{id}"))
+        assertEquals(
+            "exact:/users/{id}",
+            ArmeriaPathVariableSupport.replacePathVariableName("exact:/users/{id}", "id", "userId"),
+        )
+        assertEquals(listOf("id"), ArmeriaPathVariableSupport.extractPathVariables("/users/{id}"))
+    }
 }

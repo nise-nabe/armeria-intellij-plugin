@@ -9,10 +9,14 @@ object ArmeriaPathVariableSupport {
     /**
      * Names bound from brace (`{id}`), colon (`:name`), and regex named groups.
      * Glob wildcards (`*` / `**`) are not extracted; Armeria binds those as `"0"`, `"1"`, …
+     * Typed `exact:` paths are literal matches and do not bind parameters.
      */
     fun extractPathVariables(rawPath: String): List<String> {
-        val (pathType, bodyStart) = typedPathBodyStart(rawPath)
-        return extractPathVariables(rawPath.substring(bodyStart), pathType)
+        val typed = typedPath(rawPath)
+        if (!typed.bindVariables) {
+            return emptyList()
+        }
+        return extractPathVariables(rawPath.substring(typed.bodyStart), typed.pathType)
     }
 
     fun extractPathVariables(
@@ -28,10 +32,13 @@ object ArmeriaPathVariableSupport {
         if (oldName.isEmpty() || oldName == newName) {
             return path
         }
-        val (pathType, bodyStart) = typedPathBodyStart(path)
-        val body = path.substring(bodyStart)
+        val typed = typedPath(path)
+        if (!typed.bindVariables) {
+            return path
+        }
+        val body = path.substring(typed.bodyStart)
         val replaced =
-            when (pathType) {
+            when (typed.pathType) {
                 PathType.GLOB -> body
                 PathType.REGEX -> replaceRegexNamedGroup(body, oldName, newName)
                 PathType.EXACT, PathType.PREFIX -> replaceExactPathVariables(body, oldName, newName)
@@ -39,12 +46,15 @@ object ArmeriaPathVariableSupport {
         if (replaced == body) {
             return path
         }
-        return path.substring(0, bodyStart) + replaced
+        return path.substring(0, typed.bodyStart) + replaced
     }
 
     fun pathVariableOccurrences(path: String): List<PathVariableOccurrence> {
-        val (pathType, bodyStart) = typedPathBodyStart(path)
-        return pathVariableOccurrences(path.substring(bodyStart), pathType, bodyStart)
+        val typed = typedPath(path)
+        if (!typed.bindVariables) {
+            return emptyList()
+        }
+        return pathVariableOccurrences(path.substring(typed.bodyStart), typed.pathType, typed.bodyStart)
     }
 
     fun pathVariableOccurrences(
@@ -102,8 +112,12 @@ object ArmeriaPathVariableSupport {
             val remaining = path.substring(index)
             val nextBrace = remaining.indexOf('{').let { if (it < 0) remaining.length else it }
             COLON_PATH_VARIABLE_PATTERN.findAll(remaining.substring(0, nextBrace)).forEach { match ->
+                val colonIndex = index + match.range.first
+                if (!isColonPathParameter(path, colonIndex)) {
+                    return@forEach
+                }
                 val name = match.groupValues[1]
-                val nameStart = index + match.range.first + 1
+                val nameStart = colonIndex + 1
                 occurrences +=
                     PathVariableOccurrence(
                         name = name,
@@ -146,9 +160,7 @@ object ArmeriaPathVariableSupport {
             val remaining = path.substring(index)
             val nextBrace = remaining.indexOf('{').let { if (it < 0) remaining.length else it }
             val gap = remaining.substring(0, nextBrace)
-            result.append(
-                gap.replace(Regex(":" + Regex.escape(oldName) + "(?![A-Za-z0-9_])")) { ":$newName" },
-            )
+            result.append(replaceColonPathVariables(path, index, gap, oldName, newName))
             index += nextBrace
         }
         return result.toString()
@@ -159,6 +171,40 @@ object ArmeriaPathVariableSupport {
         oldName: String,
         newName: String,
     ): String = path.replace(Regex("""\(\?<${Regex.escape(oldName)}>"""), "(?<$newName>")
+
+    private fun replaceColonPathVariables(
+        path: String,
+        gapStartInPath: Int,
+        gap: String,
+        oldName: String,
+        newName: String,
+    ): String {
+        val replaced = StringBuilder()
+        var cursor = 0
+        COLON_PATH_VARIABLE_PATTERN.findAll(gap).forEach { match ->
+            val colonIndex = gapStartInPath + match.range.first
+            replaced.append(gap, cursor, match.range.first)
+            val name = match.groupValues[1]
+            if (isColonPathParameter(path, colonIndex) && name == oldName) {
+                replaced.append(':').append(newName)
+            } else {
+                replaced.append(match.value)
+            }
+            cursor = match.range.last + 1
+        }
+        replaced.append(gap, cursor, gap.length)
+        return replaced.toString()
+    }
+
+    private fun isColonPathParameter(
+        path: String,
+        colonIndex: Int,
+    ): Boolean {
+        if (colonIndex < 0 || colonIndex >= path.length || path[colonIndex] != ':') {
+            return false
+        }
+        return colonIndex == 0 || path[colonIndex - 1] == '/'
+    }
 
     private fun findMatchingBrace(
         path: String,
@@ -182,15 +228,15 @@ object ArmeriaPathVariableSupport {
         return -1
     }
 
-    private fun typedPathBodyStart(rawPath: String): Pair<PathType, Int> {
+    private fun typedPath(rawPath: String): TypedPath {
         val start = rawPath.indexOfFirst { !it.isWhitespace() }.let { if (it < 0) 0 else it }
         val rest = rawPath.substring(start)
         return when {
-            rest.startsWith("prefix:") -> PathType.PREFIX to start + 7
-            rest.startsWith("regex:") -> PathType.REGEX to start + 6
-            rest.startsWith("glob:") -> PathType.GLOB to start + 5
-            rest.startsWith("exact:") -> PathType.EXACT to start + 6
-            else -> PathType.EXACT to start
+            rest.startsWith("prefix:") -> TypedPath(PathType.PREFIX, start + 7, bindVariables = true)
+            rest.startsWith("regex:") -> TypedPath(PathType.REGEX, start + 6, bindVariables = true)
+            rest.startsWith("glob:") -> TypedPath(PathType.GLOB, start + 5, bindVariables = false)
+            rest.startsWith("exact:") -> TypedPath(PathType.EXACT, start + 6, bindVariables = false)
+            else -> TypedPath(PathType.EXACT, start, bindVariables = true)
         }
     }
 
@@ -208,5 +254,11 @@ object ArmeriaPathVariableSupport {
         val name: String,
         val startOffset: Int,
         val endOffset: Int,
+    )
+
+    private data class TypedPath(
+        val pathType: PathType,
+        val bodyStart: Int,
+        val bindVariables: Boolean,
     )
 }
