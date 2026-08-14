@@ -119,8 +119,93 @@ class ArmeriaSpringBootConfigParserTest {
     @Test
     fun documentationFor_resolvesIndexedKeys() {
         assertEquals(
-            message("springboot.config.doc.armeria.ports"),
+            message("springboot.config.doc.armeria.ports.port"),
             ArmeriaSpringBootConfigKeys.documentationFor("armeria.ports[0].port"),
+        )
+        assertEquals(
+            message("springboot.config.doc.armeria.ports"),
+            ArmeriaSpringBootConfigKeys.documentationFor("armeria.ports[0]"),
+        )
+    }
+
+    @Test
+    fun completionSuggestions_includeArmeriaSettingsPaths() {
+        val suggestions = ArmeriaSpringBootConfigKeys.COMPLETION_SUGGESTIONS
+        assertTrue("armeria.docs-path" in suggestions)
+        assertTrue("armeria.health-check-path" in suggestions)
+        assertTrue("armeria.metrics-path" in suggestions)
+        assertTrue("armeria.internal-services.include" in suggestions)
+        assertTrue("armeria.ssl.key-store" in suggestions)
+    }
+
+    @Test
+    fun completionInsertText_topLevelArmeriaKeysInsertArmeriaSegment() {
+        assertEquals(
+            "armeria",
+            ArmeriaSpringBootConfigKeys.completionInsertText("", "armeria.docs-path"),
+        )
+        assertEquals(
+            "docs-path",
+            ArmeriaSpringBootConfigKeys.completionInsertText("armeria", "armeria.docs-path"),
+        )
+        assertEquals(
+            "include",
+            ArmeriaSpringBootConfigKeys.completionInsertText(
+                "armeria.internal-services",
+                "armeria.internal-services.include",
+            ),
+        )
+    }
+
+    @Test
+    fun isIncludeValuePath_matchesIndexedIncludeKeys() {
+        assertTrue(ArmeriaSpringBootConfigKeys.isIncludeValuePath("armeria.internal-services.include"))
+        assertTrue(ArmeriaSpringBootConfigKeys.isIncludeValuePath("armeria.internal-services.include[0]"))
+        assertFalse(ArmeriaSpringBootConfigKeys.isIncludeValuePath("armeria.internal-services.port"))
+    }
+
+    @Test
+    fun includeValueDocumentation_coversDocumentedServiceIds() {
+        assertEquals(
+            listOf("docs", "health", "metrics", "actuator", "all"),
+            ArmeriaSpringBootConfigKeys.INTERNAL_SERVICE_INCLUDE_VALUES,
+        )
+        assertEquals(
+            message("springboot.config.doc.include.docs"),
+            ArmeriaSpringBootConfigKeys.documentationForIncludeValue("docs"),
+        )
+        assertNull(ArmeriaSpringBootConfigKeys.documentationForIncludeValue("unknown"))
+    }
+
+    @Test
+    fun lastIncludeToken_usesTextAfterLastComma() {
+        assertEquals("he", ArmeriaSpringBootCompletionSupport.lastIncludeToken("docs, he"))
+        assertEquals("docs", ArmeriaSpringBootCompletionSupport.lastIncludeToken("docs"))
+    }
+
+    @Test
+    fun incompleteYamlKeyPrefix_detectsNestedKeyWithoutColon() {
+        assertEquals("i", ArmeriaSpringBootCompletionSupport.incompleteYamlKeyPrefix("  i"))
+        assertEquals("p", ArmeriaSpringBootCompletionSupport.incompleteYamlKeyPrefix("    - p"))
+        assertEquals("", ArmeriaSpringBootCompletionSupport.incompleteYamlKeyPrefix("  "))
+        assertNull(ArmeriaSpringBootCompletionSupport.incompleteYamlKeyPrefix("  include: "))
+        assertNull(ArmeriaSpringBootCompletionSupport.incompleteYamlKeyPrefix("    - port: 8"))
+    }
+
+    @Test
+    fun propertiesValueSeparatorIndex_acceptsEqualsColonAndWhitespace() {
+        assertEquals(-1, ArmeriaSpringBootCompletionSupport.propertiesValueSeparatorIndex("armeria.docs-path"))
+        assertEquals(
+            "armeria.internal-services.include=".indexOf('='),
+            ArmeriaSpringBootCompletionSupport.propertiesValueSeparatorIndex("armeria.internal-services.include="),
+        )
+        assertEquals(
+            "armeria.internal-services.include:".indexOf(':'),
+            ArmeriaSpringBootCompletionSupport.propertiesValueSeparatorIndex("armeria.internal-services.include:"),
+        )
+        assertEquals(
+            "armeria.internal-services.include ".indexOf(' '),
+            ArmeriaSpringBootCompletionSupport.propertiesValueSeparatorIndex("armeria.internal-services.include "),
         )
     }
 

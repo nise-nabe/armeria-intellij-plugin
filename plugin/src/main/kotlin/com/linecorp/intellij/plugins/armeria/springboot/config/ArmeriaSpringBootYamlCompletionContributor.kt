@@ -5,12 +5,11 @@ import com.intellij.codeInsight.completion.CompletionParameters
 import com.intellij.codeInsight.completion.CompletionProvider
 import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.completion.CompletionType
-import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.patterns.PlatformPatterns
+import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
 import org.jetbrains.yaml.psi.YAMLKeyValue
 import org.jetbrains.yaml.psi.YAMLMapping
-import org.jetbrains.yaml.psi.YAMLScalar
 import org.jetbrains.yaml.psi.YAMLSequence
 import org.jetbrains.yaml.psi.YAMLSequenceItem
 
@@ -18,7 +17,7 @@ class ArmeriaSpringBootYamlCompletionContributor : CompletionContributor() {
     init {
         extend(
             CompletionType.BASIC,
-            PlatformPatterns.psiElement(YAMLScalar::class.java).withParent(YAMLKeyValue::class.java),
+            PlatformPatterns.psiElement(),
             object : CompletionProvider<CompletionParameters>() {
                 override fun addCompletions(
                     parameters: CompletionParameters,
@@ -29,40 +28,86 @@ class ArmeriaSpringBootYamlCompletionContributor : CompletionContributor() {
                     if (!ArmeriaSpringBootConfigSupport.isApplicationConfigFileName(fileName)) {
                         return
                     }
-                    val keyValue = parameters.position.parent as? YAMLKeyValue ?: return
-                    val key = keyValue.key ?: return
-                    if (!key.textRange.contains(parameters.offset)) {
+                    val target = yamlCompletionTarget(parameters) ?: return
+                    if (!ArmeriaSpringBootConfigKeys.isRelevantCompletionPath(target.path)) {
                         return
                     }
-                    // Path of the mapping that contains the key under edit (not the leaf itself).
-                    val completionPath = ArmeriaSpringBootConfigSupport.completionContextPath(yamlKeyPath(keyValue))
+                    if (target.isValue) {
+                        if (ArmeriaSpringBootConfigKeys.isIncludeValuePath(target.path)) {
+                            ArmeriaSpringBootCompletionSupport.addIncludeValueCompletions(
+                                result,
+                                parameters.position.text,
+                            )
+                            return
+                        }
+                        val keyPrefix =
+                            ArmeriaSpringBootCompletionSupport.incompleteYamlKeyPrefix(
+                                ArmeriaSpringBootCompletionSupport.lineToCaret(parameters),
+                            ) ?: return
+                        val completionPath =
+                            ArmeriaSpringBootConfigSupport.normalizeIndexedKeyPath(target.path)
+                        if (!ArmeriaSpringBootConfigKeys.isRelevantCompletionPath(completionPath)) {
+                            return
+                        }
+                        val prefixed =
+                            if (keyPrefix.isEmpty()) {
+                                result
+                            } else {
+                                result.withPrefixMatcher(keyPrefix)
+                            }
+                        ArmeriaSpringBootCompletionSupport.addYamlKeyCompletions(prefixed, completionPath)
+                        return
+                    }
+                    val completionPath =
+                        if (target.stripLeaf) {
+                            ArmeriaSpringBootConfigSupport.completionContextPath(target.path)
+                        } else {
+                            ArmeriaSpringBootConfigSupport.normalizeIndexedKeyPath(target.path)
+                        }
                     if (!ArmeriaSpringBootConfigKeys.isRelevantCompletionPath(completionPath)) {
                         return
                     }
-                    val seenInsertTexts = linkedSetOf<String>()
-                    for (suggestion in ArmeriaSpringBootConfigKeys.COMPLETION_SUGGESTIONS) {
-                        val insertText =
-                            ArmeriaSpringBootConfigKeys.completionInsertText(completionPath, suggestion)
-                                ?: continue
-                        if (!seenInsertTexts.add(insertText)) {
-                            continue
-                        }
-                        if (!result.prefixMatcher.prefixMatches(insertText)) {
-                            continue
-                        }
-                        val doc = ArmeriaSpringBootConfigKeys.documentationFor(suggestion)
-                        var element = LookupElementBuilder.create(insertText)
-                        if (completionPath.isNotEmpty()) {
-                            element = element.withTypeText(suggestion)
-                        }
-                        if (!doc.isNullOrEmpty()) {
-                            element = element.withTailText(" — $doc", true)
-                        }
-                        result.addElement(element)
-                    }
+                    ArmeriaSpringBootCompletionSupport.addYamlKeyCompletions(result, completionPath)
                 }
             },
         )
+    }
+
+    private data class YamlCompletionTarget(
+        val path: String,
+        val isValue: Boolean,
+        val stripLeaf: Boolean = !isValue,
+    )
+
+    private fun yamlCompletionTarget(parameters: CompletionParameters): YamlCompletionTarget? {
+        val position = parameters.position
+        val offset = parameters.offset
+        when (val parent = position.parent) {
+            is YAMLKeyValue -> {
+                val isKey = parent.key?.textRange?.contains(offset) == true
+                return YamlCompletionTarget(yamlKeyPath(parent), isValue = !isKey)
+            }
+            is YAMLSequenceItem -> {
+                return YamlCompletionTarget(yamlSequenceItemPath(parent), isValue = true)
+            }
+            else -> {
+                val keyValue = PsiTreeUtil.getParentOfType(position, YAMLKeyValue::class.java, false)
+                if (keyValue != null) {
+                    val isKey = keyValue.key?.textRange?.contains(offset) == true
+                    return YamlCompletionTarget(yamlKeyPath(keyValue), isValue = !isKey)
+                }
+                val sequenceItem = PsiTreeUtil.getParentOfType(position, YAMLSequenceItem::class.java, false)
+                if (sequenceItem != null) {
+                    return YamlCompletionTarget(yamlSequenceItemPath(sequenceItem), isValue = true)
+                }
+                val mapping = PsiTreeUtil.getParentOfType(position, YAMLMapping::class.java, false)
+                val owner = mapping?.parent as? YAMLKeyValue
+                if (owner != null) {
+                    return YamlCompletionTarget(yamlKeyPath(owner), isValue = false, stripLeaf = false)
+                }
+                return YamlCompletionTarget("", isValue = false, stripLeaf = false)
+            }
+        }
     }
 
     /**
@@ -104,5 +149,13 @@ class ArmeriaSpringBootYamlCompletionContributor : CompletionContributor() {
             }
         }
         return segments.joinToString(".")
+    }
+
+    private fun yamlSequenceItemPath(item: YAMLSequenceItem): String {
+        val sequence = item.parent as? YAMLSequence ?: return ""
+        val index = sequence.items.indexOf(item)
+        val seqKey = sequence.parent as? YAMLKeyValue ?: return ""
+        val base = yamlKeyPath(seqKey)
+        return if (index >= 0) "$base[$index]" else base
     }
 }

@@ -6,21 +6,28 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
+import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaRouteNavigation
 import com.linecorp.intellij.plugins.armeria.message
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Font
+import java.awt.event.KeyEvent
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import javax.swing.JPanel
 import javax.swing.JTable
+import javax.swing.KeyStroke
 import javax.swing.ListSelectionModel
 import javax.swing.table.AbstractTableModel
 import javax.swing.table.DefaultTableCellRenderer
@@ -57,6 +64,20 @@ class ArmeriaSpringBootConfigPanel(
                 ).also { it.targetComponent = this }
                 .component
         configTable.setDefaultRenderer(Any::class.java, ConfigTableCellRenderer())
+        configTable.addMouseListener(
+            object : MouseAdapter() {
+                override fun mouseClicked(event: MouseEvent) {
+                    if (event.clickCount == 2) {
+                        navigateToSelection()
+                    }
+                }
+            },
+        )
+        configTable.registerKeyboardAction(
+            { navigateToSelection() },
+            KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0),
+            JTable.WHEN_FOCUSED,
+        )
         setContent(
             JPanel(BorderLayout()).apply {
                 border = JBUI.Borders.empty(8, 8, 0, 8)
@@ -114,6 +135,23 @@ class ArmeriaSpringBootConfigPanel(
     }
 
     override fun dispose() = Unit
+
+    private fun navigateToSelection() {
+        val viewRow = configTable.selectedRow
+        if (viewRow < 0) {
+            return
+        }
+        val row = tableModel.rowAt(configTable.convertRowIndexToModel(viewRow)) ?: return
+        row.entry.navigationPointer?.let { pointer ->
+            ArmeriaRouteNavigation.navigateToPointer(project, pointer, parentDisposable = this)
+            return
+        }
+        if (row.filePath.isEmpty()) {
+            return
+        }
+        val virtualFile = LocalFileSystem.getInstance().findFileByPath(row.filePath) ?: return
+        OpenFileDescriptor(project, virtualFile).navigate(true)
+    }
 
     private data class ConfigRow(
         val fileName: String,

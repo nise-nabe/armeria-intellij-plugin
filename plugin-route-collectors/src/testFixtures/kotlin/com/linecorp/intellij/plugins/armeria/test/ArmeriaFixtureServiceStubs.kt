@@ -182,4 +182,34 @@ fun JavaCodeInsightTestFixture.registerArmeriaSpringStubs() {
         }
         """.trimIndent(),
     )
+    this.addClass(
+        """
+        package com.linecorp.armeria.spring;
+
+        @FunctionalInterface
+        public interface DocServiceConfigurator {
+            void configure(Object builder);
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.spring;
+
+        @FunctionalInterface
+        public interface HealthCheckServiceConfigurator {
+            void configure(Object builder);
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.spring;
+
+        @FunctionalInterface
+        public interface MetricCollectingServiceConfigurator {
+            void configure(Object builder);
+        }
+        """.trimIndent(),
+    )
 }
