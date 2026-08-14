@@ -1,6 +1,7 @@
 <idea-plugin>
     <extensions defaultExtensionNs="com.intellij">
         <completion.contributor language="Properties"
+                                order="first"
                                 implementationClass="com.linecorp.intellij.plugins.armeria.springboot.config.ArmeriaSpringBootPropertiesCompletionContributor" />
     </extensions>
 </idea-plugin>

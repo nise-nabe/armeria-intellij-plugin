@@ -10,7 +10,6 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
 import org.jetbrains.yaml.psi.YAMLKeyValue
 import org.jetbrains.yaml.psi.YAMLMapping
-import org.jetbrains.yaml.psi.YAMLScalar
 import org.jetbrains.yaml.psi.YAMLSequence
 import org.jetbrains.yaml.psi.YAMLSequenceItem
 
@@ -18,7 +17,7 @@ class ArmeriaSpringBootYamlCompletionContributor : CompletionContributor() {
     init {
         extend(
             CompletionType.BASIC,
-            PlatformPatterns.psiElement(YAMLScalar::class.java),
+            PlatformPatterns.psiElement(),
             object : CompletionProvider<CompletionParameters>() {
                 override fun addCompletions(
                     parameters: CompletionParameters,
@@ -42,7 +41,12 @@ class ArmeriaSpringBootYamlCompletionContributor : CompletionContributor() {
                         }
                         return
                     }
-                    val completionPath = ArmeriaSpringBootConfigSupport.completionContextPath(target.path)
+                    val completionPath =
+                        if (target.stripLeaf) {
+                            ArmeriaSpringBootConfigSupport.completionContextPath(target.path)
+                        } else {
+                            ArmeriaSpringBootConfigSupport.normalizeIndexedKeyPath(target.path)
+                        }
                     if (!ArmeriaSpringBootConfigKeys.isRelevantCompletionPath(completionPath)) {
                         return
                     }
@@ -55,6 +59,7 @@ class ArmeriaSpringBootYamlCompletionContributor : CompletionContributor() {
     private data class YamlCompletionTarget(
         val path: String,
         val isValue: Boolean,
+        val stripLeaf: Boolean = !isValue,
     )
 
     private fun yamlCompletionTarget(parameters: CompletionParameters): YamlCompletionTarget? {
@@ -78,7 +83,12 @@ class ArmeriaSpringBootYamlCompletionContributor : CompletionContributor() {
                 if (sequenceItem != null) {
                     return YamlCompletionTarget(yamlSequenceItemPath(sequenceItem), isValue = true)
                 }
-                return null
+                val mapping = PsiTreeUtil.getParentOfType(position, YAMLMapping::class.java, false)
+                val owner = mapping?.parent as? YAMLKeyValue
+                if (owner != null) {
+                    return YamlCompletionTarget(yamlKeyPath(owner), isValue = false, stripLeaf = false)
+                }
+                return YamlCompletionTarget("", isValue = false, stripLeaf = false)
             }
         }
     }

@@ -43,7 +43,7 @@ internal object ArmeriaSpringBootCompletionSupport {
         val token = lastIncludeToken(rawValue)
         val prefixed = result.withPrefixMatcher(token)
         for (id in ArmeriaSpringBootConfigKeys.INTERNAL_SERVICE_INCLUDE_VALUES) {
-            if (!prefixed.prefixMatcher.prefixMatches(id)) {
+            if (token.isNotEmpty() && !id.startsWith(token, ignoreCase = true)) {
                 continue
             }
             val doc = ArmeriaSpringBootConfigKeys.documentationForIncludeValue(id)
@@ -56,12 +56,15 @@ internal object ArmeriaSpringBootCompletionSupport {
     }
 
     fun lastIncludeToken(rawValue: String): String {
-        val sanitized =
-            rawValue
-                .replace(CompletionUtilCore.DUMMY_IDENTIFIER, "")
-                .replace(CompletionUtilCore.DUMMY_IDENTIFIER_TRIMMED, "")
+        val sanitized = stripDummy(rawValue)
         return sanitized.substringAfterLast(',').trim()
     }
+
+    fun stripDummy(raw: String): String =
+        raw
+            .replace(CompletionUtilCore.DUMMY_IDENTIFIER, "")
+            .replace(CompletionUtilCore.DUMMY_IDENTIFIER_TRIMMED, "")
+            .trim()
 
     private fun keyLookup(
         insertText: String,

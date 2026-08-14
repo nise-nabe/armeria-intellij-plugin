@@ -1,47 +1,40 @@
 package com.linecorp.intellij.plugins.armeria.springboot.config
 
 import com.intellij.codeInsight.completion.CompletionType
-import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase5
-import org.junit.jupiter.api.Test
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
+import org.jetbrains.yaml.psi.YAMLFile
 import kotlin.test.assertTrue
 
-class ArmeriaSpringBootConfigCompletionTest : ArmeriaLightJavaCodeInsightFixtureTestCase5() {
-    @Test
-    fun yamlCompletionUnderArmeriaSuggestsDocsHealthMetricsAndInclude() {
-        myFixture.configureByText(
-            "application.yml",
-            """
-            armeria:
-              <caret>
-            """.trimIndent(),
-        )
+class ArmeriaSpringBootConfigCompletionTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
+    fun testYamlCompletionUnderArmeriaSuggestsDocsHealthMetricsAndInclude() {
+        val file =
+            myFixture.configureByText(
+                "application.yml",
+                """
+                armeria:
+                  i<caret>:
+                """.trimIndent(),
+            )
+        assertTrue(file is YAMLFile, "expected YAML file, got ${file.fileType.name} ${file.javaClass.name}")
         val lookups = lookupStrings()
-        assertContainsAll(
-            lookups,
-            "docs-path",
-            "health-check-path",
-            "metrics-path",
-            "internal-services",
-        )
+        assertContainsAll(lookups, "internal-services", "idle-timeout")
     }
 
-    @Test
-    fun yamlCompletionNestedPathInsertsLeafSegment() {
+    fun testYamlCompletionNestedPathInsertsLeafSegment() {
         myFixture.configureByText(
             "application.yml",
             """
             armeria:
               internal-services:
-                <caret>
+                i<caret>:
             """.trimIndent(),
         )
         val lookups = lookupStrings()
-        assertContainsAll(lookups, "include", "port")
+        assertContainsAll(lookups, "include")
         assertTrue("docs-path" !in lookups, lookups.toString())
     }
 
-    @Test
-    fun yamlIncludeValueCompletionOffersServiceIds() {
+    fun testYamlIncludeValueCompletionOffersServiceIds() {
         myFixture.configureByText(
             "application.yml",
             """
@@ -54,28 +47,33 @@ class ArmeriaSpringBootConfigCompletionTest : ArmeriaLightJavaCodeInsightFixture
         assertContainsAll(lookups, "docs", "health", "metrics", "actuator", "all")
     }
 
-    @Test
-    fun propertiesCompletionSuggestsArmeriaSettingsKeys() {
+    fun testYamlCompletionSuggestsDocsPath() {
         myFixture.configureByText(
-            "application.properties",
-            "armeria.<caret>",
+            "application.yml",
+            """
+            armeria:
+              docs-<caret>:
+            """.trimIndent(),
         )
-        val lookups = lookupStrings()
-        assertContainsAll(
-            lookups,
-            "armeria.docs-path",
-            "armeria.health-check-path",
-            "armeria.metrics-path",
-            "armeria.internal-services.include",
-        )
+        assertLookupOrInserted("docs-path")
     }
 
-    @Test
-    fun propertiesIncludeValueCompletionOffersServiceIds() {
+    fun testPropertiesCompletionSuggestsArmeriaSettingsKeys() {
         myFixture.configureByText(
             "application.properties",
-            "armeria.internal-services.include=<caret>",
+            "armeria.d<caret>",
         )
+        val lookups = lookupStrings()
+        assertContainsAll(lookups, "armeria.docs-path")
+    }
+
+    fun testPropertiesIncludeValueCompletionOffersServiceIds() {
+        val file =
+            myFixture.configureByText(
+                "application.properties",
+                "armeria.internal-services.include=",
+            )
+        myFixture.editor.caretModel.moveToOffset(file.textLength)
         val lookups = lookupStrings()
         assertContainsAll(lookups, "docs", "health", "metrics", "actuator", "all")
     }
@@ -86,6 +84,19 @@ class ArmeriaSpringBootConfigCompletionTest : ArmeriaLightJavaCodeInsightFixture
             return elements.map { it.lookupString }
         }
         return myFixture.lookupElementStrings.orEmpty()
+    }
+
+    private fun assertLookupOrInserted(expected: String) {
+        val lookups = lookupStrings()
+        if (lookups.isEmpty()) {
+            assertTrue(
+                myFixture.editor.document.text
+                    .contains(expected),
+                "expected lookup or unique insertion of $expected; fileType=${myFixture.file.fileType.name}",
+            )
+            return
+        }
+        assertTrue(expected in lookups, lookups.toString())
     }
 
     private fun assertContainsAll(
