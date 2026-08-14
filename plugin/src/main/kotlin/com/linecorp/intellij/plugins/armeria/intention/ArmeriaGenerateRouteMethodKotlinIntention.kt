@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.psi.KtClassInitializer
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
+import org.jetbrains.kotlin.psi.KtObjectDeclaration
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtPsiFactory
 import org.jetbrains.kotlin.psi.psiUtil.getStrictParentOfType
@@ -85,9 +86,12 @@ open class ArmeriaGenerateRouteMethodKotlinIntention : PsiElementBaseIntentionAc
         )
     }
 
-    private fun annotatedServiceClass(element: PsiElement): KtClass? {
-        val klass = element.getStrictParentOfType<KtClass>() ?: return null
-        if (klass.isInterface() || klass.isEnum() || klass.isAnnotation()) {
+    private fun annotatedServiceClass(element: PsiElement): KtClassOrObject? {
+        val klass = element.getStrictParentOfType<KtClassOrObject>() ?: return null
+        if (klass is KtClass && (klass.isInterface() || klass.isEnum() || klass.isAnnotation())) {
+            return null
+        }
+        if (klass is KtObjectDeclaration && (klass.isObjectLiteral() || klass.isCompanion())) {
             return null
         }
         if (klass.annotationEntries.any {
@@ -103,7 +107,7 @@ open class ArmeriaGenerateRouteMethodKotlinIntention : PsiElementBaseIntentionAc
 
     private fun isMemberDeclarationContext(
         element: PsiElement,
-        serviceClass: KtClass,
+        serviceClass: KtClassOrObject,
     ): Boolean {
         val body = serviceClass.body ?: return false
         if (!body.textRange.contains(element.textOffset)) {
@@ -124,14 +128,20 @@ open class ArmeriaGenerateRouteMethodKotlinIntention : PsiElementBaseIntentionAc
         project: Project,
         serviceClass: KtClassOrObject,
     ): Boolean {
-        if (hasSuspendFunction(serviceClass)) {
+        if (hasArmeriaKotlin(project, serviceClass)) {
             return true
         }
-        return JavaPsiFacade.getInstance(project).findClass(
+        return hasSuspendRouteFunction(serviceClass)
+    }
+
+    private fun hasArmeriaKotlin(
+        project: Project,
+        serviceClass: KtClassOrObject,
+    ): Boolean =
+        JavaPsiFacade.getInstance(project).findClass(
             ARMERIA_KOTLIN_MARKER_CLASS,
             serviceClass.resolveScope,
         ) != null
-    }
 
     private fun insertKotlinImport(
         factory: KtPsiFactory,
@@ -162,16 +172,18 @@ open class ArmeriaGenerateRouteMethodKotlinIntention : PsiElementBaseIntentionAc
     ): Set<String> =
         klass.declarations
             .filterIsInstance<KtNamedFunction>()
-            .mapNotNullTo(linkedSetOf()) { function ->
-                val route = ArmeriaKotlinMethodRoute.from(function) ?: return@mapNotNullTo null
+            .flatMapTo(linkedSetOf()) { function ->
+                val route = ArmeriaKotlinMethodRoute.from(function) ?: return@flatMapTo emptyList()
                 if (route.httpMethod != httpMethod) {
-                    return@mapNotNullTo null
+                    return@flatMapTo emptyList()
                 }
-                route.rawPaths.firstOrNull()?.takeIf { it.isNotEmpty() }
+                route.rawPaths.filter { it.isNotEmpty() }
             }
 
-    private fun hasSuspendFunction(klass: KtClassOrObject): Boolean =
-        klass.declarations.filterIsInstance<KtNamedFunction>().any { it.hasModifier(KtTokens.SUSPEND_KEYWORD) }
+    private fun hasSuspendRouteFunction(klass: KtClassOrObject): Boolean =
+        klass.declarations.filterIsInstance<KtNamedFunction>().any { function ->
+            function.hasModifier(KtTokens.SUSPEND_KEYWORD) && ArmeriaKotlinMethodRoute.from(function) != null
+        }
 
     companion object {
         const val ARMERIA_KOTLIN_MARKER_CLASS = "com.linecorp.armeria.internal.common.kotlin.ArmeriaKotlinUtil"

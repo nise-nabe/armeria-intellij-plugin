@@ -83,6 +83,18 @@ class ArmeriaPathVariableSupportTest {
     }
 
     @Test
+    fun occurrencesAndReplaceKeepPathsWithoutLeadingSlash() {
+        val path = "users/{id}"
+        val occurrences = ArmeriaPathVariableSupport.pathVariableOccurrences(path)
+        assertEquals(listOf("id"), occurrences.map { it.name })
+        assertEquals("id", path.substring(occurrences[0].startOffset, occurrences[0].endOffset))
+        assertEquals(
+            "users/{userId}",
+            ArmeriaPathVariableSupport.replacePathVariableName(path, "id", "userId"),
+        )
+    }
+
+    @Test
     fun occurrencesPointAtVariableNames() {
         val occurrences = ArmeriaPathVariableSupport.pathVariableOccurrences("/users/{id}/:name")
         assertEquals(listOf("id", "name"), occurrences.map { it.name })

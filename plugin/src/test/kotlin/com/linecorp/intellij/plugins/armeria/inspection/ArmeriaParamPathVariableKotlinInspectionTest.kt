@@ -76,6 +76,27 @@ class ArmeriaParamPathVariableKotlinInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun allowsBeanConstructorParamBinding() {
+        myFixture.configureByText(
+            "UserService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+            import com.linecorp.armeria.server.annotation.Param
+
+            class UserService {
+                @Get("/users/{id}")
+                fun handler(request: UserRequest): String = request.id
+            }
+
+            class UserRequest(@Param val id: String)
+            """.trimIndent(),
+        )
+        assertNoParamMismatchHighlights()
+    }
+
+    @Test
     fun allowsQueryParamWhenPathVariableIsMissing() {
         myFixture.configureByText(
             "MismatchService.kt",

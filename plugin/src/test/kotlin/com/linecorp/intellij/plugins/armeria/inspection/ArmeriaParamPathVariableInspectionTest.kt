@@ -103,6 +103,31 @@ class ArmeriaParamPathVariableInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun allowsBeanFieldParamBinding() {
+        myFixture.configureByText(
+            "UserService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.Param;
+
+            public class UserService {
+                @Get("/users/{id}")
+                public String handler(UserRequest request) {
+                    return request.id;
+                }
+            }
+
+            class UserRequest {
+                @Param public String id;
+            }
+            """.trimIndent(),
+        )
+        assertNoParamMismatchHighlights()
+    }
+
+    @Test
     fun treatsNestedBraceQuantifierAsConstraintNotName() {
         myFixture.configureByText(
             "YearService.java",

@@ -97,11 +97,12 @@ internal object ArmeriaRouteMethodStub {
     ): Set<String> =
         serviceClass.methods
             .filter { it.containingClass == serviceClass }
-            .mapNotNullTo(linkedSetOf()) { method ->
-                val (annotation, methodName) = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return@mapNotNullTo null
+            .flatMapTo(linkedSetOf()) { method ->
+                val (annotation, methodName) = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return@flatMapTo emptyList()
                 if (methodName != httpMethod) {
-                    return@mapNotNullTo null
+                    return@flatMapTo emptyList()
                 }
-                ArmeriaRouteSupport.extractPrimaryPath(annotation).takeIf { it.isNotEmpty() }
+                val paths = ArmeriaRouteSupport.extractPaths(annotation) + ArmeriaRouteSupport.extractPathAnnotations(method)
+                paths.filter { it.isNotEmpty() }
             }
 }

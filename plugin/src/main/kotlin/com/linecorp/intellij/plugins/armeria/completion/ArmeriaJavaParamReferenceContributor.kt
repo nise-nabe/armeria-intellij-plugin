@@ -59,7 +59,7 @@ private class ArmeriaJavaParamReferenceProvider : PsiReferenceProvider() {
                 .map { occurrence ->
                     ArmeriaJavaPathVariableReference(
                         literal = literal,
-                        rangeInElement = occurrenceRange(valueRange, occurrence),
+                        rangeInElement = pathVariableRangeInHost(literal, occurrence),
                         method = method,
                         variableName = occurrence.name,
                     )
@@ -70,7 +70,7 @@ private class ArmeriaJavaParamReferenceProvider : PsiReferenceProvider() {
                 .map { occurrence ->
                     ArmeriaJavaPathPrefixVariableReference(
                         literal = literal,
-                        rangeInElement = occurrenceRange(valueRange, occurrence),
+                        rangeInElement = pathVariableRangeInHost(literal, occurrence),
                         ownerClass = ownerClass,
                         variableName = occurrence.name,
                     )
@@ -84,15 +84,6 @@ private fun isPathAnnotation(qualifiedName: String): Boolean =
     qualifiedName in ArmeriaRouteSupport.routeAnnotations ||
         qualifiedName == ArmeriaRouteSupport.PATH_ANNOTATION ||
         qualifiedName == ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION
-
-private fun occurrenceRange(
-    valueRange: TextRange,
-    occurrence: ArmeriaPathVariableSupport.PathVariableOccurrence,
-): TextRange =
-    TextRange(
-        valueRange.startOffset + occurrence.startOffset,
-        valueRange.startOffset + occurrence.endOffset,
-    )
 
 private class ArmeriaJavaParamNameReference(
     literal: PsiLiteralExpression,
@@ -159,6 +150,7 @@ internal fun renameJavaPathVariable(
         return
     }
     rewriteJavaPathVariableAnnotations(javaAnnotationsOnMethod(method), oldName, newName)
+    renameJavaImplicitParams(method, oldName, newName)
 }
 
 internal fun renameJavaClassPathVariable(
@@ -173,7 +165,10 @@ internal fun renameJavaClassPathVariable(
     owner.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION)?.let { annotations += it }
     owner.methods
         .filter { it.containingClass == owner }
-        .forEach { annotations += javaAnnotationsOnMethod(it) }
+        .forEach { method ->
+            annotations += javaAnnotationsOnMethod(method)
+            renameJavaImplicitParams(method, oldName, newName)
+        }
     rewriteJavaPathVariableAnnotations(annotations, oldName, newName)
 }
 
@@ -195,6 +190,24 @@ private fun javaAnnotationsOnMethod(method: PsiMethod): List<PsiAnnotation> =
             parameter.getAnnotation(ArmeriaRouteSupport.PARAM_ANNOTATION)?.let { add(it) }
         }
     }
+
+private fun renameJavaImplicitParams(
+    method: PsiMethod,
+    oldName: String,
+    newName: String,
+) {
+    method.parameterList.parameters.forEach { parameter ->
+        val annotation = parameter.getAnnotation(ArmeriaRouteSupport.PARAM_ANNOTATION) ?: return@forEach
+        val explicit =
+            ArmeriaRouteSupport
+                .extractStrings(annotation.findDeclaredAttributeValue("value"))
+                .firstOrNull { it.isNotBlank() }
+        if (explicit != null || parameter.name != oldName) {
+            return@forEach
+        }
+        parameter.setName(newName)
+    }
+}
 
 private fun rewriteJavaPathVariableAnnotations(
     annotations: List<PsiAnnotation>,

@@ -110,6 +110,33 @@ class ArmeriaGenerateRouteMethodIntentionTest : ArmeriaFixtureTestBase() {
         assertFalse(updated.contains("public String handler()"))
     }
 
+    fun testSuggestsUniquePathWhenAdditionalPathAnnotationCollides() {
+        myFixture.configureByText(
+            "PathAnnotationCollisionService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.Path;
+
+            public class PathAnnotationCollisionService {
+                @Get
+                @Path("/handler")
+                public String hello() {
+                    return "exists";
+                }
+                <caret>
+            }
+            """.trimIndent(),
+        )
+
+        assertIntentionAvailableAndInvoke()
+
+        val updated = myFixture.editor.document.text
+        assertTrue(updated.contains("@Get(\"/handler2\")"))
+        assertTrue(updated.contains("public String handler2()"))
+    }
+
     fun testNotAvailableForRecordClass() {
         myFixture.configureByText(
             "RecordService.java",

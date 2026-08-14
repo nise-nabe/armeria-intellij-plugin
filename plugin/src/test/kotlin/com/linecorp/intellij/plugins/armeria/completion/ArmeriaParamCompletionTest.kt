@@ -116,6 +116,35 @@ class ArmeriaParamCompletionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun renamePathVariableUpdatesImplicitParamName() {
+        myFixture.configureByText(
+            "UserService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.Param;
+
+            public class UserService {
+                @Get("/users/{i<caret>d}")
+                public String handler(@Param String id) {
+                    return id;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val reference = myFixture.file.findReferenceAt(myFixture.editor.caretModel.offset)
+        assertTrue(reference != null, "Expected a path-variable reference at the caret")
+        WriteCommandAction.runWriteCommandAction(myFixture.project) {
+            reference!!.handleElementRename("userId")
+        }
+        val updated = myFixture.editor.document.text
+        assertTrue(updated.contains("@Get(\"/users/{userId}\")"), updated)
+        assertTrue(updated.contains("@Param String userId"), updated)
+    }
+
+    @Test
     fun renamePathPrefixUpdatesSiblingMethods() {
         myFixture.configureByText(
             "OrgService.java",

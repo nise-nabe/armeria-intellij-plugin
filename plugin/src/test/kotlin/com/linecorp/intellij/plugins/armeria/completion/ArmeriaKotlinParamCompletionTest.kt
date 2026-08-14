@@ -163,6 +163,61 @@ class ArmeriaKotlinParamCompletionTest : ArmeriaFixtureTestBase5() {
         assertTrue(!updated.contains("@Param(\"org\")"), updated)
     }
 
+    @Test
+    fun renamePathVariableUpdatesImplicitParamName() {
+        myFixture.configureByText(
+            "UserService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+            import com.linecorp.armeria.server.annotation.Param
+
+            class UserService {
+                @Get("/users/{i<caret>d}")
+                fun handler(@Param id: String): String = id
+            }
+            """.trimIndent(),
+        )
+
+        val reference = myFixture.file.findReferenceAt(myFixture.editor.caretModel.offset)
+        assertTrue(reference != null, "Expected a path-variable reference at the caret")
+        WriteCommandAction.runWriteCommandAction(myFixture.project) {
+            reference!!.handleElementRename("userId")
+        }
+        val updated = myFixture.editor.document.text
+        assertTrue(updated.contains("@Get(\"/users/{userId}\")"), updated)
+        assertTrue(updated.contains("userId: String"), updated)
+        assertTrue(!updated.contains("@Param id:"), updated)
+    }
+
+    @Test
+    fun renameCollectionLiteralPathVariable() {
+        myFixture.configureByText(
+            "UserService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+            import com.linecorp.armeria.server.annotation.Param
+
+            class UserService {
+                @Get(value = ["/users/{i<caret>d}"])
+                fun handler(@Param("id") id: String): String = id
+            }
+            """.trimIndent(),
+        )
+
+        val reference = myFixture.file.findReferenceAt(myFixture.editor.caretModel.offset)
+        assertTrue(reference != null, "Expected a path-variable reference at the caret")
+        WriteCommandAction.runWriteCommandAction(myFixture.project) {
+            reference!!.handleElementRename("userId")
+        }
+        val updated = myFixture.editor.document.text
+        assertTrue(updated.contains("/users/{userId}"), updated)
+        assertTrue(updated.contains("@Param(\"userId\")"), updated)
+    }
+
     private fun lookupStrings(): List<String> {
         val elements = myFixture.complete(CompletionType.BASIC)
         if (elements != null) {

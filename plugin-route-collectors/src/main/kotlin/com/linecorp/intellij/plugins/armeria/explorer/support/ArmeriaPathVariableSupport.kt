@@ -11,8 +11,8 @@ object ArmeriaPathVariableSupport {
      * Glob wildcards (`*` / `**`) are not extracted; Armeria binds those as `"0"`, `"1"`, …
      */
     fun extractPathVariables(rawPath: String): List<String> {
-        val (pathType, normalized) = ArmeriaRouteAnnotationSupport.parsePathType(rawPath)
-        return extractPathVariables(normalized, pathType)
+        val (pathType, bodyStart) = typedPathBodyStart(rawPath)
+        return extractPathVariables(rawPath.substring(bodyStart), pathType)
     }
 
     fun extractPathVariables(
@@ -28,23 +28,23 @@ object ArmeriaPathVariableSupport {
         if (oldName.isEmpty() || oldName == newName) {
             return path
         }
-        val (pathType, normalized) = ArmeriaRouteAnnotationSupport.parsePathType(path)
-        val prefixLength = pathPrefixOffset(path, pathType)
+        val (pathType, bodyStart) = typedPathBodyStart(path)
+        val body = path.substring(bodyStart)
         val replaced =
             when (pathType) {
-                PathType.GLOB -> normalized
-                PathType.REGEX -> replaceRegexNamedGroup(normalized, oldName, newName)
-                PathType.EXACT, PathType.PREFIX -> replaceExactPathVariables(normalized, oldName, newName)
+                PathType.GLOB -> body
+                PathType.REGEX -> replaceRegexNamedGroup(body, oldName, newName)
+                PathType.EXACT, PathType.PREFIX -> replaceExactPathVariables(body, oldName, newName)
             }
-        if (replaced == normalized) {
+        if (replaced == body) {
             return path
         }
-        return path.substring(0, prefixLength) + replaced
+        return path.substring(0, bodyStart) + replaced
     }
 
     fun pathVariableOccurrences(path: String): List<PathVariableOccurrence> {
-        val (pathType, normalized) = ArmeriaRouteAnnotationSupport.parsePathType(path)
-        return pathVariableOccurrences(normalized, pathType, pathPrefixOffset(path, pathType))
+        val (pathType, bodyStart) = typedPathBodyStart(path)
+        return pathVariableOccurrences(path.substring(bodyStart), pathType, bodyStart)
     }
 
     fun pathVariableOccurrences(
@@ -182,16 +182,15 @@ object ArmeriaPathVariableSupport {
         return -1
     }
 
-    private fun pathPrefixOffset(
-        rawPath: String,
-        pathType: PathType,
-    ): Int {
-        val trimmed = rawPath.trim()
-        return when (pathType) {
-            PathType.PREFIX -> if (trimmed.startsWith("prefix:")) "prefix:".length else 0
-            PathType.REGEX -> if (trimmed.startsWith("regex:")) "regex:".length else 0
-            PathType.GLOB -> if (trimmed.startsWith("glob:")) "glob:".length else 0
-            PathType.EXACT -> if (trimmed.startsWith("exact:")) "exact:".length else 0
+    private fun typedPathBodyStart(rawPath: String): Pair<PathType, Int> {
+        val start = rawPath.indexOfFirst { !it.isWhitespace() }.let { if (it < 0) 0 else it }
+        val rest = rawPath.substring(start)
+        return when {
+            rest.startsWith("prefix:") -> PathType.PREFIX to start + 7
+            rest.startsWith("regex:") -> PathType.REGEX to start + 6
+            rest.startsWith("glob:") -> PathType.GLOB to start + 5
+            rest.startsWith("exact:") -> PathType.EXACT to start + 6
+            else -> PathType.EXACT to start
         }
     }
 

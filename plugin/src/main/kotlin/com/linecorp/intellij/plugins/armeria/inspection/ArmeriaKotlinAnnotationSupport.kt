@@ -7,6 +7,8 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSuppor
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtNamedFunction
+import org.jetbrains.kotlin.psi.KtParameter
+import org.jetbrains.kotlin.psi.KtProperty
 
 internal object ArmeriaKotlinAnnotationSupport {
     fun qualifiedName(entry: KtAnnotationEntry): String? {
@@ -55,15 +57,68 @@ internal object ArmeriaKotlinAnnotationSupport {
     }
 
     fun paramBindings(function: KtNamedFunction): List<ArmeriaParamBinding> =
-        function.valueParameters.mapNotNull { parameter ->
-            val entry =
-                parameter.annotationEntries.firstOrNull {
-                    qualifiedName(it) == ArmeriaRouteSupport.PARAM_ANNOTATION
-                } ?: return@mapNotNull null
-            val explicit = extractStrings(entry).firstOrNull { it.isNotBlank() }
-            val name = explicit ?: parameter.name ?: return@mapNotNull null
-            ArmeriaParamBinding(name)
+        buildList {
+            function.valueParameters.forEach { parameter ->
+                val entry =
+                    parameter.annotationEntries.firstOrNull {
+                        qualifiedName(it) == ArmeriaRouteSupport.PARAM_ANNOTATION
+                    }
+                if (entry != null) {
+                    val explicit = extractStrings(entry).firstOrNull { it.isNotBlank() }
+                    val name = explicit ?: parameter.name ?: return@forEach
+                    add(ArmeriaParamBinding(name))
+                    return@forEach
+                }
+                addAll(beanParamBindings(parameter))
+            }
         }
+
+    private fun beanParamBindings(parameter: KtParameter): List<ArmeriaParamBinding> {
+        val resolved =
+            parameter.typeReference
+                ?.references
+                ?.firstOrNull()
+                ?.resolve()
+        return when (resolved) {
+            is PsiClass -> ArmeriaParamPathVariableMismatch.beanParamBindings(resolved)
+            is KtClass -> kotlinBeanParamBindings(resolved)
+            else -> emptyList()
+        }
+    }
+
+    private fun kotlinBeanParamBindings(klass: KtClass): List<ArmeriaParamBinding> {
+        if (klass.isInterface() || klass.isEnum() || klass.isAnnotation()) {
+            return emptyList()
+        }
+        klass.fqName?.asString()?.let { qualifiedName ->
+            if (!ArmeriaParamPathVariableMismatch.isUserBeanQualifiedName(qualifiedName)) {
+                return emptyList()
+            }
+        }
+        val names = linkedSetOf<String>()
+        klass.primaryConstructorParameters.forEach { parameter ->
+            kotlinParamName(parameter)?.let { names += it }
+        }
+        klass.declarations.filterIsInstance<KtProperty>().forEach { property ->
+            val entry =
+                property.annotationEntries.firstOrNull {
+                    qualifiedName(it) == ArmeriaRouteSupport.PARAM_ANNOTATION
+                } ?: return@forEach
+            val explicit = extractStrings(entry).firstOrNull { it.isNotBlank() }
+            val name = explicit ?: property.name ?: return@forEach
+            names += name
+        }
+        return names.map(::ArmeriaParamBinding)
+    }
+
+    private fun kotlinParamName(parameter: KtParameter): String? {
+        val entry =
+            parameter.annotationEntries.firstOrNull {
+                qualifiedName(it) == ArmeriaRouteSupport.PARAM_ANNOTATION
+            } ?: return null
+        val explicit = extractStrings(entry).firstOrNull { it.isNotBlank() }
+        return explicit ?: parameter.name
+    }
 
     private fun resolveAnnotationType(entry: KtAnnotationEntry): String? {
         val candidates =
