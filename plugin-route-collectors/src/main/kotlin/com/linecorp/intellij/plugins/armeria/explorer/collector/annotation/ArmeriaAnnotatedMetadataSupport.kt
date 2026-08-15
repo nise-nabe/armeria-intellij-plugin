@@ -65,23 +65,37 @@ internal object ArmeriaAnnotatedMetadataSupport {
         messageKey: String,
     ): String? {
         val types =
-            buildList {
-                addAll(
-                    method.annotations
-                        .filter { it.qualifiedName == annotationFqn }
-                        .flatMap { annotation ->
-                            ArmeriaRouteSupport.extractStrings(annotation.findDeclaredAttributeValue("value"))
-                        },
-                )
-                if (method.getAnnotation(jsonHelperFqn) != null) {
-                    add(JSON_MEDIA_TYPE)
-                }
-            }.distinct()
+            (
+                mediaTypesOn(method.annotations, method.getAnnotation(jsonHelperFqn) != null, annotationFqn) +
+                    mediaTypesOn(
+                        method.containingClass?.annotations.orEmpty(),
+                        method.containingClass?.getAnnotation(jsonHelperFqn) != null,
+                        annotationFqn,
+                    )
+            ).distinct()
         if (types.isEmpty()) {
             return null
         }
         return message(messageKey, types.joinToString(", "))
     }
+
+    private fun mediaTypesOn(
+        annotations: Array<out PsiAnnotation>,
+        jsonHelperPresent: Boolean,
+        annotationFqn: String,
+    ): List<String> =
+        buildList {
+            addAll(
+                annotations
+                    .filter { it.qualifiedName == annotationFqn }
+                    .flatMap { annotation ->
+                        ArmeriaRouteSupport.extractStrings(annotation.findDeclaredAttributeValue("value"))
+                    },
+            )
+            if (jsonHelperPresent) {
+                add(JSON_MEDIA_TYPE)
+            }
+        }
 
     private fun collectDescription(annotation: PsiAnnotation?): String? =
         descriptionText(annotation)?.let {

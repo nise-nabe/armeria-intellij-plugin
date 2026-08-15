@@ -13,6 +13,7 @@ object ArmeriaHttpRequestGenerator {
     private val NON_SLUG_CHARACTERS = Regex("[^a-zA-Z0-9._-]")
     private val COLON_PATH_VARIABLE = Regex(""":([A-Za-z_][A-Za-z0-9_]*)""")
     private val GRPC_METHOD_PATH = Regex("""^/[^/]+/[^/]+$""")
+    private val GRAPHQL_OPERATION_TARGET = Regex("""^(Query|Mutation|Subscription)\.[A-Za-z_][A-Za-z0-9_]*$""")
     private val SIMPLE_HEADER_MATCH = Regex("""^([A-Za-z0-9_-]+)=([^=].*)$""")
     private val METHODS_WITH_BODY = setOf("POST", "PUT", "PATCH")
 
@@ -105,7 +106,10 @@ object ArmeriaHttpRequestGenerator {
         if (route.routeMatch != RouteMatch.NON_HTTP) {
             return false
         }
-        return route.protocol.equals(RouteProtocol.GRAPHQL.presentableName(), ignoreCase = true)
+        if (!route.protocol.equals(RouteProtocol.GRAPHQL.presentableName(), ignoreCase = true)) {
+            return false
+        }
+        return GRAPHQL_OPERATION_TARGET.matches(route.target)
     }
 
     private fun grpcRequestText(

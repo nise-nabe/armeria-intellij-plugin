@@ -40,4 +40,33 @@ class ArmeriaHttpRequestGeneratorFixtureTest : ArmeriaFixtureTestBase() {
         assertTrue(text.contains("Accept: application/json"), text)
         assertTrue(text.contains("{}"), text)
     }
+
+    fun testClassLevelConsumesJsonGeneratesJsonHttpRequest() {
+        myFixture.configureByText(
+            "ItemService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.ConsumesJson;
+            import com.linecorp.armeria.server.annotation.Post;
+            import com.linecorp.armeria.server.annotation.ProducesJson;
+
+            @ConsumesJson
+            @ProducesJson
+            public class ItemService {
+                @Post("/items/{id}")
+                public String create() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val route = ArmeriaRouteCollector.collect(project).single()
+        val text = ArmeriaHttpRequestGenerator.requestText(route)
+
+        assertTrue(text.contains("POST http://localhost:8080/items/{id}"), text)
+        assertTrue(text.contains("Content-Type: application/json"), text)
+        assertTrue(text.contains("{}"), text)
+    }
 }

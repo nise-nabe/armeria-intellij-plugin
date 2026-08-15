@@ -164,6 +164,19 @@ class ArmeriaHttpRequestGeneratorTest {
     }
 
     @Test
+    fun supports_rejectsGraphqlServiceMount() {
+        val route =
+            route(
+                protocol = "GraphQL",
+                path = "/graphql",
+                target = "com.linecorp.armeria.server.graphql.GraphqlService",
+                routeMatch = RouteMatch.NON_HTTP,
+            )
+
+        assertFalse(ArmeriaHttpRequestGenerator.supports(route))
+    }
+
+    @Test
     fun requestText_convertsColonStylePathVariablesToPlaceholders() {
         val route = route(httpMethod = "GET", path = "/hello/:name")
 
