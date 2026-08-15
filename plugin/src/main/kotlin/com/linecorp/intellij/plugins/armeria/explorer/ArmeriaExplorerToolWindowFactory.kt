@@ -41,13 +41,16 @@ class ArmeriaExplorerToolWindowFactory :
         Disposer.register(clientsContent, clientsPanel)
 
         val contentManager = toolWindow.contentManager
-        contentManager.addContentManagerListener(
+        val selectionListener =
             object : ContentManagerListener {
                 override fun selectionChanged(event: ContentManagerEvent) {
                     scheduleInitialRefresh(event.content.component)
                 }
-            },
-        )
+            }
+        contentManager.addContentManagerListener(selectionListener)
+        Disposer.register(toolWindow.disposable) {
+            contentManager.removeContentManagerListener(selectionListener)
+        }
         contentManager.addContent(servicesContent)
         contentManager.addContent(clientsContent)
 
