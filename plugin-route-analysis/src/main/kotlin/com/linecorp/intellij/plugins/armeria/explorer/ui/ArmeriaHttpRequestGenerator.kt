@@ -14,7 +14,7 @@ object ArmeriaHttpRequestGenerator {
     private val COLON_PATH_VARIABLE = Regex(""":([A-Za-z_][A-Za-z0-9_]*)""")
     private val GRPC_METHOD_PATH = Regex("""^/[^/]+/[^/]+$""")
     private val GRAPHQL_OPERATION_TARGET = Regex("""^(Query|Mutation|Subscription)\.[A-Za-z_][A-Za-z0-9_]*$""")
-    private val SIMPLE_HEADER_MATCH = Regex("""^([A-Za-z0-9!#$%&'*+.^_`|~-]+)=([^=].*)$""")
+    private val SIMPLE_HEADER_MATCH = Regex("""^([A-Za-z0-9_.+-]+)=([^=].*)$""")
     private val METHODS_WITH_BODY = setOf("POST", "PUT", "PATCH")
 
     fun supports(route: ArmeriaRoute): Boolean =
