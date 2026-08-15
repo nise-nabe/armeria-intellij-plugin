@@ -231,7 +231,7 @@ class ArmeriaClientExplorerPanel(
         val fileUrl = endpoint.sourceFileUrl ?: return null
         val offset =
             endpoint.sourceOffset
-                ?: ReadAction.compute<Int?, RuntimeException> { endpoint.pointer.range?.startOffset }
+                ?: ReadAction.computeBlocking<Int?, RuntimeException> { endpoint.pointer.range?.startOffset }
                 ?: return null
         return fileUrl to offset
     }
