@@ -9,9 +9,11 @@ import com.intellij.microservices.url.Authority
 import com.intellij.microservices.url.UrlPath
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.search.GlobalSearchScope
+import com.linecorp.intellij.plugins.armeria.explorer.endpoints.ArmeriaEndpointsProvider
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaClientFixtureTestBase
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -35,7 +37,8 @@ class ArmeriaClientEndpointsProviderTest : ArmeriaClientFixtureTestBase() {
         val provider = ArmeriaClientEndpointsProvider()
         assertEquals(HTTP_CLIENT_TYPE, provider.endpointType)
         assertEquals(EndpointsProvider.Status.AVAILABLE, provider.getStatus(project))
-        assertEquals(message("endpoints.framework.title"), provider.presentation.title)
+        assertEquals("Armeria-HTTP-Client", provider.presentation.queryTag)
+        assertEquals(message("endpoints.framework.client.title"), provider.presentation.title)
 
         val (group, endpoint) = singleEndpoint(provider)
         assertEquals("https://api.example.com/v1", endpoint.uri)
@@ -255,6 +258,17 @@ class ArmeriaClientEndpointsProviderTest : ArmeriaClientFixtureTestBase() {
                 override val transitiveSearchScope = GlobalSearchScope.EMPTY_SCOPE
             }
         assertTrue(provider.getEndpointGroups(project, emptyFilter).none())
+    }
+
+    fun testFrameworkPresentationIsDistinctFromServerProvider() {
+        val server = ArmeriaEndpointsProvider().presentation
+        val client = ArmeriaClientEndpointsProvider().presentation
+        assertEquals("Armeria", server.queryTag)
+        assertEquals(message("endpoints.framework.title"), server.title)
+        assertEquals("Armeria-HTTP-Client", client.queryTag)
+        assertEquals(message("endpoints.framework.client.title"), client.title)
+        assertNotEquals(server.queryTag, client.queryTag)
+        assertNotEquals(server.title, client.title)
     }
 
     private fun singleEndpoint(provider: ArmeriaClientEndpointsProvider): Pair<ArmeriaClientEndpointGroup, ArmeriaClientEndpoint> {

@@ -23,7 +23,7 @@ import com.linecorp.intellij.plugins.armeria.ArmeriaIcons
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCacheSupport
 import com.linecorp.intellij.plugins.armeria.message
 
-private const val QUERY_TAG = "Armeria"
+private const val QUERY_TAG = "Armeria-HTTP-Client"
 
 class ArmeriaClientEndpointsProvider : EndpointsUrlTargetProvider<ArmeriaClientEndpointGroup, ArmeriaClientEndpoint> {
     override val endpointType = HTTP_CLIENT_TYPE
@@ -31,7 +31,7 @@ class ArmeriaClientEndpointsProvider : EndpointsUrlTargetProvider<ArmeriaClientE
     override val presentation: FrameworkPresentation =
         FrameworkPresentation(
             QUERY_TAG,
-            message("endpoints.framework.title"),
+            message("endpoints.framework.client.title"),
             ArmeriaIcons.Armeria,
         )
 

@@ -12,6 +12,8 @@
 
 ### Fixed
 
+- Endpoints tool window Framework filter lists Armeria server routes and Armeria client factories as distinct entries (`Armeria` vs `Armeria Client`) instead of two identical Armeria items.
+
 ### Security
 
 ## [0.3.0] - 2026-08-15
