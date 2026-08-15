@@ -5,6 +5,7 @@ import com.intellij.microservices.endpoints.HTTP_CLIENT_TYPE
 import com.intellij.microservices.endpoints.ModuleEndpointsFilter
 import com.intellij.microservices.endpoints.SearchScopeEndpointsFilter
 import com.intellij.microservices.endpoints.presentation.HttpMethodPresentation
+import com.intellij.microservices.url.Authority
 import com.intellij.microservices.url.UrlPath
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.search.GlobalSearchScope
@@ -40,6 +41,7 @@ class ArmeriaClientEndpointsProviderTest : ArmeriaClientFixtureTestBase() {
         assertEquals("https://api.example.com/v1", endpoint.uri)
         assertEquals("HTTP", endpoint.clientType)
         assertTrue(provider.isValidEndpoint(group, endpoint))
+        assertTrue(group.sourceKey.contains("class:example.Main"))
 
         val presentation = provider.getEndpointPresentation(group, endpoint) as HttpMethodPresentation
         assertEquals("https://api.example.com/v1", presentation.presentableText)
@@ -52,6 +54,7 @@ class ArmeriaClientEndpointsProviderTest : ArmeriaClientFixtureTestBase() {
         val target = provider.getUrlTargetInfo(group, endpoint).single()
         assertEquals(emptySet<String>(), target.methods)
         assertEquals(navigation, target.resolveToPsiElement())
+        assertEquals(listOf(Authority.Exact("api.example.com")), target.authorities)
         assertEquals(
             listOf(
                 UrlPath.PathSegment.Exact(""),
@@ -82,6 +85,28 @@ class ArmeriaClientEndpointsProviderTest : ArmeriaClientFixtureTestBase() {
         val (group, endpoint) = singleEndpoint(provider)
         val target = provider.getUrlTargetInfo(group, endpoint).single()
         assertEquals(listOf(UrlPath.PathSegment.Undefined), target.path.segments)
+    }
+
+    fun testExplicitPortIsKeptOnAuthority() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+
+            public class Main {
+                public static void main(String[] args) {
+                    WebClient.of("http://localhost:8080");
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val provider = ArmeriaClientEndpointsProvider()
+        val (group, endpoint) = singleEndpoint(provider)
+        val target = provider.getUrlTargetInfo(group, endpoint).single()
+        assertEquals(listOf(Authority.Exact("localhost:8080")), target.authorities)
     }
 
     fun testRestClientPathIsPrefix() {
@@ -169,6 +194,42 @@ class ArmeriaClientEndpointsProviderTest : ArmeriaClientFixtureTestBase() {
         val provider = ArmeriaClientEndpointsProvider()
         assertTrue(provider.getEndpointGroups(project, ModuleEndpointsFilter(module, true, true)).none())
         assertTrue(ArmeriaClientCollector.collect(project).isNotEmpty())
+    }
+
+    fun testEndpointGroupBackedClientsAreHidden() {
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.endpoint.eureka;
+
+            public final class EurekaEndpointGroup {
+                public static com.linecorp.armeria.client.endpoint.EndpointGroup of(String uri) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+            import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
+            import com.linecorp.armeria.client.endpoint.eureka.EurekaEndpointGroup;
+            import com.linecorp.armeria.common.SessionProtocol;
+
+            public class Main {
+                public static void main(String[] args) {
+                    WebClient.builder(SessionProtocol.HTTP, DnsAddressEndpointGroup.of("example.com", 8080));
+                    WebClient.builder(SessionProtocol.HTTP, EurekaEndpointGroup.of("http://eureka.example.com/v2/apps"));
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val provider = ArmeriaClientEndpointsProvider()
+        assertTrue(provider.getEndpointGroups(project, ModuleEndpointsFilter(module, true, true)).none())
+        assertEquals(2, ArmeriaClientCollector.collect(project).size)
     }
 
     fun testSearchScopeFilter_emptyScopeHidesClients() {

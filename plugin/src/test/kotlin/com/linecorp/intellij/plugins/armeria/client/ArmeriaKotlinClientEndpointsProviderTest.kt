@@ -28,6 +28,7 @@ class ArmeriaKotlinClientEndpointsProviderTest : ArmeriaClientFixtureTestBase() 
         assertEquals("https://api.example.com/v1", endpoint.uri)
         assertEquals("HTTP", endpoint.clientType)
         assertTrue(endpoint.target.contains("WebClient"))
+        assertTrue(group.sourceKey.contains("file:"))
         assertNotNull(provider.getNavigationElement(group, endpoint))
     }
 }

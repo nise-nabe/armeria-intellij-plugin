@@ -6,13 +6,20 @@ import com.intellij.microservices.url.UrlTargetInfo
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMember
+import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.endpoints.ArmeriaEndpointUrlPath
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
+import java.net.URI
 
 internal object ArmeriaClientEndpointsSupport {
     private val HTTP_SCHEMES = listOf("http", "https")
 
-    fun isVisible(endpoint: ArmeriaClientEndpoint): Boolean = isVisibleHttpClientUri(endpoint.uri)
+    fun isVisible(endpoint: ArmeriaClientEndpoint): Boolean {
+        if (!endpoint.endpointGroup.isNullOrBlank()) {
+            return false
+        }
+        return isVisibleHttpClientUri(endpoint.uri)
+    }
 
     fun isVisibleHttpClientUri(raw: String): Boolean {
         val trimmed = raw.trim()
@@ -35,7 +42,10 @@ internal object ArmeriaClientEndpointsSupport {
 
     fun groupKey(endpoint: ArmeriaClientEndpoint): String {
         val element = endpoint.pointer.element
-        val psiClass = element as? PsiClass ?: (element as? PsiMember)?.containingClass
+        val psiClass =
+            element as? PsiClass
+                ?: (element as? PsiMember)?.containingClass
+                ?: PsiTreeUtil.getParentOfType(element, PsiClass::class.java)
         val className = psiClass?.qualifiedName
         val module = endpoint.moduleName
         if (!className.isNullOrBlank()) {
@@ -70,6 +80,36 @@ internal object ArmeriaClientEndpointsSupport {
 
     fun urlTargetInfo(endpoint: ArmeriaClientEndpoint): UrlTargetInfo = ArmeriaClientUrlTargetInfo(endpoint)
 
+    fun authorityText(raw: String): String? {
+        val trimmed = raw.trim()
+        if (trimmed.startsWith("/")) {
+            return null
+        }
+        try {
+            val uri = URI(trimmed)
+            val host = uri.host
+            if (!host.isNullOrBlank()) {
+                return formatHostPort(host, uri.port)
+            }
+        } catch (_: Exception) {
+            // Fall through to the client URI parser for scheme-less hostnames.
+        }
+        return ArmeriaClientRouteLinkSupport.parseClientUri(trimmed).host?.takeIf { it.isNotBlank() }
+    }
+
+    private fun formatHostPort(
+        host: String,
+        port: Int,
+    ): String {
+        val hostText =
+            if (':' in host && !host.startsWith('[')) {
+                "[$host]"
+            } else {
+                host
+            }
+        return if (port >= 0) "$hostText:$port" else hostText
+    }
+
     private class ArmeriaClientUrlTargetInfo(
         private val endpoint: ArmeriaClientEndpoint,
     ) : UrlTargetInfo {
@@ -78,8 +118,7 @@ internal object ArmeriaClientEndpointsSupport {
         override val schemes: List<String> = HTTP_SCHEMES
 
         override val authorities: List<Authority> =
-            uriParts.host
-                ?.takeIf { it.isNotBlank() }
+            authorityText(endpoint.uri)
                 ?.let { listOf(Authority.Exact(it)) }
                 .orEmpty()
 
