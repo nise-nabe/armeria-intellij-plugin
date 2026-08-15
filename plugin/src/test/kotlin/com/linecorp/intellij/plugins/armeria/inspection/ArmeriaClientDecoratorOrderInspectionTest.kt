@@ -55,6 +55,31 @@ class ArmeriaClientDecoratorOrderInspectionTest : ArmeriaFixtureTestBase5() {
         assertDecoratorHighlights(message("inspection.decorator.order.circuit.after.retry"), 1)
     }
 
+    @Test
+    fun highlightsLoggingAfterRetryingOnSplitChain() {
+        configureClient(
+            """
+            WebClientBuilder builder = WebClient.builder("https://example.com")
+                    .decorator(RetryingClient.newDecorator());
+            builder.decorator(LoggingClient.newDecorator()).build();
+            """.trimIndent(),
+        )
+        assertDecoratorHighlights(message("inspection.decorator.order.logging.after.retry"), 1)
+    }
+
+    @Test
+    fun highlightsLoggingAfterRetryingOnParenthesizedChain() {
+        configureClient(
+            """
+            (WebClient.builder("https://example.com")
+                     .decorator(RetryingClient.newDecorator()))
+                     .decorator(LoggingClient.newDecorator())
+                     .build();
+            """.trimIndent(),
+        )
+        assertDecoratorHighlights(message("inspection.decorator.order.logging.after.retry"), 1)
+    }
+
     private fun configureClient(body: String) {
         myFixture.configureByText(
             "Main.java",
@@ -62,6 +87,7 @@ class ArmeriaClientDecoratorOrderInspectionTest : ArmeriaFixtureTestBase5() {
             package example;
 
             import com.linecorp.armeria.client.WebClient;
+            import com.linecorp.armeria.client.WebClientBuilder;
             import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
             import com.linecorp.armeria.client.logging.LoggingClient;
             import com.linecorp.armeria.client.retry.RetryingClient;

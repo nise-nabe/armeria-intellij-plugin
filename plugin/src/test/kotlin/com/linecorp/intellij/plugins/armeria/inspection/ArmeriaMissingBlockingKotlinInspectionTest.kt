@@ -57,6 +57,27 @@ class ArmeriaMissingBlockingKotlinInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun allowsJoinWithClassBlocking() {
+        myFixture.configureByText(
+            "SlowService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Blocking
+            import com.linecorp.armeria.server.annotation.Get
+            import java.util.concurrent.CompletableFuture
+
+            @Blocking
+            class SlowService {
+                @Get("/slow")
+                fun slow(): String = CompletableFuture.completedFuture("ok").join()
+            }
+            """.trimIndent(),
+        )
+        assertBlockingHighlights(0, "join")
+    }
+
+    @Test
     fun highlightsThreadSleepWithoutBlocking() {
         myFixture.configureByText(
             "SlowService.kt",

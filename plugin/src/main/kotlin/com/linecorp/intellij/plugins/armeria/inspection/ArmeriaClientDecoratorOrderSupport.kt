@@ -3,7 +3,9 @@ package com.linecorp.intellij.plugins.armeria.inspection
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiMethodCallExpression
+import com.intellij.psi.PsiParenthesizedExpression
 import com.intellij.psi.PsiReferenceExpression
+import com.intellij.psi.PsiTypeCastExpression
 import com.intellij.psi.PsiVariable
 import com.linecorp.intellij.plugins.armeria.client.ArmeriaClientSupport
 
@@ -85,9 +87,9 @@ internal object ArmeriaClientDecoratorOrderSupport {
     }
 
     private fun decoratorClassSimpleName(expression: PsiExpression): String {
-        var current: PsiExpression = expression
+        var current: PsiExpression = unwrapExpression(expression)
         while (current is PsiMethodCallExpression) {
-            current = current.methodExpression.qualifierExpression ?: break
+            current = unwrapExpression(current.methodExpression.qualifierExpression ?: break)
         }
         return when (current) {
             is PsiReferenceExpression -> current.referenceName.orEmpty()
@@ -99,18 +101,23 @@ internal object ArmeriaClientDecoratorOrderSupport {
     private fun decoratorCallsInChain(call: PsiMethodCallExpression): List<PsiMethodCallExpression> {
         val preceding = mutableListOf<PsiMethodCallExpression>()
         val visited = mutableSetOf<PsiElement>()
-        var current: PsiExpression? = call.methodExpression.qualifierExpression
+        var current: PsiExpression? = unwrapExpressionOrNull(call.methodExpression.qualifierExpression)
         while (current != null && visited.add(current)) {
             when (current) {
                 is PsiMethodCallExpression -> {
                     if (isDecoratorCall(current)) {
                         preceding += current
                     }
-                    current = current.methodExpression.qualifierExpression
+                    current = unwrapExpressionOrNull(current.methodExpression.qualifierExpression)
                 }
                 is PsiReferenceExpression -> {
                     val resolved = current.resolve()
-                    current = if (resolved is PsiVariable) resolved.initializer else null
+                    current =
+                        if (resolved is PsiVariable) {
+                            unwrapExpressionOrNull(resolved.initializer)
+                        } else {
+                            null
+                        }
                 }
                 else -> break
             }
@@ -130,13 +137,32 @@ internal object ArmeriaClientDecoratorOrderSupport {
     private fun enclosingQualifierCall(expression: PsiExpression): PsiMethodCallExpression? {
         var element: PsiElement? = expression.parent
         while (element != null) {
-            if (element is PsiMethodCallExpression &&
-                element.methodExpression.qualifierExpression == expression
-            ) {
-                return element
+            if (element is PsiParenthesizedExpression || element is PsiTypeCastExpression) {
+                element = element.parent
+                continue
+            }
+            if (element is PsiMethodCallExpression) {
+                val qualifier = unwrapExpressionOrNull(element.methodExpression.qualifierExpression)
+                if (qualifier == unwrapExpression(expression)) {
+                    return element
+                }
             }
             element = element.parent
         }
         return null
+    }
+
+    private fun unwrapExpressionOrNull(expression: PsiExpression?): PsiExpression? = expression?.let(::unwrapExpression)
+
+    private fun unwrapExpression(expression: PsiExpression): PsiExpression {
+        var current = expression
+        while (true) {
+            current =
+                when (current) {
+                    is PsiParenthesizedExpression -> current.expression ?: return current
+                    is PsiTypeCastExpression -> current.operand ?: return current
+                    else -> return current
+                }
+        }
     }
 }
