@@ -69,6 +69,17 @@ class ArmeriaTestMethodGeneratorTest {
         assertTrue(generated.contains("server().blockingWebClient()"))
     }
 
+    @Test
+    fun generateKotlinTestMethodUsesBlockingClientWhenRouteIsBlocking() {
+        val generated =
+            ArmeriaTestMethodGenerator.generateTestMethod(
+                route = route(path = "/slow", executionHints = listOf(message("route.explorer.execution.blocking"))),
+                serverReceiver = "server",
+                language = ArmeriaTestLanguage.KOTLIN,
+            )
+        assertTrue(generated.contains("server.blockingWebClient()"))
+    }
+
     fun generateKotlinTestMethodEscapesPathCharacters() {
         val generated =
             ArmeriaTestMethodGenerator.generateTestMethod(

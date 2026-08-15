@@ -13,7 +13,10 @@ internal object ArmeriaAnnotatedMetadataSupport {
     private const val STATUS_CODE_ANNOTATION = "com.linecorp.armeria.server.annotation.StatusCode"
     private const val CONSUMES_ANNOTATION = "com.linecorp.armeria.server.annotation.Consumes"
     private const val PRODUCES_ANNOTATION = "com.linecorp.armeria.server.annotation.Produces"
+    private const val CONSUMES_JSON_ANNOTATION = ArmeriaRouteSupport.CONSUMES_JSON_ANNOTATION
+    private const val PRODUCES_JSON_ANNOTATION = ArmeriaRouteSupport.PRODUCES_JSON_ANNOTATION
     private const val DESCRIPTION_ANNOTATION = "com.linecorp.armeria.server.annotation.Description"
+    private const val JSON_MEDIA_TYPE = "application/json"
 
     fun collectContentHints(
         method: PsiMethod,
@@ -24,8 +27,10 @@ internal object ArmeriaAnnotatedMetadataSupport {
         return buildList {
             addAll(collectHeaderMatches(method))
             collectStatusCode(method)?.let { add(it) }
-            collectMediaTypes(method, CONSUMES_ANNOTATION, "route.explorer.hint.consumes")?.let { add(it) }
-            collectMediaTypes(method, PRODUCES_ANNOTATION, "route.explorer.hint.produces")?.let { add(it) }
+            collectMediaTypes(method, CONSUMES_ANNOTATION, CONSUMES_JSON_ANNOTATION, "route.explorer.hint.consumes")
+                ?.let { add(it) }
+            collectMediaTypes(method, PRODUCES_ANNOTATION, PRODUCES_JSON_ANNOTATION, "route.explorer.hint.produces")
+                ?.let { add(it) }
             collectDescription(methodDescription)?.let { add(it) }
             collectClassDescription(method.containingClass, methodDescription)?.let { add(it) }
             collectPathVariables(path, pathType).takeIf { it.isNotEmpty() }?.let { vars ->
@@ -56,19 +61,41 @@ internal object ArmeriaAnnotatedMetadataSupport {
     private fun collectMediaTypes(
         method: PsiMethod,
         annotationFqn: String,
+        jsonHelperFqn: String,
         messageKey: String,
     ): String? {
         val types =
-            method.annotations
-                .filter { it.qualifiedName == annotationFqn }
-                .flatMap { annotation ->
-                    ArmeriaRouteSupport.extractStrings(annotation.findDeclaredAttributeValue("value"))
-                }.distinct()
+            (
+                mediaTypesOn(method.annotations, method.getAnnotation(jsonHelperFqn) != null, annotationFqn) +
+                    mediaTypesOn(
+                        method.containingClass?.annotations.orEmpty(),
+                        method.containingClass?.getAnnotation(jsonHelperFqn) != null,
+                        annotationFqn,
+                    )
+            ).distinct()
         if (types.isEmpty()) {
             return null
         }
         return message(messageKey, types.joinToString(", "))
     }
+
+    private fun mediaTypesOn(
+        annotations: Array<out PsiAnnotation>,
+        jsonHelperPresent: Boolean,
+        annotationFqn: String,
+    ): List<String> =
+        buildList {
+            addAll(
+                annotations
+                    .filter { it.qualifiedName == annotationFqn }
+                    .flatMap { annotation ->
+                        ArmeriaRouteSupport.extractStrings(annotation.findDeclaredAttributeValue("value"))
+                    },
+            )
+            if (jsonHelperPresent) {
+                add(JSON_MEDIA_TYPE)
+            }
+        }
 
     private fun collectDescription(annotation: PsiAnnotation?): String? =
         descriptionText(annotation)?.let {
