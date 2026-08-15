@@ -62,12 +62,25 @@ internal object ArmeriaClientEndpointGroupSupport {
     }
 
     internal fun extractUriFromLabel(label: String): String {
-        val openParen = label.indexOf('(')
-        val closeParen = label.lastIndexOf(')')
-        if (openParen >= 0 && closeParen > openParen) {
-            return label.substring(openParen + 1, closeParen).trim()
+        var current = label.trim()
+        if (current.isEmpty()) {
+            return label
         }
-        return label
+        while (true) {
+            val openParen = current.lastIndexOf('(')
+            if (openParen < 0) {
+                return current.ifBlank { label }
+            }
+            val closeParen = current.indexOf(')', startIndex = openParen + 1)
+            if (closeParen < 0) {
+                return current.ifBlank { label }
+            }
+            val inner = current.substring(openParen + 1, closeParen).trim()
+            if (inner.isEmpty() || inner == current) {
+                return current
+            }
+            current = inner
+        }
     }
 
     internal fun kindLabel(simpleName: String): String {

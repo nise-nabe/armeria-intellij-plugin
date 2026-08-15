@@ -224,4 +224,32 @@ class ArmeriaScalaClientCollectorTest : ArmeriaLightJavaCodeInsightFixtureTestCa
         assertEquals("BlockingWebClient", endpoint.clientType)
         assertEquals("https://example.com/users", endpoint.uri)
     }
+
+    fun testDoesNotTreatBlockingClientAsBlockingConversionFromScala() {
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client;
+
+            public final class WebClient {
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Main.scala",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+
+            object Main {
+              val client = WebClient.of("https://example.com/users").blockingClient()
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("HTTP", endpoint.clientType)
+        assertEquals("https://example.com/users", endpoint.uri)
+    }
 }

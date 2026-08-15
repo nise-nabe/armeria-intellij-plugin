@@ -47,6 +47,7 @@ class ArmeriaRouteExplorerPanel(
     private var selectedRoute: ArmeriaRoute? = null
     private var currentModuleOnly = false
     private var initialRefreshScheduled = false
+    private var pendingRouteSelection: ArmeriaRoute? = null
 
     private val routeTree =
         Tree().apply {
@@ -89,7 +90,7 @@ class ArmeriaRouteExplorerPanel(
                 )
                 add(ArmeriaGenerateHttpRequestAction { selectedRouteFromTree() })
                 add(ArmeriaGenerateTestMethodAction { selectedRouteFromTree() })
-                add(ArmeriaGotoMatchingClientAction { selectedRouteFromTree() })
+                add(ArmeriaGotoMatchingClientAction({ selectedRouteFromTree() }, this))
                 add(ArmeriaSyncRuntimeRoutesAction())
                 add(ArmeriaOpenDocServiceAction { filterRoutes(allRoutes()) })
             }
@@ -199,15 +200,12 @@ class ArmeriaRouteExplorerPanel(
     }
 
     fun selectRoute(route: ArmeriaRoute): Boolean {
-        val root = (routeTree.model as? DefaultTreeModel)?.root as? DefaultMutableTreeNode ?: return false
-        val restored = ArmeriaRouteExplorerFiltering.restoreTreeSelection(routeTree, root, route)
-        if (!restored) {
-            return false
+        if (applyRouteSelection(route)) {
+            pendingRouteSelection = null
+            return true
         }
-        selectedRoute = ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent)
-        routeDetailPanel.setRoute(selectedRoute)
-        routeTree.selectionPath?.let(routeTree::scrollPathToVisible)
-        return true
+        pendingRouteSelection = route
+        return false
     }
 
     fun staticRoutes(): List<ArmeriaRoute> = routeState.staticRoutes
@@ -222,27 +220,35 @@ class ArmeriaRouteExplorerPanel(
     private fun allRoutes(): List<ArmeriaRoute> = routeState.allRoutes()
 
     private fun rebuildTree() {
-        val previousSelection = ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent)
+        val previousSelection =
+            pendingRouteSelection
+                ?: ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent)
         val visibleRoutes = filterRoutes(allRoutes())
         val root = ArmeriaRouteTreeBuilder.buildRoot(visibleRoutes)
         routeTree.model = DefaultTreeModel(root)
-        val selectionRestored =
-            previousSelection != null &&
-                ArmeriaRouteExplorerFiltering.restoreTreeSelection(routeTree, root, previousSelection)
-        when {
-            visibleRoutes.isEmpty() -> {
-                selectedRoute = null
-                routeDetailPanel.clear()
-            }
-            selectionRestored -> {
-                selectedRoute = ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent)
-                routeDetailPanel.setRoute(selectedRoute)
-            }
-            else -> {
-                selectedRoute = null
-                routeDetailPanel.setRoute(null)
-            }
+        if (visibleRoutes.isEmpty()) {
+            selectedRoute = null
+            routeDetailPanel.clear()
+            return
         }
+        if (previousSelection != null && applyRouteSelection(previousSelection)) {
+            pendingRouteSelection = null
+            return
+        }
+        selectedRoute = null
+        routeDetailPanel.setRoute(null)
+    }
+
+    private fun applyRouteSelection(route: ArmeriaRoute): Boolean {
+        val root = (routeTree.model as? DefaultTreeModel)?.root as? DefaultMutableTreeNode ?: return false
+        val restored = ArmeriaRouteExplorerFiltering.restoreTreeSelection(routeTree, root, route)
+        if (!restored) {
+            return false
+        }
+        selectedRoute = ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent)
+        routeDetailPanel.setRoute(selectedRoute)
+        routeTree.selectionPath?.let(routeTree::scrollPathToVisible)
+        return true
     }
 
     private fun updateStatusLabel() {

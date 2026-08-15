@@ -126,4 +126,31 @@ class ArmeriaClientRouteLinkSupportTest : ArmeriaClientFixtureTestBase() {
         assertEquals(route.path, ArmeriaClientRouteLinkSupport.matchingRoutes(project, endpoint).single().path)
         assertEquals(endpoint.uri, ArmeriaClientRouteLinkSupport.matchingClients(project, route).single().uri)
     }
+
+    fun testDiscoveryZkUriDoesNotMatchHttpRoutePath() {
+        val parts = ArmeriaClientRouteLinkSupport.parseClientUri("zk://zk.example.com/armeria")
+
+        assertEquals("/", parts.path)
+        assertFalse(ArmeriaClientRouteLinkSupport.isHttpLikeScheme("zk"))
+        assertTrue(ArmeriaClientRouteLinkSupport.isHttpLikeScheme("none+h2c"))
+        assertFalse(
+            ArmeriaClientRouteLinkSupport.matches(
+                clientType = "HTTP",
+                uri = "zk://zk.example.com/armeria",
+                routeProtocol = "HTTP",
+                routePath = "/armeria",
+            ),
+        )
+    }
+
+    fun testNestedEndpointGroupLabelYieldsInnermostUri() {
+        assertEquals(
+            "example.com",
+            ArmeriaClientEndpointGroupSupport.extractUriFromLabel("Health-checked (DNS (example.com))"),
+        )
+        assertEquals(
+            "zk://zk.example.com/armeria",
+            ArmeriaClientEndpointGroupSupport.extractUriFromLabel("ZooKeeper (zk://zk.example.com/armeria)"),
+        )
+    }
 }

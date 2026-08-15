@@ -432,6 +432,50 @@ class ArmeriaKotlinClientCollectorTest : ArmeriaClientFixtureTestBase() {
         assertEquals("https://example.com/hello", endpoint.uri)
     }
 
+    fun testCollectWebClientAsRestClientAfterNotNullAssertionFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+
+            fun main() {
+                WebClient.of("https://example.com/hello")!!.asRestClient()
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+
+        assertEquals(1, endpoints.size)
+        val endpoint = endpoints.single()
+        assertEquals("RestClient", endpoint.clientType)
+        assertEquals("https://example.com/hello", endpoint.uri)
+    }
+
+    fun testCollectWebClientBlockingAfterSafeCallFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+
+            fun main() {
+                WebClient.of("https://example.com/users")?.blocking()
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+
+        assertEquals(1, endpoints.size)
+        val endpoint = endpoints.single()
+        assertEquals("BlockingWebClient", endpoint.clientType)
+        assertEquals("https://example.com/users", endpoint.uri)
+    }
+
     fun testCollectOAuth2DecoratorFromKotlin() {
         myFixture.configureByText(
             "Main.kt",

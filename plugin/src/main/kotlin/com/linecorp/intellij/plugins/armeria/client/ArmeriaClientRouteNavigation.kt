@@ -4,6 +4,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.psi.PsiElement
 import com.intellij.ui.awt.RelativePoint
@@ -29,11 +30,17 @@ internal object ArmeriaClientRouteNavigation {
                 ArmeriaClientRouteLinkSupport.matchingRoutes(project, endpoint)
             }.inSmartMode(project)
             .expireWith(project)
+            .coalesceBy(this, project, "openMatchingRoutes")
             .let { coordinator ->
                 if (parentDisposable != null) coordinator.expireWith(parentDisposable) else coordinator
             }.finishOnUiThread(ModalityState.any()) { routes ->
                 when {
-                    routes.isEmpty() -> Unit
+                    routes.isEmpty() ->
+                        showEmptyMatch(
+                            project,
+                            "client.explorer.matching.routes.empty",
+                            "client.explorer.action.gotoRoute.popup",
+                        )
                     routes.size == 1 -> openRoute(project, routes.single(), parentDisposable)
                     else -> showRouteChooser(project, routes, parentDisposable, mouseEvent)
                 }
@@ -51,11 +58,17 @@ internal object ArmeriaClientRouteNavigation {
                 ArmeriaClientRouteLinkSupport.matchingClients(project, route)
             }.inSmartMode(project)
             .expireWith(project)
+            .coalesceBy(this, project, "openMatchingClients")
             .let { coordinator ->
                 if (parentDisposable != null) coordinator.expireWith(parentDisposable) else coordinator
             }.finishOnUiThread(ModalityState.any()) { endpoints ->
                 when {
-                    endpoints.isEmpty() -> Unit
+                    endpoints.isEmpty() ->
+                        showEmptyMatch(
+                            project,
+                            "client.explorer.matching.clients.empty",
+                            "route.explorer.action.gotoClient.popup",
+                        )
                     endpoints.size == 1 -> openClient(project, endpoints.single(), parentDisposable)
                     else -> showClientChooser(project, endpoints, parentDisposable, mouseEvent)
                 }
@@ -179,5 +192,16 @@ internal object ArmeriaClientRouteNavigation {
         } else {
             popup.showInFocusCenter()
         }
+    }
+
+    private fun showEmptyMatch(
+        project: Project,
+        messageKey: String,
+        titleKey: String,
+    ) {
+        if (project.isDisposed) {
+            return
+        }
+        Messages.showInfoMessage(project, message(messageKey), message(titleKey))
     }
 }

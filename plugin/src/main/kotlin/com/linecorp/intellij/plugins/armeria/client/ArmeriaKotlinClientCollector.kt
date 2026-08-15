@@ -14,12 +14,15 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpre
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
 import org.jetbrains.kotlin.idea.KotlinFileType
+import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtCallExpression
-import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
+import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtProperty
+import org.jetbrains.kotlin.psi.KtQualifiedExpression
+import org.jetbrains.kotlin.psi.KtUnaryExpression
 
 internal object ArmeriaKotlinClientCollector {
     fun collect(
@@ -38,6 +41,11 @@ internal object ArmeriaKotlinClientCollector {
                 collectClientFromCall(call, endpoints, seenEndpoints)
             }
         }
+    }
+
+    internal fun protocolForCall(call: KtCallExpression): ClientProtocol? {
+        val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return null
+        return ArmeriaClientSupport.protocolForInvocation(methodName, resolveContainingClass(call))
     }
 
     private fun collectClientFromCall(
@@ -205,8 +213,8 @@ internal object ArmeriaKotlinClientCollector {
         }
         val receiverText =
             when (val callee = call.calleeExpression) {
-                is KtDotQualifiedExpression -> callee.receiverExpression.text
-                else -> (call.parent as? KtDotQualifiedExpression)?.receiverExpression?.text
+                is KtQualifiedExpression -> callee.receiverExpression.text
+                else -> (call.parent as? KtQualifiedExpression)?.receiverExpression?.text
             }.orEmpty()
         return ArmeriaClientSupport.looksLikeClientBuilderReceiverText(receiverText) ||
             receiverText.contains("WebClient")
@@ -239,17 +247,17 @@ internal object ArmeriaKotlinClientCollector {
     private fun looksLikeWebClientFactoryReceiver(call: KtCallExpression): Boolean {
         val receiverText =
             when (val callee = call.calleeExpression) {
-                is KtDotQualifiedExpression -> callee.receiverExpression.text
-                else -> (call.parent as? KtDotQualifiedExpression)?.receiverExpression?.text
+                is KtQualifiedExpression -> callee.receiverExpression.text
+                else -> (call.parent as? KtQualifiedExpression)?.receiverExpression?.text
             }.orEmpty()
         val simpleName = receiverText.substringAfterLast('.')
         return simpleName == "WebClient" || receiverText.endsWith(".WebClient")
     }
 
     private fun callExpressionInChain(expression: KtExpression): KtCallExpression? =
-        when (expression) {
-            is KtCallExpression -> expression
-            is KtDotQualifiedExpression -> expression.selectorExpression as? KtCallExpression
+        when (val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: expression) {
+            is KtCallExpression -> unwrapped
+            is KtQualifiedExpression -> unwrapped.selectorExpression as? KtCallExpression
             else -> null
         }
 
@@ -257,11 +265,11 @@ internal object ArmeriaKotlinClientCollector {
         when (expression) {
             is KtCallExpression -> {
                 when (val callee = expression.calleeExpression) {
-                    is KtDotQualifiedExpression -> callee.receiverExpression
-                    else -> (expression.parent as? KtDotQualifiedExpression)?.receiverExpression
+                    is KtQualifiedExpression -> callee.receiverExpression
+                    else -> (expression.parent as? KtQualifiedExpression)?.receiverExpression
                 }
             }
-            is KtDotQualifiedExpression -> expression.receiverExpression
+            is KtQualifiedExpression -> expression.receiverExpression
             else -> null
         }
 
@@ -308,17 +316,23 @@ internal object ArmeriaKotlinClientCollector {
     }
 
     private fun findNextChainedCall(call: KtCallExpression): KtCallExpression? {
-        val parent = call.parent
-        if (parent is KtDotQualifiedExpression && parent.receiverExpression == call) {
-            return parent.selectorExpression as? KtCallExpression
-        }
-        if (parent is KtDotQualifiedExpression) {
-            val grandParent = parent.parent as? KtDotQualifiedExpression
-            if (grandParent != null && grandParent.receiverExpression == parent) {
-                return grandParent.selectorExpression as? KtCallExpression
+        var current: PsiElement = call
+        while (true) {
+            val parent = current.parent ?: return null
+            when {
+                parent is KtParenthesizedExpression -> current = parent
+                parent is KtUnaryExpression && parent.operationToken == KtTokens.EXCLEXCL -> current = parent
+                parent is KtQualifiedExpression -> {
+                    val receiver = parent.receiverExpression
+                    if (receiver == current || PsiTreeUtil.isAncestor(receiver, current, false)) {
+                        val selector = parent.selectorExpression ?: return null
+                        return selector as? KtCallExpression ?: callExpressionInChain(selector)
+                    }
+                    current = parent
+                }
+                else -> return null
             }
         }
-        return null
     }
 
     private fun isDescendantOfValueArgument(
@@ -333,8 +347,8 @@ internal object ArmeriaKotlinClientCollector {
         val callee = call.calleeExpression ?: return null
         val receiver =
             when (callee) {
-                is KtDotQualifiedExpression -> callee.receiverExpression
-                else -> (call.parent as? KtDotQualifiedExpression)?.receiverExpression
+                is KtQualifiedExpression -> callee.receiverExpression
+                else -> (call.parent as? KtQualifiedExpression)?.receiverExpression
             }
         return receiver?.text
     }
@@ -344,7 +358,7 @@ internal object ArmeriaKotlinClientCollector {
         val references =
             when (callee) {
                 is KtNameReferenceExpression -> callee.references.toList()
-                is KtDotQualifiedExpression -> callee.references.toList()
+                is KtQualifiedExpression -> callee.references.toList()
                 else -> emptyList()
             }
         for (reference in references) {
@@ -361,8 +375,8 @@ internal object ArmeriaKotlinClientCollector {
         }
         val qualifierText =
             when (callee) {
-                is KtDotQualifiedExpression -> callee.receiverExpression.text
-                else -> (call.parent as? KtDotQualifiedExpression)?.receiverExpression?.text
+                is KtQualifiedExpression -> callee.receiverExpression.text
+                else -> (call.parent as? KtQualifiedExpression)?.receiverExpression?.text
             }.orEmpty()
         val fromSimpleName = protocolForClassBySimpleName(qualifierText, call.containingFile as? KtFile)
         if (fromSimpleName != null) {

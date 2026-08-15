@@ -47,13 +47,7 @@ internal class ArmeriaJavaClientRouteLineMarkerProvider : LineMarkerProvider {
         if (routes.isEmpty()) {
             return null
         }
-        val first = routes.first()
-        val tooltip =
-            if (routes.size == 1) {
-                message("marker.client.route.tooltip", first.methodLabel, first.path)
-            } else {
-                message("marker.client.route.tooltipMultiple", routes.size)
-            }
+        val tooltip = ArmeriaClientRouteLinkSupport.matchingRouteTooltip(routes)
         return LineMarkerInfo(
             element,
             element.textRange,

@@ -3,12 +3,17 @@ package com.linecorp.intellij.plugins.armeria.client
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.text.StringUtil
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnalysisCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.message
 import java.net.URI
 
 internal object ArmeriaClientRouteLinkSupport {
+    private val HTTP_LIKE_SCHEME_TOKENS =
+        setOf("http", "https", "ws", "wss", "h1", "h1c", "h2", "h2c", "none")
+
     private val MATCHABLE_ROUTE_MATCHES =
         setOf(
             RouteMatch.ANNOTATED_HTTP,
@@ -117,11 +122,23 @@ internal object ArmeriaClientRouteLinkSupport {
             val uri = URI(trimmed)
             ClientUriParts(
                 host = uri.host?.lowercase(),
-                path = normalizePath(uri.path.orEmpty().ifBlank { "/" }),
+                path =
+                    if (isHttpLikeScheme(uri.scheme)) {
+                        normalizePath(uri.path.orEmpty().ifBlank { "/" })
+                    } else {
+                        "/"
+                    },
             )
         } catch (_: Exception) {
             ClientUriParts(host = null, path = normalizePath(trimmed))
         }
+    }
+
+    internal fun isHttpLikeScheme(scheme: String?): Boolean {
+        if (scheme.isNullOrBlank()) {
+            return true
+        }
+        return scheme.lowercase().split('+', '-').any { it in HTTP_LIKE_SCHEME_TOKENS }
     }
 
     fun normalizePath(path: String): String {
@@ -156,5 +173,18 @@ internal object ArmeriaClientRouteLinkSupport {
             return true
         }
         return clientHost.equals(routeHost, ignoreCase = true)
+    }
+
+    fun matchingRouteTooltip(routes: List<ArmeriaRoute>): String {
+        val first = routes.first()
+        return if (routes.size == 1) {
+            message(
+                "marker.client.route.tooltip",
+                StringUtil.escapeXmlEntities(first.methodLabel),
+                StringUtil.escapeXmlEntities(first.path),
+            )
+        } else {
+            message("marker.client.route.tooltipMultiple", routes.size)
+        }
     }
 }

@@ -36,6 +36,7 @@ class ArmeriaClientExplorerPanel(
 ) : SimpleToolWindowPanel(true, true),
     Disposable {
     private var initialRefreshScheduled = false
+    private var pendingEndpointSelection: ArmeriaClientEndpoint? = null
 
     private val listModel = DefaultListModel<ArmeriaClientEndpoint>()
     private val endpointList = JBList(listModel)
@@ -171,14 +172,27 @@ class ArmeriaClientExplorerPanel(
             .expireWith(this)
             .coalesceBy(this)
             .finishOnUiThread(ModalityState.any()) { collectedEndpoints ->
+                val toRestore = pendingEndpointSelection ?: endpointList.selectedValue
                 listModel.removeAllElements()
                 collectedEndpoints.forEach(listModel::addElement)
+                if (toRestore != null && selectEndpointNow(toRestore)) {
+                    pendingEndpointSelection = null
+                }
                 updateStatusLabel(collectedEndpoints)
                 clientDetailPanel.setEndpoint(endpointList.selectedValue)
             }.submit(AppExecutorUtil.getAppExecutorService())
     }
 
     fun selectEndpoint(endpoint: ArmeriaClientEndpoint): Boolean {
+        if (selectEndpointNow(endpoint)) {
+            pendingEndpointSelection = null
+            return true
+        }
+        pendingEndpointSelection = endpoint
+        return false
+    }
+
+    private fun selectEndpointNow(endpoint: ArmeriaClientEndpoint): Boolean {
         for (index in 0 until listModel.size) {
             val candidate = listModel.getElementAt(index)
             if (sameEndpoint(candidate, endpoint)) {
@@ -193,11 +207,27 @@ class ArmeriaClientExplorerPanel(
     private fun sameEndpoint(
         left: ArmeriaClientEndpoint,
         right: ArmeriaClientEndpoint,
-    ): Boolean =
-        left.clientType == right.clientType &&
+    ): Boolean {
+        val leftIdentity = endpointIdentity(left)
+        val rightIdentity = endpointIdentity(right)
+        if (leftIdentity != null && rightIdentity != null) {
+            return leftIdentity == rightIdentity
+        }
+        return left.clientType == right.clientType &&
             left.uri == right.uri &&
             left.target == right.target &&
             left.moduleName == right.moduleName
+    }
+
+    private fun endpointIdentity(endpoint: ArmeriaClientEndpoint): Pair<String, Int>? {
+        val fileUrl = endpoint.pointer.virtualFile?.url ?: return null
+        val offset =
+            endpoint.sourceOffset
+                ?: endpoint.pointer.range?.startOffset
+                ?: endpoint.pointer.element?.textOffset
+                ?: return null
+        return fileUrl to offset
+    }
 
     private fun updateStatusLabel(collectedEndpoints: List<ArmeriaClientEndpoint>) {
         statusLabel.text =

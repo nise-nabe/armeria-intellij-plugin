@@ -613,5 +613,6 @@ class ArmeriaClientCollectorTest : ArmeriaClientFixtureTestBase() {
         val endpoint = ArmeriaClientCollector.collect(project).single()
 
         assertEquals("Health-checked (DNS (example.com))", endpoint.endpointGroup)
+        assertEquals("example.com", endpoint.uri)
     }
 }

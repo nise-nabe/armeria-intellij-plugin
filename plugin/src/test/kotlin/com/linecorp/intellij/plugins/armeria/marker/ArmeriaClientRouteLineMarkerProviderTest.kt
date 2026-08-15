@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.marker
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.ArmeriaIcons
+import com.linecorp.intellij.plugins.armeria.client.ArmeriaKotlinClientCollector
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaClientFixtureTestBase
 import com.linecorp.intellij.plugins.armeria.test.registerArmeriaAnnotationStubs
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -113,6 +114,51 @@ class ArmeriaClientRouteLineMarkerProviderTest : ArmeriaClientFixtureTestBase() 
 
         kotlinAssertNotNull(marker)
         assertEquals(ArmeriaIcons.Armeria, marker.icon)
+    }
+
+    fun testKotlinUnrelatedOfCallIsNotAnArmeriaClientInvocation() {
+        myFixture.addFileToProject(
+            "src/Service.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+
+            class Service {
+                @Get("/hello")
+                fun hello(): String = "hello"
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.common;
+
+            public final class HttpHeaders {
+                public static HttpHeaders of(String name, String value) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Client.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.common.HttpHeaders
+
+            fun main() {
+                HttpHeaders.of("foo", "bar")
+            }
+            """.trimIndent(),
+        )
+
+        val call = PsiTreeUtil.findChildOfType(myFixture.file, KtCallExpression::class.java)!!
+        assertNull(ArmeriaKotlinClientCollector.protocolForCall(call))
+        val name = kotlinCallName(call)
+        val leaf = name.firstChild ?: name
+        assertNull(kotlinProvider.getLineMarkerInfo(leaf))
     }
 
     private fun kotlinCallName(call: KtCallExpression): com.intellij.psi.PsiElement {

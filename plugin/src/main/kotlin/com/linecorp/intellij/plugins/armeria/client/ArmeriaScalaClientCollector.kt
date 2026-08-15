@@ -153,10 +153,24 @@ internal object ArmeriaScalaClientCollector {
         }
         val rest = text.substring(index + 1)
         return when {
-            rest.startsWith("blocking") -> ClientProtocol.BLOCKING
-            rest.startsWith("asRestClient") -> ClientProtocol.REST
+            startsWithConversionCall(rest, "blocking") -> ClientProtocol.BLOCKING
+            startsWithConversionCall(rest, "asRestClient") -> ClientProtocol.REST
             else -> null
         }
+    }
+
+    private fun startsWithConversionCall(
+        rest: String,
+        methodName: String,
+    ): Boolean {
+        if (!rest.startsWith(methodName)) {
+            return false
+        }
+        var afterName = methodName.length
+        while (afterName < rest.length && rest[afterName].isWhitespace()) {
+            afterName++
+        }
+        return afterName < rest.length && rest[afterName] == '('
     }
 
     private fun isNestedInsideScalaClientFactoryArgument(

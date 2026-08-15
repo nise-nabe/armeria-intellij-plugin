@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAwareAction
@@ -9,6 +10,7 @@ import com.linecorp.intellij.plugins.armeria.message
 
 internal class ArmeriaGotoMatchingClientAction(
     private val selectedRouteProvider: () -> ArmeriaRoute?,
+    private val parentDisposable: Disposable? = null,
 ) : DumbAwareAction(
         message("route.explorer.action.gotoClient"),
     ) {
@@ -21,6 +23,10 @@ internal class ArmeriaGotoMatchingClientAction(
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
         val route = selectedRouteProvider() ?: return
-        ArmeriaClientRouteNavigation.openMatchingClients(project, route)
+        ArmeriaClientRouteNavigation.openMatchingClients(
+            project,
+            route,
+            parentDisposable = parentDisposable,
+        )
     }
 }

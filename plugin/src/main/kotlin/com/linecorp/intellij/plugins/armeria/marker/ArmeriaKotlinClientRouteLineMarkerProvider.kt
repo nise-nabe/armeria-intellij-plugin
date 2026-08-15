@@ -11,8 +11,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.ArmeriaIcons
 import com.linecorp.intellij.plugins.armeria.client.ArmeriaClientRouteLinkSupport
 import com.linecorp.intellij.plugins.armeria.client.ArmeriaClientRouteNavigation
-import com.linecorp.intellij.plugins.armeria.client.ArmeriaClientSupport
-import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
+import com.linecorp.intellij.plugins.armeria.client.ArmeriaKotlinClientCollector
 import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
@@ -40,10 +39,7 @@ internal class ArmeriaKotlinClientRouteLineMarkerProvider : LineMarkerProvider {
         if (element != referenceNameElement && element.parent != referenceNameElement) {
             return null
         }
-        val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return null
-        if (methodName !in ArmeriaClientSupport.FACTORY_METHOD_NAMES &&
-            methodName !in ArmeriaClientSupport.CONVERSION_METHOD_NAMES
-        ) {
+        if (ArmeriaKotlinClientCollector.protocolForCall(call) == null) {
             return null
         }
         val endpoint = ArmeriaClientRouteNavigation.endpointForCall(call) ?: return null
@@ -51,13 +47,7 @@ internal class ArmeriaKotlinClientRouteLineMarkerProvider : LineMarkerProvider {
         if (routes.isEmpty()) {
             return null
         }
-        val first = routes.first()
-        val tooltip =
-            if (routes.size == 1) {
-                message("marker.client.route.tooltip", first.methodLabel, first.path)
-            } else {
-                message("marker.client.route.tooltipMultiple", routes.size)
-            }
+        val tooltip = ArmeriaClientRouteLinkSupport.matchingRouteTooltip(routes)
         return LineMarkerInfo(
             element,
             element.textRange,
