@@ -89,7 +89,8 @@ internal object ArmeriaEndpointsSupport {
                 listOf(Authority.Exact(route.virtualHostName))
             }
 
-        override val path: UrlPath = ArmeriaEndpointUrlPath.toUrlPath(route.path, route.pathType)
+        override val path: UrlPath =
+            ArmeriaEndpointUrlPath.toUrlPath(route.path, route.pathType, route.routeMatch)
 
         override val methods: Set<String> = httpMethods(route).toSet()
 

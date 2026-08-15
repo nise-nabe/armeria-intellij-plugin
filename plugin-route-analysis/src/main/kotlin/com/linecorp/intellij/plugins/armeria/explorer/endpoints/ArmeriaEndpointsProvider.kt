@@ -6,7 +6,6 @@ import com.intellij.microservices.endpoints.EndpointsUrlTargetProvider
 import com.intellij.microservices.endpoints.ExternalEndpointsFilter
 import com.intellij.microservices.endpoints.FrameworkPresentation
 import com.intellij.microservices.endpoints.HTTP_SERVER_TYPE
-import com.intellij.microservices.endpoints.ModuleEndpointsFilter
 import com.intellij.microservices.endpoints.SearchScopeEndpointsFilter
 import com.intellij.microservices.endpoints.presentation.HttpMethodPresentation
 import com.intellij.microservices.url.UrlTargetInfo
@@ -137,8 +136,6 @@ class ArmeriaEndpointsProvider : EndpointsUrlTargetProvider<ArmeriaEndpointGroup
                 .collect(project, includeProtoRoutes = true)
                 .filter(ArmeriaEndpointsSupport::isVisibleServerRoute)
         return when (filter) {
-            is ModuleEndpointsFilter ->
-                filter.filterByScope(routes) { it.pointer.element?.containingFile }.toList()
             is SearchScopeEndpointsFilter ->
                 routes.filter { route ->
                     val virtualFile =

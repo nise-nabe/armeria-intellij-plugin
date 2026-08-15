@@ -63,6 +63,48 @@ class ArmeriaEndpointsSupportTest {
     }
 
     @Test
+    fun toUrlPath_braceVariableWithNestedRegexQuantifier() {
+        val path = ArmeriaEndpointUrlPath.toUrlPath("/users/{id:[0-9]{1,3}}", PathType.EXACT)
+
+        assertEquals(
+            listOf(
+                UrlPath.PathSegment.Exact(""),
+                UrlPath.PathSegment.Exact("users"),
+                UrlPath.PathSegment.Variable("id", "[0-9]{1,3}"),
+            ),
+            path.segments,
+        )
+    }
+
+    @Test
+    fun toUrlPath_prefixAppendsUndefined() {
+        val path = ArmeriaEndpointUrlPath.toUrlPath("/api", PathType.PREFIX)
+
+        assertEquals(
+            listOf(
+                UrlPath.PathSegment.Exact(""),
+                UrlPath.PathSegment.Exact("api"),
+                UrlPath.PathSegment.Undefined,
+            ),
+            path.segments,
+        )
+    }
+
+    @Test
+    fun toUrlPath_serviceUnderIsPrefix() {
+        val path = ArmeriaEndpointUrlPath.toUrlPath("/v1/", PathType.EXACT, RouteMatch.SERVICE_UNDER)
+
+        assertEquals(
+            listOf(
+                UrlPath.PathSegment.Exact(""),
+                UrlPath.PathSegment.Exact("v1"),
+                UrlPath.PathSegment.Undefined,
+            ),
+            path.segments,
+        )
+    }
+
+    @Test
     fun toUrlPath_colonVariable() {
         val path = ArmeriaEndpointUrlPath.toUrlPath("/users/:id", PathType.EXACT)
 
