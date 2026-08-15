@@ -50,7 +50,7 @@ class ArmeriaClientEndpointsProviderTest : ArmeriaClientFixtureTestBase() {
         assertTrue(navigation is PsiMethodCallExpression)
 
         val target = provider.getUrlTargetInfo(group, endpoint).single()
-        assertEquals(emptySet(), target.methods)
+        assertEquals(emptySet<String>(), target.methods)
         assertEquals(navigation, target.resolveToPsiElement())
         assertEquals(
             listOf(
