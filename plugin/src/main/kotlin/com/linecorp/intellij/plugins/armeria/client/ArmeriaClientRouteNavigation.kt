@@ -7,6 +7,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteExplorerAccess
@@ -75,10 +76,14 @@ internal object ArmeriaClientRouteNavigation {
             }.submit(AppExecutorUtil.getAppExecutorService())
     }
 
-    fun endpointForCall(call: PsiElement): ArmeriaClientEndpoint? =
-        ArmeriaClientCollector.collect(call.project).firstOrNull { endpoint ->
-            endpoint.pointer.element == call
+    fun endpointForCall(call: PsiElement): ArmeriaClientEndpoint? {
+        if (call is PsiMethodCallExpression) {
+            val endpoints = mutableListOf<ArmeriaClientEndpoint>()
+            ArmeriaClientCollector.collectClientFromMethodCall(call, endpoints, mutableSetOf())
+            return endpoints.firstOrNull()
         }
+        return ArmeriaKotlinClientCollector.endpointForCall(call)
+    }
 
     private fun openRoute(
         project: Project,
@@ -152,7 +157,7 @@ internal object ArmeriaClientRouteNavigation {
             ): Component {
                 val label =
                     if (value is ArmeriaRoute) {
-                        "${value.methodLabel} ${value.path}"
+                        "${value.methodLabel} ${value.path} (${value.moduleName})"
                     } else {
                         value?.toString().orEmpty()
                     }
@@ -173,7 +178,7 @@ internal object ArmeriaClientRouteNavigation {
             ): Component {
                 val label =
                     if (value is ArmeriaClientEndpoint) {
-                        "${value.clientType} ${value.uri}"
+                        "${value.clientType} ${value.uri} (${value.moduleName})"
                     } else {
                         value?.toString().orEmpty()
                     }

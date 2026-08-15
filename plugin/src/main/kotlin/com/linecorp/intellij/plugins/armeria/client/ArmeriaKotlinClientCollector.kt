@@ -45,7 +45,19 @@ internal object ArmeriaKotlinClientCollector {
 
     internal fun protocolForCall(call: KtCallExpression): ClientProtocol? {
         val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return null
+        if (methodName !in ArmeriaClientSupport.FACTORY_METHOD_NAMES &&
+            methodName !in ArmeriaClientSupport.CONVERSION_METHOD_NAMES
+        ) {
+            return null
+        }
         return ArmeriaClientSupport.protocolForInvocation(methodName, resolveContainingClass(call))
+    }
+
+    internal fun endpointForCall(element: PsiElement): ArmeriaClientEndpoint? {
+        val call = element as? KtCallExpression ?: return null
+        val endpoints = mutableListOf<ArmeriaClientEndpoint>()
+        collectClientFromCall(call, endpoints, mutableSetOf())
+        return endpoints.firstOrNull()
     }
 
     private fun collectClientFromCall(

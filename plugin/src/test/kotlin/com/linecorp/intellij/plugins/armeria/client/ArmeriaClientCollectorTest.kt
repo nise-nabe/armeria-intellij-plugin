@@ -29,6 +29,8 @@ class ArmeriaClientCollectorTest : ArmeriaClientFixtureTestBase() {
         assertEquals("HTTP", endpoint.clientType)
         assertEquals("https://example.com", endpoint.uri)
         assertTrue(endpoint.target.contains("WebClient"))
+        assertTrue(endpoint.sourceOffset != null && endpoint.sourceOffset!! >= 0)
+        assertTrue(!endpoint.sourceFileUrl.isNullOrBlank())
     }
 
     fun testCollectWebClientBuilderWithUri() {

@@ -80,6 +80,52 @@ class ArmeriaClientRouteLineMarkerProviderTest : ArmeriaClientFixtureTestBase() 
         assertNull(javaProvider.getLineMarkerInfo(call.methodExpression.referenceNameElement!!))
     }
 
+    fun testJavaUnrelatedOfCallHasNoRouteMarker() {
+        myFixture.addFileToProject(
+            "src/Service.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class Service {
+                @Get("/hello")
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.common;
+
+            public final class HttpHeaders {
+                public static HttpHeaders of(String name, String value) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Client.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.common.HttpHeaders;
+
+            public class Client {
+                public static void main(String[] args) {
+                    HttpHeaders.of("foo", "bar");
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val call = PsiTreeUtil.findChildOfType(myFixture.file, PsiMethodCallExpression::class.java)!!
+        assertNull(javaProvider.getLineMarkerInfo(call.methodExpression.referenceNameElement!!))
+    }
+
     fun testKotlinClientFactoryHasRouteMarkerWhenPathsOverlap() {
         myFixture.addFileToProject(
             "src/Service.kt",

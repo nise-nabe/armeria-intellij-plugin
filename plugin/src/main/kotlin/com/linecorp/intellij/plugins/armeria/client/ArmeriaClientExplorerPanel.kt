@@ -172,11 +172,17 @@ class ArmeriaClientExplorerPanel(
             .expireWith(this)
             .coalesceBy(this)
             .finishOnUiThread(ModalityState.any()) { collectedEndpoints ->
-                val toRestore = pendingEndpointSelection ?: endpointList.selectedValue
+                val pending = pendingEndpointSelection
+                val previous = endpointList.selectedValue
                 listModel.removeAllElements()
                 collectedEndpoints.forEach(listModel::addElement)
-                if (toRestore != null && selectEndpointNow(toRestore)) {
+                if (collectedEndpoints.isNotEmpty()) {
                     pendingEndpointSelection = null
+                    val preferred = pending ?: previous
+                    when {
+                        preferred != null && selectEndpointNow(preferred) -> Unit
+                        pending != null && previous != null -> selectEndpointNow(previous)
+                    }
                 }
                 updateStatusLabel(collectedEndpoints)
                 clientDetailPanel.setEndpoint(endpointList.selectedValue)
@@ -220,12 +226,8 @@ class ArmeriaClientExplorerPanel(
     }
 
     private fun endpointIdentity(endpoint: ArmeriaClientEndpoint): Pair<String, Int>? {
-        val fileUrl = endpoint.pointer.virtualFile?.url ?: return null
-        val offset =
-            endpoint.sourceOffset
-                ?: endpoint.pointer.range?.startOffset
-                ?: endpoint.pointer.element?.textOffset
-                ?: return null
+        val fileUrl = endpoint.sourceFileUrl ?: return null
+        val offset = endpoint.sourceOffset ?: return null
         return fileUrl to offset
     }
 

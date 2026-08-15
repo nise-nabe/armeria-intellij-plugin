@@ -275,7 +275,8 @@ object ArmeriaClientCollector {
                 decorators = decorators,
                 endpointGroup = endpointGroup,
                 transport = transport,
-                sourceOffset = sourceOffset,
+                sourceOffset = sourceOffset ?: element.textRange.startOffset,
+                sourceFileUrl = virtualFile.url,
             )
     }
 

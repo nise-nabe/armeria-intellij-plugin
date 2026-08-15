@@ -225,9 +225,8 @@ class ArmeriaRouteExplorerPanel(
     private fun allRoutes(): List<ArmeriaRoute> = routeState.allRoutes()
 
     private fun rebuildTree() {
-        val previousSelection =
-            pendingRouteSelection
-                ?: ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent)
+        val pending = pendingRouteSelection
+        val previousSelection = ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent)
         val visibleRoutes = filterRoutes(allRoutes())
         val root = ArmeriaRouteTreeBuilder.buildRoot(visibleRoutes)
         routeTree.model = DefaultTreeModel(root)
@@ -236,8 +235,12 @@ class ArmeriaRouteExplorerPanel(
             routeDetailPanel.clear()
             return
         }
-        if (previousSelection != null && applyRouteSelection(previousSelection)) {
-            pendingRouteSelection = null
+        pendingRouteSelection = null
+        val preferred = pending ?: previousSelection
+        if (preferred != null && applyRouteSelection(preferred)) {
+            return
+        }
+        if (pending != null && previousSelection != null && applyRouteSelection(previousSelection)) {
             return
         }
         selectedRoute = null
