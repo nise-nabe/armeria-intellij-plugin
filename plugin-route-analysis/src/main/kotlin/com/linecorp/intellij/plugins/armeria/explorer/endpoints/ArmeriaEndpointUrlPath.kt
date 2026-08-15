@@ -19,8 +19,11 @@ internal object ArmeriaEndpointUrlPath {
             }
         }
         val normalized = if (path.startsWith("/")) path else "/$path"
-        if (pathType == PathType.REGEX || pathType == PathType.GLOB) {
+        if (pathType == PathType.REGEX) {
             return UrlPath.fromExactString(normalized)
+        }
+        if (pathType == PathType.GLOB) {
+            return UrlPath(normalized.split('/').map { globSegment(it) })
         }
         val body = if (isPrefix) normalized.trimEnd('/') else normalized
         if (body.isEmpty()) {
@@ -39,6 +42,13 @@ internal object ArmeriaEndpointUrlPath {
         }
         return pathType == PathType.PREFIX || routeMatch == RouteMatch.SERVICE_UNDER
     }
+
+    private fun globSegment(segment: String): UrlPath.PathSegment =
+        if (segment == "*" || segment == "**") {
+            UrlPath.PathSegment.Undefined
+        } else {
+            UrlPath.PathSegment.Exact(segment)
+        }
 
     private fun toSegment(segment: String): UrlPath.PathSegment {
         if (segment.startsWith(':') && segment.length > 1 && '{' !in segment) {

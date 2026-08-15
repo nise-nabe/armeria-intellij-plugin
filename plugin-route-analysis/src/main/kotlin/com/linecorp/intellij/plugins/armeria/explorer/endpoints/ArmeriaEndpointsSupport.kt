@@ -50,8 +50,9 @@ internal object ArmeriaEndpointsSupport {
         val element = route.pointer.element
         val psiClass = element as? PsiClass ?: (element as? PsiMember)?.containingClass
         val className = psiClass?.qualifiedName
+        val module = route.moduleName
         if (!className.isNullOrBlank()) {
-            return "class:$className"
+            return "module:$module|class:$className"
         }
         val fileUrl =
             route.pointer.virtualFile?.url
@@ -60,9 +61,9 @@ internal object ArmeriaEndpointsSupport {
                     ?.virtualFile
                     ?.url
         if (!fileUrl.isNullOrBlank()) {
-            return "file:$fileUrl"
+            return "module:$module|file:$fileUrl"
         }
-        return "module:${route.moduleName}"
+        return "module:$module"
     }
 
     fun urlTargetInfo(route: ArmeriaRoute): UrlTargetInfo = ArmeriaUrlTargetInfo(route)

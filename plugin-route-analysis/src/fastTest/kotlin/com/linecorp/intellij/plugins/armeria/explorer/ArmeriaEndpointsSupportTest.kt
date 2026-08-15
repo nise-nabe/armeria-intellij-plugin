@@ -119,14 +119,27 @@ class ArmeriaEndpointsSupportTest {
     }
 
     @Test
-    fun toUrlPath_globKeepsExactSegments() {
+    fun toUrlPath_globMapsStarToUndefined() {
         val path = ArmeriaEndpointUrlPath.toUrlPath("/files/**", PathType.GLOB)
 
         assertEquals(
             listOf(
                 UrlPath.PathSegment.Exact(""),
                 UrlPath.PathSegment.Exact("files"),
-                UrlPath.PathSegment.Exact("**"),
+                UrlPath.PathSegment.Undefined,
+            ),
+            path.segments,
+        )
+    }
+
+    @Test
+    fun toUrlPath_regexKeepsExactSegments() {
+        val path = ArmeriaEndpointUrlPath.toUrlPath("^(?<id>\\d+)$", PathType.REGEX)
+
+        assertEquals(
+            listOf(
+                UrlPath.PathSegment.Exact(""),
+                UrlPath.PathSegment.Exact("^(?<id>\\d+)$"),
             ),
             path.segments,
         )
@@ -184,11 +197,18 @@ class ArmeriaEndpointsSupportTest {
         )
     }
 
+    @Test
+    fun groupKey_includesModuleName() {
+        assertEquals("module:app", ArmeriaEndpointsSupport.groupKey(route(moduleName = "app")))
+        assertEquals("module:other", ArmeriaEndpointsSupport.groupKey(route(moduleName = "other")))
+    }
+
     private fun route(
         httpMethod: String = "GET",
         path: String = "/api",
         protocol: String = "HTTP",
         routeMatch: RouteMatch = RouteMatch.ANNOTATED_HTTP,
+        moduleName: String = "app",
     ): ArmeriaRoute =
         ArmeriaRoute(
             protocol = protocol,
@@ -196,7 +216,7 @@ class ArmeriaEndpointsSupportTest {
             path = path,
             target = "Handler",
             routeMatch = routeMatch,
-            moduleName = "app",
+            moduleName = moduleName,
             targetUnresolved = false,
             isDocService = false,
             decorators = emptyList(),
@@ -213,7 +233,7 @@ class ArmeriaEndpointsSupportTest {
 
         override fun getProject(): Project = throw UnsupportedOperationException()
 
-        override fun getVirtualFile(): VirtualFile = throw UnsupportedOperationException()
+        override fun getVirtualFile(): VirtualFile? = null
 
         override fun getPsiRange(): TextRange? = null
     }

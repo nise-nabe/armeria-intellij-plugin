@@ -19,10 +19,10 @@ import com.intellij.openapi.util.ModificationTracker
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiElement
 import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.psi.util.PsiModificationTracker
 import com.linecorp.intellij.plugins.armeria.ArmeriaIcons
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnalysisCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCacheSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.message
 
@@ -101,7 +101,7 @@ class ArmeriaEndpointsProvider : EndpointsUrlTargetProvider<ArmeriaEndpointGroup
         }
     }
 
-    override fun getModificationTracker(project: Project): ModificationTracker = PsiModificationTracker.getInstance(project)
+    override fun getModificationTracker(project: Project): ModificationTracker = ArmeriaRouteCacheSupport.modificationTracker(project)
 
     override fun getDocumentationElement(
         group: ArmeriaEndpointGroup,
