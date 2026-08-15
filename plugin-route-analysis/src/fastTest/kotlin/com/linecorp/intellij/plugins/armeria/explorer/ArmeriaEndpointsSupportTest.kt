@@ -77,6 +77,18 @@ class ArmeriaEndpointsSupportTest {
     }
 
     @Test
+    fun toUrlPath_prefixRoot() {
+        assertEquals(
+            listOf(UrlPath.PathSegment.Undefined),
+            ArmeriaEndpointUrlPath.toUrlPath("/", PathType.PREFIX).segments,
+        )
+        assertEquals(
+            listOf(UrlPath.PathSegment.Undefined),
+            ArmeriaEndpointUrlPath.toUrlPath("", PathType.PREFIX).segments,
+        )
+    }
+
+    @Test
     fun toUrlPath_prefixAppendsUndefined() {
         val path = ArmeriaEndpointUrlPath.toUrlPath("/api", PathType.PREFIX)
 
