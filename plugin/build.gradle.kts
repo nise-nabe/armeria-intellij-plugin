@@ -175,5 +175,6 @@ tasks.register("verifyPluginPackaging") {
 }
 
 tasks.named("check") {
-    dependsOn("verifyPluginPackaging")
+    // current() reuses the compile IDE, so this does not download an extra IU.
+    dependsOn("verifyPluginPackaging", "verifyPlugin")
 }

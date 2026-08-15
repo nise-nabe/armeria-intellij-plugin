@@ -109,11 +109,6 @@
                                   implementation="com.linecorp.intellij.plugins.armeria.completion.ArmeriaJavaParamReferenceContributor"/>
     </extensions>
 
-    <applicationListeners>
-        <listener class="com.linecorp.intellij.plugins.armeria.ArmeriaDynamicPluginListener"
-                  topic="com.intellij.ide.plugins.DynamicPluginListener"/>
-    </applicationListeners>
-
     <actions>
 
     </actions>
