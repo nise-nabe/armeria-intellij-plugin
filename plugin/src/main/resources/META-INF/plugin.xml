@@ -84,6 +84,8 @@
         <codeInsight.lineMarkerProvider language="JAVA"
                                         implementationClass="com.linecorp.intellij.plugins.armeria.test.ArmeriaJUnitServerExtensionLineMarkerProvider" />
         <gotoRelatedProvider implementation="com.linecorp.intellij.plugins.armeria.editor.ArmeriaRouteGotoRelatedProvider" />
+        <microservices.endpointsProvider
+                implementation="com.linecorp.intellij.plugins.armeria.explorer.endpoints.ArmeriaEndpointsProvider"/>
 
         <!-- Run configuration -->
         <configurationType implementation="com.linecorp.intellij.plugins.armeria.run.ArmeriaRunConfigurationType" />
