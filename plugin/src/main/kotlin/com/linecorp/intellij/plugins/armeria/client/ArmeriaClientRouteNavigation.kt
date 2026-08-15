@@ -10,6 +10,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.concurrency.AppExecutorUtil
+import com.linecorp.intellij.plugins.armeria.expireWithPluginUnload
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaExplorerAccess
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaRouteNavigation
@@ -31,6 +32,7 @@ internal object ArmeriaClientRouteNavigation {
                 ArmeriaClientRouteLinkSupport.matchingRoutes(project, endpoint)
             }.inSmartMode(project)
             .expireWith(project)
+            .expireWithPluginUnload()
             .coalesceBy(this, project, "openMatchingRoutes")
             .let { coordinator ->
                 if (parentDisposable != null) coordinator.expireWith(parentDisposable) else coordinator
@@ -59,6 +61,7 @@ internal object ArmeriaClientRouteNavigation {
                 ArmeriaClientRouteLinkSupport.matchingClients(project, route)
             }.inSmartMode(project)
             .expireWith(project)
+            .expireWithPluginUnload()
             .coalesceBy(this, project, "openMatchingClients")
             .let { coordinator ->
                 if (parentDisposable != null) coordinator.expireWith(parentDisposable) else coordinator

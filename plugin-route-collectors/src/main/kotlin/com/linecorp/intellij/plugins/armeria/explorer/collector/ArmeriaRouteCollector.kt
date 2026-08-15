@@ -39,6 +39,11 @@ import java.util.concurrent.ConcurrentHashMap
 object ArmeriaRouteCollector {
     private val cacheKeys = ConcurrentHashMap<String, Key<CachedValue<List<ArmeriaRoute>>>>()
 
+    /** Drops collector [Key]s so a dynamic plugin unload can release this classloader. */
+    fun clearCacheKeys() {
+        cacheKeys.clear()
+    }
+
     fun collect(
         project: Project,
         includeProtoRoutes: Boolean = false,

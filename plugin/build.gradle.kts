@@ -89,6 +89,11 @@ intellijPlatform {
                 }
             }
     }
+    pluginVerification {
+        ides {
+            current()
+        }
+    }
 }
 
 tasks.register("verifyPluginPackaging") {
@@ -139,6 +144,9 @@ tasks.register("verifyPluginPackaging") {
             }
             check("<id>com.linecorp.armeria</id>" in descriptor) {
                 "Patched plugin.xml must use id com.linecorp.armeria"
+            }
+            check("""require-restart="false"""" in descriptor) {
+                "Patched plugin.xml must declare require-restart=\"false\" for dynamic plugin updates"
             }
             val description =
                 Regex(

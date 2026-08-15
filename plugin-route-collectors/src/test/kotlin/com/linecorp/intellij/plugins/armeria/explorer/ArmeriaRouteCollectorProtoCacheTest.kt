@@ -125,6 +125,32 @@ class ArmeriaRouteCollectorProtoCacheTest : ArmeriaFixtureTestBase() {
         assertEquals(2, TestProtoOverlayContributor.overlayInvocations.get())
     }
 
+    fun testProtoOverlayCacheIsRecomputedAfterClearCacheKeys() {
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class HelloService {
+                @Get("/hello")
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        collectWithProtoOverlay()
+        assertEquals(1, TestProtoOverlayContributor.overlayInvocations.get())
+
+        ArmeriaRouteCollector.clearCacheKeys()
+
+        collectWithProtoOverlay()
+        assertEquals(2, TestProtoOverlayContributor.overlayInvocations.get())
+    }
+
     private fun collectWithProtoOverlay() =
         ArmeriaRouteCollector.collect(
             project,
