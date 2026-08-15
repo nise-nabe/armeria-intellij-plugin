@@ -77,7 +77,7 @@ class ArmeriaTestMethodGeneratorTest {
                 serverReceiver = "server",
                 language = ArmeriaTestLanguage.KOTLIN,
             )
-        assertTrue(generated.contains("blockingWebClient"))
+        assertTrue(generated.contains("server.blockingWebClient()"))
     }
 
     fun generateKotlinTestMethodEscapesPathCharacters() {
