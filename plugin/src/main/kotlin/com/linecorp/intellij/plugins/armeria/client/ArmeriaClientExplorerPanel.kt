@@ -227,7 +227,10 @@ class ArmeriaClientExplorerPanel(
 
     private fun endpointIdentity(endpoint: ArmeriaClientEndpoint): Pair<String, Int>? {
         val fileUrl = endpoint.sourceFileUrl ?: return null
-        val offset = endpoint.sourceOffset ?: return null
+        val offset =
+            endpoint.sourceOffset
+                ?: ReadAction.compute<Int?, RuntimeException> { endpoint.pointer.range?.startOffset }
+                ?: return null
         return fileUrl to offset
     }
 

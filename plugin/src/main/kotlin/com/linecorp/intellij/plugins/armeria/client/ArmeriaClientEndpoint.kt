@@ -14,8 +14,9 @@ data class ArmeriaClientEndpoint(
     val decorators: List<String> = emptyList(),
     val endpointGroup: String? = null,
     val transport: String? = null,
-    /** Text offset and file URL captured at collect time for Explorer identity (safe on the EDT). */
+    /** Plain-text offset (Scala); null for PSI-backed Java/Kotlin so navigation uses the pointer. */
     val sourceOffset: Int? = null,
+    /** File URL captured at collect time for Explorer identity on the EDT. */
     val sourceFileUrl: String? = null,
 ) {
     companion object {
@@ -39,7 +40,7 @@ data class ArmeriaClientEndpoint(
                 decorators = decorators,
                 endpointGroup = endpointGroup,
                 transport = transport,
-                sourceOffset = sourceOffset ?: element.textRange.startOffset,
+                sourceOffset = sourceOffset,
                 sourceFileUrl = sourceFileUrl ?: element.containingFile?.virtualFile?.url,
             )
     }
