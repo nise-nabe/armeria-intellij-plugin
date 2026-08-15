@@ -43,7 +43,7 @@ object ArmeriaRouteCollector {
      * Drops interned collector [Key]s. Platform unload already clears [CachedValuesManager]
      * project user data; this is for tests that need a fresh Key identity in the same session.
      */
-    fun clearCacheKeys() {
+    internal fun clearCacheKeys() {
         cacheKeys.clear()
     }
 
