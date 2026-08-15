@@ -108,7 +108,8 @@ class ArmeriaClientRouteLineMarkerProviderTest : ArmeriaClientFixtureTestBase() 
 
         val call = PsiTreeUtil.findChildOfType(myFixture.file, KtCallExpression::class.java)!!
         val name = kotlinCallName(call)
-        val marker = kotlinProvider.getLineMarkerInfo(name)
+        val leaf = name.firstChild ?: name
+        val marker = kotlinProvider.getLineMarkerInfo(leaf)
 
         kotlinAssertNotNull(marker)
         assertEquals(ArmeriaIcons.Armeria, marker.icon)

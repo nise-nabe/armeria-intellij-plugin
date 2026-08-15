@@ -32,6 +32,9 @@ internal class ArmeriaKotlinClientRouteLineMarkerProvider : LineMarkerProvider {
     }
 
     private fun kotlinClientRouteMarker(element: PsiElement): LineMarkerInfo<*>? {
+        if (element.firstChild != null) {
+            return null
+        }
         val call = PsiTreeUtil.getParentOfType(element, KtCallExpression::class.java, false) ?: return null
         val referenceNameElement = kotlinCallReferenceNameElement(call) ?: return null
         if (element != referenceNameElement && element.parent != referenceNameElement) {
