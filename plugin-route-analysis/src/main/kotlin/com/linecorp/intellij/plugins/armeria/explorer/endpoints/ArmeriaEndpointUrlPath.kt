@@ -4,7 +4,7 @@ import com.intellij.microservices.url.UrlPath
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 
-internal object ArmeriaEndpointUrlPath {
+object ArmeriaEndpointUrlPath {
     fun toUrlPath(
         path: String,
         pathType: PathType,

@@ -86,6 +86,8 @@
         <gotoRelatedProvider implementation="com.linecorp.intellij.plugins.armeria.editor.ArmeriaRouteGotoRelatedProvider" />
         <microservices.endpointsProvider
                 implementation="com.linecorp.intellij.plugins.armeria.explorer.endpoints.ArmeriaEndpointsProvider"/>
+        <microservices.endpointsProvider
+                implementation="com.linecorp.intellij.plugins.armeria.client.ArmeriaClientEndpointsProvider"/>
 
         <!-- Run configuration -->
         <configurationType implementation="com.linecorp.intellij.plugins.armeria.run.ArmeriaRunConfigurationType" />

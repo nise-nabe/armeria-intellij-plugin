@@ -29,10 +29,11 @@ internal enum class ClientProtocol(
 
 internal object ArmeriaClientSupport {
     const val ARMERIA_CLIENT_PACKAGE_PREFIX = "com.linecorp.armeria.client"
+    const val WEB_CLIENT_CLASS = "com.linecorp.armeria.client.WebClient"
 
     private val CLIENT_CLASS_PROTOCOLS =
         mapOf(
-            "com.linecorp.armeria.client.WebClient" to ClientProtocol.HTTP,
+            WEB_CLIENT_CLASS to ClientProtocol.HTTP,
             "com.linecorp.armeria.client.RestClient" to ClientProtocol.REST,
             "com.linecorp.armeria.client.BlockingWebClient" to ClientProtocol.BLOCKING,
             "com.linecorp.armeria.client.blocking.BlockingWebClient" to ClientProtocol.BLOCKING,
@@ -52,7 +53,7 @@ internal object ArmeriaClientSupport {
 
     private val WEB_CLIENT_CLASS_NAMES =
         setOf(
-            "com.linecorp.armeria.client.WebClient",
+            WEB_CLIENT_CLASS,
             "WebClient",
         )
 
