@@ -75,19 +75,16 @@ object ArmeriaClientCollector {
         endpoints: MutableList<ArmeriaClientEndpoint>,
         seenEndpoints: MutableSet<String>,
     ) {
-        if (isNestedInsideClientFactoryArgument(expression)) {
+        if (isNestedInsideClientFactoryArgument(expression) || isQualifierOfClientConversion(expression)) {
             return
         }
         val methodName = expression.methodExpression.referenceName ?: return
-        if (methodName !in ArmeriaClientSupport.FACTORY_METHOD_NAMES) {
-            return
-        }
-        val resolvedClass = expression.resolveMethod()?.containingClass?.qualifiedName ?: return
-        val protocol = ArmeriaClientSupport.protocolForClass(resolvedClass) ?: return
+        val resolvedClass = expression.resolveMethod()?.containingClass?.qualifiedName
+        val protocol = ArmeriaClientSupport.protocolForInvocation(methodName, resolvedClass) ?: return
         val metadata = extractClientMetadata(expression, methodName, protocol) ?: return
         val target =
             expression.methodExpression.qualifierExpression?.text
-                ?: resolvedClass.substringAfterLast('.')
+                ?: resolvedClass?.substringAfterLast('.').orEmpty()
         addEndpoint(
             element = expression,
             protocol = protocol,
@@ -115,55 +112,38 @@ object ArmeriaClientCollector {
     ): ClientMetadata? {
         val arguments = expression.argumentList.expressions
         val decorators = ArmeriaClientDecoratorSupport.collectJavaClientDecorators(expression)
+        if (methodName in ArmeriaClientSupport.CONVERSION_METHOD_NAMES) {
+            val qualifier = expression.methodExpression.qualifierExpression ?: return null
+            val webClientInfo = extractWebClientTransport(qualifier) ?: return null
+            return webClientInfo.toMetadata(decorators)
+        }
         return when (methodName) {
-            "newClient", "of" -> {
-                when (protocol) {
-                    ClientProtocol.RETROFIT -> extractRetrofitMetadata(arguments, decorators)
-                    else -> {
-                        val uri = extractString(arguments.firstOrNull()) ?: return null
-                        ClientMetadata(uri = uri, decorators = decorators)
-                    }
-                }
-            }
+            "newClient", "of" -> extractFactoryMetadata(arguments, protocol, decorators)
             "builder" -> {
-                when {
-                    arguments.isEmpty() -> null
-                    arguments.size >= 2 && isEndpointGroupArgument(arguments[1]) -> {
-                        val endpointGroup =
-                            ArmeriaClientEndpointGroupSupport.labelJavaEndpointGroup(arguments[1])
-                                ?: return null
-                        ClientMetadata(
-                            uri =
-                                ArmeriaClientEndpointGroupSupport.extractJavaEndpointGroupUri(arguments[1])
-                                    ?: endpointGroup,
-                            decorators = decorators,
-                            endpointGroup = endpointGroup,
-                        )
-                    }
-                    protocol == ClientProtocol.RETROFIT -> extractRetrofitMetadata(arguments, decorators)
-                    else -> {
-                        val uri = extractString(arguments.firstOrNull()) ?: return null
-                        ClientMetadata(uri = uri, decorators = decorators)
-                    }
+                if (arguments.isEmpty()) {
+                    null
+                } else {
+                    extractFactoryMetadata(arguments, protocol, decorators)
                 }
             }
             else -> null
         }
     }
 
-    private fun extractRetrofitMetadata(
+    private fun extractFactoryMetadata(
         arguments: Array<PsiExpression>,
+        protocol: ClientProtocol,
         decorators: List<String>,
     ): ClientMetadata? {
-        val firstArg = arguments.firstOrNull() ?: return null
-        val webClientInfo = extractWebClientTransport(firstArg)
-        if (webClientInfo != null) {
-            return ClientMetadata(
-                uri = webClientInfo.uri,
-                decorators = (decorators + webClientInfo.decorators).distinct(),
-                endpointGroup = webClientInfo.endpointGroup,
-                transport = message("client.explorer.transport.webClient"),
-            )
+        if (ArmeriaClientSupport.wrapsWebClientTransport(protocol)) {
+            val firstArg = arguments.firstOrNull() ?: return null
+            val webClientInfo = extractWebClientTransport(firstArg)
+            if (webClientInfo != null) {
+                return webClientInfo.toMetadata(
+                    extraDecorators = decorators,
+                    transport = message("client.explorer.transport.webClient"),
+                )
+            }
         }
         if (arguments.size >= 2 && isEndpointGroupArgument(arguments[1])) {
             val endpointGroup = ArmeriaClientEndpointGroupSupport.labelJavaEndpointGroup(arguments[1]) ?: return null
@@ -173,7 +153,7 @@ object ArmeriaClientCollector {
                 endpointGroup = endpointGroup,
             )
         }
-        val uri = extractString(firstArg) ?: return null
+        val uri = extractString(arguments.firstOrNull()) ?: return null
         return ClientMetadata(uri = uri, decorators = decorators)
     }
 
@@ -183,11 +163,28 @@ object ArmeriaClientCollector {
         val endpointGroup: String? = null,
     )
 
+    private fun WebClientTransportInfo.toMetadata(
+        extraDecorators: List<String> = emptyList(),
+        transport: String? = null,
+    ): ClientMetadata =
+        ClientMetadata(
+            uri = uri,
+            decorators = (extraDecorators + decorators).distinct(),
+            endpointGroup = endpointGroup,
+            transport = transport,
+        )
+
     private fun extractWebClientTransport(expression: PsiExpression): WebClientTransportInfo? {
         val call = expression as? PsiMethodCallExpression
         if (call != null) {
             val methodName = call.methodExpression.referenceName
             val resolvedClass = call.resolveMethod()?.containingClass?.qualifiedName
+            if (methodName in ArmeriaClientSupport.CONVERSION_METHOD_NAMES &&
+                ArmeriaClientSupport.isWebClientClass(resolvedClass)
+            ) {
+                val qualifier = call.methodExpression.qualifierExpression ?: return null
+                return extractWebClientTransport(qualifier)
+            }
             if (ArmeriaClientSupport.isWebClientClass(resolvedClass) &&
                 methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES
             ) {
@@ -279,6 +276,7 @@ object ArmeriaClientCollector {
                 endpointGroup = endpointGroup,
                 transport = transport,
                 sourceOffset = sourceOffset,
+                sourceFileUrl = virtualFile.url,
             )
     }
 
@@ -306,9 +304,9 @@ object ArmeriaClientCollector {
                     element = element.parent
                     continue
                 }
-            val methodName = outerCall.methodExpression.referenceName
-            if (methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES &&
-                ArmeriaClientSupport.protocolForClass(outerCall.resolveMethod()?.containingClass?.qualifiedName) != null &&
+            val methodName = outerCall.methodExpression.referenceName ?: ""
+            val outerClass = outerCall.resolveMethod()?.containingClass?.qualifiedName
+            if (ArmeriaClientSupport.protocolForInvocation(methodName, outerClass) != null &&
                 isDescendantOfArgumentList(expression, outerCall.argumentList)
             ) {
                 return true
@@ -316,6 +314,36 @@ object ArmeriaClientCollector {
             element = element.parent
         }
         return false
+    }
+
+    private fun isQualifierOfClientConversion(expression: PsiMethodCallExpression): Boolean {
+        var current: PsiExpression = expression
+        while (true) {
+            val parent = findEnclosingQualifierCall(current) ?: return false
+            val methodName = parent.methodExpression.referenceName
+            if (methodName in ArmeriaClientSupport.CONVERSION_METHOD_NAMES) {
+                val resolvedClass = parent.resolveMethod()?.containingClass?.qualifiedName
+                if (ArmeriaClientSupport.isWebClientClass(resolvedClass) ||
+                    resolvedClass?.startsWith(ArmeriaClientSupport.ARMERIA_CLIENT_PACKAGE_PREFIX) == true
+                ) {
+                    return true
+                }
+            }
+            current = parent
+        }
+    }
+
+    private fun findEnclosingQualifierCall(expression: PsiExpression): PsiMethodCallExpression? {
+        var element: PsiElement? = expression.parent
+        while (element != null) {
+            if (element is PsiMethodCallExpression &&
+                element.methodExpression.qualifierExpression == expression
+            ) {
+                return element
+            }
+            element = element.parent
+        }
+        return null
     }
 
     private fun isDescendantOfArgumentList(

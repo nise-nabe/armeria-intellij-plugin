@@ -55,11 +55,15 @@ internal object ArmeriaScalaClientCollector {
                 continue
             }
             val fqcn = "${match.groupValues[1]}.${match.groupValues[2]}"
-            val protocol = ArmeriaClientSupport.protocolForClass(fqcn) ?: continue
             val factoryOpenParen = scan.textWithoutComments.indexOf('(', offset)
             if (factoryOpenParen < 0) {
                 continue
             }
+            val factoryCloseParen = findMatchingCloseParen(scan.textWithoutComments, factoryOpenParen)
+            val protocol =
+                conversionProtocolAfterFactory(scan.textWithoutComments, factoryCloseParen)
+                    ?: ArmeriaClientSupport.protocolForClass(fqcn)
+                    ?: continue
             qualifiedFactoryOpenParens += factoryOpenParen
             matches +=
                 ClientEndpointMatch(
@@ -81,7 +85,11 @@ internal object ArmeriaScalaClientCollector {
             }
             val simpleName = match.groupValues[1]
             val fqcn = importedClientClasses[simpleName] ?: continue
-            val protocol = ArmeriaClientSupport.protocolForClass(fqcn) ?: continue
+            val factoryCloseParen = findMatchingCloseParen(scan.textWithoutComments, factoryOpenParen)
+            val protocol =
+                conversionProtocolAfterFactory(scan.textWithoutComments, factoryCloseParen)
+                    ?: ArmeriaClientSupport.protocolForClass(fqcn)
+                    ?: continue
             matches +=
                 ClientEndpointMatch(
                     offset = offset,
@@ -129,6 +137,40 @@ internal object ArmeriaScalaClientCollector {
             }
         }
         return imports
+    }
+
+    private fun conversionProtocolAfterFactory(
+        text: String,
+        factoryCloseParen: Int?,
+    ): ClientProtocol? {
+        factoryCloseParen ?: return null
+        var index = factoryCloseParen + 1
+        while (index < text.length && text[index].isWhitespace()) {
+            index++
+        }
+        if (index >= text.length || text[index] != '.') {
+            return null
+        }
+        val rest = text.substring(index + 1)
+        return when {
+            startsWithConversionCall(rest, "blocking") -> ClientProtocol.BLOCKING
+            startsWithConversionCall(rest, "asRestClient") -> ClientProtocol.REST
+            else -> null
+        }
+    }
+
+    private fun startsWithConversionCall(
+        rest: String,
+        methodName: String,
+    ): Boolean {
+        if (!rest.startsWith(methodName)) {
+            return false
+        }
+        var afterName = methodName.length
+        while (afterName < rest.length && rest[afterName].isWhitespace()) {
+            afterName++
+        }
+        return afterName < rest.length && rest[afterName] == '('
     }
 
     private fun isNestedInsideScalaClientFactoryArgument(

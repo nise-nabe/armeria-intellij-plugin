@@ -42,6 +42,8 @@
         <codeInsight.lineMarkerProvider language="kotlin"
                                         implementationClass="com.linecorp.intellij.plugins.armeria.marker.ArmeriaKotlinRouteLineMarkerProvider"/>
         <codeInsight.lineMarkerProvider language="kotlin"
+                                        implementationClass="com.linecorp.intellij.plugins.armeria.marker.ArmeriaKotlinClientRouteLineMarkerProvider"/>
+        <codeInsight.lineMarkerProvider language="kotlin"
                                         implementationClass="com.linecorp.intellij.plugins.armeria.test.ArmeriaKotlinJUnitServerExtensionLineMarkerProvider" />
         <defaultLiveTemplates file="liveTemplates/ArmeriaKotlin.xml"/>
         <intentionAction>

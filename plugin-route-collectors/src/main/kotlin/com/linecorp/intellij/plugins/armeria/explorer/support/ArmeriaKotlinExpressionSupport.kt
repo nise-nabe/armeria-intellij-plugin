@@ -1,6 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.explorer.support
+
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiVariable
+import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtBinaryExpressionWithTypeRHS
 import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -11,6 +13,7 @@ import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
+import org.jetbrains.kotlin.psi.KtUnaryExpression
 import org.jetbrains.kotlin.psi.KtValueArgument
 
 object ArmeriaKotlinExpressionSupport {
@@ -102,6 +105,12 @@ object ArmeriaKotlinExpressionSupport {
                 when (current) {
                     is KtParenthesizedExpression -> current.expression ?: return null
                     is KtBinaryExpressionWithTypeRHS -> current.left
+                    is KtUnaryExpression ->
+                        if (current.operationToken == KtTokens.EXCLEXCL) {
+                            current.baseExpression ?: return current
+                        } else {
+                            return current
+                        }
                     else -> return current
                 }
         }

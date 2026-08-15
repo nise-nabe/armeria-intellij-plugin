@@ -212,7 +212,7 @@ class ArmeriaKotlinClientCollectorTest : ArmeriaClientFixtureTestBase() {
         val endpoint = ArmeriaClientCollector.collect(project).single()
 
         assertEquals("example.com", endpoint.uri)
-        assertTrue(endpoint.endpointGroup!!.startsWith("DnsAddressEndpointGroup"))
+        assertTrue(endpoint.endpointGroup!!.startsWith("DNS"))
     }
 
     fun testCollectRetrofitBuilderWithWebClientTransportFromKotlin() {
@@ -368,5 +368,133 @@ class ArmeriaKotlinClientCollectorTest : ArmeriaClientFixtureTestBase() {
         assertEquals("https://api.example.com", endpoint.uri)
         assertEquals("WebClient transport", endpoint.transport)
         assertEquals(listOf("Logging"), endpoint.decorators)
+    }
+
+    fun testCollectRestClientOfFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.RestClient
+
+            fun main() {
+                RestClient.of("https://example.com/hello")
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("RestClient", endpoint.clientType)
+        assertEquals("https://example.com/hello", endpoint.uri)
+    }
+
+    fun testCollectWebClientBlockingConversionFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+
+            fun main() {
+                WebClient.of("https://example.com/users").blocking()
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+
+        assertEquals(1, endpoints.size)
+        val endpoint = endpoints.single()
+        assertEquals("BlockingWebClient", endpoint.clientType)
+        assertEquals("https://example.com/users", endpoint.uri)
+    }
+
+    fun testCollectWebClientAsRestClientConversionFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+
+            fun main() {
+                WebClient.of("https://example.com/hello").asRestClient()
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("RestClient", endpoint.clientType)
+        assertEquals("https://example.com/hello", endpoint.uri)
+    }
+
+    fun testCollectWebClientAsRestClientAfterNotNullAssertionFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+
+            fun main() {
+                WebClient.of("https://example.com/hello")!!.asRestClient()
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+
+        assertEquals(1, endpoints.size)
+        val endpoint = endpoints.single()
+        assertEquals("RestClient", endpoint.clientType)
+        assertEquals("https://example.com/hello", endpoint.uri)
+    }
+
+    fun testCollectWebClientBlockingAfterSafeCallFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+
+            fun main() {
+                WebClient.of("https://example.com/users")?.blocking()
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+
+        assertEquals(1, endpoints.size)
+        val endpoint = endpoints.single()
+        assertEquals("BlockingWebClient", endpoint.clientType)
+        assertEquals("https://example.com/users", endpoint.uri)
+    }
+
+    fun testCollectOAuth2DecoratorFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+            import com.linecorp.armeria.client.auth.oauth2.OAuth2Client
+
+            fun main() {
+                WebClient.builder("https://example.com")
+                    .decorator(OAuth2Client.newDecorator())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals(listOf("OAuth2"), endpoint.decorators)
     }
 }

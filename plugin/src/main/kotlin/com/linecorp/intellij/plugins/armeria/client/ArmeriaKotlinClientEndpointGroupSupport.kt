@@ -50,8 +50,10 @@ internal object ArmeriaKotlinClientEndpointGroupSupport {
                 ?.substringAfterLast('.')
                 ?.takeIf { ArmeriaClientEndpointGroupSupport.looksLikeEndpointGroupText(it) }
                 ?: return null
-        val detail = arguments.firstNotNullOfOrNull { extractKotlinDetail(it) }
-        return if (detail != null) "$simpleName ($detail)" else simpleName
+        val nested = arguments.firstNotNullOfOrNull { labelKotlinEndpointGroup(it) }
+        val detail = nested ?: arguments.firstNotNullOfOrNull { extractKotlinDetail(it) }
+        val kind = ArmeriaClientEndpointGroupSupport.kindLabel(simpleName)
+        return if (detail != null) "$kind ($detail)" else kind
     }
 
     private fun extractKotlinDetail(expression: KtExpression): String? {
