@@ -18,6 +18,7 @@
 
 ### Changed
 
+- Combine the Armeria Services and Armeria Clients explorers into one Armeria tool window with Services and Clients tabs. Go to Matching Route/Client and DocService runtime sync switch to the matching tab.
 - Plugin ID is `com.linecorp.armeria` (was `com.linecorp.intellij.armeria-intellij-plugin`) so the descriptor no longer includes the word `intellij`. Existing installs are treated as a different plugin.
 - Kotlin PSI helpers for call names, named or positional arguments, and string extraction live on `ArmeriaKotlinExpressionSupport` and are reused by route collectors, client collectors, navigation, and line markers. Virtual-host annotation of a registration-key set lives on `ArmeriaRouteVirtualHostAnnotator`.
 - Route Explorer caches proto route merging so Refresh no longer re-scans `.proto` files on every collect.

@@ -6,8 +6,7 @@ IntelliJ IDEA Plugin for [Armeria](https://armeria.dev/)
 
 This plugin is evolving toward an Armeria cockpit inside IntelliJ IDEA:
 
-- Route Explorer tool window for discovering annotated services and server registrations
-- Armeria Clients explorer for WebClient, gRPC, and Thrift client discovery
+- Armeria explorer tool window with Services (annotated services and server registrations) and Clients (WebClient, gRPC, and Thrift) tabs
 - Armeria run configuration with module classpath and main class selection
 - Armeria-specific duplicate route inspection for annotated services
 - DocService URL detection in console output for faster local verification
