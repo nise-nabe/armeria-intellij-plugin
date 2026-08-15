@@ -1,6 +1,8 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.date
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
+import java.util.EnumSet
 import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 
@@ -93,6 +95,15 @@ intellijPlatform {
         ides {
             current()
         }
+        // Gate on unloadability and compatibility, not pre-existing internal/experimental APIs
+        // (e.g. JavaModuleType in the wizard). NOT_DYNAMIC is the restart-required finding.
+        failureLevel.set(
+            EnumSet.of(
+                VerifyPluginTask.FailureLevel.COMPATIBILITY_PROBLEMS,
+                VerifyPluginTask.FailureLevel.INVALID_PLUGIN,
+                VerifyPluginTask.FailureLevel.NOT_DYNAMIC,
+            ),
+        )
     }
 }
 
