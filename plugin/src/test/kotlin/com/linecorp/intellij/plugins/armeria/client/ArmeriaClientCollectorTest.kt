@@ -261,7 +261,7 @@ class ArmeriaClientCollectorTest : ArmeriaClientFixtureTestBase() {
         val endpoint = ArmeriaClientCollector.collect(project).single()
 
         assertEquals("k8s.default.svc.cluster.local.", endpoint.uri)
-        assertEquals("DnsServiceEndpointGroup (k8s.default.svc.cluster.local.)", endpoint.endpointGroup)
+        assertEquals("DNS (k8s.default.svc.cluster.local.)", endpoint.endpointGroup)
     }
 
     fun testCollectRetrofitBuilderWithWebClientTransport() {
@@ -424,5 +424,194 @@ class ArmeriaClientCollectorTest : ArmeriaClientFixtureTestBase() {
         val endpoint = ArmeriaClientCollector.collect(project).single()
 
         assertEquals(listOf("Circuit breaker"), endpoint.decorators)
+    }
+
+    fun testCollectRestClientOf() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.RestClient;
+
+            public class Main {
+                public static void main(String[] args) {
+                    RestClient.of("https://example.com/hello");
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("RestClient", endpoint.clientType)
+        assertEquals("https://example.com/hello", endpoint.uri)
+        assertTrue(endpoint.target.contains("RestClient"))
+    }
+
+    fun testCollectWebClientAsRestClientConversion() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+
+            public class Main {
+                public static void main(String[] args) {
+                    WebClient.of("https://example.com/hello").asRestClient();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+
+        assertEquals(1, endpoints.size)
+        val endpoint = endpoints.single()
+        assertEquals("RestClient", endpoint.clientType)
+        assertEquals("https://example.com/hello", endpoint.uri)
+    }
+
+    fun testCollectWebClientBlockingConversion() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+
+            public class Main {
+                public static void main(String[] args) {
+                    WebClient.of("https://example.com/users").blocking();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("BlockingWebClient", endpoint.clientType)
+        assertEquals("https://example.com/users", endpoint.uri)
+    }
+
+    fun testCollectBlockingWebClientOf() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.BlockingWebClient;
+
+            public class Main {
+                public static void main(String[] args) {
+                    BlockingWebClient.of("https://example.com");
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("BlockingWebClient", endpoint.clientType)
+        assertEquals("https://example.com", endpoint.uri)
+    }
+
+    fun testCollectRestClientOfWrappedWebClient() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.RestClient;
+            import com.linecorp.armeria.client.WebClient;
+
+            public class Main {
+                public static void main(String[] args) {
+                    RestClient.of(WebClient.of("https://api.example.com/v1"));
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("RestClient", endpoint.clientType)
+        assertEquals("https://api.example.com/v1", endpoint.uri)
+        assertEquals("WebClient transport", endpoint.transport)
+    }
+
+    fun testCollectOAuth2AndAuthDecorators() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+            import com.linecorp.armeria.client.auth.oauth2.OAuth2Client;
+
+            public class Main {
+                public static void main(String[] args) {
+                    WebClient.builder("https://example.com")
+                             .decorator(OAuth2Client.newDecorator())
+                             .auth(new Object())
+                             .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals(listOf("OAuth2", "Auth"), endpoint.decorators)
+    }
+
+    fun testCollectZooKeeperEndpointGroupKind() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+            import com.linecorp.armeria.client.endpoint.zookeeper.ZooKeeperEndpointGroup;
+            import com.linecorp.armeria.common.SessionProtocol;
+
+            public class Main {
+                public static void main(String[] args) {
+                    WebClient.builder(SessionProtocol.HTTP, ZooKeeperEndpointGroup.of("zk://zk.example.com/armeria"));
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("ZooKeeper (zk://zk.example.com/armeria)", endpoint.endpointGroup)
+    }
+
+    fun testCollectHealthCheckedDnsEndpointGroupKind() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+            import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
+            import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup;
+            import com.linecorp.armeria.common.SessionProtocol;
+
+            public class Main {
+                public static void main(String[] args) {
+                    WebClient.builder(
+                        SessionProtocol.HTTP,
+                        HealthCheckedEndpointGroup.of(DnsAddressEndpointGroup.of("example.com", 8080)));
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("Health-checked (DNS (example.com))", endpoint.endpointGroup)
     }
 }

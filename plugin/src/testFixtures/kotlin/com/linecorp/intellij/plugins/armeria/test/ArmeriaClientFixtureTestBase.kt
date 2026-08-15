@@ -29,6 +29,14 @@ abstract class ArmeriaClientFixtureTestBase : ArmeriaLightJavaCodeInsightFixture
                         com.linecorp.armeria.client.endpoint.EndpointGroup endpointGroup) {
                     return null;
                 }
+
+                public Object blocking() {
+                    return null;
+                }
+
+                public Object asRestClient() {
+                    return null;
+                }
             }
             """.trimIndent(),
         )
@@ -41,7 +49,93 @@ abstract class ArmeriaClientFixtureTestBase : ArmeriaLightJavaCodeInsightFixture
                     return this;
                 }
 
+                public WebClientBuilder auth(Object auth) {
+                    return this;
+                }
+
                 public WebClient build() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client;
+
+            public final class RestClient {
+                public static RestClient of(String uri) {
+                    return null;
+                }
+
+                public static RestClient of(WebClient webClient) {
+                    return null;
+                }
+
+                public static RestClientBuilder builder() {
+                    return null;
+                }
+
+                public static RestClientBuilder builder(String uri) {
+                    return null;
+                }
+
+                public static RestClientBuilder builder(WebClient webClient) {
+                    return null;
+                }
+
+                public static RestClientBuilder builder(
+                        com.linecorp.armeria.common.SessionProtocol protocol,
+                        com.linecorp.armeria.client.endpoint.EndpointGroup endpointGroup) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client;
+
+            public final class RestClientBuilder {
+                public RestClientBuilder decorator(Object decorator) {
+                    return this;
+                }
+
+                public RestClient build() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client;
+
+            public final class BlockingWebClient {
+                public static BlockingWebClient of(String uri) {
+                    return null;
+                }
+
+                public static BlockingWebClientBuilder builder() {
+                    return null;
+                }
+
+                public static BlockingWebClientBuilder builder(String uri) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client;
+
+            public final class BlockingWebClientBuilder {
+                public BlockingWebClientBuilder decorator(Object decorator) {
+                    return this;
+                }
+
+                public BlockingWebClient build() {
                     return null;
                 }
             }
@@ -129,6 +223,73 @@ abstract class ArmeriaClientFixtureTestBase : ArmeriaLightJavaCodeInsightFixture
 
             public final class CircuitBreakerClient {
                 public static Object newDecorator() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.auth.oauth2;
+
+            public final class OAuth2Client {
+                public static Object newDecorator() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.throttling;
+
+            public final class ThrottlingClient {
+                public static Object newDecorator() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.encoding;
+
+            public final class DecodingClient {
+                public static Object newDecorator() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.encoding;
+
+            public final class EncodingClient {
+                public static Object newDecorator() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.endpoint.healthcheck;
+
+            public final class HealthCheckedEndpointGroup {
+                public static com.linecorp.armeria.client.endpoint.EndpointGroup of(
+                        com.linecorp.armeria.client.endpoint.EndpointGroup delegate) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.endpoint.zookeeper;
+
+            public final class ZooKeeperEndpointGroup {
+                public static com.linecorp.armeria.client.endpoint.EndpointGroup of(String connectionStr) {
                     return null;
                 }
             }

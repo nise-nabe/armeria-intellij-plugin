@@ -34,6 +34,7 @@ import javax.swing.JPanel
 import javax.swing.JTree
 import javax.swing.KeyStroke
 import javax.swing.event.TreeSelectionEvent
+import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
 
 class ArmeriaRouteExplorerPanel(
@@ -88,6 +89,7 @@ class ArmeriaRouteExplorerPanel(
                 )
                 add(ArmeriaGenerateHttpRequestAction { selectedRouteFromTree() })
                 add(ArmeriaGenerateTestMethodAction { selectedRouteFromTree() })
+                add(ArmeriaGotoMatchingClientAction { selectedRouteFromTree() })
                 add(ArmeriaSyncRuntimeRoutesAction())
                 add(ArmeriaOpenDocServiceAction { filterRoutes(allRoutes()) })
             }
@@ -194,6 +196,18 @@ class ArmeriaRouteExplorerPanel(
                 updateStatusLabel()
                 updateDetailFootnote()
             }.submit(AppExecutorUtil.getAppExecutorService())
+    }
+
+    fun selectRoute(route: ArmeriaRoute): Boolean {
+        val root = (routeTree.model as? DefaultTreeModel)?.root as? DefaultMutableTreeNode ?: return false
+        val restored = ArmeriaRouteExplorerFiltering.restoreTreeSelection(routeTree, root, route)
+        if (!restored) {
+            return false
+        }
+        selectedRoute = ArmeriaRouteTreeBuilder.selectedRoute(routeTree.lastSelectedPathComponent)
+        routeDetailPanel.setRoute(selectedRoute)
+        routeTree.selectionPath?.let(routeTree::scrollPathToVisible)
+        return true
     }
 
     fun staticRoutes(): List<ArmeriaRoute> = routeState.staticRoutes

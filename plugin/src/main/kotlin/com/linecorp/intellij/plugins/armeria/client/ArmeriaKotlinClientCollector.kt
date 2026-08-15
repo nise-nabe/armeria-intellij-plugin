@@ -45,17 +45,14 @@ internal object ArmeriaKotlinClientCollector {
         endpoints: MutableList<ArmeriaClientEndpoint>,
         seenEndpoints: MutableSet<String>,
     ) {
-        if (isNestedInsideClientFactoryArgument(call)) {
+        if (isNestedInsideClientFactoryArgument(call) || isQualifierOfClientConversion(call)) {
             return
         }
         val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return
-        if (methodName !in ArmeriaClientSupport.FACTORY_METHOD_NAMES) {
-            return
-        }
-        val resolvedClass = resolveContainingClass(call) ?: return
-        val protocol = ArmeriaClientSupport.protocolForClass(resolvedClass) ?: return
+        val resolvedClass = resolveContainingClass(call)
+        val protocol = ArmeriaClientSupport.protocolForInvocation(methodName, resolvedClass) ?: return
         val metadata = extractClientMetadata(call, methodName, protocol) ?: return
-        val target = resolveTargetName(call) ?: resolvedClass.substringAfterLast('.')
+        val target = resolveTargetName(call) ?: resolvedClass?.substringAfterLast('.').orEmpty()
         ArmeriaClientCollector.addEndpoint(
             element = call,
             protocol = protocol,
@@ -83,55 +80,38 @@ internal object ArmeriaKotlinClientCollector {
     ): ClientMetadata? {
         val arguments = call.valueArguments.mapNotNull { it.getArgumentExpression() }
         val decorators = ArmeriaKotlinClientDecoratorSupport.collectKotlinClientDecorators(call)
+        if (methodName in ArmeriaClientSupport.CONVERSION_METHOD_NAMES) {
+            val receiver = qualifierReceiver(call) ?: return null
+            val webClientInfo = extractWebClientTransport(receiver) ?: return null
+            return webClientInfo.toMetadata(decorators)
+        }
         return when (methodName) {
-            "newClient", "of" -> {
-                when (protocol) {
-                    ClientProtocol.RETROFIT -> extractRetrofitMetadata(arguments, decorators)
-                    else -> {
-                        val uri = ArmeriaKotlinExpressionSupport.extractKotlinString(arguments.firstOrNull()) ?: return null
-                        ClientMetadata(uri = uri, decorators = decorators)
-                    }
-                }
-            }
+            "newClient", "of" -> extractFactoryMetadata(arguments, protocol, decorators)
             "builder" -> {
-                when {
-                    arguments.isEmpty() -> null
-                    arguments.size >= 2 && isEndpointGroupArgument(arguments[1]) -> {
-                        val endpointGroup =
-                            ArmeriaKotlinClientEndpointGroupSupport.labelKotlinEndpointGroup(arguments[1])
-                                ?: return null
-                        ClientMetadata(
-                            uri =
-                                ArmeriaKotlinClientEndpointGroupSupport.extractKotlinEndpointGroupUri(arguments[1])
-                                    ?: endpointGroup,
-                            decorators = decorators,
-                            endpointGroup = endpointGroup,
-                        )
-                    }
-                    protocol == ClientProtocol.RETROFIT -> extractRetrofitMetadata(arguments, decorators)
-                    else -> {
-                        val uri = ArmeriaKotlinExpressionSupport.extractKotlinString(arguments.firstOrNull()) ?: return null
-                        ClientMetadata(uri = uri, decorators = decorators)
-                    }
+                if (arguments.isEmpty()) {
+                    null
+                } else {
+                    extractFactoryMetadata(arguments, protocol, decorators)
                 }
             }
             else -> null
         }
     }
 
-    private fun extractRetrofitMetadata(
+    private fun extractFactoryMetadata(
         arguments: List<KtExpression>,
+        protocol: ClientProtocol,
         decorators: List<String>,
     ): ClientMetadata? {
-        val firstArg = arguments.firstOrNull() ?: return null
-        val webClientInfo = extractWebClientTransport(firstArg)
-        if (webClientInfo != null) {
-            return ClientMetadata(
-                uri = webClientInfo.uri,
-                decorators = (decorators + webClientInfo.decorators).distinct(),
-                endpointGroup = webClientInfo.endpointGroup,
-                transport = message("client.explorer.transport.webClient"),
-            )
+        if (ArmeriaClientSupport.wrapsWebClientTransport(protocol)) {
+            val firstArg = arguments.firstOrNull() ?: return null
+            val webClientInfo = extractWebClientTransport(firstArg)
+            if (webClientInfo != null) {
+                return webClientInfo.toMetadata(
+                    extraDecorators = decorators,
+                    transport = message("client.explorer.transport.webClient"),
+                )
+            }
         }
         if (arguments.size >= 2 && isEndpointGroupArgument(arguments[1])) {
             val endpointGroup =
@@ -144,7 +124,7 @@ internal object ArmeriaKotlinClientCollector {
                 endpointGroup = endpointGroup,
             )
         }
-        val uri = ArmeriaKotlinExpressionSupport.extractKotlinString(firstArg) ?: return null
+        val uri = ArmeriaKotlinExpressionSupport.extractKotlinString(arguments.firstOrNull()) ?: return null
         return ClientMetadata(uri = uri, decorators = decorators)
     }
 
@@ -154,12 +134,32 @@ internal object ArmeriaKotlinClientCollector {
         val endpointGroup: String? = null,
     )
 
+    private fun WebClientTransportInfo.toMetadata(
+        extraDecorators: List<String> = emptyList(),
+        transport: String? = null,
+    ): ClientMetadata =
+        ClientMetadata(
+            uri = uri,
+            decorators = (extraDecorators + decorators).distinct(),
+            endpointGroup = endpointGroup,
+            transport = transport,
+        )
+
     private fun extractWebClientTransport(expression: KtExpression): WebClientTransportInfo? {
         val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: return null
         val call = callExpressionInChain(unwrapped)
         if (call != null) {
             val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call)
             val resolvedClass = resolveContainingClass(call)
+            if (methodName in ArmeriaClientSupport.CONVERSION_METHOD_NAMES &&
+                (
+                    ArmeriaClientSupport.isWebClientClass(resolvedClass) ||
+                        looksLikeWebClientFactoryReceiver(call)
+                )
+            ) {
+                val receiver = qualifierReceiver(call) ?: return null
+                return extractWebClientTransport(receiver)
+            }
             if (methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES &&
                 (ArmeriaClientSupport.isWebClientClass(resolvedClass) || looksLikeWebClientFactoryReceiver(call))
             ) {
@@ -273,9 +273,9 @@ internal object ArmeriaKotlinClientCollector {
                     element = element.parent
                     continue
                 }
-            val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(outerCall)
-            if (methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES &&
-                ArmeriaClientSupport.protocolForClass(resolveContainingClass(outerCall)) != null &&
+            val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(outerCall) ?: ""
+            val outerClass = resolveContainingClass(outerCall)
+            if (ArmeriaClientSupport.protocolForInvocation(methodName, outerClass) != null &&
                 isDescendantOfValueArgument(call, outerCall)
             ) {
                 return true
@@ -283,6 +283,42 @@ internal object ArmeriaKotlinClientCollector {
             element = element.parent
         }
         return false
+    }
+
+    private fun isQualifierOfClientConversion(call: KtCallExpression): Boolean {
+        var current: KtCallExpression = call
+        while (true) {
+            val next = findNextChainedCall(current) ?: return false
+            val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(next)
+            if (methodName in ArmeriaClientSupport.CONVERSION_METHOD_NAMES) {
+                val resolvedClass = resolveContainingClass(next)
+                if (ArmeriaClientSupport.isWebClientClass(resolvedClass) ||
+                    looksLikeWebClientFactoryReceiver(next) ||
+                    findWebClientFactoryInQualifierChain(next) != null ||
+                    resolvedClass?.startsWith(ArmeriaClientSupport.ARMERIA_CLIENT_PACKAGE_PREFIX) == true
+                ) {
+                    return true
+                }
+            }
+            if (next === current) {
+                return false
+            }
+            current = next
+        }
+    }
+
+    private fun findNextChainedCall(call: KtCallExpression): KtCallExpression? {
+        val parent = call.parent
+        if (parent is KtDotQualifiedExpression && parent.receiverExpression == call) {
+            return parent.selectorExpression as? KtCallExpression
+        }
+        if (parent is KtDotQualifiedExpression) {
+            val grandParent = parent.parent as? KtDotQualifiedExpression
+            if (grandParent != null && grandParent.receiverExpression == parent) {
+                return grandParent.selectorExpression as? KtCallExpression
+            }
+        }
+        return null
     }
 
     private fun isDescendantOfValueArgument(
@@ -328,7 +364,17 @@ internal object ArmeriaKotlinClientCollector {
                 is KtDotQualifiedExpression -> callee.receiverExpression.text
                 else -> (call.parent as? KtDotQualifiedExpression)?.receiverExpression?.text
             }.orEmpty()
-        return protocolForClassBySimpleName(qualifierText, call.containingFile as? KtFile)
+        val fromSimpleName = protocolForClassBySimpleName(qualifierText, call.containingFile as? KtFile)
+        if (fromSimpleName != null) {
+            return fromSimpleName
+        }
+        val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call)
+        if (methodName in ArmeriaClientSupport.CONVERSION_METHOD_NAMES &&
+            findWebClientFactoryInQualifierChain(call) != null
+        ) {
+            return "com.linecorp.armeria.client.WebClient"
+        }
+        return null
     }
 
     private fun protocolForClassBySimpleName(

@@ -2,6 +2,7 @@ package com.linecorp.intellij.plugins.armeria.client
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.application.ModalityState
@@ -48,6 +49,24 @@ class ArmeriaClientExplorerPanel(
                     object : DumbAwareAction(message("client.explorer.action.refresh")) {
                         override fun actionPerformed(e: AnActionEvent) {
                             refresh()
+                        }
+                    },
+                )
+                add(
+                    object : DumbAwareAction(message("client.explorer.action.gotoRoute")) {
+                        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+                        override fun update(e: AnActionEvent) {
+                            e.presentation.isEnabled = endpointList.selectedValue != null
+                        }
+
+                        override fun actionPerformed(e: AnActionEvent) {
+                            val endpoint = endpointList.selectedValue ?: return
+                            ArmeriaClientRouteNavigation.openMatchingRoutes(
+                                project,
+                                endpoint,
+                                parentDisposable = this@ArmeriaClientExplorerPanel,
+                            )
                         }
                     },
                 )
@@ -158,6 +177,27 @@ class ArmeriaClientExplorerPanel(
                 clientDetailPanel.setEndpoint(endpointList.selectedValue)
             }.submit(AppExecutorUtil.getAppExecutorService())
     }
+
+    fun selectEndpoint(endpoint: ArmeriaClientEndpoint): Boolean {
+        for (index in 0 until listModel.size) {
+            val candidate = listModel.getElementAt(index)
+            if (sameEndpoint(candidate, endpoint)) {
+                endpointList.selectedIndex = index
+                endpointList.ensureIndexIsVisible(index)
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun sameEndpoint(
+        left: ArmeriaClientEndpoint,
+        right: ArmeriaClientEndpoint,
+    ): Boolean =
+        left.clientType == right.clientType &&
+            left.uri == right.uri &&
+            left.target == right.target &&
+            left.moduleName == right.moduleName
 
     private fun updateStatusLabel(collectedEndpoints: List<ArmeriaClientEndpoint>) {
         statusLabel.text =

@@ -16,7 +16,14 @@ internal object ArmeriaClientDecoratorSupport {
             "BraveClient" to "client.explorer.decorator.brave",
             "RetryingClient" to "client.explorer.decorator.retrying",
             "CircuitBreakerClient" to "client.explorer.decorator.circuitBreaker",
+            "OAuth2Client" to "client.explorer.decorator.oauth2",
+            "AuthClient" to "client.explorer.decorator.auth",
+            "ThrottlingClient" to "client.explorer.decorator.throttling",
+            "DecodingClient" to "client.explorer.decorator.decoding",
+            "EncodingClient" to "client.explorer.decorator.encoding",
         )
+
+    private val CLIENT_DECORATOR_METHOD_NAMES = setOf("decorator", "auth")
 
     fun collectJavaClientDecorators(factoryCall: PsiMethodCallExpression): List<String> {
         val decorators = linkedSetOf<String>()
@@ -87,7 +94,8 @@ internal object ArmeriaClientDecoratorSupport {
     }
 
     private fun isJavaClientDecoratorCall(expression: PsiMethodCallExpression): Boolean {
-        if (expression.methodExpression.referenceName != "decorator") {
+        val methodName = expression.methodExpression.referenceName ?: return false
+        if (methodName !in CLIENT_DECORATOR_METHOD_NAMES) {
             return false
         }
         val resolvedClass = expression.resolveMethod()?.containingClass?.qualifiedName
@@ -99,6 +107,9 @@ internal object ArmeriaClientDecoratorSupport {
     }
 
     private fun extractJavaDecoratorLabel(expression: PsiMethodCallExpression): String? {
+        if (expression.methodExpression.referenceName == "auth") {
+            return labelClientDecorator("AuthClient")
+        }
         val decoratorArgument = expression.argumentList.expressions.firstOrNull() ?: return null
         val target =
             when (decoratorArgument) {

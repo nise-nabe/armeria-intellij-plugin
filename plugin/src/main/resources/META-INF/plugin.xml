@@ -70,6 +70,8 @@
                      description="Include gRPC routes parsed from .proto files in Route Explorer"/>
         <codeInsight.lineMarkerProvider language="JAVA"
                                         implementationClass="com.linecorp.intellij.plugins.armeria.marker.ArmeriaJavaRouteLineMarkerProvider"/>
+        <codeInsight.lineMarkerProvider language="JAVA"
+                                        implementationClass="com.linecorp.intellij.plugins.armeria.marker.ArmeriaJavaClientRouteLineMarkerProvider"/>
         <localInspection language="JAVA"
                          bundle="messages.ArmeriaBundle"
                          key="inspection.blocking.client.display.name"

@@ -71,7 +71,8 @@ internal object ArmeriaKotlinClientDecoratorSupport {
         }
 
     private fun isKotlinClientDecoratorCall(call: KtCallExpression): Boolean {
-        if (ArmeriaKotlinExpressionSupport.resolveCallName(call) != "decorator") {
+        val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return false
+        if (methodName != "decorator" && methodName != "auth") {
             return false
         }
         val references =
@@ -95,6 +96,9 @@ internal object ArmeriaKotlinClientDecoratorSupport {
     }
 
     private fun extractKotlinDecoratorLabel(call: KtCallExpression): String? {
+        if (ArmeriaKotlinExpressionSupport.resolveCallName(call) == "auth") {
+            return ArmeriaClientDecoratorSupport.labelClientDecorator("AuthClient")
+        }
         val decoratorArgument = call.valueArguments.firstOrNull()?.getArgumentExpression() ?: return null
         val target = extractKotlinDecoratorTarget(decoratorArgument)
         return ArmeriaClientDecoratorSupport.labelClientDecorator(target)

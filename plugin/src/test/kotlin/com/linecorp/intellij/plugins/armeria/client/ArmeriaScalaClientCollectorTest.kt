@@ -167,4 +167,61 @@ class ArmeriaScalaClientCollectorTest : ArmeriaLightJavaCodeInsightFixtureTestCa
         assertEquals(1, endpoints.size)
         assertEquals("https://example.com", endpoints.single().uri)
     }
+
+    fun testCollectRestClientOfFromScala() {
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client;
+
+            public final class RestClient {
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Main.scala",
+            """
+            package example
+
+            import com.linecorp.armeria.client.RestClient
+
+            object Main {
+              val client = RestClient.of("https://example.com/hello")
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("RestClient", endpoint.clientType)
+        assertEquals("https://example.com/hello", endpoint.uri)
+        assertEquals("RestClient", endpoint.target)
+    }
+
+    fun testCollectWebClientBlockingConversionFromScala() {
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client;
+
+            public final class WebClient {
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Main.scala",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+
+            object Main {
+              val client = WebClient.of("https://example.com/users").blocking()
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("BlockingWebClient", endpoint.clientType)
+        assertEquals("https://example.com/users", endpoint.uri)
+    }
 }
