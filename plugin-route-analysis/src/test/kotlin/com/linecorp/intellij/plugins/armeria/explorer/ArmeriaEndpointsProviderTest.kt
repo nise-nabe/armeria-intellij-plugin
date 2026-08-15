@@ -43,6 +43,7 @@ class ArmeriaEndpointsProviderTest : ArmeriaFixtureTestBase5() {
 
         val provider = ArmeriaEndpointsProvider()
         assertEquals(EndpointsProvider.Status.AVAILABLE, provider.getStatus(project))
+        assertEquals("Armeria", provider.presentation.queryTag)
         assertEquals(message("endpoints.framework.title"), provider.presentation.title)
 
         val (group, route) = singleEndpoint(provider)
