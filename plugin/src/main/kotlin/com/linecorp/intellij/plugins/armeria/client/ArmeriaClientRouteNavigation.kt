@@ -10,7 +10,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.concurrency.AppExecutorUtil
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteExplorerAccess
+import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaExplorerAccess
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaRouteNavigation
 import com.linecorp.intellij.plugins.armeria.message
@@ -90,7 +90,7 @@ internal object ArmeriaClientRouteNavigation {
         route: ArmeriaRoute,
         parentDisposable: Disposable?,
     ) {
-        ArmeriaRouteExplorerAccess.ensurePanel(project) { panel ->
+        ArmeriaExplorerAccess.ensureRoutePanel(project) { panel ->
             panel?.selectRoute(route)
         }
         ArmeriaRouteNavigation.navigateToRoute(project, route, parentDisposable)
@@ -101,7 +101,7 @@ internal object ArmeriaClientRouteNavigation {
         endpoint: ArmeriaClientEndpoint,
         parentDisposable: Disposable?,
     ) {
-        ArmeriaClientExplorerAccess.ensurePanel(project) { panel ->
+        ArmeriaExplorerAccess.ensureClientPanel(project) { panel ->
             panel?.selectEndpoint(endpoint)
         }
         ArmeriaRouteNavigation.navigateToPointer(

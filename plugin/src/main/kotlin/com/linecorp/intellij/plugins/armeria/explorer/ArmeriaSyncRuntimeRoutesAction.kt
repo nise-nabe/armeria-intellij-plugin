@@ -19,7 +19,7 @@ class ArmeriaSyncRuntimeRoutesAction :
     ) {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val panel = ArmeriaRouteExplorerAccess.findPanel(project)
+        val panel = ArmeriaExplorerAccess.findRoutePanel(project)
         val staticRoutes = panel?.staticRoutes().orEmpty()
         val defaultMountPath =
             ArmeriaDocServiceMountResolver
@@ -70,9 +70,9 @@ class ArmeriaSyncRuntimeRoutesAction :
                         }
                         when (result) {
                             is ArmeriaDocServiceFetchResult.Success -> {
-                                ArmeriaRouteExplorerAccess.ensurePanel(project) { explorerPanel ->
+                                ArmeriaExplorerAccess.ensureRoutePanel(project, requestFocus = true) { explorerPanel ->
                                     if (project.isDisposed) {
-                                        return@ensurePanel
+                                        return@ensureRoutePanel
                                     }
                                     if (explorerPanel != null) {
                                         explorerPanel.scheduleInitialRefreshIfNeeded()
