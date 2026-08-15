@@ -10,6 +10,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpRequestGenerator
+import com.linecorp.intellij.plugins.armeria.message
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -149,10 +150,10 @@ class ArmeriaHttpRequestGeneratorTest {
     }
 
     @Test
-    fun requestText_substitutesPathVariables() {
+    fun requestText_keepsBracePathVariablePlaceholders() {
         val route = route(httpMethod = "GET", path = "/users/{id}")
 
-        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("/users/1"))
+        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("/users/{id}"))
     }
 
     @Test
@@ -163,10 +164,10 @@ class ArmeriaHttpRequestGeneratorTest {
     }
 
     @Test
-    fun requestText_substitutesColonStylePathVariables() {
+    fun requestText_convertsColonStylePathVariablesToPlaceholders() {
         val route = route(httpMethod = "GET", path = "/hello/:name")
 
-        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("/hello/example"))
+        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("/hello/{name}"))
     }
 
     @Test
@@ -207,6 +208,8 @@ class ArmeriaHttpRequestGeneratorTest {
             GRPC http://localhost:8080/example.EchoService/Echo
 
             # Invoke via DocService: http://localhost:8080/docs
+            # gRPC-JSON uses POST with a JSON body:
+            {}
 
             """.trimIndent() + "\n",
             ArmeriaHttpRequestGenerator.requestText(route),
@@ -221,25 +224,25 @@ class ArmeriaHttpRequestGeneratorTest {
     }
 
     @Test
-    fun requestText_substitutesConstrainedPathVariables() {
+    fun requestText_stripsConstraintsFromBracePathVariables() {
         val route = route(httpMethod = "GET", path = "/users/{id:\\d+}")
 
-        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("/users/1"))
+        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("/users/{id}"))
     }
 
     @Test
-    fun requestText_substitutesConstrainedPathVariablesWithWhitespace() {
+    fun requestText_stripsConstrainedPathVariablesWithWhitespace() {
         val route = route(httpMethod = "GET", path = "/users/{id :\\d+}")
 
-        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("/users/1"))
+        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("/users/{id}"))
     }
 
     @Test
-    fun requestText_substitutesConstrainedPathVariablesWithQuantifierBraces() {
+    fun requestText_stripsConstrainedPathVariablesWithQuantifierBraces() {
         val route = route(httpMethod = "GET", path = "/users/{id:\\d{2,3}}")
 
-        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("/users/1"))
-        assertFalse(ArmeriaHttpRequestGenerator.requestText(route).contains("/users/1}"))
+        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("/users/{id}"))
+        assertFalse(ArmeriaHttpRequestGenerator.requestText(route).contains("/users/{id}}"))
     }
 
     @Test
@@ -258,6 +261,8 @@ class ArmeriaHttpRequestGeneratorTest {
             GRPC http://localhost:8080/Greeter/Ping
 
             # Invoke via DocService: http://localhost:8080/docs
+            # gRPC-JSON uses POST with a JSON body:
+            {}
 
             """.trimIndent() + "\n",
             ArmeriaHttpRequestGenerator.requestText(route),
@@ -291,10 +296,107 @@ class ArmeriaHttpRequestGeneratorTest {
             GRPC http://localhost:8080/example.EchoService/Echo
 
             # Invoke via DocService: http://localhost:8080/docs
+            # gRPC-JSON uses POST with a JSON body:
+            {}
 
             """.trimIndent() + "\n",
             ArmeriaHttpRequestGenerator.requestText(route, "http://localhost:8080/"),
         )
+    }
+
+    @Test
+    fun requestText_usesConsumesProducesAndMatchesHeader() {
+        val route =
+            route(
+                httpMethod = "POST",
+                path = "/users/{id}",
+                contentHints =
+                    listOf(
+                        message("route.explorer.hint.matchesHeader", "client-type=android"),
+                        message("route.explorer.hint.matchesHeader", "authorization"),
+                        message("route.explorer.hint.matchesHeader", "env!=prod"),
+                        message("route.explorer.hint.consumes", "application/xml, application/json"),
+                        message("route.explorer.hint.produces", "application/json"),
+                    ),
+            )
+
+        assertEquals(
+            """
+            ### /users/{id}
+            POST http://localhost:8080/users/{id}
+            client-type: android
+            Content-Type: application/json
+            Accept: application/json
+
+            {}
+            """.trimIndent() + "\n",
+            ArmeriaHttpRequestGenerator.requestText(route),
+        )
+    }
+
+    @Test
+    fun requestText_omitsBodyOnGetEvenWithConsumes() {
+        val route =
+            route(
+                httpMethod = "GET",
+                path = "/items",
+                contentHints = listOf(message("route.explorer.hint.consumes", "application/json")),
+            )
+
+        val text = ArmeriaHttpRequestGenerator.requestText(route)
+        assertFalse(text.contains("Content-Type:"))
+        assertFalse(text.contains("{}"))
+    }
+
+    @Test
+    fun supports_graphqlRoute() {
+        val route =
+            route(
+                protocol = "GraphQL",
+                path = "/graphql",
+                target = "Query.user",
+                routeMatch = RouteMatch.NON_HTTP,
+            )
+
+        assertTrue(ArmeriaHttpRequestGenerator.supports(route))
+        assertEquals("POST", ArmeriaHttpRequestGenerator.httpMethod(route))
+        assertEquals("armeria-graphql-Query.user.http", ArmeriaHttpRequestGenerator.fileName(route))
+    }
+
+    @Test
+    fun requestText_graphqlQueryStub() {
+        val route =
+            route(
+                protocol = "GraphQL",
+                path = "/graphql",
+                target = "Query.user",
+                routeMatch = RouteMatch.NON_HTTP,
+            )
+
+        assertEquals(
+            """
+            ### Query.user
+            POST http://localhost:8080/graphql
+            Content-Type: application/json
+            Accept: application/json
+
+            {"query": "query { user }"}
+            """.trimIndent() + "\n",
+            ArmeriaHttpRequestGenerator.requestText(route),
+        )
+    }
+
+    @Test
+    fun requestText_graphqlMutationStub() {
+        val route =
+            route(
+                protocol = "GraphQL",
+                path = "/graphql",
+                target = "Mutation.createUser",
+                routeMatch = RouteMatch.NON_HTTP,
+            )
+
+        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("""{"query": "mutation { createUser }"}"""))
     }
 
     private fun route(
@@ -304,6 +406,7 @@ class ArmeriaHttpRequestGeneratorTest {
         routeMatch: RouteMatch = RouteMatch.ANNOTATED_HTTP,
         pathType: PathType = PathType.EXACT,
         target: String = "Handler",
+        contentHints: List<String> = emptyList(),
     ): ArmeriaRoute =
         ArmeriaRoute(
             protocol = protocol,
@@ -317,6 +420,7 @@ class ArmeriaHttpRequestGeneratorTest {
             pathType = pathType,
             decorators = emptyList(),
             exceptionHandlers = emptyList(),
+            contentHints = contentHints,
             pointer = TestPsiPointer,
         )
 

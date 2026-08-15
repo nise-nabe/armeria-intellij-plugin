@@ -1,4 +1,5 @@
 package com.linecorp.intellij.plugins.armeria.explorer.ui
+
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
@@ -7,10 +8,13 @@ import java.util.Locale
 
 object ArmeriaHttpRequestGenerator {
     const val DEFAULT_BASE_URL = "http://localhost:8080"
+    const val JSON_MEDIA_TYPE = "application/json"
 
     private val NON_SLUG_CHARACTERS = Regex("[^a-zA-Z0-9._-]")
     private val COLON_PATH_VARIABLE = Regex(""":([A-Za-z_][A-Za-z0-9_]*)""")
     private val GRPC_METHOD_PATH = Regex("""^/[^/]+/[^/]+$""")
+    private val SIMPLE_HEADER_MATCH = Regex("""^([A-Za-z0-9_-]+)=([^=].*)$""")
+    private val METHODS_WITH_BODY = setOf("POST", "PUT", "PATCH")
 
     fun supports(route: ArmeriaRoute): Boolean =
         when (route.routeMatch) {
@@ -18,7 +22,7 @@ object ArmeriaHttpRequestGenerator {
             RouteMatch.DELEGATED -> true
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.HEALTH_CHECK, RouteMatch.ROUTE_FLUENT -> true
             RouteMatch.RUNTIME, RouteMatch.CONFIG -> route.httpMethod.isNotBlank()
-            RouteMatch.NON_HTTP -> isGrpcRoute(route)
+            RouteMatch.NON_HTTP -> isGrpcRoute(route) || isGraphqlRoute(route)
             RouteMatch.ANNOTATED_SERVICE, RouteMatch.FILE_SERVICE, RouteMatch.VIRTUAL_HOST,
             RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
             -> false
@@ -31,10 +35,9 @@ object ArmeriaHttpRequestGenerator {
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.HEALTH_CHECK, RouteMatch.ROUTE_FLUENT,
             -> route.httpMethod.ifBlank { "GET" }
             RouteMatch.NON_HTTP -> {
-                if (isGrpcRoute(route)) {
-                    "POST"
-                } else {
-                    error("Unsupported route match: ${route.routeMatch}")
+                when {
+                    isGrpcRoute(route) || isGraphqlRoute(route) -> "POST"
+                    else -> error("Unsupported route match: ${route.routeMatch}")
                 }
             }
             RouteMatch.ANNOTATED_SERVICE, RouteMatch.FILE_SERVICE, RouteMatch.VIRTUAL_HOST,
@@ -47,6 +50,9 @@ object ArmeriaHttpRequestGenerator {
             val slug = pathSlug(route.path)
             return "armeria-grpc-$slug.http"
         }
+        if (isGraphqlRoute(route)) {
+            return "armeria-graphql-${pathSlug(route.target)}.http"
+        }
         val method = httpMethod(route).lowercase(Locale.ROOT)
         return "armeria-$method-${pathSlug(route.path)}.http"
     }
@@ -56,16 +62,32 @@ object ArmeriaHttpRequestGenerator {
         baseUrl: String = DEFAULT_BASE_URL,
     ): String {
         val normalizedBaseUrl = normalizeBaseUrl(baseUrl)
+        if (isGraphqlRoute(route)) {
+            return graphqlRequestText(route, normalizedBaseUrl)
+        }
         if (isGrpcRoute(route)) {
             return grpcRequestText(route, normalizedBaseUrl)
         }
         val method = httpMethod(route)
         val resolvedPath = pathWithPlaceholders(route.path, route.pathType)
+        val consumes = ArmeriaRouteContentHintSupport.mediaTypes(route.contentHints, "route.explorer.hint.consumes")
+        val produces = ArmeriaRouteContentHintSupport.mediaTypes(route.contentHints, "route.explorer.hint.produces")
+        val accept = produces.firstOrNull() ?: JSON_MEDIA_TYPE
+        val contentType = contentTypeForMethod(method, consumes)
         return buildString {
             appendLine("### ${route.path}")
             appendLine("$method $normalizedBaseUrl$resolvedPath")
-            appendLine("Accept: application/json")
+            for ((name, value) in matchHeaderFields(route.contentHints)) {
+                appendLine("$name: $value")
+            }
+            if (contentType != null) {
+                appendLine("Content-Type: $contentType")
+            }
+            appendLine("Accept: $accept")
             appendLine()
+            if (contentType != null && isJsonMediaType(contentType)) {
+                appendLine("{}")
+            }
         }
     }
 
@@ -79,6 +101,13 @@ object ArmeriaHttpRequestGenerator {
         return GRPC_METHOD_PATH.matches(route.path)
     }
 
+    private fun isGraphqlRoute(route: ArmeriaRoute): Boolean {
+        if (route.routeMatch != RouteMatch.NON_HTTP) {
+            return false
+        }
+        return route.protocol.equals(RouteProtocol.GRAPHQL.presentableName(), ignoreCase = true)
+    }
+
     private fun grpcRequestText(
         route: ArmeriaRoute,
         baseUrl: String,
@@ -89,8 +118,54 @@ object ArmeriaHttpRequestGenerator {
             appendLine("GRPC $baseUrl/$grpcPath")
             appendLine()
             appendLine("# Invoke via DocService: $baseUrl/docs")
+            appendLine("# gRPC-JSON uses POST with a JSON body:")
+            appendLine("{}")
             appendLine()
         }
+    }
+
+    private fun graphqlRequestText(
+        route: ArmeriaRoute,
+        baseUrl: String,
+    ): String {
+        val path = route.path.ifBlank { "/graphql" }
+        val query = graphqlOperationStub(route.target)
+        return buildString {
+            appendLine("### ${route.target}")
+            appendLine("POST $baseUrl$path")
+            appendLine("Content-Type: $JSON_MEDIA_TYPE")
+            appendLine("Accept: $JSON_MEDIA_TYPE")
+            appendLine()
+            appendLine("""{"query": "$query"}""")
+            appendLine()
+        }
+    }
+
+    private fun graphqlOperationStub(target: String): String {
+        val trimmed = target.trim()
+        val separator = trimmed.indexOf('.')
+        val operationType: String
+        val field: String
+        if (separator < 0) {
+            operationType = "query"
+            field = trimmed
+        } else {
+            operationType = trimmed.substring(0, separator).lowercase(Locale.ROOT)
+            field = trimmed.substring(separator + 1)
+        }
+        val keyword =
+            when (operationType) {
+                "mutation" -> "mutation"
+                "subscription" -> "subscription"
+                else -> "query"
+            }
+        val fieldName = graphqlFieldName(field)
+        return "$keyword { $fieldName }"
+    }
+
+    private fun graphqlFieldName(field: String): String {
+        val identifier = field.takeWhile { it.isLetterOrDigit() || it == '_' }
+        return identifier.ifEmpty { "operation" }
     }
 
     private fun normalizeBaseUrl(baseUrl: String): String = baseUrl.trimEnd('/')
@@ -103,7 +178,7 @@ object ArmeriaHttpRequestGenerator {
             return path
         }
         var resolved = replaceBracePathVariables(path)
-        resolved = COLON_PATH_VARIABLE.replace(resolved) { match -> sampleValue(match.groupValues[1]) }
+        resolved = COLON_PATH_VARIABLE.replace(resolved) { match -> "{${match.groupValues[1]}}" }
         return resolved
     }
 
@@ -119,7 +194,7 @@ object ArmeriaHttpRequestGenerator {
                     continue
                 }
                 val capture = path.substring(index + 1, end)
-                result.append(sampleValue(braceVariableName(capture)))
+                result.append('{').append(braceVariableName(capture)).append('}')
                 index = end + 1
             } else {
                 result.append(path[index])
@@ -157,13 +232,28 @@ object ArmeriaHttpRequestGenerator {
         return if (colonIndex < 0) trimmed else trimmed.substring(0, colonIndex).trim()
     }
 
-    private fun sampleValue(name: String): String =
-        when {
-            name.equals("id", ignoreCase = true) -> "1"
-            name.equals("name", ignoreCase = true) -> "example"
-            name.all { it.isDigit() } -> "sample"
-            else -> name.lowercase(Locale.ROOT)
+    private fun contentTypeForMethod(
+        method: String,
+        consumes: List<String>,
+    ): String? {
+        if (method.uppercase(Locale.ROOT) !in METHODS_WITH_BODY || consumes.isEmpty()) {
+            return null
         }
+        return consumes.firstOrNull(::isJsonMediaType) ?: consumes.first()
+    }
+
+    private fun isJsonMediaType(mediaType: String): Boolean {
+        val normalized = mediaType.substringBefore(';').trim().lowercase(Locale.ROOT)
+        return normalized == JSON_MEDIA_TYPE || normalized.endsWith("+json")
+    }
+
+    private fun matchHeaderFields(contentHints: List<String>): List<Pair<String, String>> =
+        ArmeriaRouteContentHintSupport
+            .payloads(contentHints, "route.explorer.hint.matchesHeader")
+            .mapNotNull { condition ->
+                val match = SIMPLE_HEADER_MATCH.matchEntire(condition.trim()) ?: return@mapNotNull null
+                match.groupValues[1] to match.groupValues[2]
+            }
 
     private fun pathSlug(path: String): String {
         val trimmed = path.trim('/')

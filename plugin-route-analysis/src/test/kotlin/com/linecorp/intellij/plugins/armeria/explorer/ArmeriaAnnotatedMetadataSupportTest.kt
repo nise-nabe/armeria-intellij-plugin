@@ -98,6 +98,36 @@ class ArmeriaAnnotatedMetadataSupportTest : ArmeriaFixtureTestBase() {
         )
     }
 
+    fun testCollectJsonHelperMediaTypes() {
+        myFixture.configureByText(
+            "JsonService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.*;
+
+            public class JsonService {
+                @Post("/items")
+                @ConsumesJson
+                @ProducesJson
+                public String create() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val route = routes.single()
+        assertEquals(
+            listOf(
+                message("route.explorer.hint.consumes", "application/json"),
+                message("route.explorer.hint.produces", "application/json"),
+            ),
+            route.contentHints,
+        )
+    }
+
     fun testCollectRepeatableConsumesAnnotations() {
         myFixture.configureByText(
             "ItemService.java",

@@ -4,6 +4,7 @@
 
 ### Added
 
+- Generate HTTP Request fills `.http` files from route metadata: `Content-Type` / `Accept` from `@Consumes` / `@Produces` (including `@ConsumesJson` / `@ProducesJson`), `@MatchesHeader` request headers, a JSON body for JSON consumes, and `{id}` path placeholders. GraphQL operations get a POST `/graphql` stub; gRPC method files include a JSON body placeholder.
 - Plugin install, update, enable, and disable no longer require an IDE restart.
 
 ### Changed
