@@ -20,6 +20,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
+import com.linecorp.intellij.plugins.armeria.expireWithPluginUnload
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnalysisCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaRouteNavigation
@@ -192,6 +193,7 @@ class ArmeriaRouteExplorerPanel(
                 ArmeriaRouteAnalysisCollector.collect(project, includeProtoRoutes = true)
             }.inSmartMode(project)
             .expireWith(this)
+            .expireWithPluginUnload()
             .coalesceBy(this)
             .finishOnUiThread(ModalityState.any()) { collectedRoutes ->
                 if (generation != refreshGeneration) {

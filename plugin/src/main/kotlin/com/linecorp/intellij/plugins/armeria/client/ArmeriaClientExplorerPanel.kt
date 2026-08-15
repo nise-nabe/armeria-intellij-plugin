@@ -16,6 +16,7 @@ import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
+import com.linecorp.intellij.plugins.armeria.expireWithPluginUnload
 import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaRouteNavigation
 import com.linecorp.intellij.plugins.armeria.message
 import java.awt.BorderLayout
@@ -170,6 +171,7 @@ class ArmeriaClientExplorerPanel(
                 ArmeriaClientCollector.collect(project)
             }.inSmartMode(project)
             .expireWith(this)
+            .expireWithPluginUnload()
             .coalesceBy(this)
             .finishOnUiThread(ModalityState.any()) { collectedEndpoints ->
                 val pending = pendingEndpointSelection

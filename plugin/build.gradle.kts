@@ -1,6 +1,8 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.date
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
+import java.util.EnumSet
 import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 
@@ -89,6 +91,20 @@ intellijPlatform {
                 }
             }
     }
+    pluginVerification {
+        ides {
+            current()
+        }
+        // Gate on unloadability and compatibility, not pre-existing internal/experimental APIs
+        // (e.g. JavaModuleType in the wizard). NOT_DYNAMIC is the restart-required finding.
+        failureLevel.set(
+            EnumSet.of(
+                VerifyPluginTask.FailureLevel.COMPATIBILITY_PROBLEMS,
+                VerifyPluginTask.FailureLevel.INVALID_PLUGIN,
+                VerifyPluginTask.FailureLevel.NOT_DYNAMIC,
+            ),
+        )
+    }
 }
 
 tasks.register("verifyPluginPackaging") {
@@ -140,6 +156,9 @@ tasks.register("verifyPluginPackaging") {
             check("<id>com.linecorp.armeria</id>" in descriptor) {
                 "Patched plugin.xml must use id com.linecorp.armeria"
             }
+            check("""require-restart="false"""" in descriptor) {
+                "Patched plugin.xml must declare require-restart=\"false\" for dynamic plugin updates"
+            }
             val description =
                 Regex(
                     "<description(?:\\s[^>]*)?>(?:<!\\[CDATA\\[)?(.*?)(?:]]>)?</description>",
@@ -156,5 +175,6 @@ tasks.register("verifyPluginPackaging") {
 }
 
 tasks.named("check") {
-    dependsOn("verifyPluginPackaging")
+    // current() reuses the compile IDE, so this does not download an extra IU.
+    dependsOn("verifyPluginPackaging", "verifyPlugin")
 }

@@ -8,6 +8,7 @@ import com.intellij.pom.Navigatable
 import com.intellij.psi.PsiElement
 import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.util.concurrency.AppExecutorUtil
+import com.linecorp.intellij.plugins.armeria.expireWithPluginUnload
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 
 object ArmeriaRouteNavigation {
@@ -30,6 +31,7 @@ object ArmeriaRouteNavigation {
                 resolveNavigatable(pointer, sourceOffset)
             }.inSmartMode(project)
             .expireWith(project)
+            .expireWithPluginUnload()
             .let { coordinator ->
                 if (parentDisposable != null) coordinator.expireWith(parentDisposable) else coordinator
             }.finishOnUiThread(ModalityState.any()) { navigatable ->

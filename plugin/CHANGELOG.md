@@ -4,6 +4,8 @@
 
 ### Added
 
+- Plugin install, update, enable, and disable no longer require an IDE restart.
+
 ### Changed
 
 ### Deprecated

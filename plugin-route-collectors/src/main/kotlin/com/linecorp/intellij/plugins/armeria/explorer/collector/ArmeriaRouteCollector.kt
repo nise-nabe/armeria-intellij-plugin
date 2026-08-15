@@ -39,6 +39,14 @@ import java.util.concurrent.ConcurrentHashMap
 object ArmeriaRouteCollector {
     private val cacheKeys = ConcurrentHashMap<String, Key<CachedValue<List<ArmeriaRoute>>>>()
 
+    /**
+     * Drops interned collector [Key]s. Platform unload already clears [CachedValuesManager]
+     * project user data; this is for tests that need a fresh Key identity in the same session.
+     */
+    internal fun clearCacheKeys() {
+        cacheKeys.clear()
+    }
+
     fun collect(
         project: Project,
         includeProtoRoutes: Boolean = false,
@@ -79,14 +87,14 @@ object ArmeriaRouteCollector {
         contributors: List<RouteContributor>,
     ): List<ArmeriaRoute> {
         val manager = CachedValuesManager.getManager(project)
-        val baseKey = cacheKey(contributors)
         return manager.getCachedValue(
             project,
             cacheKeyWithProto(contributors),
             CachedValueProvider {
                 val baseRoutes = cachedProjectRoutes(project, contributors)
-                // CachedValuesManager stores the base CachedValue in project user data under [baseKey];
-                // depend on it so proto overlay invalidates when the base route cache does.
+                // Look up the key after [cachedProjectRoutes] so it matches the interned Key
+                // that call just stored under (do not capture a Key across a concurrent clear).
+                val baseKey = cacheKey(contributors)
                 val baseCachedValue =
                     project.getUserData(baseKey)
                         ?: error("base route cache not registered for $baseKey")

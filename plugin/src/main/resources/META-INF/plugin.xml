@@ -1,4 +1,4 @@
-<idea-plugin>
+<idea-plugin require-restart="false">
     <id>com.linecorp.armeria</id>
     <name>Armeria</name>
     <vendor email="nise.nabe@gmail.com" url="https://github.com/nise-nabe/armeria-intellij-plugin">nise_nabe</vendor>
@@ -61,9 +61,11 @@
         <consoleFilterProvider implementation="com.linecorp.intellij.plugins.armeria.run.ArmeriaDocServiceConsoleFilterProvider" />
         <registryKey key="armeria.route.explorer.metrics"
                      defaultValue="false"
+                     restartRequired="false"
                      description="Log Armeria Route Explorer collection metrics at INFO level"/>
         <registryKey key="armeria.grpc.proto.routes.enabled"
                      defaultValue="true"
+                     restartRequired="false"
                      description="Include gRPC routes parsed from .proto files in Route Explorer"/>
         <codeInsight.lineMarkerProvider language="JAVA"
                                         implementationClass="com.linecorp.intellij.plugins.armeria.marker.ArmeriaJavaRouteLineMarkerProvider"/>
