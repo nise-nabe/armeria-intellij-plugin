@@ -70,7 +70,7 @@ class ArmeriaSyncRuntimeRoutesAction :
                         }
                         when (result) {
                             is ArmeriaDocServiceFetchResult.Success -> {
-                                ArmeriaExplorerAccess.ensureRoutePanel(project) { explorerPanel ->
+                                ArmeriaExplorerAccess.ensureRoutePanel(project, requestFocus = true) { explorerPanel ->
                                     if (project.isDisposed) {
                                         return@ensureRoutePanel
                                     }

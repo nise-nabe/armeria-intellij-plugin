@@ -13,30 +13,36 @@ object ArmeriaExplorerAccess {
 
     fun findRoutePanel(project: Project): ArmeriaRouteExplorerPanel? = findPanel(project, ArmeriaRouteExplorerPanel::class.java)
 
-    fun findClientPanel(project: Project): ArmeriaClientExplorerPanel? = findPanel(project, ArmeriaClientExplorerPanel::class.java)
-
     /**
      * Invokes [onReady] on the EDT with the Services tab after activating the Armeria tool window
      * and selecting that tab so [ArmeriaExplorerToolWindowFactory] can create content.
      * Passes null when the panel cannot be obtained.
+     *
+     * [requestFocus] should be true when the user is working in this tool window (for example
+     * DocService sync) and false when jumping from the editor so navigation can keep editor focus.
      */
     fun ensureRoutePanel(
         project: Project,
+        requestFocus: Boolean = false,
         onReady: (ArmeriaRouteExplorerPanel?) -> Unit,
     ) {
-        ensurePanel(project, ArmeriaRouteExplorerPanel::class.java, onReady)
+        ensurePanel(project, ArmeriaRouteExplorerPanel::class.java, requestFocus, onReady)
     }
 
     /**
      * Invokes [onReady] on the EDT with the Clients tab after activating the Armeria tool window
      * and selecting that tab so [ArmeriaExplorerToolWindowFactory] can create content.
      * Passes null when the panel cannot be obtained.
+     *
+     * [requestFocus] should be true when the user is working in this tool window and false when
+     * jumping from the editor so navigation can keep editor focus.
      */
     fun ensureClientPanel(
         project: Project,
+        requestFocus: Boolean = false,
         onReady: (ArmeriaClientExplorerPanel?) -> Unit,
     ) {
-        ensurePanel(project, ArmeriaClientExplorerPanel::class.java, onReady)
+        ensurePanel(project, ArmeriaClientExplorerPanel::class.java, requestFocus, onReady)
     }
 
     private fun <T : JComponent> findPanel(
@@ -53,6 +59,7 @@ object ArmeriaExplorerAccess {
     private fun <T : JComponent> ensurePanel(
         project: Project,
         type: Class<T>,
+        requestFocus: Boolean,
         onReady: (T?) -> Unit,
     ) {
         if (project.isDisposed) {
@@ -72,22 +79,23 @@ object ArmeriaExplorerAccess {
             invokeOnEdt {
                 val panel = findPanel(project, type)
                 if (panel != null) {
-                    selectContent(toolWindow, panel)
+                    selectContent(toolWindow, panel, requestFocus)
                     scheduleInitialRefresh(panel)
                 }
                 onReady(panel)
             }
-        }, true, false)
+        }, requestFocus, false)
     }
 
     private fun selectContent(
         toolWindow: ToolWindow,
         panel: JComponent,
+        requestFocus: Boolean,
     ) {
         val content =
             toolWindow.contentManager.contents.firstOrNull { it.component === panel }
                 ?: return
-        toolWindow.contentManager.setSelectedContent(content, true)
+        toolWindow.contentManager.setSelectedContent(content, requestFocus)
     }
 
     private fun scheduleInitialRefresh(panel: JComponent) {
