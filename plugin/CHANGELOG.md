@@ -4,6 +4,20 @@
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [0.3.0] - 2026-08-15
+
+### Added
+
 - Armeria annotated HTTP routes and `Server.builder()` registrations appear in the Endpoints tool window (Framework = Armeria, Type = HTTP Server), including HTTP Client URL targets. Prefix and `serviceUnder` paths are prefix URL targets; glob `*` / `**` segments are wildcards. Armeria client factories (`WebClient`, `RestClient`, `BlockingWebClient`, gRPC, Thrift, Retrofit) with HTTP-like request URIs appear as Type = HTTP Client; EndpointGroup-backed clients and discovery URIs such as `zk://` are omitted. Spring MVC mappings stay on Spring’s provider.
 - Armeria Clients explorer discovers `RestClient` and `BlockingWebClient` factories and conversions (`WebClient.asRestClient()`, `WebClient.blocking()`, including Kotlin `!!` / `?.` chains), labels additional client decorators (`OAuth2Client`, Auth, Throttling, Decoding/Encoding), surfaces EndpointGroup kinds (DNS, ZooKeeper, Eureka, Consul, health-checked, including nested group URIs), and jumps to overlapping Armeria Services routes (toolbar and gutter; reverse jump from Route Explorer). Matching uses HTTP-like request URIs and does not treat discovery connection strings such as `zk://` as request paths.
 - Spring Boot `ArmeriaSettings` completion for YAML and `application.properties` (including `docs-path` / `health-check-path` / `metrics-path` and `internal-services.include` values, YAML nested keys before a colon is typed, and `.properties` whitespace delimiters), plus jump from the Spring Boot Config explorer to `ArmeriaServerConfigurator` / `DocServiceConfigurator` / `HealthCheckServiceConfigurator` / `MetricCollectingServiceConfigurator` beans.
@@ -15,6 +29,8 @@
 - gRPC Route Explorer discovery uses Proto Editor PSI when `idea.plugin.protoeditor` is available (RPC-level navigation), with fallback to the existing `.proto` text parser.
 - IDE support for Armeria JUnit 5 integration tests: `@RegisterExtension` `ServerExtension` gutter markers, blocking-route inspection in tests, and Generate Test Method from Route Explorer.
 - gRPC gutter icons on `rpc` keywords in `.proto` files (when Proto Editor is installed), showing the resolved gRPC path in the tooltip.
+- Scala sources in Route Explorer and Clients Explorer (annotated services, `Server.builder()` registrations, and WebClient/gRPC/Thrift factories).
+- Route Explorer expands Spring MVC controller mappings under Armeria `serviceUnder` prefix mounts as delegated children (exact `.service()` Tomcat mounts stay badge-only).
 
 ### Changed
 
@@ -26,10 +42,6 @@
 - Split the route-analysis codebase into five acyclic Gradle modules: `plugin-route-model` (leaf domain types), `plugin-route-collectors` (annotated / service-registration collectors, decorator/timeout support, `RouteContributor` SPI, public `ArmeriaRouteCollector`, shared test fixtures), `plugin-route-spring` (Spring MVC / Boot / config collectors), `plugin-route-protocol` (GraphQL / gRPC / Thrift), and `plugin-route-analysis` (UI helpers, DocService, navigation, duplicate index, `ArmeriaRouteAnalysisCollector`). `plugin-route-analysis` `api`-exports the other route modules for compile; `plugin` composes `plugin-shared`, `plugin-wizard`, and all `plugin-route-*` modules into the main plugin JAR. Test fixtures are consumed from `plugin-route-collectors`.
 - Move DocService runtime route pointer/factory from `explorer.navigation` to `explorer.model.runtime` in `plugin-route-model` so `navigation` is jump-to-source only.
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Stop packaging Kotlin stdlib and JetBrains annotations into the plugin ZIP so a real IntelliJ IDEA install no longer hits a stdlib classloader conflict at plugin load. Sibling modules (`plugin-wizard`, `plugin-route-*`) are composed into the main plugin JAR, and `plugin.xml` now includes the required description.
@@ -40,8 +52,8 @@
 - Route Explorer deduplicates GraphQL and Thrift IDL routes per module when the same operation appears in multiple schema or `.thrift` files.
 - DocService runtime route sync activates the Armeria Services tool window when needed so routes apply even if it was closed before the fetch completed.
 - Route Explorer Refresh no longer clears DocService-synced runtime routes; synced routes stay until the next sync replaces them.
-
-### Security
+- Generate Test Method inserts into Kotlin `object` declarations and does not guess a module when more than one is in scope.
+- Blocking-client inspection skips `*Test` files that live in main sources rather than test sources.
 
 ## [0.2.0] - 2026-07-18
 
