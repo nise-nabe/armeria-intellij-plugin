@@ -14,6 +14,7 @@ class ArmeriaParametersCompilerInspectionTest : ArmeriaFixtureTestBase5() {
 
     override fun onFixtureSetUp() {
         super.onFixtureSetUp()
+        CompilerConfiguration.getInstance(project).removeAdditionalOptions(module)
         myFixture.enableInspections(ArmeriaParametersCompilerInspection())
     }
 

@@ -57,6 +57,64 @@ class ArmeriaMissingBlockingKotlinInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun highlightsThreadSleepWithoutBlocking() {
+        myFixture.configureByText(
+            "SlowService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+
+            class SlowService {
+                @Get("/slow")
+                fun slow(): String {
+                    Thread.sleep(1)
+                    return "ok"
+                }
+            }
+            """.trimIndent(),
+        )
+        assertBlockingHighlights(1, "sleep")
+    }
+
+    @Test
+    fun highlightsGrpcImplBaseThroughIntermediateSuperclass() {
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloServiceImplBase {
+                public void sayHello() {
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloServiceImpl extends HelloServiceImplBase {
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "HelloService.kt",
+            """
+            package example
+
+            import java.util.concurrent.CompletableFuture
+
+            class HelloService : HelloServiceImpl() {
+                override fun sayHello() {
+                    CompletableFuture.completedFuture("ok").join()
+                }
+            }
+            """.trimIndent(),
+        )
+        assertBlockingHighlights(1, "join")
+    }
+
+    @Test
     fun highlightsGrpcImplBaseOverride() {
         myFixture.addClass(
             """

@@ -98,8 +98,9 @@ internal object ArmeriaClientDecoratorOrderSupport {
 
     private fun decoratorCallsInChain(call: PsiMethodCallExpression): List<PsiMethodCallExpression> {
         val preceding = mutableListOf<PsiMethodCallExpression>()
+        val visited = mutableSetOf<PsiElement>()
         var current: PsiExpression? = call.methodExpression.qualifierExpression
-        while (current != null) {
+        while (current != null && visited.add(current)) {
             when (current) {
                 is PsiMethodCallExpression -> {
                     if (isDecoratorCall(current)) {

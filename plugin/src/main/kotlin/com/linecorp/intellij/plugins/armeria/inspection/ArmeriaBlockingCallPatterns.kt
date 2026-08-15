@@ -54,7 +54,7 @@ internal object ArmeriaBlockingCallPatterns {
                 if (ownerFqn != null && ownerFqn in JOIN_OWNERS) {
                     return true
                 }
-                if (unresolved && argumentCount == 0) {
+                if (unresolved && argumentCount == 0 && !qualifierText.isNullOrBlank()) {
                     return true
                 }
             }
@@ -69,7 +69,10 @@ internal object ArmeriaBlockingCallPatterns {
                 }
             }
             "runBlocking" -> {
-                if (ownerFqn == null || ownerFqn.startsWith("kotlinx.coroutines")) {
+                if (ownerFqn?.startsWith("kotlinx.coroutines") == true) {
+                    return true
+                }
+                if (unresolved && qualifierText.isNullOrBlank()) {
                     return true
                 }
             }

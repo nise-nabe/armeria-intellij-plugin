@@ -9,9 +9,9 @@ internal enum class ArmeriaClientDecoratorKind {
     companion object {
         fun fromSimpleName(simpleName: String): ArmeriaClientDecoratorKind? =
             when (simpleName) {
-                "LoggingClient" -> LOGGING
+                "LoggingClient", "LoggingRpcClient" -> LOGGING
                 "RetryingClient", "RetryingRpcClient" -> RETRYING
-                "CircuitBreakerClient" -> CIRCUIT_BREAKER
+                "CircuitBreakerClient", "CircuitBreakerRpcClient" -> CIRCUIT_BREAKER
                 else -> null
             }
     }

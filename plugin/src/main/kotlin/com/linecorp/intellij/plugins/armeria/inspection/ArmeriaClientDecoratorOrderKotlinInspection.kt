@@ -6,6 +6,7 @@ import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiVariable
 import com.linecorp.intellij.plugins.armeria.client.ArmeriaClientSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
 import com.linecorp.intellij.plugins.armeria.message
@@ -13,6 +14,7 @@ import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
+import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtVisitorVoid
 
 class ArmeriaClientDecoratorOrderKotlinInspection : LocalInspectionTool() {
@@ -134,14 +136,14 @@ class ArmeriaClientDecoratorOrderKotlinInspection : LocalInspectionTool() {
 
     private fun decoratorCallsInChain(call: KtCallExpression): List<KtCallExpression> {
         val preceding = mutableListOf<KtCallExpression>()
+        val visited = mutableSetOf<PsiElement>()
         var current: KtExpression? = chainReceiver(call)
-        while (current != null) {
+        while (current != null && visited.add(current)) {
             val decoratorCall = asCall(current)
             if (decoratorCall != null && isDecoratorCall(decoratorCall)) {
                 preceding += decoratorCall
             }
-            val next = chainReceiver(current)
-            current = if (next === current) null else next
+            current = nextPrecedingExpression(current)
         }
         val following = mutableListOf<KtCallExpression>()
         var cursor: KtCallExpression = call
@@ -153,6 +155,32 @@ class ArmeriaClientDecoratorOrderKotlinInspection : LocalInspectionTool() {
             cursor = next
         }
         return preceding.asReversed() + call + following
+    }
+
+    private fun nextPrecedingExpression(current: KtExpression): KtExpression? {
+        val receiver = chainReceiver(current)
+        if (receiver != null && receiver !== current) {
+            return receiver
+        }
+        return resolvedInitializer(current)
+    }
+
+    private fun resolvedInitializer(expression: KtExpression): KtExpression? {
+        val name =
+            when (expression) {
+                is KtNameReferenceExpression -> expression
+                is KtDotQualifiedExpression -> expression.selectorExpression as? KtNameReferenceExpression
+                else -> null
+            } ?: return null
+        return when (
+            val resolved =
+                name.references
+                    .firstNotNullOfOrNull { it.resolve() }
+        ) {
+            is KtProperty -> resolved.initializer
+            is PsiVariable -> resolved.initializer as? KtExpression
+            else -> null
+        }
     }
 
     private fun asCall(expression: KtExpression): KtCallExpression? =

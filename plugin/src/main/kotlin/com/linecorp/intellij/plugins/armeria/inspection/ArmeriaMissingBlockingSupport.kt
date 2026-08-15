@@ -1,7 +1,9 @@
 package com.linecorp.intellij.plugins.armeria.inspection
 
+import com.intellij.psi.PsiAnonymousClass
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiLambdaExpression
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
@@ -28,6 +30,9 @@ internal object ArmeriaMissingBlockingSupport {
         val findings = mutableListOf<ArmeriaBlockingCallFinding>()
         body.forEachDescendant { element ->
             val call = element as? PsiMethodCallExpression ?: return@forEachDescendant
+            if (!isOnInspectedMethodPath(method, call)) {
+                return@forEachDescendant
+            }
             val methodName = call.methodExpression.referenceName ?: return@forEachDescendant
             val resolved = call.resolveMethod()
             val ownerFqn = resolved?.containingClass?.qualifiedName
@@ -73,10 +78,25 @@ internal object ArmeriaMissingBlockingSupport {
         return false
     }
 
-    private fun isGrpcServiceType(psiClass: PsiClass): Boolean {
+    fun isGrpcServiceType(psiClass: PsiClass): Boolean {
         if (psiClass.name?.endsWith("ImplBase") == true) {
             return true
         }
         return psiClass.qualifiedName == "io.grpc.BindableService"
+    }
+
+    private fun isOnInspectedMethodPath(
+        method: PsiMethod,
+        element: PsiElement,
+    ): Boolean {
+        var current: PsiElement? = element.parent
+        while (current != null && current != method) {
+            when (current) {
+                is PsiLambdaExpression, is PsiAnonymousClass -> return false
+                is PsiClass, is PsiMethod -> return false
+            }
+            current = current.parent
+        }
+        return current == method
     }
 }

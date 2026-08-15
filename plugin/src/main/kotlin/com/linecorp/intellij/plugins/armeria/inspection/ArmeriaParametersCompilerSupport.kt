@@ -7,11 +7,16 @@ import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ModuleRootManager
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiElement
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.util.CachedValue
+import com.intellij.psi.util.CachedValueProvider
+import com.intellij.psi.util.CachedValuesManager
+import com.intellij.psi.util.PsiModificationTracker
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 
 internal enum class ArmeriaParameterNameMode {
@@ -24,6 +29,10 @@ internal object ArmeriaParametersCompilerSupport {
     private const val JAVA_FLAG_TOKEN = "-parameters"
     private const val KOTLIN_FLAG_TOKEN = "-java-parameters"
     private const val MAX_GRADLE_SCRIPT_CHARS = 256 * 1024
+    private val JAVA_FLAG_KEY = Key.create<CachedValue<Boolean>>("armeria.parameters.compiler.java")
+    private val KOTLIN_FLAG_KEY = Key.create<CachedValue<Boolean>>("armeria.parameters.compiler.kotlin")
+    private val KOTLIN_JAVA_PARAMETERS_ENABLED =
+        Regex("""javaParameters\s*(?:\.set\s*\(\s*(?:true|Boolean\.TRUE)\s*\)|\s*=\s*true)""")
 
     fun isArmeriaParamWithoutExplicitName(annotation: PsiAnnotation): Boolean {
         if (annotation.qualifiedName != ArmeriaRouteSupport.PARAM_ANNOTATION) {
@@ -40,12 +49,26 @@ internal object ArmeriaParametersCompilerSupport {
         element: PsiElement,
         mode: ArmeriaParameterNameMode,
     ): Boolean {
-        val module = ModuleUtilCore.findModuleForPsiElement(element)
         val project = element.project
-        if (compilerOptionsHaveFlag(project, module, mode)) {
-            return true
+        val module = ModuleUtilCore.findModuleForPsiElement(element)
+        if (module == null) {
+            return compilerOptionsHaveFlag(project, null, mode) || gradleScriptsHaveFlag(project, null, mode)
         }
-        return gradleScriptsHaveFlag(project, module, mode)
+        val key = if (mode == ArmeriaParameterNameMode.JAVA) JAVA_FLAG_KEY else KOTLIN_FLAG_KEY
+        return CachedValuesManager.getManager(project).getCachedValue(
+            module,
+            key,
+            CachedValueProvider {
+                val enabled =
+                    compilerOptionsHaveFlag(project, module, mode) || gradleScriptsHaveFlag(project, module, mode)
+                CachedValueProvider.Result.create(
+                    enabled,
+                    CompilerConfiguration.getInstance(project),
+                    PsiModificationTracker.MODIFICATION_COUNT,
+                )
+            },
+            false,
+        )
     }
 
     private fun compilerOptionsHaveFlag(
@@ -116,7 +139,7 @@ internal object ArmeriaParametersCompilerSupport {
             ArmeriaParameterNameMode.JAVA -> containsToken(text, JAVA_FLAG_TOKEN)
             ArmeriaParameterNameMode.KOTLIN ->
                 containsToken(text, KOTLIN_FLAG_TOKEN) ||
-                    text.contains("javaParameters")
+                    KOTLIN_JAVA_PARAMETERS_ENABLED.containsMatchIn(text)
         }
 
     private fun containsToken(

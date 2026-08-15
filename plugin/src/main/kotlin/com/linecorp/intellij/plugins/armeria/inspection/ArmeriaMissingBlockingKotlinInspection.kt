@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.inspection
 import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.ProblemsHolder
+import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiMethod
@@ -14,9 +15,9 @@ import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtCallExpression
-import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
+import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtVisitorVoid
 
@@ -38,6 +39,9 @@ class ArmeriaMissingBlockingKotlinInspection : LocalInspectionTool() {
                 val body = function.bodyExpression ?: return
                 body.forEachDescendant { element ->
                     val call = element as? KtCallExpression ?: return@forEachDescendant
+                    if (!isOnInspectedFunctionPath(function, call)) {
+                        return@forEachDescendant
+                    }
                     val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return@forEachDescendant
                     val resolved = resolvePsiMethod(call)
                     val qualifierText =
@@ -89,18 +93,57 @@ class ArmeriaMissingBlockingKotlinInspection : LocalInspectionTool() {
             return false
         }
         val klass = containingClass(function) ?: return false
-        return klass.superTypeListEntries.any { entry ->
-            val referencedName = entry.typeAsUserType?.referencedName ?: entry.text
-            if (referencedName.endsWith("ImplBase") || referencedName.contains("BindableService")) {
-                return@any true
+        return isGrpcHierarchy(klass)
+    }
+
+    private fun isGrpcHierarchy(root: PsiElement): Boolean {
+        val visited = mutableSetOf<PsiElement>()
+        val queue = ArrayDeque<PsiElement>()
+        queue.add(root)
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            if (!visited.add(current)) {
+                continue
             }
-            val superClass = entry.typeReference?.references?.firstNotNullOfOrNull { it.resolve() }
-            superClass is KtClass &&
-                (
-                    superClass.name?.endsWith("ImplBase") == true ||
-                        superClass.fqName?.asString() == "io.grpc.BindableService"
-                )
+            when (current) {
+                is KtClassOrObject -> {
+                    if (current.name?.endsWith("ImplBase") == true) {
+                        return true
+                    }
+                    current.superTypeListEntries.forEach { entry ->
+                        val referencedName = entry.typeAsUserType?.referencedName
+                        if (referencedName?.endsWith("ImplBase") == true || referencedName == "BindableService") {
+                            return true
+                        }
+                        entry.typeReference
+                            ?.references
+                            ?.firstNotNullOfOrNull { it.resolve() }
+                            ?.let { queue.add(it) }
+                    }
+                }
+                is PsiClass -> {
+                    if (ArmeriaMissingBlockingSupport.isGrpcServiceType(current)) {
+                        return true
+                    }
+                    current.supers.forEach { queue.add(it) }
+                }
+            }
         }
+        return false
+    }
+
+    private fun isOnInspectedFunctionPath(
+        function: KtNamedFunction,
+        element: PsiElement,
+    ): Boolean {
+        var current: PsiElement? = element.parent
+        while (current != null && current != function) {
+            when (current) {
+                is KtLambdaExpression, is KtClassOrObject, is KtNamedFunction -> return false
+            }
+            current = current.parent
+        }
+        return current == function
     }
 
     private fun resolvePsiMethod(call: KtCallExpression): PsiMethod? {

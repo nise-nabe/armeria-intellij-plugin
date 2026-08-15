@@ -127,6 +127,98 @@ class ArmeriaMissingBlockingInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun highlightsThreadSleepWithoutBlocking() {
+        myFixture.configureByText(
+            "SlowService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class SlowService {
+                @Get("/slow")
+                public String slow() throws Exception {
+                    Thread.sleep(1);
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+        assertBlockingHighlights(1, "sleep")
+    }
+
+    @Test
+    fun highlightsJdbcWithoutBlocking() {
+        myFixture.configureByText(
+            "DbService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import java.sql.DriverManager;
+
+            public class DbService {
+                @Get("/db")
+                public String db() throws Exception {
+                    DriverManager.getConnection("jdbc:example");
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+        assertBlockingHighlights(1, "getConnection")
+    }
+
+    @Test
+    fun highlightsFilesReadWithoutBlocking() {
+        myFixture.configureByText(
+            "FileService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import java.nio.file.Files;
+            import java.nio.file.Path;
+
+            public class FileService {
+                @Get("/file")
+                public String file() throws Exception {
+                    return new String(Files.readAllBytes(Path.of("x")));
+                }
+            }
+            """.trimIndent(),
+        )
+        assertBlockingHighlights(1, "readAllBytes")
+    }
+
+    @Test
+    fun ignoresJoinInsideSupplyAsync() {
+        myFixture.configureByText(
+            "SlowService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import java.util.concurrent.CompletableFuture;
+
+            public class SlowService {
+                @Get("/slow")
+                public CompletableFuture<String> slow() {
+                    return CompletableFuture.supplyAsync(() -> {
+                        try {
+                            Thread.sleep(1);
+                        } catch (Exception ignored) {
+                        }
+                        return "ok";
+                    });
+                }
+            }
+            """.trimIndent(),
+        )
+        assertBlockingHighlights(0, "sleep")
+    }
+
+    @Test
     fun highlightsGrpcImplBaseOverride() {
         myFixture.addClass(
             """

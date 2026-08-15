@@ -41,6 +41,40 @@ class ArmeriaClientDecoratorOrderKotlinInspectionTest : ArmeriaFixtureTestBase5(
         assertDecoratorHighlights(message("inspection.decorator.order.logging.after.retry"), 0)
     }
 
+    @Test
+    fun highlightsCircuitBreakerAfterRetrying() {
+        configureClient(
+            """
+            WebClient.builder("https://example.com")
+                .decorator(RetryingClient.newDecorator())
+                .decorator(CircuitBreakerClient.newDecorator())
+                .build()
+            """.trimIndent(),
+        )
+        assertDecoratorHighlights(message("inspection.decorator.order.circuit.after.retry"), 1)
+    }
+
+    @Test
+    fun highlightsLoggingAfterRetryingOnSplitChain() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+            import com.linecorp.armeria.client.logging.LoggingClient
+            import com.linecorp.armeria.client.retry.RetryingClient
+
+            fun main() {
+                val builder = WebClient.builder("https://example.com")
+                    .decorator(RetryingClient.newDecorator())
+                builder.decorator(LoggingClient.newDecorator()).build()
+            }
+            """.trimIndent(),
+        )
+        assertDecoratorHighlights(message("inspection.decorator.order.logging.after.retry"), 1)
+    }
+
     private fun configureClient(body: String) {
         myFixture.configureByText(
             "Main.kt",
@@ -48,6 +82,7 @@ class ArmeriaClientDecoratorOrderKotlinInspectionTest : ArmeriaFixtureTestBase5(
             package example
 
             import com.linecorp.armeria.client.WebClient
+            import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient
             import com.linecorp.armeria.client.logging.LoggingClient
             import com.linecorp.armeria.client.retry.RetryingClient
 

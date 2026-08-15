@@ -44,6 +44,22 @@ class ArmeriaParametersCompilerKotlinInspectionTest : ArmeriaFixtureTestBase5() 
         assertParametersHighlights(0)
     }
 
+    @Test
+    fun highlightsUnnamedParamWhenJavaParametersDisabled() {
+        myFixture.addFileToProject(
+            "build.gradle.kts",
+            """
+            kotlin {
+                compilerOptions {
+                    javaParameters.set(false)
+                }
+            }
+            """.trimIndent(),
+        )
+        configureHandler("@Param name: String")
+        assertParametersHighlights(1)
+    }
+
     private fun configureHandler(parameter: String) {
         myFixture.configureByText(
             "HelloService.kt",
