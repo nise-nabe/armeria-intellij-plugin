@@ -48,5 +48,6 @@ class ArmeriaKotlinJUnitServerExtensionLineMarkerProvider : LineMarkerProviderDe
             { message("test.support.lineMarker.tooltip", name.orEmpty()) },
             null,
             GutterIconRenderer.Alignment.CENTER,
+            { message("test.support.lineMarker.name") },
         )
 }

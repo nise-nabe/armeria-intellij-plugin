@@ -72,7 +72,7 @@ class ArmeriaRunProfileState(
         }
         return try {
             val routes =
-                ReadAction.compute<List<ArmeriaRoute>, RuntimeException> {
+                ReadAction.computeBlocking<List<ArmeriaRoute>, RuntimeException> {
                     ArmeriaRouteAnalysisCollector.collect(project)
                 }
             ArmeriaDocServiceSupport.primaryUrl(routes.filter { it.moduleName == module.name })

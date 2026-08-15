@@ -48,6 +48,7 @@ open class ArmeriaGenerateRouteMethodKotlinIntention : PsiElementBaseIntentionAc
         return isMemberDeclarationContext(element, serviceClass)
     }
 
+    @Suppress("DEPRECATION")
     override fun invoke(
         project: Project,
         editor: Editor,
@@ -73,7 +74,7 @@ open class ArmeriaGenerateRouteMethodKotlinIntention : PsiElementBaseIntentionAc
             getText(),
             null,
             {
-                val added = serviceClass.addDeclaration(function) as KtNamedFunction
+                val added = serviceClass.addDeclaration(function)
                 val ktFile = serviceClass.containingKtFile
                 for (fqName in ArmeriaRouteMethodStub.kotlinImports(stubKind)) {
                     insertKotlinImport(factory, ktFile, fqName)

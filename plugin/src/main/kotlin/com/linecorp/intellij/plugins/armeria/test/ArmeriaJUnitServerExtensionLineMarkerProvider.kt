@@ -26,7 +26,7 @@ class ArmeriaJUnitServerExtensionLineMarkerProvider : LineMarkerProviderDescript
         val field = element.parent as? PsiField
         if (field != null && element == field.nameIdentifier) {
             if (ArmeriaJUnitServerExtensionSupport.serverExtensionFromField(field, scope) != null) {
-                return markerFor(field.nameIdentifier ?: field, field.textRange, field.name)
+                return markerFor(field.nameIdentifier, field.textRange, field.name)
             }
             return null
         }
@@ -51,5 +51,6 @@ class ArmeriaJUnitServerExtensionLineMarkerProvider : LineMarkerProviderDescript
             { message("test.support.lineMarker.tooltip", name.orEmpty()) },
             null,
             GutterIconRenderer.Alignment.CENTER,
+            { message("test.support.lineMarker.name") },
         )
 }

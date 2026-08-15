@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach
 /**
  * Platform [LightJavaCodeInsightFixtureTestCase5] with Armeria sandbox roots, testData helpers, and metrics teardown.
  */
+@Suppress("DEPRECATION")
 @RunInEdt(writeIntent = true)
 abstract class ArmeriaLightJavaCodeInsightFixtureTestCase5(
     projectDescriptor: LightProjectDescriptor? = null,

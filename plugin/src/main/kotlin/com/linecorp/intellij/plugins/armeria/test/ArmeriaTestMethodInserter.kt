@@ -144,6 +144,7 @@ internal object ArmeriaTestMethodInserter {
         editor?.scrollingModel?.scrollToCaret(ScrollType.CENTER)
     }
 
+    @Suppress("DEPRECATION")
     internal fun insertKotlinMethod(
         project: Project,
         ktTarget: KtClassOrObject,

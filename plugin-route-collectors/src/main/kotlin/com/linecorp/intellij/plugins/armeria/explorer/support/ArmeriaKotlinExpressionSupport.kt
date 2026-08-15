@@ -101,7 +101,7 @@ object ArmeriaKotlinExpressionSupport {
             current =
                 when (current) {
                     is KtParenthesizedExpression -> current.expression ?: return null
-                    is KtBinaryExpressionWithTypeRHS -> current.left ?: return null
+                    is KtBinaryExpressionWithTypeRHS -> current.left
                     else -> return current
                 }
         }

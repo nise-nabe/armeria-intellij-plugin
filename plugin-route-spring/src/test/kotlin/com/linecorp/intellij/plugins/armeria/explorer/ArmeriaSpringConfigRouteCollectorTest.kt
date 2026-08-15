@@ -398,7 +398,7 @@ class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixture
             element is YAMLKeyValue,
             "Port route should navigate to the YAML port key, not the whole file",
         )
-        assertEquals("port", (element as YAMLKeyValue).keyText)
+        assertEquals("port", element.keyText)
         assertFalse(portRoute.resolveSourceHint().endsWith(":1"))
         assertSame(psiFile, element.containingFile)
     }

@@ -103,7 +103,7 @@ internal object ArmeriaJUnitServerExtensionSupport {
         if (!hasRegisterExtensionAnnotation(field) || !isServerExtensionType(field.type, field.project, scope)) {
             return null
         }
-        val variableName = field.name ?: return null
+        val variableName = field.name
         val containingClass = field.containingClass ?: return null
         return ArmeriaJUnitServerExtension.create(
             element = field,
@@ -123,7 +123,7 @@ internal object ArmeriaJUnitServerExtensionSupport {
         if (!hasRegisterExtensionAnnotation(method) || !isServerExtensionType(method.returnType, method.project, scope)) {
             return null
         }
-        val variableName = method.name ?: return null
+        val variableName = method.name
         val containingClass = method.containingClass ?: return null
         val containingClassName = containingClass.qualifiedName ?: return null
         return ArmeriaJUnitServerExtension.create(
@@ -257,15 +257,15 @@ internal object ArmeriaJUnitServerExtensionSupport {
             if (importPath.isAllUnder) {
                 val packageName =
                     importPath.pathStr
-                        ?.removeSuffix(".*")
-                        ?.removeSuffix("*")
-                        ?.trimEnd('.')
+                        .removeSuffix(".*")
+                        .removeSuffix("*")
+                        .trimEnd('.')
                 if ("$packageName.$REGISTER_EXTENSION_ANNOTATION_SHORT" == REGISTER_EXTENSION_ANNOTATION) {
                     return true
                 }
             } else {
                 val path = importPath.pathStr
-                if (path == REGISTER_EXTENSION_ANNOTATION || path?.endsWith(".$REGISTER_EXTENSION_ANNOTATION_SHORT") == true) {
+                if (path == REGISTER_EXTENSION_ANNOTATION || path.endsWith(".$REGISTER_EXTENSION_ANNOTATION_SHORT")) {
                     return true
                 }
             }
@@ -283,15 +283,15 @@ internal object ArmeriaJUnitServerExtensionSupport {
             if (importPath.isAllUnder) {
                 val packageName =
                     importPath.pathStr
-                        ?.removeSuffix(".*")
-                        ?.removeSuffix("*")
-                        ?.trimEnd('.')
+                        .removeSuffix(".*")
+                        .removeSuffix("*")
+                        .trimEnd('.')
                 if (!packageName.isNullOrEmpty()) {
                     return "$packageName.$shortName"
                 }
             } else {
                 val path = importPath.pathStr
-                if (path == shortName || path?.endsWith(".$shortName") == true) {
+                if (path == shortName || path.endsWith(".$shortName")) {
                     return path
                 }
             }
@@ -617,7 +617,7 @@ internal object ArmeriaJUnitServerExtensionSupport {
         when (val resolved = reference.reference?.resolve()) {
             is PsiClass, is KtClass -> return true
         }
-        val name = reference.getReferencedName() ?: return false
+        val name = reference.getReferencedName()
         return reference.containingKtFile.declarations.any { declaration ->
             (declaration is KtClass && declaration.name == name) ||
                 (declaration is KtObjectDeclaration && declaration.name == name)
@@ -706,7 +706,7 @@ internal object ArmeriaJUnitServerExtensionSupport {
         names: MutableSet<String>,
     ) {
         when (expression) {
-            is KtNameReferenceExpression -> expression.getReferencedName()?.let(names::add)
+            is KtNameReferenceExpression -> expression.getReferencedName().let(names::add)
             is KtCallExpression -> {
                 (expression.calleeExpression as? KtNameReferenceExpression)?.getReferencedName()?.let(names::add)
                 (expression.parent as? KtDotQualifiedExpression)

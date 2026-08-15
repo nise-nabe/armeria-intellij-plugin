@@ -4,6 +4,7 @@ import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.openapi.command.WriteCommandAction
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase5
 import org.junit.jupiter.api.Test
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class ArmeriaKotlinParamCompletionTest : ArmeriaFixtureTestBase5() {
@@ -71,10 +72,13 @@ class ArmeriaKotlinParamCompletionTest : ArmeriaFixtureTestBase5() {
             """.trimIndent(),
         )
 
-        val reference = myFixture.file.findReferenceAt(myFixture.editor.caretModel.offset)
-        assertTrue(reference != null, "Expected a path-variable reference at the caret")
+        val reference =
+            assertNotNull(
+                myFixture.file.findReferenceAt(myFixture.editor.caretModel.offset),
+                "Expected a path-variable reference at the caret",
+            )
         WriteCommandAction.runWriteCommandAction(myFixture.project) {
-            reference!!.handleElementRename("userId")
+            reference.handleElementRename("userId")
         }
         val updated = myFixture.editor.document.text
         assertTrue(updated.contains("@Get(\"/users/{userId}\")"), updated)
@@ -119,10 +123,13 @@ class ArmeriaKotlinParamCompletionTest : ArmeriaFixtureTestBase5() {
             """.trimIndent(),
         )
 
-        val reference = myFixture.file.findReferenceAt(myFixture.editor.caretModel.offset)
-        assertTrue(reference != null, "Expected a path-variable reference at the caret")
+        val reference =
+            assertNotNull(
+                myFixture.file.findReferenceAt(myFixture.editor.caretModel.offset),
+                "Expected a path-variable reference at the caret",
+            )
         WriteCommandAction.runWriteCommandAction(myFixture.project) {
-            reference!!.handleElementRename("userId")
+            reference.handleElementRename("userId")
         }
         val updated = myFixture.editor.document.text
         assertTrue(updated.contains("(?<userId>"), updated)
@@ -152,10 +159,13 @@ class ArmeriaKotlinParamCompletionTest : ArmeriaFixtureTestBase5() {
             """.trimIndent(),
         )
 
-        val reference = myFixture.file.findReferenceAt(myFixture.editor.caretModel.offset)
-        assertTrue(reference != null, "Expected a path-variable reference at the caret")
+        val reference =
+            assertNotNull(
+                myFixture.file.findReferenceAt(myFixture.editor.caretModel.offset),
+                "Expected a path-variable reference at the caret",
+            )
         WriteCommandAction.runWriteCommandAction(myFixture.project) {
-            reference!!.handleElementRename("organization")
+            reference.handleElementRename("organization")
         }
         val updated = myFixture.editor.document.text
         assertTrue(updated.contains("@PathPrefix(\"/orgs/{organization}\")"), updated)
@@ -180,10 +190,13 @@ class ArmeriaKotlinParamCompletionTest : ArmeriaFixtureTestBase5() {
             """.trimIndent(),
         )
 
-        val reference = myFixture.file.findReferenceAt(myFixture.editor.caretModel.offset)
-        assertTrue(reference != null, "Expected a path-variable reference at the caret")
+        val reference =
+            assertNotNull(
+                myFixture.file.findReferenceAt(myFixture.editor.caretModel.offset),
+                "Expected a path-variable reference at the caret",
+            )
         WriteCommandAction.runWriteCommandAction(myFixture.project) {
-            reference!!.handleElementRename("userId")
+            reference.handleElementRename("userId")
         }
         val updated = myFixture.editor.document.text
         assertTrue(updated.contains("@Get(\"/users/{userId}\")"), updated)
@@ -208,10 +221,13 @@ class ArmeriaKotlinParamCompletionTest : ArmeriaFixtureTestBase5() {
             """.trimIndent(),
         )
 
-        val reference = myFixture.file.findReferenceAt(myFixture.editor.caretModel.offset)
-        assertTrue(reference != null, "Expected a path-variable reference at the caret")
+        val reference =
+            assertNotNull(
+                myFixture.file.findReferenceAt(myFixture.editor.caretModel.offset),
+                "Expected a path-variable reference at the caret",
+            )
         WriteCommandAction.runWriteCommandAction(myFixture.project) {
-            reference!!.handleElementRename("userId")
+            reference.handleElementRename("userId")
         }
         val updated = myFixture.editor.document.text
         assertTrue(updated.contains("/users/{userId}"), updated)

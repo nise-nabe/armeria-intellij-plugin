@@ -39,7 +39,7 @@ class ArmeriaJUnitServerExtensionLineMarkerProviderTest : ArmeriaLightJavaCodeIn
         )
 
         val field = PsiTreeUtil.findChildOfType(myFixture.file, PsiField::class.java)!!
-        val marker = javaProvider.getLineMarkerInfo(field.nameIdentifier!!)
+        val marker = javaProvider.getLineMarkerInfo(field.nameIdentifier)
 
         kotlinAssertNotNull(marker)
         assertEquals(AllIcons.RunConfigurations.Junit, marker.icon)
@@ -83,7 +83,7 @@ class ArmeriaJUnitServerExtensionLineMarkerProviderTest : ArmeriaLightJavaCodeIn
         )
 
         val field = PsiTreeUtil.findChildOfType(myFixture.file, PsiField::class.java)!!
-        assertNull(javaProvider.getLineMarkerInfo(field.nameIdentifier!!))
+        assertNull(javaProvider.getLineMarkerInfo(field.nameIdentifier))
     }
 
     fun testNonExtensionKotlinPropertyHasNoMarker() {
@@ -126,7 +126,7 @@ class ArmeriaJUnitServerExtensionLineMarkerProviderTest : ArmeriaLightJavaCodeIn
             val psiFile = PsiManager.getInstance(project).findFile(virtualFile)!!
             val field = PsiTreeUtil.findChildOfType(psiFile, PsiField::class.java)!!
 
-            assertNull(javaProvider.getLineMarkerInfo(field.nameIdentifier!!))
+            assertNull(javaProvider.getLineMarkerInfo(field.nameIdentifier))
         }
     }
 
