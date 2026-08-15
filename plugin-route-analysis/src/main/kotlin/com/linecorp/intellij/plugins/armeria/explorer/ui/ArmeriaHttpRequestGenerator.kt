@@ -137,7 +137,6 @@ object ArmeriaHttpRequestGenerator {
             appendLine("Accept: $JSON_MEDIA_TYPE")
             appendLine()
             appendLine("""{"query": "$query"}""")
-            appendLine()
         }
     }
 
