@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.inspection
 import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.ProblemsHolder
+import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
@@ -16,9 +17,11 @@ import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClassOrObject
+import org.jetbrains.kotlin.psi.KtConstructor
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
+import org.jetbrains.kotlin.psi.KtSuperTypeListEntry
 import org.jetbrains.kotlin.psi.KtVisitorVoid
 
 class ArmeriaMissingBlockingKotlinInspection : LocalInspectionTool() {
@@ -115,10 +118,7 @@ class ArmeriaMissingBlockingKotlinInspection : LocalInspectionTool() {
                         if (referencedName?.endsWith("ImplBase") == true || referencedName == "BindableService") {
                             return true
                         }
-                        entry.typeReference
-                            ?.references
-                            ?.firstNotNullOfOrNull { it.resolve() }
-                            ?.let { queue.add(it) }
+                        resolveSuperType(entry, current)?.let { queue.add(it) }
                     }
                 }
                 is PsiClass -> {
@@ -127,10 +127,42 @@ class ArmeriaMissingBlockingKotlinInspection : LocalInspectionTool() {
                     }
                     current.supers.forEach { queue.add(it) }
                 }
+                is PsiMethod -> current.containingClass?.let { queue.add(it) }
+                is KtConstructor<*> -> queue.add(current.getContainingClassOrObject())
             }
         }
         return false
     }
+
+    private fun resolveSuperType(
+        entry: KtSuperTypeListEntry,
+        klass: KtClassOrObject,
+    ): PsiElement? {
+        entry.typeReference
+            ?.references
+            ?.firstNotNullOfOrNull { it.resolve() }
+            ?.let { resolved -> asHierarchyType(resolved)?.let { return it } }
+        val shortName = entry.typeAsUserType?.referencedName ?: return null
+        val file = klass.containingKtFile
+        val facade = JavaPsiFacade.getInstance(file.project)
+        file.importDirectives
+            .mapNotNull { it.importPath?.pathStr }
+            .firstOrNull { it == shortName || it.endsWith(".$shortName") }
+            ?.let { imported ->
+                facade.findClass(imported, file.resolveScope)?.let { return it }
+            }
+        val pkg = file.packageFqName.asString()
+        val fqn = if (pkg.isEmpty()) shortName else "$pkg.$shortName"
+        return facade.findClass(fqn, file.resolveScope)
+    }
+
+    private fun asHierarchyType(element: PsiElement): PsiElement? =
+        when (element) {
+            is PsiClass, is KtClassOrObject -> element
+            is PsiMethod -> element.containingClass
+            is KtConstructor<*> -> element.getContainingClassOrObject()
+            else -> null
+        }
 
     private fun isOnInspectedFunctionPath(
         function: KtNamedFunction,

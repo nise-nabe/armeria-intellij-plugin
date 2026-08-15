@@ -149,6 +149,17 @@ class ArmeriaMissingBlockingInspectionTest : ArmeriaFixtureTestBase5() {
 
     @Test
     fun highlightsJdbcWithoutBlocking() {
+        myFixture.addClass(
+            """
+            package java.sql;
+
+            public class DriverManager {
+                public static Object getConnection(String url) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
         myFixture.configureByText(
             "DbService.java",
             """

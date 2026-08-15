@@ -68,6 +68,14 @@ internal object ArmeriaBlockingCallPatterns {
                     return true
                 }
             }
+            "getConnection" -> {
+                if (ownerFqn != null && ownerFqn in JDBC_OWNERS) {
+                    return true
+                }
+                if (unresolved && qualifierText?.substringAfterLast('.') == "DriverManager") {
+                    return true
+                }
+            }
             "runBlocking" -> {
                 if (ownerFqn?.startsWith("kotlinx.coroutines") == true) {
                     return true

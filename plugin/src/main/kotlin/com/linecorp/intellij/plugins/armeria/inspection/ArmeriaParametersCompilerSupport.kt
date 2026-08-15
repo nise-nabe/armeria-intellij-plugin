@@ -51,19 +51,19 @@ internal object ArmeriaParametersCompilerSupport {
     ): Boolean {
         val project = element.project
         val module = ModuleUtilCore.findModuleForPsiElement(element)
+        if (compilerOptionsHaveFlag(project, module, mode)) {
+            return true
+        }
         if (module == null) {
-            return compilerOptionsHaveFlag(project, null, mode) || gradleScriptsHaveFlag(project, null, mode)
+            return gradleScriptsHaveFlag(project, null, mode)
         }
         val key = if (mode == ArmeriaParameterNameMode.JAVA) JAVA_FLAG_KEY else KOTLIN_FLAG_KEY
         return CachedValuesManager.getManager(project).getCachedValue(
             module,
             key,
             CachedValueProvider {
-                val enabled =
-                    compilerOptionsHaveFlag(project, module, mode) || gradleScriptsHaveFlag(project, module, mode)
                 CachedValueProvider.Result.create(
-                    enabled,
-                    CompilerConfiguration.getInstance(project),
+                    gradleScriptsHaveFlag(project, module, mode),
                     PsiModificationTracker.MODIFICATION_COUNT,
                 )
             },
