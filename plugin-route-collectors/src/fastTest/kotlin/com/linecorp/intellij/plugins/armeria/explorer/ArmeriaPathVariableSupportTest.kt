@@ -4,6 +4,8 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaPathVariableSupport
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ArmeriaPathVariableSupportTest {
     @Test
@@ -53,8 +55,39 @@ class ArmeriaPathVariableSupportTest {
     }
 
     @Test
-    fun globPathsHaveNoVariables() {
-        assertEquals(emptyList(), ArmeriaPathVariableSupport.extractPathVariables("glob:/users/**"))
+    fun extractGlobWildcardsAsIndexedParams() {
+        assertEquals(listOf("0"), ArmeriaPathVariableSupport.extractPathVariables("glob:/users/**"))
+        assertEquals(listOf("0", "1"), ArmeriaPathVariableSupport.extractPathVariables("glob:/*/hello/**"))
+        assertEquals(listOf("0"), ArmeriaPathVariableSupport.extractPathVariables("glob:/foo*"))
+        assertEquals(emptyList(), ArmeriaPathVariableSupport.extractPathVariables("glob:/users"))
+        assertEquals(
+            listOf("0"),
+            ArmeriaPathVariableSupport.extractPathVariables("/files/**", PathType.GLOB),
+        )
+    }
+
+    @Test
+    fun globOccurrencesPointAtWildcards() {
+        val path = "glob:/*/hello/**"
+        val occurrences = ArmeriaPathVariableSupport.pathVariableOccurrences(path)
+        assertEquals(listOf("0", "1"), occurrences.map { it.name })
+        assertEquals("*", path.substring(occurrences[0].startOffset, occurrences[0].endOffset))
+        assertEquals("**", path.substring(occurrences[1].startOffset, occurrences[1].endOffset))
+    }
+
+    @Test
+    fun invalidGlobWildcardsAreNotExtracted() {
+        assertEquals(emptyList(), ArmeriaPathVariableSupport.extractPathVariables("glob:/foo***"))
+    }
+
+    @Test
+    fun replaceDoesNotRewriteGlobWildcards() {
+        assertEquals(
+            "glob:/*/hello/**",
+            ArmeriaPathVariableSupport.replacePathVariableName("glob:/*/hello/**", "0", "prefix"),
+        )
+        assertFalse(ArmeriaPathVariableSupport.isRenameableVariable("0", listOf("glob:/*/hello/**")))
+        assertTrue(ArmeriaPathVariableSupport.isRenameableVariable("id", listOf("/users/{id}")))
     }
 
     @Test

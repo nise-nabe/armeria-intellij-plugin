@@ -234,6 +234,32 @@ class ArmeriaAnnotatedMetadataSupportTest : ArmeriaFixtureTestBase() {
         )
     }
 
+    fun testGlobWildcardsArePathVariables() {
+        myFixture.configureByText(
+            "GlobService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.*;
+
+            public class GlobService {
+                @Get("glob:/*/hello/**")
+                public String match() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val route = routes.single()
+        assertEquals(PathType.GLOB, route.pathType)
+        assertEquals(
+            listOf(message("route.explorer.hint.pathVariables", "0, 1")),
+            route.contentHints,
+        )
+    }
+
     fun testDuplicateDescriptionIsNotRepeated() {
         myFixture.configureByText(
             "DupService.java",

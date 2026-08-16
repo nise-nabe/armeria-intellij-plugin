@@ -28,6 +28,8 @@ class ArmeriaParamPathVariableInspectionTest : ArmeriaFixtureTestBase5() {
             "@Get(\"/users/{id:[0-9]+}\")|id",
             "@Get(\"/years/{year:[0-9]{4}}\")|year",
             "@Get(\"regex:^(?<userId>\\\\d+)$\")|userId",
+            "@Get(\"glob:/users/**\")|0",
+            "@Get(\"glob:/*/hello/**\")|0, 1",
         ],
     )
     fun highlightsMissingPathVariable(
@@ -58,6 +60,27 @@ class ArmeriaParamPathVariableInspectionTest : ArmeriaFixtureTestBase5() {
     @Test
     fun allowsMatchingParam() {
         configureUsersGet("""public String handler(@Param("id") String id) { return id; }""")
+        assertNoParamMismatchHighlights()
+    }
+
+    @Test
+    fun allowsMatchingGlobWildcardParams() {
+        myFixture.configureByText(
+            "GlobService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.Param;
+
+            public class GlobService {
+                @Get("glob:/*/hello/**")
+                public String handler(@Param("0") String prefix, @Param("1") String rest) {
+                    return prefix;
+                }
+            }
+            """.trimIndent(),
+        )
         assertNoParamMismatchHighlights()
     }
 

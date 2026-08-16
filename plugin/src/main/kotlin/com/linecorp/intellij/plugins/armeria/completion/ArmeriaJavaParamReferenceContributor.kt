@@ -116,6 +116,8 @@ private class ArmeriaJavaPathVariableReference(
 ) : PsiReferenceBase<PsiLiteralExpression>(literal, rangeInElement, true) {
     override fun resolve(): PsiElement = element
 
+    override fun getCanonicalText(): String = variableName
+
     override fun handleElementRename(newElementName: String): PsiElement {
         renameJavaPathVariable(method, variableName, newElementName)
         return element
@@ -130,6 +132,8 @@ private class ArmeriaJavaPathPrefixVariableReference(
 ) : PsiReferenceBase<PsiLiteralExpression>(literal, rangeInElement, true) {
     override fun resolve(): PsiElement = element
 
+    override fun getCanonicalText(): String = variableName
+
     override fun handleElementRename(newElementName: String): PsiElement {
         renameJavaClassPathVariable(ownerClass, variableName, newElementName)
         return element
@@ -142,6 +146,9 @@ internal fun renameJavaPathVariable(
     newName: String,
 ) {
     if (oldName.isEmpty() || oldName == newName) {
+        return
+    }
+    if (!ArmeriaPathVariableSupport.isRenameableVariable(oldName, javaRouteRawPaths(method))) {
         return
     }
     val owner = method.containingClass
@@ -159,6 +166,9 @@ internal fun renameJavaClassPathVariable(
     newName: String,
 ) {
     if (oldName.isEmpty() || oldName == newName) {
+        return
+    }
+    if (!ArmeriaPathVariableSupport.isRenameableVariable(oldName, javaClassRawPaths(owner))) {
         return
     }
     val annotations = mutableListOf<PsiAnnotation>()
@@ -181,6 +191,45 @@ private fun classPrefixHasVariable(
             owner.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION),
         )
     return name in ArmeriaPathVariableSupport.extractPathVariables(prefix)
+}
+
+private fun javaRouteRawPaths(method: PsiMethod): List<String> {
+    val classPrefix =
+        ArmeriaRouteSupport.extractPrimaryPath(
+            method.containingClass?.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION),
+        )
+    val route = ArmeriaRouteSupport.findRouteAnnotation(method)
+    val routePaths =
+        if (route != null) {
+            ArmeriaRouteSupport.extractPaths(route.first) + ArmeriaRouteSupport.extractPathAnnotations(method)
+        } else {
+            emptyList()
+        }
+    return buildList {
+        if (classPrefix.isNotEmpty()) {
+            add(classPrefix)
+        }
+        addAll(routePaths)
+    }
+}
+
+private fun javaClassRawPaths(owner: PsiClass): List<String> {
+    val classPrefix =
+        ArmeriaRouteSupport.extractPrimaryPath(
+            owner.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION),
+        )
+    return buildList {
+        if (classPrefix.isNotEmpty()) {
+            add(classPrefix)
+        }
+        owner.methods
+            .filter { it.containingClass == owner }
+            .forEach { method ->
+                val route = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return@forEach
+                addAll(ArmeriaRouteSupport.extractPaths(route.first))
+                addAll(ArmeriaRouteSupport.extractPathAnnotations(method))
+            }
+    }
 }
 
 private fun javaAnnotationsOnMethod(method: PsiMethod): List<PsiAnnotation> =
