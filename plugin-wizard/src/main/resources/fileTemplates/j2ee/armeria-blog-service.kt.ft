@@ -1,0 +1,71 @@
+package ${context.rootPackage}
+
+import com.linecorp.armeria.common.HttpResponse
+import com.linecorp.armeria.common.HttpStatus
+import com.linecorp.armeria.server.annotation.ConsumesJson
+import com.linecorp.armeria.server.annotation.Delete
+import com.linecorp.armeria.server.annotation.Get
+import com.linecorp.armeria.server.annotation.Param
+import com.linecorp.armeria.server.annotation.Post
+import com.linecorp.armeria.server.annotation.ProducesJson
+import com.linecorp.armeria.server.annotation.Put
+#if ($context.hasAnyLibrary("armeria-spring-boot3-starter", "armeria-spring-boot3-autoconfigure", "armeria-spring-boot2-autoconfigure", "armeria-spring-boot3-webflux-starter", "armeria-spring-boot3-webflux-autoconfigure", "armeria-spring-boot2-webflux-autoconfigure"))
+import org.springframework.stereotype.Component
+#end
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
+
+class BlogPost {
+    var id: Int = 0
+    var title: String = ""
+    var content: String = ""
+}
+
+#if ($context.hasAnyLibrary("armeria-spring-boot3-starter", "armeria-spring-boot3-autoconfigure", "armeria-spring-boot2-autoconfigure", "armeria-spring-boot3-webflux-starter", "armeria-spring-boot3-webflux-autoconfigure", "armeria-spring-boot2-webflux-autoconfigure"))
+@Component
+#end
+class BlogService {
+    private val posts = ConcurrentHashMap<Int, BlogPost>()
+    private val idGenerator = AtomicInteger()
+
+    @Post("/blogs")
+    @ConsumesJson
+    @ProducesJson
+    fun create(request: BlogPost): BlogPost {
+        val created = BlogPost().apply {
+            id = idGenerator.incrementAndGet()
+            title = request.title
+            content = request.content
+        }
+        posts[created.id] = created
+        return created
+    }
+
+    @Get("/blogs/:id")
+    fun get(@Param id: Int): HttpResponse {
+        val post = posts[id] ?: return HttpResponse.of(HttpStatus.NOT_FOUND)
+        return HttpResponse.ofJson(post)
+    }
+
+    @Get("/blogs")
+    @ProducesJson
+    fun list(): Collection<BlogPost> = posts.values
+
+    @Put("/blogs/:id")
+    @ConsumesJson
+    @ProducesJson
+    fun update(@Param id: Int, request: BlogPost): HttpResponse {
+        val existing = posts[id] ?: return HttpResponse.of(HttpStatus.NOT_FOUND)
+        existing.title = request.title
+        existing.content = request.content
+        return HttpResponse.ofJson(existing)
+    }
+
+    @Delete("/blogs/:id")
+    fun delete(@Param id: Int): HttpResponse {
+        if (posts.remove(id) == null) {
+            return HttpResponse.of(HttpStatus.NOT_FOUND)
+        }
+        return HttpResponse.of(HttpStatus.NO_CONTENT)
+    }
+}

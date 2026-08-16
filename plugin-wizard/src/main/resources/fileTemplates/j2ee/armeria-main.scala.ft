@@ -5,10 +5,12 @@ import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.SpringBootApplication
 
 @SpringBootApplication
-open class Main
+class Main
 
-fun main(args: Array<String>) {
-    SpringApplication.run(Main::class.java, *args)
+object Main {
+  def main(args: Array[String]): Unit = {
+    SpringApplication.run(classOf[Main], args: _*)
+  }
 }
 #else
 import com.linecorp.armeria.server.Server
@@ -16,19 +18,19 @@ import com.linecorp.armeria.server.Server
 import com.linecorp.armeria.server.grpc.GrpcService
 #end
 
-fun main() {
-    val server = Server.builder()
-        .http(8080)
-        .annotatedService(BlogService())
+object Main {
+  def main(args: Array[String]): Unit = {
+    val sb = Server.builder()
+      .http(8080)
+      .annotatedService(new BlogService())
 #if ($context.hasLibrary("armeria-grpc"))
-        .service(
-            GrpcService.builder()
-                .addService(HelloServiceImpl())
-                .build(),
-        )
+    sb.service(GrpcService.builder()
+      .addService(new HelloServiceImpl())
+      .build())
 #end
-        .build()
+    val server = sb.build()
     server.closeOnJvmShutdown()
     server.start().join()
+  }
 }
 #end

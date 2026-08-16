@@ -19,6 +19,8 @@ class ArmeriaWizardTemplateTestContext(
 
     fun hasLibrary(libraryId: String): Boolean = libraryId in libraries
 
+    fun hasAnyLibrary(vararg libraryIds: String): Boolean = libraryIds.any { it in libraries }
+
     fun hasLanguage(languageId: String): Boolean = language == languageId
 
     fun getVersion(

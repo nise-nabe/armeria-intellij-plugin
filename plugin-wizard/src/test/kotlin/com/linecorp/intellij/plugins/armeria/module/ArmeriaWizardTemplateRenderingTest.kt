@@ -69,6 +69,57 @@ class ArmeriaWizardTemplateRenderingTest {
     }
 
     @Test
+    fun springBoot3StarterRendersApplicationYmlAndConfigurator() {
+        val context =
+            ArmeriaWizardTemplateTestContext(
+                language = "kotlin",
+                libraries = setOf("armeria-spring-boot3-starter"),
+            )
+        val applicationYml = renderBuildTemplate("fileTemplates/j2ee/armeria-application.yml.ft", context)
+        val configurator =
+            renderBuildTemplate("fileTemplates/j2ee/armeria-server-configurator.kt.ft", context)
+        val main = renderBuildTemplate("fileTemplates/j2ee/armeria-main.kt.ft", context)
+
+        assertTrue(applicationYml.contains("web-application-type: none"))
+        assertTrue(applicationYml.contains("armeria:"))
+        assertTrue(applicationYml.contains("port: 8080"))
+        assertTrue(configurator.contains("ArmeriaServerConfigurator"))
+        assertTrue(configurator.contains("annotatedService(BlogService())"))
+        assertTrue(main.contains("SpringApplication.run"))
+        assertFalse(main.contains("Server.builder()"))
+    }
+
+    @Test
+    fun grpcRendersProtoAndServiceStub() {
+        val context =
+            ArmeriaWizardTemplateTestContext(
+                language = "java",
+                libraries = setOf("armeria-grpc"),
+            )
+        val proto = renderBuildTemplate("fileTemplates/j2ee/armeria-hello.proto.ft", context)
+        val stub = renderBuildTemplate("fileTemplates/j2ee/armeria-grpc-service.java.ft", context)
+        val main = renderBuildTemplate("fileTemplates/j2ee/armeria-main.java.ft", context)
+
+        assertTrue(proto.contains("option java_package = \"${context.rootPackage}\";"))
+        assertTrue(proto.contains("service HelloService"))
+        assertTrue(stub.contains("class HelloServiceImpl extends HelloServiceGrpc.HelloServiceImplBase"))
+        assertTrue(main.contains("GrpcService.builder()"))
+        assertTrue(main.contains("new HelloServiceImpl()"))
+    }
+
+    @Test
+    fun scalaMainTemplateRendersBlogService() {
+        val context = ArmeriaWizardTemplateTestContext(language = "scala")
+        val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-main.scala.ft", context)
+
+        assertTrue(rendered.contains("package ${context.rootPackage}"))
+        assertTrue(rendered.contains("object Main"))
+        assertTrue(rendered.contains("def main(args: Array[String]): Unit"))
+        assertTrue(rendered.contains("new BlogService()"))
+        assertTrue(rendered.contains("Server.builder()"))
+    }
+
+    @Test
     fun libraryBlocksAreOmittedWhenNotSelected() {
         val context = ArmeriaWizardTemplateTestContext(libraries = emptySet())
         val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-build.gradle.kts.ft", context)
@@ -79,13 +130,65 @@ class ArmeriaWizardTemplateRenderingTest {
     }
 
     @Test
-    fun kotlinMainTemplateRendersAnnotatedService() {
+    fun kotlinMainTemplateRendersBlogService() {
         val context = ArmeriaWizardTemplateTestContext(language = "kotlin")
         val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-main.kt.ft", context)
 
         assertTrue(rendered.contains("package ${context.rootPackage}"))
-        assertTrue(rendered.contains("@Get(\"/hello\")"))
         assertTrue(rendered.contains("fun main()"))
+        assertTrue(rendered.contains("BlogService()"))
+        assertTrue(rendered.contains("Server.builder()"))
+        assertFalse(rendered.contains("SpringApplication"))
+    }
+
+    @Test
+    fun javaBlogServiceTemplateRendersCrudRoutes() {
+        val context = ArmeriaWizardTemplateTestContext(language = "java")
+        val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-blog-service.java.ft", context)
+
+        assertTrue(rendered.contains("@Post(\"/blogs\")"))
+        assertTrue(rendered.contains("@Get(\"/blogs/:id\")"))
+        assertTrue(rendered.contains("@Get(\"/blogs\")"))
+        assertTrue(rendered.contains("@Put(\"/blogs/:id\")"))
+        assertTrue(rendered.contains("@Delete(\"/blogs/:id\")"))
+        assertFalse(rendered.contains("@Component"))
+    }
+
+    @Test
+    fun springBootBlogServiceUsesComponent() {
+        val context =
+            ArmeriaWizardTemplateTestContext(
+                language = "kotlin",
+                libraries = setOf("armeria-spring-boot3-starter"),
+            )
+        val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-blog-service.kt.ft", context)
+
+        assertTrue(rendered.contains("@Component"))
+        assertTrue(rendered.contains("@Post(\"/blogs\")"))
+    }
+
+    @Test
+    fun newCatalogLibrariesRenderWhenSelected() {
+        val context =
+            ArmeriaWizardTemplateTestContext(
+                libraries =
+                    setOf(
+                        "armeria-consul",
+                        "armeria-oauth2",
+                        "armeria-reactor3",
+                        "armeria-resilience4j2",
+                        "armeria-resteasy",
+                        "armeria-spring-boot3-actuator-starter",
+                    ),
+            )
+        val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-build.gradle.kts.ft", context)
+
+        assertTrue(rendered.contains("armeria-consul"))
+        assertTrue(rendered.contains("armeria-oauth2"))
+        assertTrue(rendered.contains("armeria-reactor3"))
+        assertTrue(rendered.contains("armeria-resilience4j2"))
+        assertTrue(rendered.contains("armeria-resteasy"))
+        assertTrue(rendered.contains("armeria-spring-boot3-actuator-starter"))
     }
 
     @Test

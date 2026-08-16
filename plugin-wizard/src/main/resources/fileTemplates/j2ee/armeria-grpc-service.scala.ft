@@ -1,0 +1,13 @@
+package ${context.rootPackage}
+
+import io.grpc.stub.StreamObserver
+
+class HelloServiceImpl extends HelloServiceGrpc.HelloServiceImplBase {
+  override def hello(request: HelloRequest, responseObserver: StreamObserver[HelloReply]): Unit = {
+    val reply = HelloReply.newBuilder
+      .setMessage(s"Hello, ${request.getName}!")
+      .build()
+    responseObserver.onNext(reply)
+    responseObserver.onCompleted()
+  }
+}

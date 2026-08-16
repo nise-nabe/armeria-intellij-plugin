@@ -7,6 +7,7 @@
 - Generate HTTP Request fills `.http` files from route metadata: `Content-Type` / `Accept` from `@Consumes` / `@Produces` (including `@ConsumesJson` / `@ProducesJson`), `@MatchesHeader` request headers, a JSON body for JSON consumes, and `{id}` path placeholders. GraphQL operations get a POST `/graphql` stub; gRPC method files include a JSON body placeholder.
 - Inspections for annotated/gRPC methods that call known blocking APIs without `@Blocking`, client decorator order of `LoggingClient` / `RetryingClient` / `CircuitBreakerClient`, and unnamed `@Param` when javac `-parameters` (or Kotlin `javaParameters`) is missing.
 - Plugin install, update, enable, and disable no longer require an IDE restart.
+- New Project Wizard generates a REST blog sample, Spring Boot `ArmeriaServerConfigurator` + `application.yml` when a Spring starter is selected, a gRPC `.proto` and service stub when gRPC is selected, and a Scala `Main` sample. The library catalog includes Consul, OAuth 2.0, Resilience4j, RESTEasy, Reactor, and Spring Boot 3 Actuator starter.
 
 ### Changed
 

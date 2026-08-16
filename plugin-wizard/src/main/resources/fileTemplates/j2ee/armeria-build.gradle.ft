@@ -26,6 +26,9 @@ dependencies {
 #if ($context.hasLibrary("armeria-bucket4j"))
     implementation 'com.linecorp.armeria:armeria-bucket4j'
 #end
+#if ($context.hasLibrary("armeria-consul"))
+    implementation 'com.linecorp.armeria:armeria-consul'
+#end
 #if ($context.hasLibrary("armeria-dropwizard2"))
     implementation 'com.linecorp.armeria:armeria-dropwizard2'
 #end
@@ -56,11 +59,23 @@ dependencies {
 #if ($context.hasLibrary("armeria-logback12"))
     implementation 'com.linecorp.armeria:armeria-logback12'
 #end
+#if ($context.hasLibrary("armeria-oauth2"))
+    implementation 'com.linecorp.armeria:armeria-oauth2'
+#end
 #if ($context.hasLibrary("armeria-prometheus1"))
     implementation 'com.linecorp.armeria:armeria-prometheus1'
 #end
 #if ($context.hasLibrary("armeria-protobuf"))
     implementation 'com.linecorp.armeria:armeria-protobuf'
+#end
+#if ($context.hasLibrary("armeria-reactor3"))
+    implementation 'com.linecorp.armeria:armeria-reactor3'
+#end
+#if ($context.hasLibrary("armeria-resilience4j2"))
+    implementation 'com.linecorp.armeria:armeria-resilience4j2'
+#end
+#if ($context.hasLibrary("armeria-resteasy"))
+    implementation 'com.linecorp.armeria:armeria-resteasy'
 #end
 #if ($context.hasLibrary("armeria-retrofit2"))
     implementation 'com.linecorp.armeria:armeria-retrofit2'
@@ -103,6 +118,9 @@ dependencies {
 #end
 #if ($context.hasLibrary("armeria-spring-boot2-webflux-autoconfigure"))
     implementation 'com.linecorp.armeria:armeria-spring-boot2-webflux-autoconfigure'
+#end
+#if ($context.hasLibrary("armeria-spring-boot3-actuator-starter"))
+    implementation 'com.linecorp.armeria:armeria-spring-boot3-actuator-starter'
 #end
 #if ($context.hasLibrary("armeria-spring-boot3-autoconfigure"))
     implementation 'com.linecorp.armeria:armeria-spring-boot3-autoconfigure'

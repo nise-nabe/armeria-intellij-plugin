@@ -82,46 +82,26 @@ class ArmeriaModuleBuilder : StarterModuleBuilder() {
             }
         }
 
-        val isKotlin = starterContext.language == KOTLIN_STARTER_LANGUAGE
+        val languageId = starterContext.language.id
         val languageDir =
-            when {
-                isKotlin -> "kotlin"
-                starterContext.language == SCALA_STARTER_LANGUAGE -> "scala"
+            when (languageId) {
+                "kotlin" -> "kotlin"
+                "scala" -> "scala"
                 else -> "java"
             }
         val packagePath =
             suggestPackageName(starterContext.group, starterContext.artifact)
                 .replace('.', '/')
-        if (starterContext.language != SCALA_STARTER_LANGUAGE) {
-            val mainFileName = if (isKotlin) "Main.kt" else "Main.java"
-            val mainTemplate = if (isKotlin) "armeria-main.kt" else "armeria-main.java"
+        for (file in ArmeriaWizardSampleFiles.sourceTemplates(
+            languageId = languageId,
+            libraries = starterContext.libraryIds,
+            junit5 = starterContext.testFramework == JUNIT5_TEST_RUNNER,
+            packagePath = packagePath,
+        )) {
             assets.add(
                 GeneratorTemplateFile(
-                    "src/main/$languageDir/$packagePath/$mainFileName",
-                    ftManager.getJ2eeTemplate(mainTemplate),
-                ),
-            )
-            assets.add(
-                GeneratorTemplateFile(
-                    "src/main/resources/logback.xml",
-                    ftManager.getJ2eeTemplate("armeria-logback.xml"),
-                ),
-            )
-            if (starterContext.testFramework == JUNIT5_TEST_RUNNER) {
-                val testFileName = if (isKotlin) "MainTest.kt" else "MainTest.java"
-                val testTemplate = if (isKotlin) "armeria-service-test.kt" else "armeria-service-test.java"
-                assets.add(
-                    GeneratorTemplateFile(
-                        "src/test/$languageDir/$packagePath/$testFileName",
-                        ftManager.getJ2eeTemplate(testTemplate),
-                    ),
-                )
-            }
-        } else {
-            assets.add(
-                GeneratorTemplateFile(
-                    "src/main/resources/logback.xml",
-                    ftManager.getJ2eeTemplate("armeria-logback.xml"),
+                    file.relativePath,
+                    ftManager.getJ2eeTemplate(file.templateName),
                 ),
             )
         }
@@ -155,6 +135,7 @@ class ArmeriaModuleBuilder : StarterModuleBuilder() {
                     listOf(
                         ArmeriaBrave,
                         ArmeriaBucket4j,
+                        ArmeriaConsul,
                         ArmeriaDropwizard2,
                         ArmeriaEureka,
                         ArmeriaGraphql,
@@ -165,8 +146,12 @@ class ArmeriaModuleBuilder : StarterModuleBuilder() {
                         ArmeriaKotlin,
                         ArmeriaLogback,
                         ArmeriaLogback12,
+                        ArmeriaOAuth2,
                         ArmeriaPrometheus1,
                         ArmeriaProtobuf,
+                        ArmeriaReactor3,
+                        ArmeriaResilience4j2,
+                        ArmeriaResteasy,
                         ArmeriaRetrofit,
                         ArmeriaRxJava3,
                         ArmeriaSaml,
@@ -178,6 +163,7 @@ class ArmeriaModuleBuilder : StarterModuleBuilder() {
                         ArmeriaScalaPB3,
                         ArmeriaSpringBoot2,
                         ArmeriaSpringBoot2WebFlux,
+                        ArmeriaSpringBoot3ActuatorStarter,
                         ArmeriaSpringBoot3,
                         ArmeriaSpringBoot3Starter,
                         ArmeriaSpringBoot3WebFlux,
@@ -196,6 +182,7 @@ class ArmeriaModuleBuilder : StarterModuleBuilder() {
                     getDependencyConfig("/starters/armeria.pom"),
                     listOf(
                         ArmeriaGrpc,
+                        ArmeriaOAuth2,
                         ArmeriaThrift0_13,
                         ArmeriaThrift0_18,
                         ArmeriaRetrofit,

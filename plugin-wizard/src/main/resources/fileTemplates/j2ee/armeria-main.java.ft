@@ -1,20 +1,34 @@
 package ${context.rootPackage};
 
+#if ($context.hasAnyLibrary("armeria-spring-boot3-starter", "armeria-spring-boot3-autoconfigure", "armeria-spring-boot2-autoconfigure", "armeria-spring-boot3-webflux-starter", "armeria-spring-boot3-webflux-autoconfigure", "armeria-spring-boot2-webflux-autoconfigure"))
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class Main {
+    public static void main(String[] args) {
+        SpringApplication.run(Main.class, args);
+    }
+}
+#else
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.annotation.Get;
+#if ($context.hasLibrary("armeria-grpc"))
+import com.linecorp.armeria.server.grpc.GrpcService;
+#end
 
 public class Main {
     public static void main(String[] args) {
-        Server.builder()
-              .http(8080)
-              .annotatedService(new Object() {
-                  @Get("/hello")
-                  public String hello() {
-                      return "Hello, Armeria";
-                  }
-              })
-              .build()
-              .start()
-              .join();
+        Server server = Server.builder()
+                .http(8080)
+                .annotatedService(new BlogService())
+#if ($context.hasLibrary("armeria-grpc"))
+                .service(GrpcService.builder()
+                        .addService(new HelloServiceImpl())
+                        .build())
+#end
+                .build();
+        server.closeOnJvmShutdown();
+        server.start().join();
     }
 }
+#end

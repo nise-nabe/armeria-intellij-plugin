@@ -65,6 +65,21 @@ val ArmeriaProtobuf =
         description = message("module.library.armeria.protobuf.description"),
     )
 
+val ArmeriaOAuth2 =
+    armeriaLibrary(
+        id = "armeria-oauth2",
+        title = message("module.library.armeria.oauth2.title"),
+        description = message("module.library.armeria.oauth2.description"),
+        links =
+            listOf(
+                LibraryLink(
+                    type = LibraryLinkType.GUIDE,
+                    url = "https://armeria.dev/docs/setup",
+                    title = message("armeria.website.setup.title"),
+                ),
+            ),
+    )
+
 val ArmeriaPrometheus1 =
     armeriaLibrary(
         id = "armeria-prometheus1",
@@ -76,6 +91,51 @@ val ArmeriaPrometheus1 =
                     type = LibraryLinkType.GUIDE,
                     url = "https://armeria.dev/docs/monitoring-metrics",
                     title = message("armeria.website.prometheus.title"),
+                ),
+            ),
+    )
+
+val ArmeriaReactor3 =
+    armeriaLibrary(
+        id = "armeria-reactor3",
+        title = message("module.library.armeria.reactor3.title"),
+        description = message("module.library.armeria.reactor3.description"),
+        links =
+            listOf(
+                LibraryLink(
+                    type = LibraryLinkType.GUIDE,
+                    url = "https://armeria.dev/docs/setup",
+                    title = message("armeria.website.setup.title"),
+                ),
+            ),
+    )
+
+val ArmeriaResilience4j2 =
+    armeriaLibrary(
+        id = "armeria-resilience4j2",
+        title = message("module.library.armeria.resilience4j2.title"),
+        description = message("module.library.armeria.resilience4j2.description"),
+        links =
+            listOf(
+                LibraryLink(
+                    type = LibraryLinkType.GUIDE,
+                    url = "https://armeria.dev/docs/setup",
+                    title = message("armeria.website.setup.title"),
+                ),
+            ),
+    )
+
+val ArmeriaResteasy =
+    armeriaLibrary(
+        id = "armeria-resteasy",
+        title = message("module.library.armeria.resteasy.title"),
+        description = message("module.library.armeria.resteasy.description"),
+        links =
+            listOf(
+                LibraryLink(
+                    type = LibraryLinkType.GUIDE,
+                    url = "https://armeria.dev/docs/setup",
+                    title = message("armeria.website.setup.title"),
                 ),
             ),
     )
@@ -215,6 +275,21 @@ val ArmeriaSpringBoot2WebFlux =
                     type = LibraryLinkType.GUIDE,
                     url = "https://armeria.dev/docs/advanced-spring-webflux-integration",
                     title = message("armeria.website.spring-boot2-webflux.title"),
+                ),
+            ),
+    )
+
+val ArmeriaSpringBoot3ActuatorStarter =
+    armeriaLibrary(
+        id = "armeria-spring-boot3-actuator-starter",
+        title = message("module.library.armeria.spring-boot3-actuator-starter.title"),
+        description = message("module.library.armeria.spring-boot3-actuator-starter.description"),
+        links =
+            listOf(
+                LibraryLink(
+                    type = LibraryLinkType.GUIDE,
+                    url = "https://armeria.dev/docs/advanced-spring-boot-integration/#actuator-support",
+                    title = message("armeria.website.spring-boot3-actuator.title"),
                 ),
             ),
     )

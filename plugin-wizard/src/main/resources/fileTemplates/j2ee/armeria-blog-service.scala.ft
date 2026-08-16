@@ -1,0 +1,80 @@
+package ${context.rootPackage}
+
+import com.linecorp.armeria.common.HttpResponse
+import com.linecorp.armeria.common.HttpStatus
+import com.linecorp.armeria.server.annotation.ConsumesJson
+import com.linecorp.armeria.server.annotation.Delete
+import com.linecorp.armeria.server.annotation.Get
+import com.linecorp.armeria.server.annotation.Param
+import com.linecorp.armeria.server.annotation.Post
+import com.linecorp.armeria.server.annotation.ProducesJson
+import com.linecorp.armeria.server.annotation.Put
+#if ($context.hasAnyLibrary("armeria-spring-boot3-starter", "armeria-spring-boot3-autoconfigure", "armeria-spring-boot2-autoconfigure", "armeria-spring-boot3-webflux-starter", "armeria-spring-boot3-webflux-autoconfigure", "armeria-spring-boot2-webflux-autoconfigure"))
+import org.springframework.stereotype.Component
+#end
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
+
+final class BlogPost {
+  private var id: Int = 0
+  private var title: String = ""
+  private var content: String = ""
+
+  def getId: Int = id
+  def setId(value: Int): Unit = { id = value }
+  def getTitle: String = title
+  def setTitle(value: String): Unit = { title = value }
+  def getContent: String = content
+  def setContent(value: String): Unit = { content = value }
+}
+
+#if ($context.hasAnyLibrary("armeria-spring-boot3-starter", "armeria-spring-boot3-autoconfigure", "armeria-spring-boot2-autoconfigure", "armeria-spring-boot3-webflux-starter", "armeria-spring-boot3-webflux-autoconfigure", "armeria-spring-boot2-webflux-autoconfigure"))
+@Component
+#end
+final class BlogService {
+  private val posts = new ConcurrentHashMap[Integer, BlogPost]()
+  private val idGenerator = new AtomicInteger()
+
+  @Post(Array("/blogs"))
+  @ConsumesJson
+  @ProducesJson
+  def create(request: BlogPost): BlogPost = {
+    val created = new BlogPost()
+    created.setId(idGenerator.incrementAndGet())
+    created.setTitle(request.getTitle)
+    created.setContent(request.getContent)
+    posts.put(Integer.valueOf(created.getId), created)
+    created
+  }
+
+  @Get(Array("/blogs/:id"))
+  def get(@Param("id") id: Int): HttpResponse = {
+    val post = posts.get(Integer.valueOf(id))
+    if (post == null) HttpResponse.of(HttpStatus.NOT_FOUND)
+    else HttpResponse.ofJson(post)
+  }
+
+  @Get(Array("/blogs"))
+  @ProducesJson
+  def list(): java.util.Collection[BlogPost] = posts.values()
+
+  @Put(Array("/blogs/:id"))
+  @ConsumesJson
+  @ProducesJson
+  def update(@Param("id") id: Int, request: BlogPost): HttpResponse = {
+    val existing = posts.get(Integer.valueOf(id))
+    if (existing == null) {
+      HttpResponse.of(HttpStatus.NOT_FOUND)
+    } else {
+      existing.setTitle(request.getTitle)
+      existing.setContent(request.getContent)
+      HttpResponse.ofJson(existing)
+    }
+  }
+
+  @Delete(Array("/blogs/:id"))
+  def delete(@Param("id") id: Int): HttpResponse = {
+    if (posts.remove(Integer.valueOf(id)) == null) HttpResponse.of(HttpStatus.NOT_FOUND)
+    else HttpResponse.of(HttpStatus.NO_CONTENT)
+  }
+}

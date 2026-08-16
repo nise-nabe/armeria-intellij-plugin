@@ -71,6 +71,12 @@
             <artifactId>armeria-bucket4j</artifactId>
         </dependency>
 #end
+#if ($context.hasLibrary("armeria-consul"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-consul</artifactId>
+        </dependency>
+#end
 #if ($context.hasLibrary("armeria-dropwizard2"))
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
@@ -131,6 +137,12 @@
             <artifactId>armeria-logback12</artifactId>
         </dependency>
 #end
+#if ($context.hasLibrary("armeria-oauth2"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-oauth2</artifactId>
+        </dependency>
+#end
 #if ($context.hasLibrary("armeria-prometheus1"))
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
@@ -141,6 +153,24 @@
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria-protobuf</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-reactor3"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-reactor3</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-resilience4j2"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-resilience4j2</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-resteasy"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-resteasy</artifactId>
         </dependency>
 #end
 #if ($context.hasLibrary("armeria-retrofit2"))
@@ -228,6 +258,12 @@
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria-spring-boot2-webflux-autoconfigure</artifactId>
+        </dependency>
+#end
+#if ($context.hasLibrary("armeria-spring-boot3-actuator-starter"))
+        <dependency>
+            <groupId>com.linecorp.armeria</groupId>
+            <artifactId>armeria-spring-boot3-actuator-starter</artifactId>
         </dependency>
 #end
 #if ($context.hasLibrary("armeria-spring-boot3-autoconfigure"))
