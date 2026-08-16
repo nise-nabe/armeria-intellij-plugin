@@ -1,0 +1,104 @@
+package ${context.rootPackage};
+
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.server.annotation.ConsumesJson;
+import com.linecorp.armeria.server.annotation.Delete;
+import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.annotation.ProducesJson;
+import com.linecorp.armeria.server.annotation.Put;
+#if ($context.hasLibrary("armeria-spring-boot3-starter") || $context.hasLibrary("armeria-spring-boot3-autoconfigure") || $context.hasLibrary("armeria-spring-boot2-autoconfigure"))
+import org.springframework.stereotype.Component;
+#end
+
+import java.util.Collection;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+
+#if ($context.hasLibrary("armeria-spring-boot3-starter") || $context.hasLibrary("armeria-spring-boot3-autoconfigure") || $context.hasLibrary("armeria-spring-boot2-autoconfigure"))
+@Component
+#end
+public class BlogService {
+    private final ConcurrentHashMap<Integer, BlogPost> posts = new ConcurrentHashMap<>();
+    private final AtomicInteger idGenerator = new AtomicInteger();
+
+    @Post("/blogs")
+    @ConsumesJson
+    @ProducesJson
+    public BlogPost create(BlogPost request) {
+        BlogPost created = new BlogPost();
+        created.setId(idGenerator.incrementAndGet());
+        created.setTitle(request.getTitle());
+        created.setContent(request.getContent());
+        posts.put(created.getId(), created);
+        return created;
+    }
+
+    @Get("/blogs/:id")
+    public HttpResponse get(@Param int id) {
+        BlogPost post = posts.get(id);
+        if (post == null) {
+            return HttpResponse.of(HttpStatus.NOT_FOUND);
+        }
+        return HttpResponse.ofJson(post);
+    }
+
+    @Get("/blogs")
+    @ProducesJson
+    public Collection<BlogPost> list() {
+        return posts.values();
+    }
+
+    @Put("/blogs/:id")
+    @ConsumesJson
+    @ProducesJson
+    public HttpResponse update(@Param int id, BlogPost request) {
+        BlogPost existing = posts.get(id);
+        if (existing == null) {
+            return HttpResponse.of(HttpStatus.NOT_FOUND);
+        }
+        existing.setTitle(request.getTitle());
+        existing.setContent(request.getContent());
+        return HttpResponse.ofJson(existing);
+    }
+
+    @Delete("/blogs/:id")
+    public HttpResponse delete(@Param int id) {
+        if (posts.remove(id) == null) {
+            return HttpResponse.of(HttpStatus.NOT_FOUND);
+        }
+        return HttpResponse.of(HttpStatus.NO_CONTENT);
+    }
+
+    public static final class BlogPost {
+        private int id;
+        private String title = "";
+        private String content = "";
+
+        public int getId() {
+            return id;
+        }
+
+        public void setId(int id) {
+            this.id = id;
+        }
+
+        public String getTitle() {
+            return title;
+        }
+
+        public void setTitle(String title) {
+            this.title = title;
+        }
+
+        public String getContent() {
+            return content;
+        }
+
+        public void setContent(String content) {
+            this.content = content;
+        }
+    }
+}

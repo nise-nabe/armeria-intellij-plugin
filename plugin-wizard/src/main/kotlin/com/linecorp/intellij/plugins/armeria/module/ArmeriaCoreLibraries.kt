@@ -36,6 +36,30 @@ val ArmeriaBucket4j =
             ),
     )
 
+val ArmeriaConsul =
+    armeriaLibrary(
+        id = "armeria-consul",
+        title = message("module.library.armeria.consul.title"),
+        description = message("module.library.armeria.consul.description"),
+        links =
+            listOf(
+                LibraryLink(
+                    type = LibraryLinkType.GUIDE,
+                    url =
+                        "https://armeria.dev/docs/client-service-discovery/" +
+                            "#consul-based-service-discovery-with-consulendpointgroup",
+                    title = message("armeria.website.consul.service-discovery.title"),
+                ),
+                LibraryLink(
+                    type = LibraryLinkType.GUIDE,
+                    url =
+                        "https://armeria.dev/docs/server-service-registration/" +
+                            "#consul-based-service-registration-with-consulupdatinglistener",
+                    title = message("armeria.website.consul.service-register.title"),
+                ),
+            ),
+    )
+
 val ArmeriaDropwizard2 =
     armeriaLibrary(
         id = "armeria-dropwizard2",
