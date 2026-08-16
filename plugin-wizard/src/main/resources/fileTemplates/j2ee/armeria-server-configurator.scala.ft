@@ -1,5 +1,6 @@
 package ${context.rootPackage}
 
+import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator
 #if ($context.hasLibrary("armeria-grpc"))
 import com.linecorp.armeria.server.grpc.GrpcService
@@ -10,10 +11,10 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 class ArmeriaConfiguration {
   @Bean
-  def armeriaServerConfigurator(): ArmeriaServerConfigurator = {
+  def armeriaServerConfigurator(blogService: BlogService): ArmeriaServerConfigurator = {
     new ArmeriaServerConfigurator {
-      override def configure(sb: com.linecorp.armeria.server.ServerBuilder): Unit = {
-        sb.annotatedService(new BlogService())
+      override def configure(sb: ServerBuilder): Unit = {
+        sb.annotatedService(blogService)
 #if ($context.hasLibrary("armeria-grpc"))
         sb.service(GrpcService.builder()
           .addService(new HelloServiceImpl())

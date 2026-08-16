@@ -59,6 +59,22 @@ class ArmeriaWizardSampleFilesTest {
     }
 
     @Test
+    fun webfluxStarterDoesNotGenerateArmeriaServerSample() {
+        val files =
+            ArmeriaWizardSampleFiles.sourceTemplates(
+                languageId = "kotlin",
+                libraries = setOf("armeria-spring-boot3-webflux-starter"),
+                junit5 = true,
+                packagePath = "com/example/demo",
+            )
+        val paths = files.map { it.relativePath }
+
+        assertFalse(paths.any { it.contains("application.yml") })
+        assertFalse(paths.any { it.contains("ArmeriaConfiguration") })
+        assertTrue(paths.contains("src/main/kotlin/com/example/demo/Main.kt"))
+    }
+
+    @Test
     fun defaultJavaRestSampleOmitsSpringAndGrpcFiles() {
         val files =
             ArmeriaWizardSampleFiles.sourceTemplates(

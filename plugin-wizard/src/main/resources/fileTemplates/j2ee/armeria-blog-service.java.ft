@@ -9,7 +9,7 @@ import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.annotation.Put;
-#if ($context.hasAnyLibrary("armeria-spring-boot3-starter", "armeria-spring-boot3-autoconfigure", "armeria-spring-boot2-autoconfigure", "armeria-spring-boot3-webflux-starter", "armeria-spring-boot3-webflux-autoconfigure", "armeria-spring-boot2-webflux-autoconfigure"))
+#if ($context.hasLibrary("armeria-spring-boot3-starter") || $context.hasLibrary("armeria-spring-boot3-autoconfigure") || $context.hasLibrary("armeria-spring-boot2-autoconfigure"))
 import org.springframework.stereotype.Component;
 #end
 
@@ -17,7 +17,7 @@ import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-#if ($context.hasAnyLibrary("armeria-spring-boot3-starter", "armeria-spring-boot3-autoconfigure", "armeria-spring-boot2-autoconfigure", "armeria-spring-boot3-webflux-starter", "armeria-spring-boot3-webflux-autoconfigure", "armeria-spring-boot2-webflux-autoconfigure"))
+#if ($context.hasLibrary("armeria-spring-boot3-starter") || $context.hasLibrary("armeria-spring-boot3-autoconfigure") || $context.hasLibrary("armeria-spring-boot2-autoconfigure"))
 @Component
 #end
 public class BlogService {

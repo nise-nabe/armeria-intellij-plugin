@@ -8,11 +8,11 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
-class ArmeriaConfiguration {
+open class ArmeriaConfiguration {
     @Bean
-    fun armeriaServerConfigurator(): ArmeriaServerConfigurator {
+    open fun armeriaServerConfigurator(blogService: BlogService): ArmeriaServerConfigurator {
         return ArmeriaServerConfigurator { sb ->
-            sb.annotatedService(BlogService())
+            sb.annotatedService(blogService)
 #if ($context.hasLibrary("armeria-grpc"))
             sb.service(
                 GrpcService.builder()

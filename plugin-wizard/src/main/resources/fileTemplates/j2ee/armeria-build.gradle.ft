@@ -2,9 +2,20 @@ plugins {
     id 'java'
 #if($context.hasLanguage("kotlin"))
     id 'org.jetbrains.kotlin.jvm' version '${context.getVersion("org.jetbrains.kotlin", "kotlin-bom")}'
+#if ($context.hasLibrary("armeria-spring-boot3-starter") || $context.hasLibrary("armeria-spring-boot3-autoconfigure") || $context.hasLibrary("armeria-spring-boot2-autoconfigure"))
+    id 'org.jetbrains.kotlin.plugin.spring' version '${context.getVersion("org.jetbrains.kotlin", "kotlin-bom")}'
+#end
 #end
 #if ($context.hasLanguage("scala"))
     id 'scala'
+#end
+#if ($context.hasLibrary("armeria-spring-boot3-starter") || $context.hasLibrary("armeria-spring-boot3-autoconfigure"))
+    id 'org.springframework.boot' version '3.4.5'
+#elseif ($context.hasLibrary("armeria-spring-boot2-autoconfigure"))
+    id 'org.springframework.boot' version '2.7.18'
+#end
+#if ($context.hasLibrary("armeria-grpc"))
+    id 'com.google.protobuf' version '0.9.5'
 #end
 }
 
@@ -17,6 +28,15 @@ dependencies {
     implementation platform('org.jetbrains.kotlin:kotlin-bom:${context.getVersion("org.jetbrains.kotlin", "kotlin-bom")}')
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
 
+#end
+#if ($context.hasLanguage("scala"))
+#if ($context.hasLibrary("armeria-scala_2.12"))
+    implementation 'org.scala-lang:scala-library:2.12.15'
+#elseif ($context.hasLibrary("armeria-scala_3"))
+    implementation 'org.scala-lang:scala3-library_3:3.1.2'
+#else
+    implementation 'org.scala-lang:scala-library:2.13.8'
+#end
 #end
     implementation platform('com.linecorp.armeria:armeria-bom:${context.getVersion("com.linecorp.armeria", "armeria-bom")}')
     implementation 'com.linecorp.armeria:armeria'
@@ -87,21 +107,12 @@ dependencies {
     implementation 'com.linecorp.armeria:armeria-saml'
 #end
 #if ($context.hasLibrary("armeria-scala_2.12"))
-#if ($context.hasLanguage("scala"))
-    implementation 'org.scala-lang:scala-library:2.12.15'
-#end
     implementation 'com.linecorp.armeria:armeria-scala_2.12'
 #end
 #if ($context.hasLibrary("armeria-scala_2.13"))
-#if ($context.hasLanguage("scala"))
-    implementation 'org.scala-lang:scala-library:2.13.8'
-#end
     implementation 'com.linecorp.armeria:armeria-scala_2.13'
 #end
 #if ($context.hasLibrary("armeria-scala_3"))
-#if ($context.hasLanguage("scala"))
-    implementation 'org.scala-lang:scala3-library_3:3.1.2'
-#end
     implementation 'com.linecorp.armeria:armeria-scala_3'
 #end
 #if ($context.hasLibrary("armeria-scalapb_2.12"))
@@ -191,6 +202,24 @@ test {
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
     kotlinOptions {
         javaParameters = true
+    }
+}
+#end
+#if ($context.hasLibrary("armeria-grpc"))
+
+protobuf {
+    protoc {
+        artifact = 'com.google.protobuf:protoc:4.29.3'
+    }
+    plugins {
+        grpc {
+            artifact = 'io.grpc:protoc-gen-grpc-java:1.70.0'
+        }
+    }
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {}
+        }
     }
 }
 #end

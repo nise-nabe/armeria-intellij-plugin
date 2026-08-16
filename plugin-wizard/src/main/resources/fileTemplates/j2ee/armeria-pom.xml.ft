@@ -55,6 +55,27 @@
             <artifactId>kotlin-stdlib-jdk8</artifactId>
         </dependency>
 #end
+#if ($context.hasLanguage("scala"))
+#if ($context.hasLibrary("armeria-scala_2.12"))
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <version>2.12.15</version>
+        </dependency>
+#elseif ($context.hasLibrary("armeria-scala_3"))
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala3-library_3</artifactId>
+            <version>3.1.2</version>
+        </dependency>
+#else
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <version>2.13.8</version>
+        </dependency>
+#end
+#end
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria</artifactId>
@@ -192,39 +213,18 @@
         </dependency>
 #end
 #if ($context.hasLibrary("armeria-scala_2.12"))
-#if ($context.hasLanguage("scala"))
-        <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library</artifactId>
-            <version>2.12.15</version>
-        </dependency>
-#end
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria-scala_2.12</artifactId>
         </dependency>
 #end
 #if ($context.hasLibrary("armeria-scala_2.13"))
-#if ($context.hasLanguage("scala"))
-        <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala-library</artifactId>
-            <version>2.13.8</version>
-        </dependency>
-#end
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria-scala_2.13</artifactId>
         </dependency>
 #end
 #if ($context.hasLibrary("armeria-scala_3"))
-#if ($context.hasLanguage("scala"))
-        <dependency>
-            <groupId>org.scala-lang</groupId>
-            <artifactId>scala3-library_3</artifactId>
-            <version>3.1.2</version>
-        </dependency>
-#end
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria-scala_3</artifactId>
@@ -384,6 +384,15 @@
     </dependencies>
 
     <build>
+#if ($context.hasLibrary("armeria-grpc"))
+        <extensions>
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>1.7.1</version>
+            </extension>
+        </extensions>
+#end
 #if ($context.hasLanguage("kotlin"))
         <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
         <testSourceDirectory>${project.basedir}/src/test/kotlin</testSourceDirectory>
@@ -438,6 +447,39 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+#end
+#if ($context.hasLibrary("armeria-grpc"))
+            <plugin>
+                <groupId>org.xolstice.maven.plugins</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+                <version>0.6.1</version>
+                <configuration>
+                    <protocArtifact>com.google.protobuf:protoc:4.29.3:exe:#[[${os.detected.classifier}]]#</protocArtifact>
+                    <pluginId>grpc-java</pluginId>
+                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.70.0:exe:#[[${os.detected.classifier}]]#</pluginArtifact>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>compile-custom</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+#end
+#if ($context.hasLibrary("armeria-spring-boot3-starter") || $context.hasLibrary("armeria-spring-boot3-autoconfigure"))
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>3.4.5</version>
+            </plugin>
+#elseif ($context.hasLibrary("armeria-spring-boot2-autoconfigure"))
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>2.7.18</version>
             </plugin>
 #end
         </plugins>

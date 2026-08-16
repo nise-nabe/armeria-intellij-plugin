@@ -11,11 +11,8 @@ internal object ArmeriaWizardSampleFiles {
     val SPRING_BOOT_LIBRARY_IDS: Set<String> =
         setOf(
             "armeria-spring-boot2-autoconfigure",
-            "armeria-spring-boot2-webflux-autoconfigure",
             "armeria-spring-boot3-autoconfigure",
             "armeria-spring-boot3-starter",
-            "armeria-spring-boot3-webflux-autoconfigure",
-            "armeria-spring-boot3-webflux-starter",
         )
 
     fun isSpringBoot(libraries: Set<String>): Boolean = libraries.any { it in SPRING_BOOT_LIBRARY_IDS }

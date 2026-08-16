@@ -1,6 +1,6 @@
 package ${context.rootPackage};
 
-#if ($context.hasAnyLibrary("armeria-spring-boot3-starter", "armeria-spring-boot3-autoconfigure", "armeria-spring-boot2-autoconfigure", "armeria-spring-boot3-webflux-starter", "armeria-spring-boot3-webflux-autoconfigure", "armeria-spring-boot2-webflux-autoconfigure"))
+#if ($context.hasLibrary("armeria-spring-boot3-starter") || $context.hasLibrary("armeria-spring-boot3-autoconfigure") || $context.hasLibrary("armeria-spring-boot2-autoconfigure"))
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 

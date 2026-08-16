@@ -66,6 +66,8 @@ class ArmeriaWizardTemplateRenderingTest {
         val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-build.gradle.kts.ft", context)
 
         assertTrue(rendered.contains("armeria-spring-boot3-starter"))
+        assertTrue(rendered.contains("org.springframework.boot"))
+        assertTrue(rendered.contains("kotlin(\"plugin.spring\")"))
     }
 
     @Test
@@ -84,7 +86,9 @@ class ArmeriaWizardTemplateRenderingTest {
         assertTrue(applicationYml.contains("armeria:"))
         assertTrue(applicationYml.contains("port: 8080"))
         assertTrue(configurator.contains("ArmeriaServerConfigurator"))
-        assertTrue(configurator.contains("annotatedService(BlogService())"))
+        assertTrue(configurator.contains("open class ArmeriaConfiguration"))
+        assertTrue(configurator.contains("armeriaServerConfigurator(blogService: BlogService)"))
+        assertTrue(configurator.contains("annotatedService(blogService)"))
         assertTrue(main.contains("SpringApplication.run"))
         assertFalse(main.contains("Server.builder()"))
     }
@@ -105,6 +109,56 @@ class ArmeriaWizardTemplateRenderingTest {
         assertTrue(stub.contains("class HelloServiceImpl extends HelloServiceGrpc.HelloServiceImplBase"))
         assertTrue(main.contains("GrpcService.builder()"))
         assertTrue(main.contains("new HelloServiceImpl()"))
+    }
+
+    @Test
+    fun grpcBuildTemplateIncludesProtobufPlugin() {
+        val context =
+            ArmeriaWizardTemplateTestContext(
+                language = "java",
+                libraries = setOf("armeria-grpc"),
+            )
+        val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-build.gradle.kts.ft", context)
+
+        assertTrue(rendered.contains("id(\"com.google.protobuf\")"))
+        assertTrue(rendered.contains("protoc-gen-grpc-java"))
+        assertTrue(rendered.contains("protobuf {"))
+    }
+
+    @Test
+    fun grpcMavenTemplateLeavesOsClassifierPlaceholder() {
+        val context =
+            ArmeriaWizardTemplateTestContext(
+                language = "java",
+                libraries = setOf("armeria-grpc"),
+            )
+        val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-pom.xml.ft", context)
+
+        assertTrue(rendered.contains("protobuf-maven-plugin"))
+        assertTrue(rendered.contains("\${os.detected.classifier}"))
+        assertTrue(rendered.contains("os-maven-plugin"))
+    }
+
+    @Test
+    fun scalaLanguageWithoutArmeriaScalaLibraryStillHasStdlib() {
+        val context = ArmeriaWizardTemplateTestContext(language = "scala")
+        val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-build.gradle.ft", context)
+
+        assertTrue(rendered.contains("id 'scala'"))
+        assertTrue(rendered.contains("scala-library:2.13.8"))
+    }
+
+    @Test
+    fun webfluxStarterDoesNotDisableWebApplicationType() {
+        val context =
+            ArmeriaWizardTemplateTestContext(
+                language = "kotlin",
+                libraries = setOf("armeria-spring-boot3-webflux-starter"),
+            )
+        val main = renderBuildTemplate("fileTemplates/j2ee/armeria-main.kt.ft", context)
+
+        assertTrue(main.contains("Server.builder()"))
+        assertFalse(main.contains("SpringApplication"))
     }
 
     @Test
