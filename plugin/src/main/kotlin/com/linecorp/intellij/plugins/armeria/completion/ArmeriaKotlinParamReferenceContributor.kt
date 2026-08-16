@@ -15,6 +15,7 @@ import com.intellij.util.ProcessingContext
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaPathVariableSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.inspection.ArmeriaKotlinAnnotationSupport
+import com.linecorp.intellij.plugins.armeria.inspection.ArmeriaKotlinMethodRoute
 import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtClassOrObject
@@ -119,6 +120,8 @@ private class ArmeriaKotlinPathVariableReference(
 ) : PsiReferenceBase<KtStringTemplateExpression>(template, rangeInElement, true) {
     override fun resolve(): PsiElement = element
 
+    override fun getCanonicalText(): String = variableName
+
     override fun handleElementRename(newElementName: String): PsiElement {
         renameKotlinPathVariable(function, variableName, newElementName)
         return element
@@ -133,6 +136,8 @@ private class ArmeriaKotlinPathPrefixVariableReference(
 ) : PsiReferenceBase<KtStringTemplateExpression>(template, rangeInElement, true) {
     override fun resolve(): PsiElement = element
 
+    override fun getCanonicalText(): String = variableName
+
     override fun handleElementRename(newElementName: String): PsiElement {
         renameKotlinClassPathVariable(owner, variableName, newElementName)
         return element
@@ -145,6 +150,9 @@ internal fun renameKotlinPathVariable(
     newName: String,
 ) {
     if (oldName.isEmpty() || oldName == newName) {
+        return
+    }
+    if (!ArmeriaPathVariableSupport.isRenameableVariable(oldName, kotlinRouteRawPaths(function))) {
         return
     }
     val owner = PsiTreeUtil.getParentOfType(function, KtClassOrObject::class.java)
@@ -162,6 +170,9 @@ internal fun renameKotlinClassPathVariable(
     newName: String,
 ) {
     if (oldName.isEmpty() || oldName == newName) {
+        return
+    }
+    if (!ArmeriaPathVariableSupport.isRenameableVariable(oldName, kotlinClassRawPaths(owner))) {
         return
     }
     val entries = mutableListOf<KtAnnotationEntry>()
@@ -186,6 +197,29 @@ private fun kotlinClassPrefixHasVariable(
             ArmeriaPathVariableSupport.extractPathVariables(it)
         }
 }
+
+private fun kotlinRouteRawPaths(function: KtNamedFunction): List<String> {
+    val route = ArmeriaKotlinMethodRoute.from(function) ?: return emptyList()
+    return buildList {
+        if (route.classPrefix.isNotEmpty()) {
+            add(route.classPrefix)
+        }
+        addAll(route.rawPaths)
+    }
+}
+
+private fun kotlinClassRawPaths(owner: KtClassOrObject): List<String> =
+    buildList {
+        owner.annotationEntries
+            .firstOrNull {
+                ArmeriaKotlinAnnotationSupport.qualifiedName(it) == ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION
+            }?.let { entry ->
+                addAll(ArmeriaKotlinAnnotationSupport.extractStrings(entry))
+            }
+        owner.declarations.filterIsInstance<KtNamedFunction>().forEach { function ->
+            addAll(kotlinRouteRawPaths(function))
+        }
+    }
 
 private fun kotlinEntriesOnFunction(function: KtNamedFunction): List<KtAnnotationEntry> =
     buildList {

@@ -4,6 +4,8 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaPathVariableSupport
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ArmeriaPathVariableSupportTest {
     @Test
@@ -84,6 +86,8 @@ class ArmeriaPathVariableSupportTest {
             "glob:/*/hello/**",
             ArmeriaPathVariableSupport.replacePathVariableName("glob:/*/hello/**", "0", "prefix"),
         )
+        assertFalse(ArmeriaPathVariableSupport.isRenameableVariable("0", listOf("glob:/*/hello/**")))
+        assertTrue(ArmeriaPathVariableSupport.isRenameableVariable("id", listOf("/users/{id}")))
     }
 
     @Test

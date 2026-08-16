@@ -50,6 +50,14 @@ object ArmeriaPathVariableSupport {
         return path.substring(0, typed.bodyStart) + replaced
     }
 
+    fun isRenameableVariable(
+        name: String,
+        rawPaths: Iterable<String>,
+    ): Boolean =
+        rawPaths.none { rawPath ->
+            pathVariableOccurrences(rawPath).any { it.name == name && !it.renameable }
+        }
+
     fun pathVariableOccurrences(path: String): List<PathVariableOccurrence> {
         val typed = typedPath(path)
         if (!typed.bindVariables) {
@@ -263,6 +271,7 @@ object ArmeriaPathVariableSupport {
                     name = paramIndex.toString(),
                     startOffset = offsetInOriginal + start,
                     endOffset = offsetInOriginal + start + length,
+                    renameable = false,
                 )
             paramIndex++
             index += length
@@ -284,6 +293,7 @@ object ArmeriaPathVariableSupport {
         val name: String,
         val startOffset: Int,
         val endOffset: Int,
+        val renameable: Boolean = true,
     )
 
     private data class TypedPath(
