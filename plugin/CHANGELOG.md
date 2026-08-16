@@ -5,6 +5,7 @@
 ### Added
 
 - Generate HTTP Request fills `.http` files from route metadata: `Content-Type` / `Accept` from `@Consumes` / `@Produces` (including `@ConsumesJson` / `@ProducesJson`), `@MatchesHeader` request headers, a JSON body for JSON consumes, and `{id}` path placeholders. GraphQL operations get a POST `/graphql` stub; gRPC method files include a JSON body placeholder.
+- Inspections for annotated/gRPC methods that call known blocking APIs without `@Blocking`, client decorator order of `LoggingClient` / `RetryingClient` / `CircuitBreakerClient`, and unnamed `@Param` when javac `-parameters` (or Kotlin `javaParameters`) is missing.
 - Plugin install, update, enable, and disable no longer require an IDE restart.
 
 ### Changed
