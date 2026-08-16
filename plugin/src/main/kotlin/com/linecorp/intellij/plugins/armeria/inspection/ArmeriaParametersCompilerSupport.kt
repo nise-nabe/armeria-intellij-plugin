@@ -4,6 +4,7 @@ import com.intellij.compiler.CompilerConfiguration
 import com.intellij.openapi.fileEditor.impl.LoadTextUtil
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleUtilCore
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ModuleRootManager
@@ -128,7 +129,13 @@ internal object ArmeriaParametersCompilerSupport {
         if (file.length > MAX_GRADLE_SCRIPT_CHARS) {
             return null
         }
-        return LoadTextUtil.loadText(file).toString()
+        return try {
+            LoadTextUtil.loadText(file).toString()
+        } catch (exception: ProcessCanceledException) {
+            throw exception
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun scriptHasFlag(
