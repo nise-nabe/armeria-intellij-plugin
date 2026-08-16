@@ -38,6 +38,87 @@ class ArmeriaParamCompletionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun completesGlobWildcardParams() {
+        myFixture.configureByText(
+            "GlobService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.Param;
+
+            public class GlobService {
+                @Get("glob:/*/hello/**")
+                public String handler(@Param("<caret>") String value) {
+                    return value;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val lookups = lookupStrings()
+        assertTrue("0" in lookups, lookups.toString())
+        assertTrue("1" in lookups, lookups.toString())
+    }
+
+    @Test
+    fun renameGlobParamLeavesGlobPathUnchanged() {
+        myFixture.configureByText(
+            "GlobService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.Param;
+
+            public class GlobService {
+                @Get("glob:/*/hello/**")
+                public String handler(@Param("0<caret>") String prefix, @Param("1") String rest) {
+                    return prefix;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val reference =
+            assertNotNull(
+                myFixture.file.findReferenceAt(myFixture.editor.caretModel.offset),
+                "Expected a path-variable reference at the caret",
+            )
+        WriteCommandAction.runWriteCommandAction(myFixture.project) {
+            reference.handleElementRename("prefix")
+        }
+        val updated = myFixture.editor.document.text
+        assertTrue(updated.contains("@Get(\"glob:/*/hello/**\")"), updated)
+        assertTrue(updated.contains("@Param(\"prefix\")"), updated)
+    }
+
+    @Test
+    fun globWildcardInPathHasReference() {
+        myFixture.configureByText(
+            "GlobService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.Param;
+
+            public class GlobService {
+                @Get("glob:/*<caret>/hello/**")
+                public String handler(@Param("0") String prefix, @Param("1") String rest) {
+                    return prefix;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertNotNull(
+            myFixture.file.findReferenceAt(myFixture.editor.caretModel.offset),
+            "Expected a glob wildcard path-variable reference at the caret",
+        )
+    }
+
+    @Test
     fun completesKnownHeaders() {
         myFixture.configureByText(
             "UserService.java",

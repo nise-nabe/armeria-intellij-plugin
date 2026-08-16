@@ -17,6 +17,8 @@
 
 ### Fixed
 
+- Glob annotated paths (`glob:/*/hello/**`) bind `*` / `**` as `@Param("0")`, `@Param("1")`, … for the path-variable inspection, `@Param` completion, and rename (the glob pattern itself stays positional).
+- Generate Route Method (Kotlin) treats `armeria-kotlin` as present when the published `CoroutineContextService` type resolves, and still accepts the internal `ArmeriaKotlinUtil` marker as a fallback.
 - Endpoints tool window Framework filter lists Armeria server routes and Armeria client factories as distinct entries (`Armeria` vs `Armeria Client`) instead of two identical Armeria items.
 
 ### Security

@@ -62,6 +62,34 @@ class ArmeriaGenerateRouteMethodKotlinIntentionTest : ArmeriaFixtureTestBase() {
         assertTrue(updated.contains("suspend fun handler(): String"), updated)
     }
 
+    fun testGenerateSuspendWhenPublishedArmeriaKotlinApiIsOnClasspath() {
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.kotlin;
+            public final class CoroutineContextService {}
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "HelloService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+
+            class HelloService {
+                @Get("/hello")
+                fun hello(): String = "hello"
+                <caret>
+            }
+            """.trimIndent(),
+        )
+
+        assertIntentionAvailableAndInvoke(ArmeriaGenerateRouteMethodKotlinIntention())
+
+        val updated = myFixture.editor.document.text
+        assertTrue(updated.contains("suspend fun handler(): String"), updated)
+    }
+
     fun testGeneratePostJsonRouteMethod() {
         myFixture.configureByText(
             "HelloService.kt",

@@ -38,6 +38,45 @@ class ArmeriaParamPathVariableKotlinInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun highlightsMissingGlobWildcardParams() {
+        myFixture.configureByText(
+            "MissingGlobService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+
+            class MissingGlobService {
+                @Get("glob:/*/hello/**")
+                fun handler(): String = "ok"
+            }
+            """.trimIndent(),
+        )
+        val expected = message("inspection.param.path.variable.missing", "0, 1")
+        val highlights = myFixture.doHighlighting().filter { it.description == expected }
+        assertEquals(1, highlights.size, highlights.joinToString { it.description.orEmpty() })
+    }
+
+    @Test
+    fun allowsMatchingGlobWildcardParams() {
+        myFixture.configureByText(
+            "GlobService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+            import com.linecorp.armeria.server.annotation.Param
+
+            class GlobService {
+                @Get("glob:/*/hello/**")
+                fun handler(@Param("0") prefix: String, @Param("1") rest: String): String = prefix
+            }
+            """.trimIndent(),
+        )
+        assertNoParamMismatchHighlights()
+    }
+
+    @Test
     fun allowsMatchingParam() {
         myFixture.configureByText(
             "UserService.kt",

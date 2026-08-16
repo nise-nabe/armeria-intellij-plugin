@@ -7,9 +7,10 @@ object ArmeriaPathVariableSupport {
     private val REGEX_NAMED_GROUP_PATTERN = Regex("""\(\?<([A-Za-z_][A-Za-z0-9_]*)>""")
 
     /**
-     * Names bound from brace (`{id}`), colon (`:name`), and regex named groups.
-     * Glob wildcards (`*` / `**`) are not extracted; Armeria binds those as `"0"`, `"1"`, …
-     * Typed `exact:` paths are literal matches and do not bind parameters.
+     * Names bound from brace (`{id}`), colon (`:name`), regex named groups, and glob
+     * wildcards (`*` / `**` as `"0"`, `"1"`, …). Typed `exact:` paths are literal matches
+     * and do not bind parameters. Glob names are positional; the path itself cannot be
+     * rewritten to a different identifier.
      */
     fun extractPathVariables(rawPath: String): List<String> {
         val typed = typedPath(rawPath)
@@ -63,7 +64,7 @@ object ArmeriaPathVariableSupport {
         offsetInOriginal: Int = 0,
     ): List<PathVariableOccurrence> =
         when (pathType) {
-            PathType.GLOB -> emptyList()
+            PathType.GLOB -> globPathVariableOccurrences(path, offsetInOriginal)
             PathType.REGEX ->
                 REGEX_NAMED_GROUP_PATTERN
                     .findAll(path)
@@ -234,10 +235,39 @@ object ArmeriaPathVariableSupport {
         return when {
             rest.startsWith("prefix:") -> TypedPath(PathType.PREFIX, start + 7, bindVariables = true)
             rest.startsWith("regex:") -> TypedPath(PathType.REGEX, start + 6, bindVariables = true)
-            rest.startsWith("glob:") -> TypedPath(PathType.GLOB, start + 5, bindVariables = false)
+            rest.startsWith("glob:") -> TypedPath(PathType.GLOB, start + 5, bindVariables = true)
             rest.startsWith("exact:") -> TypedPath(PathType.EXACT, start + 6, bindVariables = false)
             else -> TypedPath(PathType.EXACT, start, bindVariables = true)
         }
+    }
+
+    private fun globPathVariableOccurrences(
+        path: String,
+        offsetInOriginal: Int,
+    ): List<PathVariableOccurrence> {
+        if ("***" in path) {
+            return emptyList()
+        }
+        val occurrences = mutableListOf<PathVariableOccurrence>()
+        var index = 0
+        var paramIndex = 0
+        while (index < path.length) {
+            if (path[index] != '*') {
+                index++
+                continue
+            }
+            val start = index
+            val length = if (index + 1 < path.length && path[index + 1] == '*') 2 else 1
+            occurrences +=
+                PathVariableOccurrence(
+                    name = paramIndex.toString(),
+                    startOffset = offsetInOriginal + start,
+                    endOffset = offsetInOriginal + start + length,
+                )
+            paramIndex++
+            index += length
+        }
+        return occurrences
     }
 
     private fun braceVariableName(raw: String): String? {

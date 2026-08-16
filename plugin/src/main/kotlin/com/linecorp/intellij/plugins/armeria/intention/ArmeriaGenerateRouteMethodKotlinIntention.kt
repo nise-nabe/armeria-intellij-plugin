@@ -138,11 +138,11 @@ open class ArmeriaGenerateRouteMethodKotlinIntention : PsiElementBaseIntentionAc
     private fun hasArmeriaKotlin(
         project: Project,
         serviceClass: KtClassOrObject,
-    ): Boolean =
-        JavaPsiFacade.getInstance(project).findClass(
-            ARMERIA_KOTLIN_MARKER_CLASS,
-            serviceClass.resolveScope,
-        ) != null
+    ): Boolean {
+        val facade = JavaPsiFacade.getInstance(project)
+        val scope = serviceClass.resolveScope
+        return ARMERIA_KOTLIN_MARKER_CLASSES.any { facade.findClass(it, scope) != null }
+    }
 
     private fun insertKotlinImport(
         factory: KtPsiFactory,
@@ -187,7 +187,11 @@ open class ArmeriaGenerateRouteMethodKotlinIntention : PsiElementBaseIntentionAc
         }
 
     companion object {
-        const val ARMERIA_KOTLIN_MARKER_CLASS = "com.linecorp.armeria.internal.common.kotlin.ArmeriaKotlinUtil"
+        private val ARMERIA_KOTLIN_MARKER_CLASSES =
+            listOf(
+                "com.linecorp.armeria.server.kotlin.CoroutineContextService",
+                "com.linecorp.armeria.internal.common.kotlin.ArmeriaKotlinUtil",
+            )
     }
 }
 
