@@ -30,6 +30,13 @@ internal object ArmeriaAnnotatedMetadataSupport {
             ArmeriaRouteSupport.PRODUCES_TEXT_ANNOTATION to PLAIN_TEXT_MEDIA_TYPE,
             ArmeriaRouteSupport.PRODUCES_BINARY_ANNOTATION to OCTET_STREAM_MEDIA_TYPE,
         )
+    private val BINDING_NAME_ANNOTATIONS =
+        listOf(
+            ArmeriaRouteSupport.PARAM_ANNOTATION,
+            ArmeriaRouteSupport.HEADER_ANNOTATION,
+            ArmeriaRouteSupport.ATTRIBUTE_ANNOTATION,
+            ArmeriaRouteSupport.COOKIE_ANNOTATION,
+        )
 
     fun collectContentHints(
         method: PsiMethod,
@@ -128,13 +135,12 @@ internal object ArmeriaAnnotatedMetadataSupport {
 
     private fun parameterBindingName(parameter: PsiParameter): String? {
         val named =
-            listOf(ArmeriaRouteSupport.PARAM_ANNOTATION, ArmeriaRouteSupport.HEADER_ANNOTATION)
-                .firstNotNullOfOrNull { fqn ->
-                    val annotation = parameter.getAnnotation(fqn) ?: return@firstNotNullOfOrNull null
-                    ArmeriaRouteSupport
-                        .extractStrings(annotation.findDeclaredAttributeValue("value"))
-                        .firstOrNull { it.isNotBlank() }
-                }
+            BINDING_NAME_ANNOTATIONS.firstNotNullOfOrNull { fqn ->
+                val annotation = parameter.getAnnotation(fqn) ?: return@firstNotNullOfOrNull null
+                ArmeriaRouteSupport
+                    .extractStrings(annotation.findDeclaredAttributeValue("value"))
+                    .firstOrNull { it.isNotBlank() }
+            }
         return named ?: parameter.name?.takeIf { it.isNotBlank() }
     }
 

@@ -17,62 +17,7 @@ class ArmeriaAnnotationProcessorInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
-    fun highlightsDescriptionWithoutProcessor() {
-        configureDescriptionService()
-        assertDescriptionHighlights(1)
-    }
-
-    @Test
-    fun allowsDescriptionWhenGradleMentionsProcessor() {
-        myFixture.addFileToProject(
-            "build.gradle.kts",
-            """
-            dependencies {
-                annotationProcessor("com.linecorp.armeria:armeria-annotation-processor:1.32.0")
-            }
-            """.trimIndent(),
-        )
-        configureDescriptionService()
-        assertDescriptionHighlights(0)
-    }
-
-    @Test
-    fun allowsDescriptionWhenProcessorClassResolves() {
-        myFixture.addClass(
-            """
-            package com.linecorp.armeria.server.annotation.processor;
-
-            public class DocumentationProcessor {}
-            """.trimIndent(),
-        )
-        configureDescriptionService()
-        assertDescriptionHighlights(0)
-    }
-
-    @Test
-    fun highlightsJavadocOnAnnotatedRouteWithoutProcessor() {
-        myFixture.configureByText(
-            "HelloService.java",
-            """
-            package example;
-
-            import com.linecorp.armeria.server.annotation.Get;
-
-            public class HelloService {
-                /** Greets the caller. */
-                @Get("/hello")
-                public String hello() {
-                    return "ok";
-                }
-            }
-            """.trimIndent(),
-        )
-        val expected = message("inspection.annotation.processor.javadoc.problem")
-        val highlights = myFixture.doHighlighting().filter { it.description == expected }
-        assertEquals(1, highlights.size, highlights.joinToString { it.description.orEmpty() })
-    }
-
-    private fun configureDescriptionService() {
+    fun doesNotHighlightDescriptionWithoutProcessor() {
         myFixture.configureByText(
             "HelloService.java",
             """
@@ -90,10 +35,69 @@ class ArmeriaAnnotationProcessorInspectionTest : ArmeriaFixtureTestBase5() {
             }
             """.trimIndent(),
         )
+        assertJavadocHighlights(0)
     }
 
-    private fun assertDescriptionHighlights(count: Int) {
-        val expected = message("inspection.annotation.processor.problem")
+    @Test
+    fun doesNotHighlightSummaryOnlyJavadocWithoutProcessor() {
+        configureJavadocService("/** Greets the caller. */")
+        assertJavadocHighlights(0)
+    }
+
+    @Test
+    fun highlightsJavadocTagsOnAnnotatedRouteWithoutProcessor() {
+        configureJavadocService("/** @param unused unused */")
+        assertJavadocHighlights(1)
+    }
+
+    @Test
+    fun allowsJavadocTagsWhenGradleMentionsProcessor() {
+        myFixture.addFileToProject(
+            "build.gradle.kts",
+            """
+            dependencies {
+                annotationProcessor("com.linecorp.armeria:armeria-annotation-processor:1.32.0")
+            }
+            """.trimIndent(),
+        )
+        configureJavadocService("/** @return greeting */")
+        assertJavadocHighlights(0)
+    }
+
+    @Test
+    fun allowsJavadocTagsWhenProcessorClassResolves() {
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation.processor;
+
+            public class DocumentationProcessor {}
+            """.trimIndent(),
+        )
+        configureJavadocService("/** @throws RuntimeException if the call fails */")
+        assertJavadocHighlights(0)
+    }
+
+    private fun configureJavadocService(javadoc: String) {
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class HelloService {
+                $javadoc
+                @Get("/hello")
+                public String hello() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+    }
+
+    private fun assertJavadocHighlights(count: Int) {
+        val expected = message("inspection.annotation.processor.javadoc.problem")
         val highlights = myFixture.doHighlighting().filter { it.description == expected }
         assertEquals(count, highlights.size, highlights.joinToString { it.description.orEmpty() })
     }

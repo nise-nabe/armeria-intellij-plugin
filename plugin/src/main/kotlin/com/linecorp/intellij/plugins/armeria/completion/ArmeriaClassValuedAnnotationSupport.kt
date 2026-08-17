@@ -112,6 +112,7 @@ private object JavaClassLiteralInsertHandler : InsertHandler<LookupElement> {
         context: InsertionContext,
         item: LookupElement,
     ) {
+        qualifyInsertedTypeIfNeeded(context, item)
         appendClassLiteralSuffix(context, ".class")
     }
 }
@@ -121,8 +122,23 @@ private object KotlinClassLiteralInsertHandler : InsertHandler<LookupElement> {
         context: InsertionContext,
         item: LookupElement,
     ) {
+        qualifyInsertedTypeIfNeeded(context, item)
         appendClassLiteralSuffix(context, "::class")
     }
+}
+
+private fun qualifyInsertedTypeIfNeeded(
+    context: InsertionContext,
+    item: LookupElement,
+) {
+    val psiClass = item.psiElement as? PsiClass ?: return
+    val qualifiedName = psiClass.qualifiedName ?: return
+    val filePackage = (context.file as? PsiClassOwner)?.packageName.orEmpty()
+    val typePackage = qualifiedName.substringBeforeLast('.', missingDelimiterValue = "")
+    if (typePackage == filePackage) {
+        return
+    }
+    context.document.replaceString(context.startOffset, context.tailOffset, qualifiedName)
 }
 
 private fun appendClassLiteralSuffix(

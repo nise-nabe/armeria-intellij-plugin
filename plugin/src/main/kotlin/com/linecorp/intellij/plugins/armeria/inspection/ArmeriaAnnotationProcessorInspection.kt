@@ -4,7 +4,6 @@ import com.intellij.codeInspection.AbstractBaseJavaLocalInspectionTool
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.psi.JavaElementVisitor
-import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiMethod
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
@@ -20,22 +19,9 @@ class ArmeriaAnnotationProcessorInspection : AbstractBaseJavaLocalInspectionTool
         isOnTheFly: Boolean,
     ): PsiElementVisitor =
         object : JavaElementVisitor() {
-            override fun visitAnnotation(annotation: PsiAnnotation) {
-                if (annotation.qualifiedName != ArmeriaRouteSupport.DESCRIPTION_ANNOTATION) {
-                    return
-                }
-                if (ArmeriaAnnotationProcessorSupport.hasDocumentationProcessor(annotation)) {
-                    return
-                }
-                holder.registerProblem(
-                    annotation,
-                    message("inspection.annotation.processor.problem"),
-                    ProblemHighlightType.WEAK_WARNING,
-                )
-            }
-
             override fun visitMethod(method: PsiMethod) {
-                if (method.docComment == null) {
+                val docComment = method.docComment?.text ?: return
+                if (!ArmeriaAnnotationProcessorSupport.hasProcessorConsumedTags(docComment)) {
                     return
                 }
                 if (ArmeriaRouteSupport.findRouteAnnotation(method) == null) {

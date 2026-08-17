@@ -6,7 +6,6 @@ import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.psi.PsiElementVisitor
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.message
-import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtVisitorVoid
@@ -22,26 +21,10 @@ class ArmeriaAnnotationProcessorKotlinInspection : LocalInspectionTool() {
         isOnTheFly: Boolean,
     ): PsiElementVisitor =
         object : KtVisitorVoid() {
-            override fun visitAnnotationEntry(entry: KtAnnotationEntry) {
-                super.visitAnnotationEntry(entry)
-                if (ArmeriaKotlinAnnotationSupport.qualifiedName(entry) !=
-                    ArmeriaRouteSupport.DESCRIPTION_ANNOTATION
-                ) {
-                    return
-                }
-                if (ArmeriaAnnotationProcessorSupport.hasDocumentationProcessor(entry)) {
-                    return
-                }
-                holder.registerProblem(
-                    entry,
-                    message("inspection.annotation.processor.problem"),
-                    ProblemHighlightType.WEAK_WARNING,
-                )
-            }
-
             override fun visitNamedFunction(function: KtNamedFunction) {
                 super.visitNamedFunction(function)
-                if (function.docComment == null) {
+                val docComment = function.docComment?.text ?: return
+                if (!ArmeriaAnnotationProcessorSupport.hasProcessorConsumedTags(docComment)) {
                     return
                 }
                 if (ArmeriaKotlinMethodRoute.from(function) == null) {

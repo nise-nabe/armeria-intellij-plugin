@@ -214,6 +214,36 @@ class ArmeriaAnnotatedMetadataSupportTest : ArmeriaFixtureTestBase() {
         )
     }
 
+    fun testCollectDefaultForAttributeAndCookie() {
+        myFixture.configureByText(
+            "SessionService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.*;
+
+            public class SessionService {
+                @Get("/session")
+                public String session(
+                        @Attribute("user") @Default("guest") String user,
+                        @Cookie("token") @Default("none") String token) {
+                    return user;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val route = routes.single()
+        assertEquals(
+            listOf(
+                message("route.explorer.hint.default", "user=guest"),
+                message("route.explorer.hint.default", "token=none"),
+            ),
+            route.contentHints,
+        )
+    }
+
     fun testCollectProducesTextHelper() {
         myFixture.configureByText(
             "TextService.java",

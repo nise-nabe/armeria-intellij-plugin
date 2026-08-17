@@ -1,9 +1,10 @@
 package com.linecorp.intellij.plugins.armeria.completion
 
 import com.intellij.codeInsight.completion.CompletionType
+import com.intellij.codeInsight.lookup.Lookup
 import com.intellij.psi.PsiClass
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase5
-import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -65,13 +66,36 @@ class ArmeriaKotlinAnnotatedServiceEditorCompletionTest : ArmeriaFixtureTestBase
                     .findReferenceAt(myFixture.editor.caretModel.offset)
                     ?.resolve(),
             )
-        val name =
-            when (resolved) {
-                is PsiClass -> resolved.name
-                is KtClass -> resolved.name
-                else -> resolved.toString()
+        assertEquals("MyHandler", resolvedName(resolved))
+    }
+
+    @Test
+    fun navigatesFromExceptionHandlerObjectLiteral() {
+        myFixture.configureByText(
+            "UserService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.ExceptionHandler
+            import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction
+            import com.linecorp.armeria.server.annotation.Get
+
+            @ExceptionHandler(My<caret>Handler::class)
+            class UserService {
+                @Get("/users")
+                fun users(): String = "ok"
             }
-        assertEquals("MyHandler", name)
+
+            object MyHandler : ExceptionHandlerFunction
+            """.trimIndent(),
+        )
+        val resolved =
+            assertNotNull(
+                myFixture.file
+                    .findReferenceAt(myFixture.editor.caretModel.offset)
+                    ?.resolve(),
+            )
+        assertEquals("MyHandler", resolvedName(resolved))
     }
 
     @Test
@@ -99,11 +123,62 @@ class ArmeriaKotlinAnnotatedServiceEditorCompletionTest : ArmeriaFixtureTestBase
         assertTrue("MyHandler" in lookups, lookups.toString())
     }
 
+    @Test
+    fun insertsQualifiedNameForOtherPackageImplementor() {
+        myFixture.addFileToProject(
+            "other/OtherHandler.kt",
+            """
+            package other
+
+            import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction
+
+            class OtherHandler : ExceptionHandlerFunction
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "UserService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.ExceptionHandler
+            import com.linecorp.armeria.server.annotation.Get
+
+            @ExceptionHandler(<caret>)
+            class UserService {
+                @Get("/users")
+                fun users(): String = "ok"
+            }
+            """.trimIndent(),
+        )
+
+        selectLookup("OtherHandler")
+        assertTrue(
+            "other.OtherHandler::class" in myFixture.file.text,
+            myFixture.file.text,
+        )
+    }
+
+    private fun resolvedName(resolved: Any): String? =
+        when (resolved) {
+            is PsiClass -> resolved.name
+            is KtClassOrObject -> resolved.name
+            else -> resolved.toString()
+        }
+
     private fun lookupStrings(): List<String> {
         val elements = myFixture.complete(CompletionType.BASIC)
         if (elements != null) {
             return elements.map { it.lookupString }
         }
         return myFixture.lookupElementStrings.orEmpty()
+    }
+
+    private fun selectLookup(lookupString: String) {
+        val elements = myFixture.complete(CompletionType.BASIC)
+        if (elements != null) {
+            val match = elements.first { it.lookupString == lookupString }
+            myFixture.lookup.currentItem = match
+            myFixture.finishLookup(Lookup.NORMAL_SELECT_CHAR)
+        }
     }
 }

@@ -24,7 +24,15 @@ internal object ArmeriaAnnotationProcessorSupport {
     private const val PROCESSOR_ARTIFACT = "armeria-annotation-processor"
     private const val MAX_GRADLE_SCRIPT_CHARS = 256 * 1024
     private val GRADLE_SCRIPT_NAMES = listOf("build.gradle", "build.gradle.kts")
+    private val PROCESSOR_CONSUMED_TAG = Regex("""@(?:param|return|throws)\b""")
     private val PROCESSOR_KEY = Key.create<CachedValue<Boolean>>("armeria.annotation.processor.present")
+
+    /**
+     * Armeria DocumentationProcessor only consumes Javadoc/KDoc that contains `@param`,
+     * `@return`, or `@throws`. A summary-only comment is ignored even when the processor is
+     * on the classpath. `@Description` is a runtime annotation and does not need the processor.
+     */
+    fun hasProcessorConsumedTags(docComment: String): Boolean = PROCESSOR_CONSUMED_TAG.containsMatchIn(docComment)
 
     fun hasDocumentationProcessor(element: PsiElement): Boolean {
         val project = element.project

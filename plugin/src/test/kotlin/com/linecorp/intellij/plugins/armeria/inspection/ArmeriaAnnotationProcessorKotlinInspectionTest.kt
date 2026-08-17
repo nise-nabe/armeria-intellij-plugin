@@ -17,47 +17,7 @@ class ArmeriaAnnotationProcessorKotlinInspectionTest : ArmeriaFixtureTestBase5()
     }
 
     @Test
-    fun highlightsDescriptionWithoutProcessor() {
-        configureDescriptionService()
-        assertDescriptionHighlights(1)
-    }
-
-    @Test
-    fun allowsDescriptionWhenGradleMentionsProcessor() {
-        myFixture.addFileToProject(
-            "build.gradle.kts",
-            """
-            dependencies {
-                kapt("com.linecorp.armeria:armeria-annotation-processor:1.32.0")
-            }
-            """.trimIndent(),
-        )
-        configureDescriptionService()
-        assertDescriptionHighlights(0)
-    }
-
-    @Test
-    fun highlightsKdocOnAnnotatedRouteWithoutProcessor() {
-        myFixture.configureByText(
-            "HelloService.kt",
-            """
-            package example
-
-            import com.linecorp.armeria.server.annotation.Get
-
-            class HelloService {
-                /** Greets the caller. */
-                @Get("/hello")
-                fun hello(): String = "ok"
-            }
-            """.trimIndent(),
-        )
-        val expected = message("inspection.annotation.processor.javadoc.problem")
-        val highlights = myFixture.doHighlighting().filter { it.description == expected }
-        assertEquals(1, highlights.size, highlights.joinToString { it.description.orEmpty() })
-    }
-
-    private fun configureDescriptionService() {
+    fun doesNotHighlightDescriptionWithoutProcessor() {
         myFixture.configureByText(
             "HelloService.kt",
             """
@@ -73,10 +33,54 @@ class ArmeriaAnnotationProcessorKotlinInspectionTest : ArmeriaFixtureTestBase5()
             }
             """.trimIndent(),
         )
+        assertJavadocHighlights(0)
     }
 
-    private fun assertDescriptionHighlights(count: Int) {
-        val expected = message("inspection.annotation.processor.problem")
+    @Test
+    fun doesNotHighlightSummaryOnlyKdocWithoutProcessor() {
+        configureKdocService("/** Greets the caller. */")
+        assertJavadocHighlights(0)
+    }
+
+    @Test
+    fun highlightsKdocTagsOnAnnotatedRouteWithoutProcessor() {
+        configureKdocService("/** @param unused unused */")
+        assertJavadocHighlights(1)
+    }
+
+    @Test
+    fun allowsKdocTagsWhenGradleMentionsProcessor() {
+        myFixture.addFileToProject(
+            "build.gradle.kts",
+            """
+            dependencies {
+                kapt("com.linecorp.armeria:armeria-annotation-processor:1.32.0")
+            }
+            """.trimIndent(),
+        )
+        configureKdocService("/** @return greeting */")
+        assertJavadocHighlights(0)
+    }
+
+    private fun configureKdocService(kdoc: String) {
+        myFixture.configureByText(
+            "HelloService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+
+            class HelloService {
+                $kdoc
+                @Get("/hello")
+                fun hello(): String = "ok"
+            }
+            """.trimIndent(),
+        )
+    }
+
+    private fun assertJavadocHighlights(count: Int) {
+        val expected = message("inspection.annotation.processor.javadoc.problem")
         val highlights = myFixture.doHighlighting().filter { it.description == expected }
         assertEquals(count, highlights.size, highlights.joinToString { it.description.orEmpty() })
     }

@@ -11,8 +11,9 @@ import com.intellij.psi.PsiReferenceRegistrar
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
 import com.linecorp.intellij.plugins.armeria.inspection.ArmeriaKotlinAnnotationSupport
-import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtClassLiteralExpression
+import org.jetbrains.kotlin.psi.KtClassOrObject
+import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 
 class ArmeriaKotlinClassValuedReferenceContributor : PsiReferenceContributor() {
@@ -46,9 +47,7 @@ private class ArmeriaKotlinAnnotationClassReference(
     override fun resolve(): PsiElement? {
         val name = element.getReferencedName()
         resolveClassByName(element, name)?.let { return it }
-        return element.containingKtFile.declarations
-            .filterIsInstance<KtClass>()
-            .firstOrNull { it.name == name }
+        return findClassOrObject(element.containingKtFile, name)
     }
 
     override fun getVariants(): Array<Any> {
@@ -60,4 +59,20 @@ private class ArmeriaKotlinAnnotationClassReference(
                 kotlinClassLiteral = true,
             ).toTypedArray()
     }
+}
+
+private fun findClassOrObject(
+    file: KtFile,
+    name: String,
+): KtClassOrObject? {
+    val pending = ArrayDeque<KtClassOrObject>()
+    pending.addAll(file.declarations.filterIsInstance<KtClassOrObject>())
+    while (pending.isNotEmpty()) {
+        val current = pending.removeFirst()
+        if (current.name == name) {
+            return current
+        }
+        pending.addAll(current.declarations.filterIsInstance<KtClassOrObject>())
+    }
+    return null
 }

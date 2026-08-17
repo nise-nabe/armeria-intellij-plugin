@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.completion
 
 import com.intellij.codeInsight.completion.CompletionType
+import com.intellij.codeInsight.lookup.Lookup
 import com.intellij.psi.PsiClass
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase5
 import org.junit.jupiter.api.Test
@@ -125,6 +126,42 @@ class ArmeriaAnnotatedServiceEditorCompletionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun insertsQualifiedNameForOtherPackageImplementor() {
+        myFixture.addClass(
+            """
+            package other;
+
+            import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
+
+            public class OtherHandler implements ExceptionHandlerFunction {}
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "UserService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.ExceptionHandler;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            @ExceptionHandler(<caret>)
+            public class UserService {
+                @Get("/users")
+                public String users() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        selectLookup("OtherHandler")
+        assertTrue(
+            "other.OtherHandler.class" in myFixture.file.text,
+            myFixture.file.text,
+        )
+    }
+
+    @Test
     fun completesAttributeNamesFromTheSameClass() {
         myFixture.configureByText(
             "UserService.java",
@@ -158,5 +195,14 @@ class ArmeriaAnnotatedServiceEditorCompletionTest : ArmeriaFixtureTestBase5() {
             return elements.map { it.lookupString }
         }
         return myFixture.lookupElementStrings.orEmpty()
+    }
+
+    private fun selectLookup(lookupString: String) {
+        val elements = myFixture.complete(CompletionType.BASIC)
+        if (elements != null) {
+            val match = elements.first { it.lookupString == lookupString }
+            myFixture.lookup.currentItem = match
+            myFixture.finishLookup(Lookup.NORMAL_SELECT_CHAR)
+        }
     }
 }
