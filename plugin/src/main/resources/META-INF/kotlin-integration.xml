@@ -50,6 +50,15 @@
                          implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaParametersCompilerKotlinInspection" />
         <localInspection language="kotlin"
                          bundle="messages.ArmeriaBundle"
+                         key="inspection.annotation.processor.kotlin.display.name"
+                         groupBundle="messages.ArmeriaBundle"
+                         groupKey="inspection.group.armeria"
+                         shortName="ArmeriaAnnotationProcessorKotlin"
+                         enabledByDefault="true"
+                         level="WEAK WARNING"
+                         implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaAnnotationProcessorKotlinInspection" />
+        <localInspection language="kotlin"
+                         bundle="messages.ArmeriaBundle"
                          key="inspection.duplicate.registration.kotlin.display.name"
                          groupBundle="messages.ArmeriaBundle"
                          groupKey="inspection.group.armeria"
@@ -87,5 +96,7 @@
                                 implementationClass="com.linecorp.intellij.plugins.armeria.completion.ArmeriaKotlinAnnotationValueCompletionContributor"/>
         <psi.referenceContributor language="kotlin"
                                   implementation="com.linecorp.intellij.plugins.armeria.completion.ArmeriaKotlinParamReferenceContributor"/>
+        <psi.referenceContributor language="kotlin"
+                                  implementation="com.linecorp.intellij.plugins.armeria.completion.ArmeriaKotlinClassValuedReferenceContributor"/>
     </extensions>
 </idea-plugin>

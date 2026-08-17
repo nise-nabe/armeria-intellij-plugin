@@ -54,8 +54,18 @@ object ArmeriaRouteSupport {
     const val HEADER_ANNOTATION = ArmeriaRouteAnnotationSupport.HEADER_ANNOTATION
     const val COOKIE_ANNOTATION = ArmeriaRouteAnnotationSupport.COOKIE_ANNOTATION
     const val MATCHES_HEADER_ANNOTATION = ArmeriaRouteAnnotationSupport.MATCHES_HEADER_ANNOTATION
+    const val MATCHES_PARAM_ANNOTATION = ArmeriaRouteAnnotationSupport.MATCHES_PARAM_ANNOTATION
+    const val CONSUMES_ANNOTATION = ArmeriaRouteAnnotationSupport.CONSUMES_ANNOTATION
+    const val PRODUCES_ANNOTATION = ArmeriaRouteAnnotationSupport.PRODUCES_ANNOTATION
     const val CONSUMES_JSON_ANNOTATION = ArmeriaRouteAnnotationSupport.CONSUMES_JSON_ANNOTATION
     const val PRODUCES_JSON_ANNOTATION = ArmeriaRouteAnnotationSupport.PRODUCES_JSON_ANNOTATION
+    const val PRODUCES_TEXT_ANNOTATION = ArmeriaRouteAnnotationSupport.PRODUCES_TEXT_ANNOTATION
+    const val PRODUCES_BINARY_ANNOTATION = ArmeriaRouteAnnotationSupport.PRODUCES_BINARY_ANNOTATION
+    const val DESCRIPTION_ANNOTATION = ArmeriaRouteAnnotationSupport.DESCRIPTION_ANNOTATION
+    const val DEFAULT_ANNOTATION = ArmeriaRouteAnnotationSupport.DEFAULT_ANNOTATION
+    const val ATTRIBUTE_ANNOTATION = ArmeriaRouteAnnotationSupport.ATTRIBUTE_ANNOTATION
+    const val REQUEST_CONVERTER_ANNOTATION = ArmeriaRouteAnnotationSupport.REQUEST_CONVERTER_ANNOTATION
+    const val RESPONSE_CONVERTER_ANNOTATION = ArmeriaRouteAnnotationSupport.RESPONSE_CONVERTER_ANNOTATION
 
     val routeAnnotations = ArmeriaRouteAnnotationSupport.routeAnnotations
 

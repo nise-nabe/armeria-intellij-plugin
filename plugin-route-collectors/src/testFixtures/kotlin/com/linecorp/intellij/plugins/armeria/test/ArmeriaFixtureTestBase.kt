@@ -31,6 +31,8 @@ abstract class ArmeriaFixtureTestBase : ArmeriaLightJavaCodeInsightFixtureTestCa
 
     protected fun registerContentAnnotationStubs() = myFixture.registerContentAnnotationStubs()
 
+    protected fun registerClassValuedAnnotationStubs() = myFixture.registerClassValuedAnnotationStubs()
+
     protected fun registerResolvableArmeriaServerStubs() = myFixture.registerResolvableArmeriaServerStubs()
 
     protected fun registerArmeriaServerStubs() = myFixture.registerArmeriaServerStubs()

@@ -11,6 +11,7 @@ object ArmeriaHttpRequestGenerator {
     const val JSON_MEDIA_TYPE = "application/json"
 
     private val NON_SLUG_CHARACTERS = Regex("[^a-zA-Z0-9._-]")
+    private val NEWLINE_CHARACTERS = Regex("[\\r\\n]+")
     private val COLON_PATH_VARIABLE = Regex(""":([A-Za-z_][A-Za-z0-9_]*)""")
     private val GRPC_METHOD_PATH = Regex("""^/[^/]+/[^/]+$""")
     private val GRAPHQL_OPERATION_TARGET = Regex("""^(Query|Mutation|Subscription)\.[A-Za-z_][A-Za-z0-9_]*$""")
@@ -71,13 +72,17 @@ object ArmeriaHttpRequestGenerator {
         }
         val method = httpMethod(route)
         val resolvedPath = pathWithPlaceholders(route.path, route.pathType)
+        val pathWithQuery = appendQuery(resolvedPath, matchQueryString(route.contentHints))
         val consumes = ArmeriaRouteContentHintSupport.mediaTypes(route.contentHints, "route.explorer.hint.consumes")
         val produces = ArmeriaRouteContentHintSupport.mediaTypes(route.contentHints, "route.explorer.hint.produces")
         val accept = produces.firstOrNull() ?: JSON_MEDIA_TYPE
         val contentType = contentTypeForMethod(method, consumes)
         return buildString {
             appendLine("### ${route.path}")
-            appendLine("$method $normalizedBaseUrl$resolvedPath")
+            for (comment in descriptionComments(route.contentHints)) {
+                appendLine("# $comment")
+            }
+            appendLine("$method $normalizedBaseUrl$pathWithQuery")
             for ((name, value) in matchHeaderFields(route.contentHints)) {
                 appendLine("$name: $value")
             }
@@ -251,8 +256,39 @@ object ArmeriaHttpRequestGenerator {
     }
 
     private fun matchHeaderFields(contentHints: List<String>): List<Pair<String, String>> =
+        equalityMatchFields(contentHints, "route.explorer.hint.matchesHeader")
+
+    private fun matchQueryString(contentHints: List<String>): String {
+        val fields = equalityMatchFields(contentHints, "route.explorer.hint.matchesParam")
+        if (fields.isEmpty()) {
+            return ""
+        }
+        return fields.joinToString("&") { (name, value) -> "$name=$value" }
+    }
+
+    private fun appendQuery(
+        path: String,
+        query: String,
+    ): String {
+        if (query.isEmpty()) {
+            return path
+        }
+        val separator = if (path.contains('?')) '&' else '?'
+        return "$path$separator$query"
+    }
+
+    private fun descriptionComments(contentHints: List<String>): List<String> =
         ArmeriaRouteContentHintSupport
-            .payloads(contentHints, "route.explorer.hint.matchesHeader")
+            .payloads(contentHints, "route.explorer.hint.description")
+            .map { text -> text.replace(NEWLINE_CHARACTERS, " ").trim() }
+            .filter { it.isNotEmpty() }
+
+    private fun equalityMatchFields(
+        contentHints: List<String>,
+        messageKey: String,
+    ): List<Pair<String, String>> =
+        ArmeriaRouteContentHintSupport
+            .payloads(contentHints, messageKey)
             .mapNotNull { condition ->
                 val match = SIMPLE_HEADER_MATCH.matchEntire(condition.trim()) ?: return@mapNotNull null
                 match.groupValues[1] to match.groupValues[2]

@@ -69,4 +69,29 @@ class ArmeriaHttpRequestGeneratorFixtureTest : ArmeriaFixtureTestBase() {
         assertTrue(text.contains("Content-Type: application/json"), text)
         assertTrue(text.contains("{}"), text)
     }
+
+    fun testDescriptionBecomesHttpComment() {
+        myFixture.configureByText(
+            "GreetService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Description;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class GreetService {
+                @Get("/hello")
+                @Description("Returns a greeting.")
+                public String greet() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val route = ArmeriaRouteCollector.collect(project).single()
+        val text = ArmeriaHttpRequestGenerator.requestText(route)
+        assertTrue(text.contains("# Returns a greeting."), text)
+        assertTrue(text.contains("GET http://localhost:8080/hello"), text)
+    }
 }

@@ -40,7 +40,7 @@ internal class ArmeriaRouteExplorerTreeRenderer : ColoredTreeCellRenderer() {
                 append(route.methodLabel)
                 append(' ')
                 append(route.path)
-                ArmeriaRouteTreeLabel.headerMatchSuffix(route)?.let { suffix ->
+                ArmeriaRouteTreeLabel.matchSuffix(route)?.let { suffix ->
                     append(" · ")
                     append(suffix)
                 }
@@ -55,7 +55,7 @@ internal class ArmeriaRouteExplorerTreeRenderer : ColoredTreeCellRenderer() {
         append(ArmeriaHttpMethodPill.pillText(pillLabel), ArmeriaHttpMethodPill.textAttributes(route))
         append("  ", SimpleTextAttributes.REGULAR_ATTRIBUTES)
         append(route.path, SimpleTextAttributes.REGULAR_ATTRIBUTES)
-        ArmeriaRouteTreeLabel.headerMatchSuffix(route)?.let { suffix ->
+        ArmeriaRouteTreeLabel.matchSuffix(route)?.let { suffix ->
             append("  ", SimpleTextAttributes.REGULAR_ATTRIBUTES)
             append(suffix, SimpleTextAttributes.GRAYED_ATTRIBUTES)
         }

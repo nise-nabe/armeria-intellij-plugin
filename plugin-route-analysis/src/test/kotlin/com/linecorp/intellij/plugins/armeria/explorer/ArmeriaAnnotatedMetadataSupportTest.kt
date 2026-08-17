@@ -185,6 +185,199 @@ class ArmeriaAnnotatedMetadataSupportTest : ArmeriaFixtureTestBase() {
         )
     }
 
+    fun testCollectMatchesParamAndDefault() {
+        myFixture.configureByText(
+            "ItemService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.*;
+
+            public class ItemService {
+                @Get("/items")
+                @MatchesParam("env=prod")
+                public String list(@Param("limit") @Default("20") String limit) {
+                    return limit;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val route = routes.single()
+        assertEquals(
+            listOf(
+                message("route.explorer.hint.matchesParam", "env=prod"),
+                message("route.explorer.hint.default", "limit=20"),
+            ),
+            route.contentHints,
+        )
+    }
+
+    fun testCollectDefaultForAttributeAndCookie() {
+        myFixture.configureByText(
+            "SessionService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.*;
+
+            public class SessionService {
+                @Get("/session")
+                public String session(
+                        @Attribute("user") @Default("guest") String user,
+                        @Cookie("token") @Default("none") String token) {
+                    return user;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val route = routes.single()
+        assertEquals(
+            listOf(
+                message("route.explorer.hint.default", "user=guest"),
+                message("route.explorer.hint.default", "token=none"),
+            ),
+            route.contentHints,
+        )
+    }
+
+    fun testCollectProducesBinaryHelper() {
+        myFixture.configureByText(
+            "BinaryService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.*;
+
+            public class BinaryService {
+                @Get("/blob")
+                @ProducesBinary
+                public String blob() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val route = routes.single()
+        assertEquals(
+            listOf(message("route.explorer.hint.produces", "application/binary")),
+            route.contentHints,
+        )
+    }
+
+    fun testCollectClassLevelMatchesParam() {
+        myFixture.configureByText(
+            "ItemService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.*;
+
+            @MatchesParam("env=prod")
+            public class ItemService {
+                @Get("/items")
+                public String list() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val route = routes.single()
+        assertEquals(
+            listOf(message("route.explorer.hint.matchesParam", "env=prod")),
+            route.contentHints,
+        )
+    }
+
+    fun testCollectClassAndMethodMatchesParamAreDeduped() {
+        myFixture.configureByText(
+            "ItemService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.*;
+
+            @MatchesParam("env=prod")
+            public class ItemService {
+                @Get("/items")
+                @MatchesParam("env=prod")
+                @MatchesParam("region=us")
+                public String list() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val route = routes.single()
+        assertEquals(
+            listOf(
+                message("route.explorer.hint.matchesParam", "env=prod"),
+                message("route.explorer.hint.matchesParam", "region=us"),
+            ),
+            route.contentHints,
+        )
+    }
+
+    fun testCollectProducesTextHelper() {
+        myFixture.configureByText(
+            "TextService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.*;
+
+            public class TextService {
+                @Get("/plain")
+                @ProducesText
+                public String plain() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val route = routes.single()
+        assertEquals(
+            listOf(message("route.explorer.hint.produces", "text/plain")),
+            route.contentHints,
+        )
+    }
+
+    fun testCollectMatchesParamFromKotlin() {
+        myFixture.configureByText(
+            "ItemService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+            import com.linecorp.armeria.server.annotation.MatchesParam
+
+            class ItemService {
+                @Get("/items")
+                @MatchesParam("env=prod")
+                fun list(): String = "ok"
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val route = routes.single()
+        assertEquals(
+            listOf(message("route.explorer.hint.matchesParam", "env=prod")),
+            route.contentHints,
+        )
+    }
+
     fun testRegexPathSkipsPathVariables() {
         myFixture.configureByText(
             "RegexService.java",
