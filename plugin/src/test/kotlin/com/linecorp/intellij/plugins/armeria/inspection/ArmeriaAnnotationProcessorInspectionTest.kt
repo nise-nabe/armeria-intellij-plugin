@@ -88,6 +88,19 @@ class ArmeriaAnnotationProcessorInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun allowsJavadocTagsWhenVersionCatalogMentionsProcessor() {
+        myFixture.addFileToProject(
+            "gradle/libs.versions.toml",
+            """
+            [libraries]
+            armeria-annotation-processor = { module = "com.linecorp.armeria:armeria-annotation-processor", version = "1.32.0" }
+            """.trimIndent(),
+        )
+        configureJavadocService("/** @return greeting */")
+        assertJavadocHighlights(0)
+    }
+
+    @Test
     fun allowsJavadocTagsWhenProcessorClassResolves() {
         myFixture.addClass(
             """

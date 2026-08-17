@@ -4,6 +4,7 @@ import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.openapi.util.TextRange
 import com.intellij.patterns.PlatformPatterns
+import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiClassObjectAccessExpression
 import com.intellij.psi.PsiClassOwner
@@ -88,10 +89,30 @@ private fun resolveClassLiteral(
     context: PsiElement,
     classRef: PsiJavaCodeReferenceElement,
 ): PsiClass? {
+    val qualifiedName = classRef.qualifiedName
+    if (!qualifiedName.isNullOrBlank() && qualifiedName.contains('.')) {
+        resolveQualifiedClass(context, qualifiedName)?.let { return it }
+        return classRef.resolve() as? PsiClass
+    }
     val name = classRef.referenceName ?: classRef.text
     resolveClassByName(context, name)?.let { return it }
     return classRef.resolve() as? PsiClass
 }
+
+internal fun resolveQualifiedClass(
+    context: PsiElement,
+    qualifiedName: String,
+): PsiClass? =
+    try {
+        JavaPsiFacade.getInstance(context.project).findClass(
+            qualifiedName,
+            GlobalSearchScope.projectScope(context.project),
+        )
+    } catch (exception: ProcessCanceledException) {
+        throw exception
+    } catch (_: IndexNotReadyException) {
+        null
+    }
 
 private fun classValuedLookup(
     classRef: PsiJavaCodeReferenceElement,

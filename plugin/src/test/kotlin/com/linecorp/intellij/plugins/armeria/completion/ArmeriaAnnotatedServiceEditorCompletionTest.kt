@@ -129,6 +129,48 @@ class ArmeriaAnnotatedServiceEditorCompletionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun navigatesFromQualifiedExceptionHandlerWhenSameFileNameClashes() {
+        myFixture.addClass(
+            """
+            package other;
+
+            import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
+
+            public class OtherHandler implements ExceptionHandlerFunction {}
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "UserService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.ExceptionHandler;
+            import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            @ExceptionHandler(other.Other<caret>Handler.class)
+            public class UserService {
+                @Get("/users")
+                public String users() {
+                    return "ok";
+                }
+            }
+
+            class OtherHandler implements ExceptionHandlerFunction {}
+            """.trimIndent(),
+        )
+        val resolved = resolvedClassesAtCaret()
+        assertTrue(
+            resolved.any { it.qualifiedName == "other.OtherHandler" },
+            resolved.joinToString { it.qualifiedName.orEmpty() },
+        )
+        assertTrue(
+            resolved.none { it.qualifiedName == "example.OtherHandler" },
+            resolved.joinToString { it.qualifiedName.orEmpty() },
+        )
+    }
+
+    @Test
     fun insertsQualifiedNameForOtherPackageImplementor() {
         myFixture.addClass(
             """
@@ -190,6 +232,13 @@ class ArmeriaAnnotatedServiceEditorCompletionTest : ArmeriaFixtureTestBase5() {
 
         val lookups = lookupStrings()
         assertTrue("user" in lookups, lookups.toString())
+    }
+
+    private fun resolvedClassesAtCaret(): List<PsiClass> {
+        val at = myFixture.file.findElementAt(myFixture.editor.caretModel.offset) ?: return emptyList()
+        return (at.references.toList() + at.parent.references.toList())
+            .mapNotNull { it.resolve() as? PsiClass }
+            .distinct()
     }
 
     private fun lookupStrings(): List<String> {

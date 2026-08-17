@@ -15,6 +15,7 @@ import com.intellij.util.ProcessingContext
 import com.linecorp.intellij.plugins.armeria.inspection.ArmeriaKotlinAnnotationSupport
 import org.jetbrains.kotlin.psi.KtClassLiteralExpression
 import org.jetbrains.kotlin.psi.KtClassOrObject
+import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 
@@ -47,10 +48,23 @@ private class ArmeriaKotlinAnnotationClassReference(
     reference: KtNameReferenceExpression,
 ) : PsiReferenceBase<KtNameReferenceExpression>(reference, TextRange(0, reference.textLength)) {
     override fun resolve(): PsiElement? {
+        qualifiedClassName()?.let { fqn ->
+            resolveQualifiedClass(element, fqn)?.let { return it }
+            return resolveViaOtherReferences()
+        }
         val name = element.getReferencedName()
         resolveClassByName(element, name)?.let { return it }
         findClassOrObject(element.containingKtFile, name)?.let { return it }
         return resolveViaOtherReferences()
+    }
+
+    private fun qualifiedClassName(): String? {
+        val qualified = element.parent as? KtDotQualifiedExpression ?: return null
+        if (qualified.selectorExpression != element) {
+            return null
+        }
+        val text = qualified.text
+        return text.takeIf { '.' in it && text.none(Char::isWhitespace) }
     }
 
     private fun resolveViaOtherReferences(): PsiElement? =

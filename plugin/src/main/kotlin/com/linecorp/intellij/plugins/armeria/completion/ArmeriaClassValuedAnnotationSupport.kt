@@ -67,8 +67,6 @@ internal object ArmeriaClassValuedAnnotationSupport {
         interfaceFqn: String,
     ): List<PsiClass> {
         val project = contextElement.project
-        val scope = GlobalSearchScope.allScope(project)
-        val base = JavaPsiFacade.getInstance(project).findClass(interfaceFqn, scope) ?: return emptyList()
         val found = linkedMapOf<String, PsiClass>()
 
         fun add(candidate: PsiClass) {
@@ -81,19 +79,34 @@ internal object ArmeriaClassValuedAnnotationSupport {
             val key = candidate.qualifiedName ?: candidate.name ?: return
             found.putIfAbsent(key, candidate)
         }
-        val file = contextElement.containingFile
-        if (file is PsiClassOwner) {
-            file.classes.forEach { candidate ->
-                if (candidate.isInheritor(base, true)) {
-                    add(candidate)
+
+        val base =
+            try {
+                JavaPsiFacade.getInstance(project).findClass(interfaceFqn, GlobalSearchScope.allScope(project))
+            } catch (exception: ProcessCanceledException) {
+                throw exception
+            } catch (_: IndexNotReadyException) {
+                return emptyList()
+            } ?: return emptyList()
+
+        fun addIfInheritor(candidate: PsiClass) {
+            val inheritor =
+                try {
+                    candidate.isInheritor(base, true)
+                } catch (exception: ProcessCanceledException) {
+                    throw exception
+                } catch (_: IndexNotReadyException) {
+                    false
                 }
-            }
-        }
-        PsiTreeUtil.findChildrenOfType(file, PsiClass::class.java).forEach { candidate ->
-            if (candidate.isInheritor(base, true)) {
+            if (inheritor) {
                 add(candidate)
             }
         }
+        val file = contextElement.containingFile
+        if (file is PsiClassOwner) {
+            file.classes.forEach(::addIfInheritor)
+        }
+        PsiTreeUtil.findChildrenOfType(file, PsiClass::class.java).forEach(::addIfInheritor)
         try {
             ClassInheritorsSearch.search(base, GlobalSearchScope.projectScope(project), true).forEach { candidate ->
                 ProgressManager.checkCanceled()

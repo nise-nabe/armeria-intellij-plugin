@@ -198,6 +198,41 @@ class ArmeriaKotlinAnnotatedServiceEditorCompletionTest : ArmeriaFixtureTestBase
     }
 
     @Test
+    fun navigatesFromQualifiedExceptionHandlerWhenSameFileNameClashes() {
+        myFixture.addFileToProject(
+            "other/OtherHandler.kt",
+            """
+            package other
+
+            import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction
+
+            class OtherHandler : ExceptionHandlerFunction
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "UserService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.ExceptionHandler
+            import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction
+            import com.linecorp.armeria.server.annotation.Get
+
+            @ExceptionHandler(other.Other<caret>Handler::class)
+            class UserService {
+                @Get("/users")
+                fun users(): String = "ok"
+            }
+
+            class OtherHandler : ExceptionHandlerFunction
+            """.trimIndent(),
+        )
+        val names = resolvedQualifiedNamesAtCaret()
+        assertTrue("other.OtherHandler" in names, names.toString())
+        assertTrue("example.OtherHandler" !in names, names.toString())
+    }
+
+    @Test
     fun insertsQualifiedNameForOtherPackageImplementor() {
         myFixture.addFileToProject(
             "other/OtherHandler.kt",
@@ -230,6 +265,18 @@ class ArmeriaKotlinAnnotatedServiceEditorCompletionTest : ArmeriaFixtureTestBase
             "other.OtherHandler::class" in myFixture.file.text,
             myFixture.file.text,
         )
+    }
+
+    private fun resolvedQualifiedNamesAtCaret(): List<String> {
+        val at = myFixture.file.findElementAt(myFixture.editor.caretModel.offset) ?: return emptyList()
+        return (at.references.toList() + at.parent.references.toList())
+            .mapNotNull { reference ->
+                when (val resolved = reference.resolve()) {
+                    is PsiClass -> resolved.qualifiedName
+                    is KtClassOrObject -> resolved.fqName?.asString()
+                    else -> null
+                }
+            }.distinct()
     }
 
     private fun resolvedName(resolved: Any): String? =

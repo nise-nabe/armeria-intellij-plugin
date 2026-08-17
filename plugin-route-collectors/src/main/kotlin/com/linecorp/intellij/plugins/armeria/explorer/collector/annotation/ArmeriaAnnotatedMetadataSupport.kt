@@ -1,4 +1,5 @@
 package com.linecorp.intellij.plugins.armeria.explorer.collector.annotation
+
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
@@ -18,7 +19,7 @@ internal object ArmeriaAnnotatedMetadataSupport {
     private const val DESCRIPTION_ANNOTATION = ArmeriaRouteSupport.DESCRIPTION_ANNOTATION
     private const val JSON_MEDIA_TYPE = "application/json"
     private const val PLAIN_TEXT_MEDIA_TYPE = "text/plain"
-    private const val OCTET_STREAM_MEDIA_TYPE = "application/octet-stream"
+    private const val BINARY_MEDIA_TYPE = "application/binary"
 
     private val CONSUMES_HELPERS =
         mapOf(
@@ -28,7 +29,7 @@ internal object ArmeriaAnnotatedMetadataSupport {
         mapOf(
             ArmeriaRouteSupport.PRODUCES_JSON_ANNOTATION to JSON_MEDIA_TYPE,
             ArmeriaRouteSupport.PRODUCES_TEXT_ANNOTATION to PLAIN_TEXT_MEDIA_TYPE,
-            ArmeriaRouteSupport.PRODUCES_BINARY_ANNOTATION to OCTET_STREAM_MEDIA_TYPE,
+            ArmeriaRouteSupport.PRODUCES_BINARY_ANNOTATION to BINARY_MEDIA_TYPE,
         )
     private val BINDING_NAME_ANNOTATIONS =
         listOf(
@@ -71,11 +72,14 @@ internal object ArmeriaAnnotatedMetadataSupport {
         method: PsiMethod,
         annotationFqn: String,
         messageKey: String,
-    ): List<String> =
-        method.annotations
+    ): List<String> {
+        val annotations = method.annotations.toList() + method.containingClass?.annotations.orEmpty()
+        return annotations
             .filter { it.qualifiedName == annotationFqn }
             .flatMap { ArmeriaRouteSupport.extractStrings(it.findDeclaredAttributeValue("value")) }
+            .distinct()
             .map { value -> message(messageKey, value) }
+    }
 
     private fun collectStatusCode(method: PsiMethod): String? {
         val annotation = method.getAnnotation(STATUS_CODE_ANNOTATION) ?: return null

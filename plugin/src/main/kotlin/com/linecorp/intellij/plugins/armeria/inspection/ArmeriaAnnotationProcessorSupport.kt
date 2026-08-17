@@ -23,7 +23,7 @@ internal object ArmeriaAnnotationProcessorSupport {
         "com.linecorp.armeria.server.annotation.processor.DocumentationProcessor"
     private const val PROCESSOR_ARTIFACT = "armeria-annotation-processor"
     private const val MAX_GRADLE_SCRIPT_CHARS = 256 * 1024
-    private val GRADLE_SCRIPT_NAMES = listOf("build.gradle", "build.gradle.kts")
+    private val PROCESSOR_FILE_NAMES = listOf("build.gradle", "build.gradle.kts", "libs.versions.toml")
     private val PROCESSOR_CONSUMED_TAG = Regex("""@(?:param|return|throws)\b""")
     private val PROCESSOR_KEY = Key.create<CachedValue<Boolean>>("armeria.annotation.processor.present")
 
@@ -89,14 +89,15 @@ internal object ArmeriaAnnotationProcessorSupport {
         val files = linkedSetOf<VirtualFile>()
         if (module != null) {
             for (root in ModuleRootManager.getInstance(module).contentRoots) {
-                for (name in GRADLE_SCRIPT_NAMES) {
+                for (name in PROCESSOR_FILE_NAMES) {
                     root.findChild(name)?.let { files += it }
                 }
+                root.findFileByRelativePath("gradle/libs.versions.toml")?.let { files += it }
             }
         }
         try {
             val scope = module?.moduleContentScope ?: GlobalSearchScope.projectScope(project)
-            for (name in GRADLE_SCRIPT_NAMES) {
+            for (name in PROCESSOR_FILE_NAMES) {
                 files += FilenameIndex.getVirtualFilesByName(name, scope)
             }
         } catch (_: IndexNotReadyException) {
