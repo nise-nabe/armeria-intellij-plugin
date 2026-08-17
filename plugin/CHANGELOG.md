@@ -4,12 +4,6 @@
 
 ### Added
 
-- Annotated-service editor support for remaining annotations: Ctrl/Cmd-click and implementor completion for `@ExceptionHandler` / `@RequestConverter` / `@ResponseConverter` / `@Decorator` (qualified class literals resolve to the named type), media-type completion for `@Produces` / `@Consumes` (including `application/json`, `text/plain`, and `application/binary`), Route Explorer distinction and Generate HTTP Request query params for method- and class-level `@MatchesParam`, `@ProducesBinary` as `application/binary`, `@Description` comments in generated `.http` files, `@Default` explorer hints, `@Attribute` name completion, and a weak warning when annotated-service Javadoc/KDoc contains `@param` / `@return` / `@throws` without `armeria-annotation-processor` (including a version-catalog mention in `libs.versions.toml`).
-- Generate HTTP Request fills `.http` files from route metadata: `Content-Type` / `Accept` from `@Consumes` / `@Produces` (including `@ConsumesJson` / `@ProducesJson`), `@MatchesHeader` request headers, a JSON body for JSON consumes, and `{id}` path placeholders. GraphQL operations get a POST `/graphql` stub; gRPC method files include a JSON body placeholder.
-- Inspections for annotated/gRPC methods that call known blocking APIs without `@Blocking`, client decorator order of `LoggingClient` / `RetryingClient` / `CircuitBreakerClient`, and unnamed `@Param` when javac `-parameters` (or Kotlin `javaParameters`) is missing.
-- Plugin install, update, enable, and disable no longer require an IDE restart.
-- New Project Wizard generates a REST blog sample, Spring Boot `ArmeriaServerConfigurator` + `application.yml` when a Spring starter is selected, a gRPC `.proto` and service stub when gRPC is selected, and a Scala `Main` sample. The library catalog includes Consul, OAuth 2.0, Resilience4j, RESTEasy, Reactor, and Spring Boot 3 Actuator starter.
-
 ### Changed
 
 ### Deprecated
@@ -18,11 +12,23 @@
 
 ### Fixed
 
+### Security
+
+## [0.4.0] - 2026-08-17
+
+### Added
+
+- Annotated-service editor support for remaining annotations: Ctrl/Cmd-click and implementor completion for `@ExceptionHandler` / `@RequestConverter` / `@ResponseConverter` / `@Decorator` (qualified class literals resolve to the named type), media-type completion for `@Produces` / `@Consumes` (including `application/json`, `text/plain`, and `application/binary`), Route Explorer distinction and Generate HTTP Request query params for method- and class-level `@MatchesParam`, `@ProducesBinary` as `application/binary`, `@Description` comments in generated `.http` files, `@Default` explorer hints, `@Attribute` name completion, and a weak warning when annotated-service Javadoc/KDoc contains `@param` / `@return` / `@throws` without `armeria-annotation-processor` (including a version-catalog mention in `libs.versions.toml`).
+- Generate HTTP Request fills `.http` files from route metadata: `Content-Type` / `Accept` from `@Consumes` / `@Produces` (including `@ConsumesJson` / `@ProducesJson`), `@MatchesHeader` request headers, a JSON body for JSON consumes, and `{id}` path placeholders. GraphQL operations get a POST `/graphql` stub; gRPC method files include a JSON body placeholder.
+- Inspections for annotated/gRPC methods that call known blocking APIs without `@Blocking`, client decorator order of `LoggingClient` / `RetryingClient` / `CircuitBreakerClient`, and unnamed `@Param` when javac `-parameters` (or Kotlin `javaParameters`) is missing.
+- Plugin install, update, enable, and disable no longer require an IDE restart.
+- New Project Wizard generates a REST blog sample, Spring Boot `ArmeriaServerConfigurator` + `application.yml` when a Spring starter is selected, a gRPC `.proto` and service stub when gRPC is selected, and a Scala `Main` sample. The library catalog includes Consul, OAuth 2.0, Resilience4j, RESTEasy, Reactor, and Spring Boot 3 Actuator starter.
+
+### Fixed
+
 - Glob annotated paths (`glob:/*/hello/**`) bind `*` / `**` as `@Param("0")`, `@Param("1")`, … for the path-variable inspection, `@Param` completion, and path-side references. Those names are positional, so rename leaves the glob pattern and `@Param` indices unchanged.
 - Generate Route Method (Kotlin) treats `armeria-kotlin` as present when the published `CoroutineContextService` type resolves, and still accepts the internal `ArmeriaKotlinUtil` marker as a fallback.
 - Endpoints tool window Framework filter lists Armeria server routes and Armeria client factories as distinct entries (`Armeria` vs `Armeria Client`) instead of two identical Armeria items.
-
-### Security
 
 ## [0.3.0] - 2026-08-15
 
