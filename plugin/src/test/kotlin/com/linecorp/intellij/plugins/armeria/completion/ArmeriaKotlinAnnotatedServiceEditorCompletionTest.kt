@@ -125,6 +125,15 @@ class ArmeriaKotlinAnnotatedServiceEditorCompletionTest : ArmeriaFixtureTestBase
 
     @Test
     fun insertsShortNameForSamePackageImplementor() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
+
+            public class OtherHandler implements ExceptionHandlerFunction {}
+            """.trimIndent(),
+        )
         myFixture.configureByText(
             "UserService.kt",
             """
