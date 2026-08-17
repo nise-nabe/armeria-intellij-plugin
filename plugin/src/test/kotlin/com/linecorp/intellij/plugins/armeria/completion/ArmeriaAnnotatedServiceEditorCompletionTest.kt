@@ -2,6 +2,8 @@ package com.linecorp.intellij.plugins.armeria.completion
 
 import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.lookup.Lookup
+import com.intellij.codeInsight.lookup.LookupElement
+import com.intellij.codeInsight.lookup.LookupElementPresentation
 import com.intellij.psi.PsiClass
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase5
@@ -204,10 +206,12 @@ class ArmeriaAnnotatedServiceEditorCompletionTest : ArmeriaFixtureTestBase5() {
         val expectedType = message("completion.exception.handler.type")
         val match =
             elements.firstOrNull { element ->
-                element.lookupString == lookupString && element.typeText == expectedType
+                element.lookupString == lookupString && presentedTypeText(element) == expectedType
             }
-        assertNotNull(match, elements.joinToString { "${it.lookupString}/${it.typeText}" })
+        assertNotNull(match, elements.joinToString { "${it.lookupString}/${presentedTypeText(it)}" })
         myFixture.lookup.currentItem = match
         myFixture.finishLookup(Lookup.NORMAL_SELECT_CHAR)
     }
+
+    private fun presentedTypeText(element: LookupElement): String = LookupElementPresentation.renderElement(element).typeText.orEmpty()
 }
