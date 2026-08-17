@@ -47,15 +47,15 @@ private class ArmeriaJavaAnnotationClassReference(
     private val classRef: PsiJavaCodeReferenceElement,
 ) : PsiReferenceBase<PsiIdentifier>(identifier, TextRange(0, identifier.textLength)) {
     override fun resolve(): PsiElement? {
-        val name = classRef.referenceName ?: identifier.text
-        resolveClassByName(identifier, name)?.let { return it }
+        val name = classRef.referenceName ?: element.text
+        resolveClassByName(element, name)?.let { return it }
         return classRef.resolve() as? PsiClass
     }
 
     override fun getVariants(): Array<Any> {
         val annotation = javaClassValuedAnnotation(classRef) ?: return emptyArray()
         return ArmeriaClassValuedAnnotationSupport
-            .lookupElements(identifier, annotation.qualifiedName, kotlinClassLiteral = false)
+            .lookupElements(element, annotation.qualifiedName, kotlinClassLiteral = false)
             .toTypedArray()
     }
 }
