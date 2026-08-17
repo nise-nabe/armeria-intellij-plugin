@@ -41,7 +41,7 @@ private class ArmeriaJavaClassValuedIdentifierReferenceProvider : PsiReferencePr
     ): Array<PsiReference> {
         val identifier = element as? PsiIdentifier ?: return PsiReference.EMPTY_ARRAY
         val classRef = identifier.parent as? PsiJavaCodeReferenceElement ?: return PsiReference.EMPTY_ARRAY
-        if (!isClassValuedClassLiteral(classRef)) {
+        if (classRef.referenceNameElement != identifier || !isClassNameOfClassLiteral(classRef)) {
             return PsiReference.EMPTY_ARRAY
         }
         return arrayOf(ArmeriaJavaAnnotationClassReference(identifier, classRef))
@@ -54,14 +54,17 @@ private class ArmeriaJavaClassValuedCodeReferenceProvider : PsiReferenceProvider
         context: ProcessingContext,
     ): Array<PsiReference> {
         val classRef = element as? PsiJavaCodeReferenceElement ?: return PsiReference.EMPTY_ARRAY
-        if (!isClassValuedClassLiteral(classRef)) {
+        if (!isClassNameOfClassLiteral(classRef)) {
             return PsiReference.EMPTY_ARRAY
         }
         return arrayOf(ArmeriaJavaAnnotationClassCodeReference(classRef))
     }
 }
 
-private fun isClassValuedClassLiteral(classRef: PsiJavaCodeReferenceElement): Boolean {
+private fun isClassNameOfClassLiteral(classRef: PsiJavaCodeReferenceElement): Boolean {
+    if (classRef.parent is PsiJavaCodeReferenceElement) {
+        return false
+    }
     if (PsiTreeUtil.getParentOfType(classRef, PsiClassObjectAccessExpression::class.java) == null) {
         return false
     }
@@ -71,7 +74,7 @@ private fun isClassValuedClassLiteral(classRef: PsiJavaCodeReferenceElement): Bo
 private class ArmeriaJavaAnnotationClassReference(
     identifier: PsiIdentifier,
     private val classRef: PsiJavaCodeReferenceElement,
-) : PsiReferenceBase<PsiIdentifier>(identifier, TextRange(0, identifier.textLength)) {
+) : PsiReferenceBase<PsiIdentifier>(identifier, TextRange(0, identifier.textLength), true) {
     override fun resolve(): PsiElement? = resolveClassLiteral(element, classRef)
 
     override fun getVariants(): Array<Any> = classValuedLookup(classRef, element)
@@ -79,7 +82,7 @@ private class ArmeriaJavaAnnotationClassReference(
 
 private class ArmeriaJavaAnnotationClassCodeReference(
     classRef: PsiJavaCodeReferenceElement,
-) : PsiReferenceBase<PsiJavaCodeReferenceElement>(classRef) {
+) : PsiReferenceBase<PsiJavaCodeReferenceElement>(classRef, true) {
     override fun resolve(): PsiElement? = resolveClassLiteral(element, element)
 
     override fun getVariants(): Array<Any> = classValuedLookup(element, element)
@@ -94,9 +97,8 @@ private fun resolveClassLiteral(
         resolveQualifiedClass(context, qualifiedName)?.let { return it }
         return classRef.resolve() as? PsiClass
     }
-    val name = classRef.referenceName ?: classRef.text
-    resolveClassByName(context, name)?.let { return it }
-    return classRef.resolve() as? PsiClass
+    (classRef.resolve() as? PsiClass)?.let { return it }
+    return resolveClassByName(context, classRef.referenceName ?: classRef.text)
 }
 
 internal fun resolveQualifiedClass(

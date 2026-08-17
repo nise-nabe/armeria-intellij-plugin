@@ -12,6 +12,7 @@ internal object ArmeriaKnownMediaTypes {
             "text/plain; charset=utf-8",
             "text/event-stream",
             "application/xml",
+            "application/binary",
             "application/octet-stream",
             "application/x-www-form-urlencoded",
             "multipart/form-data",

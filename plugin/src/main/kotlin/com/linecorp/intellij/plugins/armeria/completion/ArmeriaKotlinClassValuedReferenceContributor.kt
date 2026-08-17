@@ -4,6 +4,7 @@ import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.openapi.util.TextRange
 import com.intellij.patterns.PlatformPatterns
+import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiReference
 import com.intellij.psi.PsiReferenceBase
@@ -34,7 +35,7 @@ private class ArmeriaKotlinClassValuedReferenceProvider : PsiReferenceProvider()
         context: ProcessingContext,
     ): Array<PsiReference> {
         val reference = element as? KtNameReferenceExpression ?: return PsiReference.EMPTY_ARRAY
-        if (PsiTreeUtil.getParentOfType(reference, KtClassLiteralExpression::class.java) == null) {
+        if (!isClassNameOfClassLiteral(reference)) {
             return PsiReference.EMPTY_ARRAY
         }
         if (kotlinClassValuedEntry(reference) == null) {
@@ -46,17 +47,22 @@ private class ArmeriaKotlinClassValuedReferenceProvider : PsiReferenceProvider()
 
 private class ArmeriaKotlinAnnotationClassReference(
     reference: KtNameReferenceExpression,
-) : PsiReferenceBase<KtNameReferenceExpression>(reference, TextRange(0, reference.textLength)) {
+) : PsiReferenceBase<KtNameReferenceExpression>(reference, TextRange(0, reference.textLength), true) {
     override fun resolve(): PsiElement? {
         qualifiedClassName()?.let { fqn ->
             resolveQualifiedClass(element, fqn)?.let { return it }
-            return resolveViaOtherReferences()
+            return nativeClassOrObject()
         }
+        nativeClassOrObject()?.let { return it }
         val name = element.getReferencedName()
-        resolveClassByName(element, name)?.let { return it }
         findClassOrObject(element.containingKtFile, name)?.let { return it }
-        return resolveViaOtherReferences()
+        return resolveClassByName(element, name)
     }
+
+    private fun nativeClassOrObject(): PsiElement? =
+        resolveViaOtherReferences()?.takeIf { resolved ->
+            resolved is PsiClass || resolved is KtClassOrObject
+        }
 
     private fun qualifiedClassName(): String? {
         val qualified = element.parent as? KtDotQualifiedExpression ?: return null
@@ -90,6 +96,15 @@ private class ArmeriaKotlinAnnotationClassReference(
                 ArmeriaKotlinAnnotationSupport.qualifiedName(entry),
                 kotlinClassLiteral = true,
             ).toTypedArray()
+    }
+}
+
+private fun isClassNameOfClassLiteral(reference: KtNameReferenceExpression): Boolean {
+    val literal = PsiTreeUtil.getParentOfType(reference, KtClassLiteralExpression::class.java) ?: return false
+    return when (val receiver = literal.receiverExpression) {
+        is KtNameReferenceExpression -> receiver == reference
+        is KtDotQualifiedExpression -> receiver.selectorExpression == reference
+        else -> false
     }
 }
 

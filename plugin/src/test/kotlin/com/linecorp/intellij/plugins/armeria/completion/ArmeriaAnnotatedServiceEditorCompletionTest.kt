@@ -42,6 +42,7 @@ class ArmeriaAnnotatedServiceEditorCompletionTest : ArmeriaFixtureTestBase5() {
         val lookups = lookupStrings()
         assertTrue("application/json" in lookups, lookups.toString())
         assertTrue("text/plain" in lookups, lookups.toString())
+        assertTrue("application/binary" in lookups, lookups.toString())
     }
 
     @Test
@@ -67,6 +68,93 @@ class ArmeriaAnnotatedServiceEditorCompletionTest : ArmeriaFixtureTestBase5() {
         val lookups = lookupStrings()
         assertTrue("application/json" in lookups, lookups.toString())
         assertTrue("text/plain" in lookups, lookups.toString())
+    }
+
+    @Test
+    fun navigatesFromImportedExceptionHandlerWhenAnotherPackageSharesTheName() {
+        myFixture.addClass(
+            """
+            package other;
+
+            import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
+
+            public class OtherHandler implements ExceptionHandlerFunction {}
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package clash;
+
+            import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
+
+            public class OtherHandler implements ExceptionHandlerFunction {}
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "UserService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.ExceptionHandler;
+            import com.linecorp.armeria.server.annotation.Get;
+            import other.OtherHandler;
+
+            @ExceptionHandler(Other<caret>Handler.class)
+            public class UserService {
+                @Get("/users")
+                public String users() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+        val resolved = resolvedClassesAtCaret()
+        assertTrue(
+            resolved.any { it.qualifiedName == "other.OtherHandler" },
+            resolved.joinToString { it.qualifiedName.orEmpty() },
+        )
+        assertTrue(
+            resolved.none { it.qualifiedName == "clash.OtherHandler" },
+            resolved.joinToString { it.qualifiedName.orEmpty() },
+        )
+    }
+
+    @Test
+    fun doesNotResolveClassLiteralQualifierToTheHandlerType() {
+        myFixture.addClass(
+            """
+            package other;
+
+            import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
+
+            public class OtherHandler implements ExceptionHandlerFunction {}
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "UserService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.ExceptionHandler;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            @ExceptionHandler(ot<caret>her.OtherHandler.class)
+            public class UserService {
+                @Get("/users")
+                public String users() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+        val at = myFixture.file.findElementAt(myFixture.editor.caretModel.offset)
+        assertNotNull(at)
+        assertTrue(
+            at.references.none { reference ->
+                !reference.isSoft && (reference.resolve() as? PsiClass)?.name == "OtherHandler"
+            },
+            at.references.joinToString { "${it.canonicalText}/${it.isSoft}/${it.resolve()}" },
+        )
     }
 
     @Test

@@ -41,6 +41,50 @@ class ArmeriaKotlinAnnotatedServiceEditorCompletionTest : ArmeriaFixtureTestBase
         val lookups = lookupStrings()
         assertTrue("application/json" in lookups, lookups.toString())
         assertTrue("text/plain" in lookups, lookups.toString())
+        assertTrue("application/binary" in lookups, lookups.toString())
+    }
+
+    @Test
+    fun navigatesFromImportedExceptionHandlerWhenAnotherPackageSharesTheName() {
+        myFixture.addFileToProject(
+            "other/OtherHandler.kt",
+            """
+            package other
+
+            import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction
+
+            class OtherHandler : ExceptionHandlerFunction
+            """.trimIndent(),
+        )
+        myFixture.addFileToProject(
+            "clash/OtherHandler.kt",
+            """
+            package clash
+
+            import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction
+
+            class OtherHandler : ExceptionHandlerFunction
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "UserService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.ExceptionHandler
+            import com.linecorp.armeria.server.annotation.Get
+            import other.OtherHandler
+
+            @ExceptionHandler(Other<caret>Handler::class)
+            class UserService {
+                @Get("/users")
+                fun users(): String = "ok"
+            }
+            """.trimIndent(),
+        )
+        val names = resolvedQualifiedNamesAtCaret()
+        assertTrue("other.OtherHandler" in names, names.toString())
+        assertTrue("clash.OtherHandler" !in names, names.toString())
     }
 
     @Test
