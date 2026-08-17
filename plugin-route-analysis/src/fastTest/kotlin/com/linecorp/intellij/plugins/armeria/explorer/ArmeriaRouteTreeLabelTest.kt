@@ -29,15 +29,33 @@ class ArmeriaRouteTreeLabelTest {
 
         assertEquals(
             message("route.explorer.hint.matchesHeader", "client-type=android"),
-            ArmeriaRouteTreeLabel.headerMatchSuffix(route),
+            ArmeriaRouteTreeLabel.matchSuffix(route),
         )
         assertTrue(route.speedSearchText.contains("client-type=android"))
     }
 
     @Test
+    fun matchSuffix_joinsParamMatchHints() {
+        val route =
+            testRoute(
+                contentHints =
+                    listOf(
+                        message("route.explorer.hint.matchesParam", "env=prod"),
+                        message("route.explorer.hint.statusCode", "201"),
+                    ),
+            )
+
+        assertEquals(
+            message("route.explorer.hint.matchesParam", "env=prod"),
+            ArmeriaRouteTreeLabel.matchSuffix(route),
+        )
+        assertTrue(route.speedSearchText.contains("env=prod"))
+    }
+
+    @Test
     fun headerMatchSuffix_isNullWithoutHeaderHints() {
         val route = testRoute(contentHints = listOf(message("route.explorer.hint.statusCode", "200")))
-        assertNull(ArmeriaRouteTreeLabel.headerMatchSuffix(route))
+        assertNull(ArmeriaRouteTreeLabel.matchSuffix(route))
     }
 
     private fun testRoute(contentHints: List<String>): ArmeriaRoute =

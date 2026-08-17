@@ -3,6 +3,7 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiParameter
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaPathVariableSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
@@ -10,13 +11,25 @@ import com.linecorp.intellij.plugins.armeria.message
 
 internal object ArmeriaAnnotatedMetadataSupport {
     private const val MATCHES_HEADER_ANNOTATION = ArmeriaRouteSupport.MATCHES_HEADER_ANNOTATION
+    private const val MATCHES_PARAM_ANNOTATION = ArmeriaRouteSupport.MATCHES_PARAM_ANNOTATION
     private const val STATUS_CODE_ANNOTATION = "com.linecorp.armeria.server.annotation.StatusCode"
-    private const val CONSUMES_ANNOTATION = "com.linecorp.armeria.server.annotation.Consumes"
-    private const val PRODUCES_ANNOTATION = "com.linecorp.armeria.server.annotation.Produces"
-    private const val CONSUMES_JSON_ANNOTATION = ArmeriaRouteSupport.CONSUMES_JSON_ANNOTATION
-    private const val PRODUCES_JSON_ANNOTATION = ArmeriaRouteSupport.PRODUCES_JSON_ANNOTATION
-    private const val DESCRIPTION_ANNOTATION = "com.linecorp.armeria.server.annotation.Description"
+    private const val CONSUMES_ANNOTATION = ArmeriaRouteSupport.CONSUMES_ANNOTATION
+    private const val PRODUCES_ANNOTATION = ArmeriaRouteSupport.PRODUCES_ANNOTATION
+    private const val DESCRIPTION_ANNOTATION = ArmeriaRouteSupport.DESCRIPTION_ANNOTATION
     private const val JSON_MEDIA_TYPE = "application/json"
+    private const val PLAIN_TEXT_MEDIA_TYPE = "text/plain"
+    private const val OCTET_STREAM_MEDIA_TYPE = "application/octet-stream"
+
+    private val CONSUMES_HELPERS =
+        mapOf(
+            ArmeriaRouteSupport.CONSUMES_JSON_ANNOTATION to JSON_MEDIA_TYPE,
+        )
+    private val PRODUCES_HELPERS =
+        mapOf(
+            ArmeriaRouteSupport.PRODUCES_JSON_ANNOTATION to JSON_MEDIA_TYPE,
+            ArmeriaRouteSupport.PRODUCES_TEXT_ANNOTATION to PLAIN_TEXT_MEDIA_TYPE,
+            ArmeriaRouteSupport.PRODUCES_BINARY_ANNOTATION to OCTET_STREAM_MEDIA_TYPE,
+        )
 
     fun collectContentHints(
         method: PsiMethod,
@@ -26,11 +39,13 @@ internal object ArmeriaAnnotatedMetadataSupport {
         val methodDescription = method.getAnnotation(DESCRIPTION_ANNOTATION)
         return buildList {
             addAll(collectHeaderMatches(method))
+            addAll(collectParamMatches(method))
             collectStatusCode(method)?.let { add(it) }
-            collectMediaTypes(method, CONSUMES_ANNOTATION, CONSUMES_JSON_ANNOTATION, "route.explorer.hint.consumes")
+            collectMediaTypes(method, CONSUMES_ANNOTATION, CONSUMES_HELPERS, "route.explorer.hint.consumes")
                 ?.let { add(it) }
-            collectMediaTypes(method, PRODUCES_ANNOTATION, PRODUCES_JSON_ANNOTATION, "route.explorer.hint.produces")
+            collectMediaTypes(method, PRODUCES_ANNOTATION, PRODUCES_HELPERS, "route.explorer.hint.produces")
                 ?.let { add(it) }
+            addAll(collectDefaults(method))
             collectDescription(methodDescription)?.let { add(it) }
             collectClassDescription(method.containingClass, methodDescription)?.let { add(it) }
             collectPathVariables(path, pathType).takeIf { it.isNotEmpty() }?.let { vars ->
@@ -40,10 +55,20 @@ internal object ArmeriaAnnotatedMetadataSupport {
     }
 
     private fun collectHeaderMatches(method: PsiMethod): List<String> =
+        collectMatches(method, MATCHES_HEADER_ANNOTATION, "route.explorer.hint.matchesHeader")
+
+    private fun collectParamMatches(method: PsiMethod): List<String> =
+        collectMatches(method, MATCHES_PARAM_ANNOTATION, "route.explorer.hint.matchesParam")
+
+    private fun collectMatches(
+        method: PsiMethod,
+        annotationFqn: String,
+        messageKey: String,
+    ): List<String> =
         method.annotations
-            .filter { it.qualifiedName == MATCHES_HEADER_ANNOTATION }
+            .filter { it.qualifiedName == annotationFqn }
             .flatMap { ArmeriaRouteSupport.extractStrings(it.findDeclaredAttributeValue("value")) }
-            .map { header -> message("route.explorer.hint.matchesHeader", header) }
+            .map { value -> message(messageKey, value) }
 
     private fun collectStatusCode(method: PsiMethod): String? {
         val annotation = method.getAnnotation(STATUS_CODE_ANNOTATION) ?: return null
@@ -61,17 +86,13 @@ internal object ArmeriaAnnotatedMetadataSupport {
     private fun collectMediaTypes(
         method: PsiMethod,
         annotationFqn: String,
-        jsonHelperFqn: String,
+        helpers: Map<String, String>,
         messageKey: String,
     ): String? {
         val types =
             (
-                mediaTypesOn(method.annotations, method.getAnnotation(jsonHelperFqn) != null, annotationFqn) +
-                    mediaTypesOn(
-                        method.containingClass?.annotations.orEmpty(),
-                        method.containingClass?.getAnnotation(jsonHelperFqn) != null,
-                        annotationFqn,
-                    )
+                mediaTypesOn(method.annotations, annotationFqn, helpers) +
+                    mediaTypesOn(method.containingClass?.annotations.orEmpty(), annotationFqn, helpers)
             ).distinct()
         if (types.isEmpty()) {
             return null
@@ -81,8 +102,8 @@ internal object ArmeriaAnnotatedMetadataSupport {
 
     private fun mediaTypesOn(
         annotations: Array<out PsiAnnotation>,
-        jsonHelperPresent: Boolean,
         annotationFqn: String,
+        helpers: Map<String, String>,
     ): List<String> =
         buildList {
             addAll(
@@ -92,10 +113,30 @@ internal object ArmeriaAnnotatedMetadataSupport {
                         ArmeriaRouteSupport.extractStrings(annotation.findDeclaredAttributeValue("value"))
                     },
             )
-            if (jsonHelperPresent) {
-                add(JSON_MEDIA_TYPE)
+            annotations.forEach { annotation ->
+                helpers[annotation.qualifiedName]?.let { add(it) }
             }
         }
+
+    private fun collectDefaults(method: PsiMethod): List<String> =
+        method.parameterList.parameters.mapNotNull { parameter ->
+            val annotation = parameter.getAnnotation(ArmeriaRouteSupport.DEFAULT_ANNOTATION) ?: return@mapNotNull null
+            val value = firstStringOrRawText(annotation)?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            val name = parameterBindingName(parameter) ?: return@mapNotNull null
+            message("route.explorer.hint.default", "$name=$value")
+        }
+
+    private fun parameterBindingName(parameter: PsiParameter): String? {
+        val named =
+            listOf(ArmeriaRouteSupport.PARAM_ANNOTATION, ArmeriaRouteSupport.HEADER_ANNOTATION)
+                .firstNotNullOfOrNull { fqn ->
+                    val annotation = parameter.getAnnotation(fqn) ?: return@firstNotNullOfOrNull null
+                    ArmeriaRouteSupport
+                        .extractStrings(annotation.findDeclaredAttributeValue("value"))
+                        .firstOrNull { it.isNotBlank() }
+                }
+        return named ?: parameter.name?.takeIf { it.isNotBlank() }
+    }
 
     private fun collectDescription(annotation: PsiAnnotation?): String? =
         descriptionText(annotation)?.let {

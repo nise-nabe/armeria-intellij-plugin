@@ -28,8 +28,18 @@ internal object ArmeriaRouteAnnotationSupport {
     const val HEADER_ANNOTATION = "com.linecorp.armeria.server.annotation.Header"
     const val COOKIE_ANNOTATION = "com.linecorp.armeria.server.annotation.Cookie"
     const val MATCHES_HEADER_ANNOTATION = "com.linecorp.armeria.server.annotation.MatchesHeader"
+    const val MATCHES_PARAM_ANNOTATION = "com.linecorp.armeria.server.annotation.MatchesParam"
+    const val CONSUMES_ANNOTATION = "com.linecorp.armeria.server.annotation.Consumes"
+    const val PRODUCES_ANNOTATION = "com.linecorp.armeria.server.annotation.Produces"
     const val CONSUMES_JSON_ANNOTATION = "com.linecorp.armeria.server.annotation.ConsumesJson"
     const val PRODUCES_JSON_ANNOTATION = "com.linecorp.armeria.server.annotation.ProducesJson"
+    const val PRODUCES_TEXT_ANNOTATION = "com.linecorp.armeria.server.annotation.ProducesText"
+    const val PRODUCES_BINARY_ANNOTATION = "com.linecorp.armeria.server.annotation.ProducesBinary"
+    const val DESCRIPTION_ANNOTATION = "com.linecorp.armeria.server.annotation.Description"
+    const val DEFAULT_ANNOTATION = "com.linecorp.armeria.server.annotation.Default"
+    const val ATTRIBUTE_ANNOTATION = "com.linecorp.armeria.server.annotation.Attribute"
+    const val REQUEST_CONVERTER_ANNOTATION = "com.linecorp.armeria.server.annotation.RequestConverter"
+    const val RESPONSE_CONVERTER_ANNOTATION = "com.linecorp.armeria.server.annotation.ResponseConverter"
 
     val routeAnnotations =
         mapOf(

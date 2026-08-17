@@ -185,6 +185,86 @@ class ArmeriaAnnotatedMetadataSupportTest : ArmeriaFixtureTestBase() {
         )
     }
 
+    fun testCollectMatchesParamAndDefault() {
+        myFixture.configureByText(
+            "ItemService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.*;
+
+            public class ItemService {
+                @Get("/items")
+                @MatchesParam("env=prod")
+                public String list(@Param("limit") @Default("20") String limit) {
+                    return limit;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val route = routes.single()
+        assertEquals(
+            listOf(
+                message("route.explorer.hint.matchesParam", "env=prod"),
+                message("route.explorer.hint.default", "limit=20"),
+            ),
+            route.contentHints,
+        )
+    }
+
+    fun testCollectProducesTextHelper() {
+        myFixture.configureByText(
+            "TextService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.*;
+
+            public class TextService {
+                @Get("/plain")
+                @ProducesText
+                public String plain() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val route = routes.single()
+        assertEquals(
+            listOf(message("route.explorer.hint.produces", "text/plain")),
+            route.contentHints,
+        )
+    }
+
+    fun testCollectMatchesParamFromKotlin() {
+        myFixture.configureByText(
+            "ItemService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+            import com.linecorp.armeria.server.annotation.MatchesParam
+
+            class ItemService {
+                @Get("/items")
+                @MatchesParam("env=prod")
+                fun list(): String = "ok"
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val route = routes.single()
+        assertEquals(
+            listOf(message("route.explorer.hint.matchesParam", "env=prod")),
+            route.contentHints,
+        )
+    }
+
     fun testRegexPathSkipsPathVariables() {
         myFixture.configureByText(
             "RegexService.java",

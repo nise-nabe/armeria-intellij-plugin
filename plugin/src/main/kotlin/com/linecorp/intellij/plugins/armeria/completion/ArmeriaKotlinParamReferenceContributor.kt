@@ -306,20 +306,32 @@ internal fun KtStringTemplateExpression.decodedConstantString(): String? {
     }
 }
 
-internal fun cookieNamesInKotlinClass(owner: KtClassOrObject): Set<String> {
+internal fun cookieNamesInKotlinClass(owner: KtClassOrObject): Set<String> =
+    namedParameterValuesInKotlinClass(owner, ArmeriaRouteSupport.COOKIE_ANNOTATION)
+
+internal fun attributeNamesInKotlinClass(owner: KtClassOrObject): Set<String> =
+    namedParameterValuesInKotlinClass(owner, ArmeriaRouteSupport.ATTRIBUTE_ANNOTATION)
+
+private fun namedParameterValuesInKotlinClass(
+    owner: KtClassOrObject,
+    annotationFqn: String,
+): Set<String> {
     val names = linkedSetOf<String>()
     for (declaration in owner.declarations.filterIsInstance<KtNamedFunction>()) {
         for (parameter in declaration.valueParameters) {
-            cookieName(parameter)?.let { names += it }
+            namedParameterValue(parameter, annotationFqn)?.let { names += it }
         }
     }
     return names
 }
 
-private fun cookieName(parameter: KtParameter): String? {
+private fun namedParameterValue(
+    parameter: KtParameter,
+    annotationFqn: String,
+): String? {
     val entry =
         parameter.annotationEntries.firstOrNull {
-            ArmeriaKotlinAnnotationSupport.qualifiedName(it) == ArmeriaRouteSupport.COOKIE_ANNOTATION
+            ArmeriaKotlinAnnotationSupport.qualifiedName(it) == annotationFqn
         } ?: return null
     return ArmeriaKotlinAnnotationSupport.extractStrings(entry).firstOrNull { it.isNotBlank() }
 }

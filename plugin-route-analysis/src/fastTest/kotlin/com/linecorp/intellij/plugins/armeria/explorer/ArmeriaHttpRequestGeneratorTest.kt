@@ -350,6 +350,33 @@ class ArmeriaHttpRequestGeneratorTest {
     }
 
     @Test
+    fun requestText_includesDescriptionCommentsAndMatchesParam() {
+        val route =
+            route(
+                httpMethod = "GET",
+                path = "/items",
+                contentHints =
+                    listOf(
+                        message("route.explorer.hint.matchesParam", "env=prod"),
+                        message("route.explorer.hint.matchesParam", "debug!=true"),
+                        message("route.explorer.hint.description", "Lists items."),
+                        message("route.explorer.hint.description", "Shared catalog."),
+                    ),
+            )
+
+        assertEquals(
+            """
+            ### /items
+            # Lists items.
+            # Shared catalog.
+            GET http://localhost:8080/items?env=prod
+            Accept: application/json
+            """.trimIndent() + "\n\n",
+            ArmeriaHttpRequestGenerator.requestText(route),
+        )
+    }
+
+    @Test
     fun requestText_omitsBodyOnGetEvenWithConsumes() {
         val route =
             route(

@@ -85,6 +85,15 @@
                          enabledByDefault="true"
                          level="WARNING"
                          implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaParametersCompilerInspection" />
+        <localInspection language="JAVA"
+                         bundle="messages.ArmeriaBundle"
+                         key="inspection.annotation.processor.display.name"
+                         groupBundle="messages.ArmeriaBundle"
+                         groupKey="inspection.group.armeria"
+                         shortName="ArmeriaAnnotationProcessor"
+                         enabledByDefault="true"
+                         level="WEAK WARNING"
+                         implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaAnnotationProcessorInspection" />
         <consoleFilterProvider implementation="com.linecorp.intellij.plugins.armeria.run.ArmeriaDocServiceConsoleFilterProvider" />
         <registryKey key="armeria.route.explorer.metrics"
                      defaultValue="false"

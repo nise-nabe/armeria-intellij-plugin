@@ -45,6 +45,41 @@ class ArmeriaAnnotationValueCompletionContributor : CompletionContributor() {
                             val owner = PsiTreeUtil.getParentOfType(annotation, PsiClass::class.java) ?: return
                             addCookieCompletions(owner, result)
                         }
+                        ArmeriaRouteSupport.ATTRIBUTE_ANNOTATION -> {
+                            val owner = PsiTreeUtil.getParentOfType(annotation, PsiClass::class.java) ?: return
+                            addNamedValueCompletions(
+                                names = attributeNamesInJavaClass(owner),
+                                typeTextKey = "completion.attribute.type",
+                                result = result,
+                            )
+                        }
+                        ArmeriaRouteSupport.PRODUCES_ANNOTATION,
+                        ArmeriaRouteSupport.CONSUMES_ANNOTATION,
+                        -> addMediaTypeCompletions(result)
+                    }
+                }
+            },
+        )
+        extend(
+            CompletionType.BASIC,
+            PlatformPatterns.psiElement().inside(PsiAnnotation::class.java),
+            object : CompletionProvider<CompletionParameters>() {
+                override fun addCompletions(
+                    parameters: CompletionParameters,
+                    context: ProcessingContext,
+                    result: CompletionResultSet,
+                ) {
+                    val start = parameters.originalPosition ?: parameters.position
+                    val annotation = javaClassValuedAnnotation(start) ?: return
+                    for (element in ArmeriaClassValuedAnnotationSupport.lookupElements(
+                        start,
+                        annotation.qualifiedName,
+                        kotlinClassLiteral = false,
+                    )) {
+                        if (!result.prefixMatcher.prefixMatches(element.lookupString)) {
+                            continue
+                        }
+                        result.addElement(element)
                     }
                 }
             },
@@ -69,14 +104,19 @@ internal fun addCookieCompletions(
     owner: PsiClass,
     result: CompletionResultSet,
 ) {
-    val names =
-        owner.methods
-            .asSequence()
-            .flatMap { method -> method.parameterList.parameters.asSequence() }
-            .mapNotNull { parameter ->
-                val annotation = parameter.getAnnotation(ArmeriaRouteSupport.COOKIE_ANNOTATION) ?: return@mapNotNull null
-                ArmeriaRouteSupport.extractStrings(annotation.findDeclaredAttributeValue("value")).firstOrNull { it.isNotBlank() }
-            }.toSet()
+    addNamedValueCompletions(cookieNamesInJavaClass(owner), "completion.cookie.type", result)
+}
+
+internal fun addMediaTypeCompletions(result: CompletionResultSet) {
+    addNamedValueCompletions(ArmeriaKnownMediaTypes.NAMES, "completion.media.type", result)
+}
+
+internal fun addNamedValueCompletions(
+    names: Collection<String>,
+    typeTextKey: String,
+    result: CompletionResultSet,
+) {
+    val typeText = message(typeTextKey)
     for (name in names) {
         if (!result.prefixMatcher.prefixMatches(name)) {
             continue
@@ -84,7 +124,23 @@ internal fun addCookieCompletions(
         result.addElement(
             LookupElementBuilder
                 .create(name)
-                .withTypeText(message("completion.cookie.type")),
+                .withTypeText(typeText),
         )
     }
 }
+
+internal fun cookieNamesInJavaClass(owner: PsiClass): Set<String> = namedParameterValues(owner, ArmeriaRouteSupport.COOKIE_ANNOTATION)
+
+internal fun attributeNamesInJavaClass(owner: PsiClass): Set<String> = namedParameterValues(owner, ArmeriaRouteSupport.ATTRIBUTE_ANNOTATION)
+
+private fun namedParameterValues(
+    owner: PsiClass,
+    annotationFqn: String,
+): Set<String> =
+    owner.methods
+        .asSequence()
+        .flatMap { method -> method.parameterList.parameters.asSequence() }
+        .mapNotNull { parameter ->
+            val annotation = parameter.getAnnotation(annotationFqn) ?: return@mapNotNull null
+            ArmeriaRouteSupport.extractStrings(annotation.findDeclaredAttributeValue("value")).firstOrNull { it.isNotBlank() }
+        }.toSet()

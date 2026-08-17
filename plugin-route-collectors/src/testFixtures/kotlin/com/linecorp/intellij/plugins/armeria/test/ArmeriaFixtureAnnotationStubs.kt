@@ -118,6 +118,27 @@ fun JavaCodeInsightTestFixture.registerContentAnnotationStubs() {
         """
         package com.linecorp.armeria.server.annotation;
 
+        public @interface MatchesParam { String value(); }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.annotation;
+
+        public @interface Default { String value() default ""; }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.annotation;
+
+        public @interface Attribute { String value() default ""; }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.annotation;
+
         public @interface Description { String value() default ""; }
         """.trimIndent(),
     )
@@ -147,6 +168,69 @@ fun JavaCodeInsightTestFixture.registerContentAnnotationStubs() {
         package com.linecorp.armeria.server.annotation;
 
         public @interface ProducesJson {}
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.annotation;
+
+        public @interface ProducesText {}
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.annotation;
+
+        public @interface ProducesBinary {}
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.annotation;
+
+        public @interface RequestConverter {
+            Class<?>[] value();
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.annotation;
+
+        public @interface ResponseConverter {
+            Class<?>[] value();
+        }
+        """.trimIndent(),
+    )
+}
+
+fun JavaCodeInsightTestFixture.registerClassValuedAnnotationStubs() {
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.annotation;
+
+        public interface ExceptionHandlerFunction {}
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.annotation;
+
+        public interface RequestConverterFunction {}
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.annotation;
+
+        public interface ResponseConverterFunction {}
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server;
+
+        public interface DecoratingHttpServiceFunction {}
         """.trimIndent(),
     )
 }
