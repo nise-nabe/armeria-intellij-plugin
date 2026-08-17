@@ -1,5 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.completion
 
+import com.intellij.openapi.progress.ProcessCanceledException
+import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.openapi.util.TextRange
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.PsiElement
@@ -47,8 +49,24 @@ private class ArmeriaKotlinAnnotationClassReference(
     override fun resolve(): PsiElement? {
         val name = element.getReferencedName()
         resolveClassByName(element, name)?.let { return it }
-        return findClassOrObject(element.containingKtFile, name)
+        findClassOrObject(element.containingKtFile, name)?.let { return it }
+        return resolveViaOtherReferences()
     }
+
+    private fun resolveViaOtherReferences(): PsiElement? =
+        try {
+            element.references.firstNotNullOfOrNull { reference ->
+                if (reference is ArmeriaKotlinAnnotationClassReference) {
+                    null
+                } else {
+                    reference.resolve()
+                }
+            }
+        } catch (exception: ProcessCanceledException) {
+            throw exception
+        } catch (_: IndexNotReadyException) {
+            null
+        }
 
     override fun getVariants(): Array<Any> {
         val entry = kotlinClassValuedEntry(element) ?: return emptyArray()

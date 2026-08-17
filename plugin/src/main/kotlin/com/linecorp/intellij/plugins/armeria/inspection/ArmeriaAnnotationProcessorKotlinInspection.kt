@@ -4,12 +4,9 @@ import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.psi.PsiElementVisitor
-import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.message
-import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtVisitorVoid
-import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 class ArmeriaAnnotationProcessorKotlinInspection : LocalInspectionTool() {
     override fun getDisplayName(): String = message("inspection.annotation.processor.kotlin.display.name")
@@ -30,11 +27,6 @@ class ArmeriaAnnotationProcessorKotlinInspection : LocalInspectionTool() {
                 if (ArmeriaKotlinMethodRoute.from(function) == null) {
                     return
                 }
-                if (hasDescription(function) ||
-                    function.getParentOfType<KtClassOrObject>(true)?.let(::hasDescription) == true
-                ) {
-                    return
-                }
                 if (ArmeriaAnnotationProcessorSupport.hasDocumentationProcessor(function)) {
                     return
                 }
@@ -44,15 +36,5 @@ class ArmeriaAnnotationProcessorKotlinInspection : LocalInspectionTool() {
                     ProblemHighlightType.WEAK_WARNING,
                 )
             }
-        }
-
-    private fun hasDescription(function: KtNamedFunction): Boolean =
-        function.annotationEntries.any {
-            ArmeriaKotlinAnnotationSupport.qualifiedName(it) == ArmeriaRouteSupport.DESCRIPTION_ANNOTATION
-        }
-
-    private fun hasDescription(owner: KtClassOrObject): Boolean =
-        owner.annotationEntries.any {
-            ArmeriaKotlinAnnotationSupport.qualifiedName(it) == ArmeriaRouteSupport.DESCRIPTION_ANNOTATION
         }
 }

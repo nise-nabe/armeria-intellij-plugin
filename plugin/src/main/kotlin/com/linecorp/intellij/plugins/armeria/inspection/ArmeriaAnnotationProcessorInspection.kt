@@ -27,11 +27,6 @@ class ArmeriaAnnotationProcessorInspection : AbstractBaseJavaLocalInspectionTool
                 if (ArmeriaRouteSupport.findRouteAnnotation(method) == null) {
                     return
                 }
-                if (method.getAnnotation(ArmeriaRouteSupport.DESCRIPTION_ANNOTATION) != null ||
-                    method.containingClass?.getAnnotation(ArmeriaRouteSupport.DESCRIPTION_ANNOTATION) != null
-                ) {
-                    return
-                }
                 if (ArmeriaAnnotationProcessorSupport.hasDocumentationProcessor(method)) {
                     return
                 }

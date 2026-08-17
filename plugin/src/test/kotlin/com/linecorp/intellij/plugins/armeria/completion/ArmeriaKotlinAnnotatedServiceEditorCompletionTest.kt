@@ -124,6 +124,68 @@ class ArmeriaKotlinAnnotatedServiceEditorCompletionTest : ArmeriaFixtureTestBase
     }
 
     @Test
+    fun insertsShortNameForSamePackageImplementor() {
+        myFixture.configureByText(
+            "UserService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.ExceptionHandler
+            import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction
+            import com.linecorp.armeria.server.annotation.Get
+
+            @ExceptionHandler(<caret>)
+            class UserService {
+                @Get("/users")
+                fun users(): String = "ok"
+            }
+
+            class MyHandler : ExceptionHandlerFunction
+            """.trimIndent(),
+        )
+
+        selectLookup("MyHandler")
+        assertTrue("MyHandler::class" in myFixture.file.text, myFixture.file.text)
+        assertTrue("example.MyHandler::class" !in myFixture.file.text, myFixture.file.text)
+    }
+
+    @Test
+    fun navigatesFromExceptionHandlerInAnotherFile() {
+        myFixture.addFileToProject(
+            "example/OtherHandler.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction
+
+            class OtherHandler : ExceptionHandlerFunction
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "UserService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.ExceptionHandler
+            import com.linecorp.armeria.server.annotation.Get
+
+            @ExceptionHandler(Other<caret>Handler::class)
+            class UserService {
+                @Get("/users")
+                fun users(): String = "ok"
+            }
+            """.trimIndent(),
+        )
+        val resolved =
+            assertNotNull(
+                myFixture.file
+                    .findReferenceAt(myFixture.editor.caretModel.offset)
+                    ?.resolve(),
+            )
+        assertEquals("OtherHandler", resolvedName(resolved))
+    }
+
+    @Test
     fun insertsQualifiedNameForOtherPackageImplementor() {
         myFixture.addFileToProject(
             "other/OtherHandler.kt",

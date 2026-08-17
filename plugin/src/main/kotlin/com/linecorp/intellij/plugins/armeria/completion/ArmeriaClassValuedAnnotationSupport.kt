@@ -7,6 +7,7 @@ import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.IndexNotReadyException
+import com.intellij.psi.JavaDirectoryService
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
@@ -133,12 +134,35 @@ private fun qualifyInsertedTypeIfNeeded(
 ) {
     val psiClass = item.psiElement as? PsiClass ?: return
     val qualifiedName = psiClass.qualifiedName ?: return
-    val filePackage = (context.file as? PsiClassOwner)?.packageName.orEmpty()
+    val filePackage = insertionPackage(context)
     val typePackage = qualifiedName.substringBeforeLast('.', missingDelimiterValue = "")
     if (typePackage == filePackage) {
         return
     }
     context.document.replaceString(context.startOffset, context.tailOffset, qualifiedName)
+}
+
+private fun insertionPackage(context: InsertionContext): String {
+    val fromOwner = (context.file as? PsiClassOwner)?.packageName
+    if (!fromOwner.isNullOrEmpty()) {
+        return fromOwner
+    }
+    val directoryPackage =
+        context.file.containingDirectory
+            ?.let { JavaDirectoryService.getInstance().getPackage(it)?.qualifiedName }
+    if (!directoryPackage.isNullOrEmpty()) {
+        return directoryPackage
+    }
+    val offset = context.startOffset.coerceIn(0, context.file.textLength)
+    var at = context.file.findElementAt(offset)
+    if (at == null && offset > 0) {
+        at = context.file.findElementAt(offset - 1)
+    }
+    var owner = PsiTreeUtil.getParentOfType(at, PsiClass::class.java, false)
+    while (owner?.containingClass != null) {
+        owner = owner.containingClass
+    }
+    return owner?.qualifiedName?.substringBeforeLast('.', missingDelimiterValue = "").orEmpty()
 }
 
 private fun appendClassLiteralSuffix(

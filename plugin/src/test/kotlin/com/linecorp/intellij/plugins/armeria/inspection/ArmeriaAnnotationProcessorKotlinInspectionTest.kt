@@ -37,6 +37,27 @@ class ArmeriaAnnotationProcessorKotlinInspectionTest : ArmeriaFixtureTestBase5()
     }
 
     @Test
+    fun highlightsKdocTagsEvenWhenDescriptionIsPresent() {
+        myFixture.configureByText(
+            "HelloService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Description
+            import com.linecorp.armeria.server.annotation.Get
+
+            class HelloService {
+                /** @param unused unused */
+                @Get("/hello")
+                @Description("Greets the caller.")
+                fun hello(): String = "ok"
+            }
+            """.trimIndent(),
+        )
+        assertJavadocHighlights(1)
+    }
+
+    @Test
     fun doesNotHighlightSummaryOnlyKdocWithoutProcessor() {
         configureKdocService("/** Greets the caller. */")
         assertJavadocHighlights(0)

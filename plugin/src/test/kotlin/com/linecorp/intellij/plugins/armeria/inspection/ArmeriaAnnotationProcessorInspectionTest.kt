@@ -39,6 +39,29 @@ class ArmeriaAnnotationProcessorInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun highlightsJavadocTagsEvenWhenDescriptionIsPresent() {
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Description;
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class HelloService {
+                /** @param unused unused */
+                @Get("/hello")
+                @Description("Greets the caller.")
+                public String hello() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+        assertJavadocHighlights(1)
+    }
+
+    @Test
     fun doesNotHighlightSummaryOnlyJavadocWithoutProcessor() {
         configureJavadocService("/** Greets the caller. */")
         assertJavadocHighlights(0)
