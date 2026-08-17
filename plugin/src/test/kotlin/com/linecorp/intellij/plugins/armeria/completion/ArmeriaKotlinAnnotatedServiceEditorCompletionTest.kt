@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.completion
 import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.lookup.Lookup
 import com.intellij.psi.PsiClass
+import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase5
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.junit.jupiter.api.Test
@@ -245,11 +246,15 @@ class ArmeriaKotlinAnnotatedServiceEditorCompletionTest : ArmeriaFixtureTestBase
     }
 
     private fun selectLookup(lookupString: String) {
-        val elements = myFixture.complete(CompletionType.BASIC)
-        if (elements != null) {
-            val match = elements.first { it.lookupString == lookupString }
-            myFixture.lookup.currentItem = match
-            myFixture.finishLookup(Lookup.NORMAL_SELECT_CHAR)
-        }
+        val elements =
+            assertNotNull(myFixture.complete(CompletionType.BASIC), myFixture.file.text)
+        val expectedType = message("completion.exception.handler.type")
+        val match =
+            elements.firstOrNull { element ->
+                element.lookupString == lookupString && element.typeText == expectedType
+            }
+        assertNotNull(match, elements.joinToString { "${it.lookupString}/${it.typeText}" })
+        myFixture.lookup.currentItem = match
+        myFixture.finishLookup(Lookup.NORMAL_SELECT_CHAR)
     }
 }
