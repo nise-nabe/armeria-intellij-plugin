@@ -143,6 +143,8 @@
                                 implementationClass="com.linecorp.intellij.plugins.armeria.completion.ArmeriaAnnotationValueCompletionContributor"/>
         <psi.referenceContributor language="JAVA"
                                   implementation="com.linecorp.intellij.plugins.armeria.completion.ArmeriaJavaParamReferenceContributor"/>
+        <psi.referenceContributor language="JAVA"
+                                  implementation="com.linecorp.intellij.plugins.armeria.completion.ArmeriaJavaClassValuedReferenceContributor"/>
     </extensions>
 
     <actions>

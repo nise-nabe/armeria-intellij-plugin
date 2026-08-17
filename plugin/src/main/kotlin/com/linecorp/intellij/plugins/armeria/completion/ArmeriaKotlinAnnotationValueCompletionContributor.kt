@@ -92,7 +92,7 @@ class ArmeriaKotlinAnnotationValueCompletionContributor : CompletionContributor(
     }
 }
 
-private fun kotlinClassValuedEntry(start: PsiElement): KtAnnotationEntry? {
+internal fun kotlinClassValuedEntry(start: PsiElement): KtAnnotationEntry? {
     if (PsiTreeUtil.getParentOfType(start, KtStringTemplateExpression::class.java, false) != null) {
         return null
     }

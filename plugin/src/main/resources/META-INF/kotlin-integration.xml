@@ -96,5 +96,7 @@
                                 implementationClass="com.linecorp.intellij.plugins.armeria.completion.ArmeriaKotlinAnnotationValueCompletionContributor"/>
         <psi.referenceContributor language="kotlin"
                                   implementation="com.linecorp.intellij.plugins.armeria.completion.ArmeriaKotlinParamReferenceContributor"/>
+        <psi.referenceContributor language="kotlin"
+                                  implementation="com.linecorp.intellij.plugins.armeria.completion.ArmeriaKotlinClassValuedReferenceContributor"/>
     </extensions>
 </idea-plugin>

@@ -50,7 +50,7 @@ class ArmeriaKotlinAnnotatedServiceEditorCompletionTest : ArmeriaFixtureTestBase
             import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction
             import com.linecorp.armeria.server.annotation.Get
 
-            @ExceptionHandler(MyHandler::class)
+            @ExceptionHandler(My<caret>Handler::class)
             class UserService {
                 @Get("/users")
                 fun users(): String = "ok"
@@ -59,15 +59,10 @@ class ArmeriaKotlinAnnotatedServiceEditorCompletionTest : ArmeriaFixtureTestBase
             class MyHandler : ExceptionHandlerFunction
             """.trimIndent(),
         )
-        val offset =
-            myFixture.editor.document.text
-                .indexOf("MyHandler::class")
-        assertTrue(offset >= 0)
-        myFixture.editor.caretModel.moveToOffset(offset)
         val resolved =
             assertNotNull(
                 myFixture.file
-                    .findReferenceAt(offset)
+                    .findReferenceAt(myFixture.editor.caretModel.offset)
                     ?.resolve(),
             )
         val name =

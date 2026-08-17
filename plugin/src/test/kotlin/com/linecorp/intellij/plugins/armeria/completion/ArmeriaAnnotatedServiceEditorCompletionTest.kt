@@ -76,7 +76,7 @@ class ArmeriaAnnotatedServiceEditorCompletionTest : ArmeriaFixtureTestBase5() {
             import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
             import com.linecorp.armeria.server.annotation.Get;
 
-            @ExceptionHandler(MyHandler.class)
+            @ExceptionHandler(My<caret>Handler.class)
             public class UserService {
                 @Get("/users")
                 public String users() {
@@ -87,15 +87,10 @@ class ArmeriaAnnotatedServiceEditorCompletionTest : ArmeriaFixtureTestBase5() {
             class MyHandler implements ExceptionHandlerFunction {}
             """.trimIndent(),
         )
-        val offset =
-            myFixture.editor.document.text
-                .indexOf("MyHandler.class")
-        assertTrue(offset >= 0)
-        myFixture.editor.caretModel.moveToOffset(offset)
         val resolved =
             assertNotNull(
                 myFixture.file
-                    .findReferenceAt(offset)
+                    .findReferenceAt(myFixture.editor.caretModel.offset)
                     ?.resolve(),
             )
         val psiClass = assertNotNull(resolved as? PsiClass, resolved.toString())
