@@ -235,7 +235,7 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         }
         val inspectable =
             klass.declarations.filterIsInstance<KtNamedFunction>().filter {
-                shouldInspect(it, ignoreClassBlocking = true)
+                honorsBlockingAnnotation(it) && shouldInspect(it, ignoreClassBlocking = true)
             }
         if (inspectable.size <= 1) {
             return false

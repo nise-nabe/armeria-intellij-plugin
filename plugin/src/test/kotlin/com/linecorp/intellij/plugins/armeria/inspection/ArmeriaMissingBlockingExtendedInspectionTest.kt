@@ -237,6 +237,36 @@ class ArmeriaMissingBlockingExtendedInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun httpServiceDoesNotOfferClassBlockingQuickFix() {
+        myFixture.configureByText(
+            "MyService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.AbstractHttpService;
+            import java.util.concurrent.CompletableFuture;
+
+            public class MyService extends AbstractHttpService {
+                @Override
+                protected Object doGet(Object ctx, Object req) {
+                    return CompletableFuture.completedFuture("ok").<caret>join();
+                }
+
+                @Override
+                protected Object doPost(Object ctx, Object req) {
+                    return CompletableFuture.completedFuture("ok").join();
+                }
+            }
+            """.trimIndent(),
+        )
+        assertHttpHighlights(2, "join")
+        myFixture.doHighlighting()
+        val names = myFixture.getAvailableQuickFixes().map { it.text }
+        assertTrue(message("inspection.missing.blocking.quickfix.class") !in names)
+        assertTrue(message("inspection.missing.blocking.quickfix.method") !in names)
+    }
+
+    @Test
     fun highlightsAnonymousGraphqlDataFetcherJoin() {
         myFixture.configureByText(
             "Server.java",

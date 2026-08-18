@@ -147,7 +147,10 @@ internal object ArmeriaMissingBlockingSupport {
         if (cls is PsiAnonymousClass || hasBlockingOrNonBlocking(cls)) {
             return false
         }
-        val inspectable = cls.methods.filter { shouldInspect(it, ignoreClassBlocking = true) }
+        val inspectable =
+            cls.methods.filter {
+                honorsBlockingAnnotation(it) && shouldInspect(it, ignoreClassBlocking = true)
+            }
         if (inspectable.size <= 1) {
             return false
         }

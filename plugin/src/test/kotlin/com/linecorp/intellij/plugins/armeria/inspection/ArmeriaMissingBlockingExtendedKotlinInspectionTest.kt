@@ -226,6 +226,31 @@ class ArmeriaMissingBlockingExtendedKotlinInspectionTest : ArmeriaFixtureTestBas
         assertTrue(myFixture.file.text.contains("@Blocking"))
     }
 
+    @Test
+    fun addClassBlockingQuickFixWhenEveryMethodBlocks() {
+        myFixture.configureByText(
+            "SlowService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+            import java.util.concurrent.CompletableFuture
+
+            class SlowService {
+                @Get("/a")
+                fun a(): String = CompletableFuture.completedFuture("ok").<caret>join()
+
+                @Get("/b")
+                fun b(): String = CompletableFuture.completedFuture("ok").join()
+            }
+            """.trimIndent(),
+        )
+        assertBlockingHighlights(2, "join")
+        applyQuickFix(message("inspection.missing.blocking.quickfix.class"))
+        assertBlockingHighlights(0, "join")
+        assertTrue(myFixture.file.text.contains("@Blocking"))
+    }
+
     private fun configureGraphqlFetcher(useBlockingExecutor: Boolean) {
         val executorCall =
             if (useBlockingExecutor) {
