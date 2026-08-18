@@ -15,9 +15,13 @@ import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClassLiteralExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
+import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
+import org.jetbrains.kotlin.psi.KtTreeVisitorVoid
+import org.jetbrains.kotlin.psi.KtValueArgument
+import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 internal object ArmeriaServerDecoratorKotlinSupport {
     fun findings(call: KtCallExpression): List<ArmeriaServerDecoratorFinding> {
@@ -34,7 +38,11 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         if (isGlobalBuilderDecoratorCall(call)) {
             addAuthAfterLogging(
                 visited = call,
-                kinds = globalBuilderDecoratorCalls(call).map { it to decoratorKind(it) },
+                kinds =
+                    collectBuilderDecoratorCalls(call)
+                        .filter(::isGlobalBuilderDecoratorCall)
+                        .sortedBy { it.textOffset }
+                        .map { it to decoratorKind(it) },
                 findings = findings,
             )
             return
@@ -118,33 +126,50 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         if (!ArmeriaBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)) {
             return null
         }
-        val arguments = call.valueArguments.mapNotNull { it.getArgumentExpression() }
-        if (arguments.isEmpty()) {
+        val valueArguments = call.valueArguments
+        if (valueArguments.isEmpty()) {
             return null
         }
-        if (methodName == "serviceUnder") {
-            val service = arguments.getOrNull(1) ?: return null
-            return ServiceRegistrationArgs(
-                serviceExpression = service,
-                hasExplicitPath = true,
-                extraDecorators = arguments.drop(2),
-            )
-        }
-        return if (isPathPatternExpression(arguments[0])) {
-            val service = arguments.getOrNull(1) ?: return null
-            ServiceRegistrationArgs(
-                serviceExpression = service,
-                hasExplicitPath = true,
-                extraDecorators = arguments.drop(2),
-            )
-        } else {
-            ServiceRegistrationArgs(
-                serviceExpression = arguments[0],
-                hasExplicitPath = false,
-                extraDecorators = arguments.drop(1),
-            )
-        }
+        val namedPath = namedArgument(valueArguments, "pathPattern") ?: namedArgument(valueArguments, "pathPrefix")
+        val namedService = namedArgument(valueArguments, "service")
+        val positional = valueArguments.filter { it.getArgumentName() == null }.mapNotNull { it.getArgumentExpression() }
+        val pathExpression =
+            namedPath
+                ?: when {
+                    methodName == "serviceUnder" -> positional.getOrNull(0)
+                    positional.firstOrNull()?.let(::isPathPatternExpression) == true -> positional.first()
+                    else -> null
+                }
+        val serviceExpression =
+            namedService
+                ?: positional.firstOrNull { it != pathExpression }
+                ?: return null
+        val extraDecorators =
+            positional.filter { it != pathExpression && it != serviceExpression } +
+                valueArguments.mapNotNull { argument ->
+                    val name = argument.getArgumentName()?.asName?.identifier
+                    if (name == null || name == "pathPattern" || name == "pathPrefix" || name == "service") {
+                        null
+                    } else {
+                        argument.getArgumentExpression()
+                    }
+                }
+        val hasExplicitPath = pathExpression != null || methodName == "serviceUnder"
+        return ServiceRegistrationArgs(
+            serviceExpression = serviceExpression,
+            hasExplicitPath = hasExplicitPath,
+            extraDecorators = extraDecorators.distinct(),
+            routePath = pathExpression?.let(::stringValue) ?: "/",
+        )
     }
+
+    private fun namedArgument(
+        arguments: List<KtValueArgument>,
+        name: String,
+    ): KtExpression? =
+        arguments
+            .firstOrNull { it.getArgumentName()?.asName?.identifier == name }
+            ?.getArgumentExpression()
 
     private fun hasCorsDecorator(
         serviceCall: KtCallExpression,
@@ -156,7 +181,7 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         if (decorateChainHasCors(registration.serviceExpression)) {
             return true
         }
-        return builderChainHasCors(serviceCall)
+        return builderHasCors(serviceCall, registration.routePath)
     }
 
     private fun decorateChainHasCors(expression: KtExpression): Boolean {
@@ -175,20 +200,103 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         return false
     }
 
-    private fun builderChainHasCors(serviceCall: KtCallExpression): Boolean {
-        var current: KtExpression? = chainReceiver(serviceCall)
+    private fun builderHasCors(
+        serviceCall: KtCallExpression,
+        routePath: String,
+    ): Boolean = collectBuilderDecoratorCalls(serviceCall).any { corsDecoratorApplies(it, routePath) }
+
+    private fun collectBuilderDecoratorCalls(anchor: KtCallExpression): List<KtCallExpression> {
+        val found = LinkedHashSet<KtCallExpression>()
+        collectFluentBuilderDecoratorCalls(anchor, found)
+        collectEnclosingScopeFluentDecorators(anchor, found)
+        val scope = ArmeriaKotlinExpressionSupport.containingKotlinExpressionScope(anchor)
+        scope.accept(
+            object : KtTreeVisitorVoid() {
+                override fun visitCallExpression(expression: KtCallExpression) {
+                    if (isBuilderDecoratorCall(expression) && isSameBuilder(anchor, expression)) {
+                        found += expression
+                    }
+                    super.visitCallExpression(expression)
+                }
+            },
+        )
+        return found.toList()
+    }
+
+    private fun collectFluentBuilderDecoratorCalls(
+        anchor: KtCallExpression,
+        found: MutableSet<KtCallExpression>,
+    ) {
+        var current: KtExpression? = chainReceiver(anchor)
         val visited = mutableSetOf<PsiElement>()
         while (current != null && visited.add(current)) {
             val decoratorCall = asCall(current)
-            if (decoratorCall != null && isCorsBuilderDecorator(decoratorCall)) {
-                return true
+            if (decoratorCall != null && isBuilderDecoratorCall(decoratorCall)) {
+                found += decoratorCall
             }
             current = nextPrecedingExpression(current)
+        }
+        var cursor = anchor
+        while (true) {
+            val next = nextChainedCall(cursor) ?: break
+            if (isBuilderDecoratorCall(next)) {
+                found += next
+            }
+            cursor = next
+        }
+        if (isBuilderDecoratorCall(anchor)) {
+            found += anchor
+        }
+    }
+
+    private fun collectEnclosingScopeFluentDecorators(
+        anchor: KtCallExpression,
+        found: MutableSet<KtCallExpression>,
+    ) {
+        var current: PsiElement = anchor
+        val visited = mutableSetOf<PsiElement>()
+        while (visited.add(current)) {
+            val lambda = current.getParentOfType<KtLambdaExpression>(strict = true) ?: break
+            val scopeCall = (lambda.parent as? KtValueArgument)?.parent as? KtCallExpression ?: break
+            collectFluentBuilderDecoratorCalls(scopeCall, found)
+            current = scopeCall
+        }
+    }
+
+    private fun isSameBuilder(
+        anchor: KtCallExpression,
+        other: KtCallExpression,
+    ): Boolean {
+        val anchorVariable = resolveBuilderVariable(anchor)
+        val otherVariable = resolveBuilderVariable(other)
+        if (anchorVariable != null && anchorVariable == otherVariable) {
+            return true
+        }
+        if (chainReceiver(anchor) == null && chainReceiver(other) == null) {
+            return ArmeriaKotlinExpressionSupport.containingKotlinExpressionScope(anchor) ===
+                ArmeriaKotlinExpressionSupport.containingKotlinExpressionScope(other)
         }
         return false
     }
 
-    private fun isCorsBuilderDecorator(call: KtCallExpression): Boolean {
+    private fun resolveBuilderVariable(call: KtCallExpression): PsiElement? {
+        var current: KtExpression? = chainReceiver(call)
+        val visited = mutableSetOf<PsiElement>()
+        while (current != null && visited.add(current)) {
+            when (current) {
+                is KtNameReferenceExpression -> {
+                    return current.references.firstNotNullOfOrNull { it.resolve() }
+                }
+                else -> current = chainReceiver(current)
+            }
+        }
+        return null
+    }
+
+    private fun corsDecoratorApplies(
+        call: KtCallExpression,
+        routePath: String,
+    ): Boolean {
         val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return false
         if (methodName != "decorator" && methodName != "decoratorUnder") {
             return false
@@ -220,8 +328,8 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         if (pathExpression == null) {
             return true
         }
-        val path = stringValue(pathExpression) ?: return false
-        return ArmeriaServerDecoratorTypes.corsPathAppliesToGrpc(path)
+        val path = stringValue(pathExpression)
+        return ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(path, routePath)
     }
 
     private fun isDecoratedServiceWithRoutes(expression: KtExpression): Boolean {
@@ -350,9 +458,6 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         psiClass.qualifiedName == ArmeriaServerDecoratorTypes.HTTP_SERVICE ||
             InheritanceUtil.isInheritor(psiClass, ArmeriaServerDecoratorTypes.HTTP_SERVICE)
 
-    private fun globalBuilderDecoratorCalls(call: KtCallExpression): List<KtCallExpression> =
-        decoratorCallsInChain(call, ::isGlobalBuilderDecoratorCall)
-
     private fun httpServiceDecorateCalls(call: KtCallExpression): List<KtCallExpression> =
         decoratorCallsInChain(call, ::isHttpServiceDecorateCall)
 
@@ -444,18 +549,23 @@ internal object ArmeriaServerDecoratorKotlinSupport {
                 is KtDotQualifiedExpression -> {
                     when (val selector = current.selectorExpression) {
                         is KtCallExpression -> current = selector
-                        is KtNameReferenceExpression -> return selector.getReferencedName()
+                        is KtNameReferenceExpression -> {
+                            val name = selector.getReferencedName()
+                            if (name == "java" || name == "class") {
+                                current = unwrap(current.receiverExpression)
+                            } else {
+                                return name
+                            }
+                        }
                         is KtClassLiteralExpression -> {
-                            current = selector.receiverExpression ?: return current.text.substringAfterLast('.')
+                            current = unwrap(selector.receiverExpression ?: current.receiverExpression)
                         }
                         else -> current = current.receiverExpression
                     }
                 }
-                is KtClassLiteralExpression ->
-                    return current.receiverExpression
-                        ?.text
-                        .orEmpty()
-                        .substringAfterLast('.')
+                is KtClassLiteralExpression -> {
+                    current = unwrap(current.receiverExpression ?: return current.text.substringAfterLast('.'))
+                }
                 is KtNameReferenceExpression -> return current.getReferencedName()
                 else -> return current.text.substringAfterLast('.').substringBefore('(')
             }
@@ -597,5 +707,6 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         val serviceExpression: KtExpression,
         val hasExplicitPath: Boolean,
         val extraDecorators: List<KtExpression>,
+        val routePath: String,
     )
 }

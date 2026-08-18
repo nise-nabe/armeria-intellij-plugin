@@ -134,6 +134,60 @@ class ArmeriaServerDecoratorInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun allowsGrpcServiceWithStatementStyleCorsDecorator() {
+        configureServer(
+            """
+            GrpcService grpcService = GrpcService.builder().build();
+            ServerBuilder sb = Server.builder();
+            sb.decorator(CorsService.newDecorator());
+            sb.service(grpcService).build();
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.grpc.cors"), 0)
+    }
+
+    @Test
+    fun allowsGrpcServiceWithCorsDecoratorAfterService() {
+        configureServer(
+            """
+            GrpcService grpcService = GrpcService.builder().build();
+            Server.builder()
+                  .service(grpcService)
+                  .decorator(CorsService.newDecorator())
+                  .build();
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.grpc.cors"), 0)
+    }
+
+    @Test
+    fun allowsGrpcWhenDecoratorUnderMatchesRegistrationPath() {
+        configureServer(
+            """
+            GrpcService grpcService = GrpcService.builder().build();
+            Server.builder()
+                  .decoratorUnder("/grpc", CorsService.newDecorator())
+                  .service("/grpc", grpcService)
+                  .build();
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.grpc.cors"), 0)
+    }
+
+    @Test
+    fun highlightsAuthAfterLoggingOnSplitStatements() {
+        configureServer(
+            """
+            ServerBuilder sb = Server.builder();
+            sb.decorator(LoggingService.newDecorator());
+            sb.decorator(AuthService.newDecorator());
+            sb.service("/api", (HttpService) null).build();
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.auth.after.logging"), 1)
+    }
+
+    @Test
     fun highlightsAuthAfterLoggingOnBuilder() {
         configureServer(
             """
@@ -194,6 +248,7 @@ class ArmeriaServerDecoratorInspectionTest : ArmeriaFixtureTestBase5() {
 
             import com.linecorp.armeria.server.HttpService;
             import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.ServerBuilder;
             import com.linecorp.armeria.server.auth.AuthService;
             import com.linecorp.armeria.server.cors.CorsService;
             import com.linecorp.armeria.server.grpc.GrpcService;

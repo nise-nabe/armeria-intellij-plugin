@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.inspection
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiClassObjectAccessExpression
 import com.intellij.psi.PsiClassType
+import com.intellij.psi.PsiCodeBlock
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiLiteralExpression
@@ -13,6 +14,7 @@ import com.intellij.psi.PsiType
 import com.intellij.psi.PsiTypeCastExpression
 import com.intellij.psi.PsiVariable
 import com.intellij.psi.util.InheritanceUtil
+import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKnownHttpServiceClassifier
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.KnownHttpServiceKind
@@ -32,7 +34,11 @@ internal object ArmeriaServerDecoratorSupport {
         if (isGlobalBuilderDecoratorCall(call)) {
             addAuthAfterLogging(
                 visited = call,
-                kinds = globalBuilderDecoratorCalls(call).map { it to decoratorKind(it) },
+                kinds =
+                    collectBuilderDecoratorCalls(call)
+                        .filter(::isGlobalBuilderDecoratorCall)
+                        .sortedBy { it.textOffset }
+                        .map { it to decoratorKind(it) },
                 findings = findings,
             )
             return
@@ -126,6 +132,7 @@ internal object ArmeriaServerDecoratorSupport {
                 serviceExpression = service,
                 hasExplicitPath = true,
                 extraDecorators = arguments.drop(2),
+                routePath = stringValue(arguments[0]) ?: "/",
             )
         }
         return if (isPathPatternExpression(arguments[0])) {
@@ -134,12 +141,14 @@ internal object ArmeriaServerDecoratorSupport {
                 serviceExpression = service,
                 hasExplicitPath = true,
                 extraDecorators = arguments.drop(2),
+                routePath = stringValue(arguments[0]) ?: "/",
             )
         } else {
             ServiceRegistrationArgs(
                 serviceExpression = arguments[0],
                 hasExplicitPath = false,
                 extraDecorators = arguments.drop(1),
+                routePath = "/",
             )
         }
     }
@@ -154,7 +163,7 @@ internal object ArmeriaServerDecoratorSupport {
         if (decorateChainHasCors(registration.serviceExpression)) {
             return true
         }
-        return builderChainHasCors(serviceCall)
+        return builderHasCors(serviceCall, registration.routePath)
     }
 
     private fun decorateChainHasCors(expression: PsiExpression): Boolean {
@@ -169,14 +178,35 @@ internal object ArmeriaServerDecoratorSupport {
         return false
     }
 
-    private fun builderChainHasCors(serviceCall: PsiMethodCallExpression): Boolean {
-        var current: PsiExpression? = unwrapOrNull(serviceCall.methodExpression.qualifierExpression)
+    private fun builderHasCors(
+        serviceCall: PsiMethodCallExpression,
+        routePath: String,
+    ): Boolean = collectBuilderDecoratorCalls(serviceCall).any { corsDecoratorApplies(it, routePath) }
+
+    private fun collectBuilderDecoratorCalls(anchor: PsiMethodCallExpression): List<PsiMethodCallExpression> {
+        val found = LinkedHashSet<PsiMethodCallExpression>()
+        collectFluentBuilderDecoratorCalls(anchor, found)
+        val builderVariable = resolveBuilderVariable(anchor) ?: return found.toList()
+        val block = PsiTreeUtil.getParentOfType(anchor, PsiCodeBlock::class.java) ?: return found.toList()
+        for (candidate in PsiTreeUtil.findChildrenOfType(block, PsiMethodCallExpression::class.java)) {
+            if (isBuilderDecoratorCall(candidate) && resolveBuilderVariable(candidate) == builderVariable) {
+                found += candidate
+            }
+        }
+        return found.toList()
+    }
+
+    private fun collectFluentBuilderDecoratorCalls(
+        anchor: PsiMethodCallExpression,
+        found: MutableSet<PsiMethodCallExpression>,
+    ) {
+        var current: PsiExpression? = unwrapOrNull(anchor.methodExpression.qualifierExpression)
         val visited = mutableSetOf<PsiElement>()
         while (current != null && visited.add(current)) {
             when (current) {
                 is PsiMethodCallExpression -> {
-                    if (isCorsBuilderDecorator(current)) {
-                        return true
+                    if (isBuilderDecoratorCall(current)) {
+                        found += current
                     }
                     current = unwrapOrNull(current.methodExpression.qualifierExpression)
                 }
@@ -192,10 +222,36 @@ internal object ArmeriaServerDecoratorSupport {
                 else -> break
             }
         }
-        return false
+        var cursor: PsiExpression = anchor
+        while (true) {
+            val parent = enclosingQualifierCall(cursor) ?: break
+            if (isBuilderDecoratorCall(parent)) {
+                found += parent
+            }
+            cursor = parent
+        }
+        if (isBuilderDecoratorCall(anchor)) {
+            found += anchor
+        }
     }
 
-    private fun isCorsBuilderDecorator(call: PsiMethodCallExpression): Boolean {
+    private fun resolveBuilderVariable(call: PsiMethodCallExpression): PsiVariable? {
+        var current: PsiExpression? = unwrapOrNull(call.methodExpression.qualifierExpression)
+        val visited = mutableSetOf<PsiElement>()
+        while (current != null && visited.add(current)) {
+            when (current) {
+                is PsiReferenceExpression -> return current.resolve() as? PsiVariable
+                is PsiMethodCallExpression -> current = unwrapOrNull(current.methodExpression.qualifierExpression)
+                else -> return null
+            }
+        }
+        return null
+    }
+
+    private fun corsDecoratorApplies(
+        call: PsiMethodCallExpression,
+        routePath: String,
+    ): Boolean {
         val methodName = call.methodExpression.referenceName ?: return false
         if (methodName != "decorator" && methodName != "decoratorUnder") {
             return false
@@ -227,8 +283,8 @@ internal object ArmeriaServerDecoratorSupport {
         if (pathExpression == null) {
             return true
         }
-        val path = stringValue(pathExpression) ?: return false
-        return ArmeriaServerDecoratorTypes.corsPathAppliesToGrpc(path)
+        val path = stringValue(pathExpression)
+        return ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(path, routePath)
     }
 
     private fun isDecoratedServiceWithRoutes(expression: PsiExpression): Boolean {
@@ -377,42 +433,6 @@ internal object ArmeriaServerDecoratorSupport {
             type.canonicalText == ArmeriaServerDecoratorTypes.HTTP_SERVICE
     }
 
-    private fun globalBuilderDecoratorCalls(call: PsiMethodCallExpression): List<PsiMethodCallExpression> {
-        val preceding = mutableListOf<PsiMethodCallExpression>()
-        val visited = mutableSetOf<PsiElement>()
-        var current: PsiExpression? = unwrapOrNull(call.methodExpression.qualifierExpression)
-        while (current != null && visited.add(current)) {
-            when (current) {
-                is PsiMethodCallExpression -> {
-                    if (isGlobalBuilderDecoratorCall(current)) {
-                        preceding += current
-                    }
-                    current = unwrapOrNull(current.methodExpression.qualifierExpression)
-                }
-                is PsiReferenceExpression -> {
-                    val resolved = current.resolve()
-                    current =
-                        if (resolved is PsiVariable) {
-                            unwrapOrNull(resolved.initializer)
-                        } else {
-                            null
-                        }
-                }
-                else -> break
-            }
-        }
-        val following = mutableListOf<PsiMethodCallExpression>()
-        var cursor: PsiExpression = call
-        while (true) {
-            val parent = enclosingQualifierCall(cursor) ?: break
-            if (isGlobalBuilderDecoratorCall(parent)) {
-                following += parent
-            }
-            cursor = parent
-        }
-        return preceding.asReversed() + call + following
-    }
-
     private fun httpServiceDecorateCalls(call: PsiMethodCallExpression): List<PsiMethodCallExpression> {
         val preceding = mutableListOf<PsiMethodCallExpression>()
         val visited = mutableSetOf<PsiElement>()
@@ -505,10 +525,7 @@ internal object ArmeriaServerDecoratorSupport {
         return typeName == "java.lang.String" || typeName == "String"
     }
 
-    private fun stringValue(expression: PsiExpression): String? {
-        val unwrapped = unwrap(expression)
-        return (unwrapped as? PsiLiteralExpression)?.value as? String
-    }
+    private fun stringValue(expression: PsiExpression): String? = ArmeriaRouteSupport.extractJavaStringConstant(expression)
 
     private fun highlightDecorateOrArgument(expression: PsiExpression): PsiElement {
         val unwrapped = unwrapAndFollow(expression)
@@ -556,5 +573,6 @@ internal object ArmeriaServerDecoratorSupport {
         val serviceExpression: PsiExpression,
         val hasExplicitPath: Boolean,
         val extraDecorators: List<PsiExpression>,
+        val routePath: String,
     )
 }

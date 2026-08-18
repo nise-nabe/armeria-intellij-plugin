@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.inspection
 
 import com.intellij.psi.PsiElement
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.KnownHttpServiceKind
 
 internal enum class ArmeriaServerDecoratorKind {
@@ -46,15 +47,13 @@ internal object ArmeriaServerDecoratorTypes {
 
     fun isServiceWithRoutesKind(kind: KnownHttpServiceKind): Boolean = kind in SERVICE_WITH_ROUTES_KINDS
 
-    fun corsPathAppliesToGrpc(pathPattern: String): Boolean {
-        val normalized = pathPattern.trim()
-        return normalized.isEmpty() ||
-            normalized == "/" ||
-            normalized == "/**" ||
-            normalized == "*" ||
-            normalized == "prefix:/" ||
-            normalized == "prefix:/**" ||
-            normalized == "glob:/**" ||
-            normalized == "glob:/*"
+    fun corsDecoratorAppliesToRoute(
+        pathPattern: String?,
+        routePath: String,
+    ): Boolean {
+        if (pathPattern.isNullOrBlank()) {
+            return true
+        }
+        return ArmeriaRouteSupport.decoratorPathPatternAppliesToRoute(pathPattern, routePath)
     }
 }

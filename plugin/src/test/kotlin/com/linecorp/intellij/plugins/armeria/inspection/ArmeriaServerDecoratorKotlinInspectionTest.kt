@@ -94,6 +94,142 @@ class ArmeriaServerDecoratorKotlinInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun allowsGrpcServiceWithClassLiteralCorsDecorator() {
+        configureServer(
+            """
+            val grpcService = GrpcService.builder().build()
+            Server.builder()
+                .decorator(CorsService::class.java)
+                .service(grpcService)
+                .build()
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.grpc.cors"), 0)
+    }
+
+    @Test
+    fun allowsGrpcServiceWithApplyBlockCorsDecorator() {
+        configureServer(
+            """
+            val grpcService = GrpcService.builder().build()
+            Server.builder().apply {
+                decorator(CorsService.newDecorator())
+                service(grpcService)
+            }.build()
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.grpc.cors"), 0)
+    }
+
+    @Test
+    fun allowsGrpcServiceWithStatementStyleCorsDecorator() {
+        configureServer(
+            """
+            val grpcService = GrpcService.builder().build()
+            val sb = Server.builder()
+            sb.decorator(CorsService.newDecorator())
+            sb.service(grpcService).build()
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.grpc.cors"), 0)
+    }
+
+    @Test
+    fun allowsGrpcServiceWithCorsDecoratorAfterService() {
+        configureServer(
+            """
+            val grpcService = GrpcService.builder().build()
+            Server.builder()
+                .service(grpcService)
+                .decorator(CorsService.newDecorator())
+                .build()
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.grpc.cors"), 0)
+    }
+
+    @Test
+    fun highlightsGrpcWhenDecoratorUnderCorsDoesNotCoverRoot() {
+        configureServer(
+            """
+            val grpcService = GrpcService.builder().build()
+            Server.builder()
+                .decoratorUnder("/public", CorsService.newDecorator())
+                .service(grpcService)
+                .build()
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.grpc.cors"), 1)
+    }
+
+    @Test
+    fun allowsGrpcServiceWithCorsDecoratorBeforeApply() {
+        configureServer(
+            """
+            val grpcService = GrpcService.builder().build()
+            Server.builder()
+                .decorator(CorsService.newDecorator())
+                .apply {
+                    service(grpcService)
+                }.build()
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.grpc.cors"), 0)
+    }
+
+    @Test
+    fun allowsDecorateWhenNamedPathPatternIsPresent() {
+        configureServer(
+            """
+            val grpcService = GrpcService.builder().build()
+            Server.builder()
+                .service(service = grpcService.decorate(LoggingService.newDecorator()), pathPattern = "/grpc")
+                .build()
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.service.with.routes"), 0)
+    }
+
+    @Test
+    fun highlightsDecorateThenPathlessServiceOnSplitVariable() {
+        configureServer(
+            """
+            val grpcService = GrpcService.builder().build()
+            val decorated = grpcService.decorate(LoggingService.newDecorator())
+            Server.builder().service(decorated).build()
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.service.with.routes"), 1)
+    }
+
+    @Test
+    fun allowsGrpcServiceWithRootDecoratorUnderCors() {
+        configureServer(
+            """
+            val grpcService = GrpcService.builder().build()
+            Server.builder()
+                .decoratorUnder("/", CorsService.newDecorator())
+                .service(grpcService)
+                .build()
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.grpc.cors"), 0)
+    }
+
+    @Test
+    fun highlightsAuthAfterLoggingOnSplitStatements() {
+        configureServer(
+            """
+            val sb = Server.builder()
+            sb.decorator(LoggingService.newDecorator())
+            sb.decorator(AuthService.newDecorator())
+            sb.service("/api", null as HttpService?).build()
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.auth.after.logging"), 1)
+    }
+
+    @Test
     fun highlightsAuthAfterLoggingOnBuilder() {
         configureServer(
             """
@@ -129,6 +265,18 @@ class ArmeriaServerDecoratorKotlinInspectionTest : ArmeriaFixtureTestBase5() {
             Server.builder()
                 .service(grpcService, LoggingService.newDecorator(), AuthService.newDecorator())
                 .build()
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.auth.after.logging"), 1)
+    }
+
+    @Test
+    fun highlightsAuthAfterLoggingOnDecorateChain() {
+        configureServer(
+            """
+            val grpcService = GrpcService.builder().build()
+            grpcService.decorate(LoggingService.newDecorator())
+                .decorate(AuthService.newDecorator())
             """.trimIndent(),
         )
         assertHighlights(message("inspection.server.decorator.auth.after.logging"), 1)

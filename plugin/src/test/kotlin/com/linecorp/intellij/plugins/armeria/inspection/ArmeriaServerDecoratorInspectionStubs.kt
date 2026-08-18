@@ -40,7 +40,7 @@ fun JavaCodeInsightTestFixture.registerServerDecoratorInspectionStubs() {
                 return this;
             }
 
-            public ServerBuilder service(String path, HttpService service) {
+            public ServerBuilder service(String pathPattern, HttpService service) {
                 return this;
             }
 
