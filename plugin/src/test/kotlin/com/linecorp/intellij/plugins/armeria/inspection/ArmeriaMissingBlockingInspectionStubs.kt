@@ -82,6 +82,38 @@ fun JavaCodeInsightTestFixture.registerMissingBlockingHttpServiceStubs() {
             protected Object doPost(Object ctx, Object req) throws Exception {
                 return null;
             }
+
+            protected Object doPut(Object ctx, Object req) throws Exception {
+                return null;
+            }
+
+            protected Object doDelete(Object ctx, Object req) throws Exception {
+                return null;
+            }
+
+            protected Object doHead(Object ctx, Object req) throws Exception {
+                return null;
+            }
+
+            protected Object doPatch(Object ctx, Object req) throws Exception {
+                return null;
+            }
+
+            protected Object doOptions(Object ctx, Object req) throws Exception {
+                return null;
+            }
+
+            protected Object doTrace(Object ctx, Object req) throws Exception {
+                return null;
+            }
+
+            protected Object doConnect(Object ctx, Object req) throws Exception {
+                return null;
+            }
+
+            protected Object doQuery(Object ctx, Object req) throws Exception {
+                return null;
+            }
         }
         """.trimIndent(),
     )

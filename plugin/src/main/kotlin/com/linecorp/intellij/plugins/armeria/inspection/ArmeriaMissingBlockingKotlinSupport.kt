@@ -190,6 +190,12 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                 }
                 element is KtCallExpression -> {
                     val className = ArmeriaKotlinExpressionSupport.resolveCallName(element) ?: return@forEachDescendant
+                    if (className in DATA_FETCHER_METHODS) {
+                        if (dataFetcherCallHasBlockingTarget(element)) {
+                            found = true
+                        }
+                        return@forEachDescendant
+                    }
                     val klass = resolveClassByName(element, className) ?: return@forEachDescendant
                     if (isDataFetcherType(klass) && dataFetcherClassHasBlockingCall(klass)) {
                         found = true
@@ -373,6 +379,140 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                 else -> null
             }
         return call != null && ArmeriaKotlinExpressionSupport.resolveCallName(call) == className
+    }
+
+    private fun dataFetcherCallHasBlockingTarget(call: KtCallExpression): Boolean =
+        call.valueArguments.any { argument ->
+            val expression = argument.getArgumentExpression() ?: return@any false
+            if (expression is KtLambdaExpression) {
+                return@any false
+            }
+            val klass = resolveDataFetcherFromExpression(expression) ?: return@any false
+            dataFetcherClassHasBlockingCall(klass)
+        }
+
+    private fun resolveDataFetcherFromExpression(expression: KtExpression): PsiElement? =
+        resolveDataFetcherFromExpression(expression, mutableSetOf())
+
+    private fun resolveDataFetcherFromExpression(
+        expression: KtExpression,
+        visited: MutableSet<PsiElement>,
+    ): PsiElement? {
+        val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: expression
+        if (!visited.add(unwrapped)) {
+            return null
+        }
+        return when (unwrapped) {
+            is KtCallExpression -> {
+                val className = ArmeriaKotlinExpressionSupport.resolveCallName(unwrapped) ?: return null
+                if (className in DATA_FETCHER_METHODS) {
+                    return null
+                }
+                resolveClassByName(unwrapped, className)?.takeIf(::isDataFetcherType)
+            }
+            is KtNameReferenceExpression -> resolveFromNameReference(unwrapped, visited)
+            is KtDotQualifiedExpression -> {
+                val selector = unwrapped.selectorExpression ?: return null
+                resolveDataFetcherFromExpression(selector, visited)
+            }
+            else -> null
+        }
+    }
+
+    private fun resolveFromNameReference(
+        reference: KtNameReferenceExpression,
+        visited: MutableSet<PsiElement>,
+    ): PsiElement? {
+        when (val resolved = reference.references.firstNotNullOfOrNull { it.resolve() }) {
+            is KtProperty -> return propertyDataFetcher(resolved, visited)
+            is KtParameter -> {
+                resolved.defaultValue?.let { resolveDataFetcherFromExpression(it, visited) }?.let { return it }
+                val typeName =
+                    resolved.typeReference
+                        ?.text
+                        ?.substringBefore('<')
+                        ?.trim()
+                return typeName?.let { findDataFetcherClassInFile(reference, it) }
+            }
+            is PsiVariable -> {
+                val typeClass = (resolved.type as? PsiClassType)?.resolve()
+                if (typeClass != null &&
+                    ArmeriaMissingBlockingSupport.isDataFetcherClass(typeClass) &&
+                    typeClass.qualifiedName != ArmeriaGraphqlBlockingSupport.DATA_FETCHER_CLASS
+                ) {
+                    return typeClass
+                }
+            }
+            is KtClassOrObject -> return resolved.takeIf(::isDataFetcherHierarchy)
+            is PsiClass -> return resolved.takeIf { ArmeriaMissingBlockingSupport.isDataFetcherClass(it) }
+        }
+        return findPropertyDataFetcher(reference, reference.getReferencedName(), visited)
+    }
+
+    private fun propertyDataFetcher(
+        property: KtProperty,
+        visited: MutableSet<PsiElement>,
+    ): PsiElement? {
+        property.initializer?.let { resolveDataFetcherFromExpression(it, visited) }?.let { return it }
+        val typeName =
+            property.typeReference
+                ?.text
+                ?.substringBefore('<')
+                ?.trim() ?: return null
+        return findDataFetcherClassInFile(property, typeName)
+    }
+
+    private fun findPropertyDataFetcher(
+        anchor: PsiElement,
+        name: String,
+        visited: MutableSet<PsiElement>,
+    ): PsiElement? {
+        val function = PsiTreeUtil.getParentOfType(anchor, KtNamedFunction::class.java) ?: return null
+        var found: PsiElement? = null
+        function.forEachDescendant { element ->
+            if (found != null) {
+                return@forEachDescendant
+            }
+            val property = element as? KtProperty ?: return@forEachDescendant
+            if (property.name != name) {
+                return@forEachDescendant
+            }
+            if (PsiTreeUtil.getParentOfType(property, KtNamedFunction::class.java) != function) {
+                return@forEachDescendant
+            }
+            found = propertyDataFetcher(property, visited)
+        }
+        return found
+    }
+
+    private fun findDataFetcherClassInFile(
+        anchor: PsiElement,
+        className: String,
+    ): PsiElement? {
+        if (className.isEmpty() || className == "DataFetcher") {
+            return null
+        }
+        val file = anchor.containingFile as? KtFile ?: return null
+        file.declarations
+            .filterIsInstance<KtClassOrObject>()
+            .firstOrNull { it.name == className && isDataFetcherHierarchy(it) }
+            ?.let { return it }
+        val facade = JavaPsiFacade.getInstance(file.project)
+        file.importDirectives
+            .mapNotNull { it.importPath?.pathStr }
+            .firstOrNull { it == className || it.endsWith(".$className") }
+            ?.let { imported ->
+                facade.findClass(imported, file.resolveScope)?.let { cls ->
+                    if (ArmeriaMissingBlockingSupport.isDataFetcherClass(cls)) {
+                        return cls
+                    }
+                }
+            }
+        val pkg = file.packageFqName.asString()
+        val fqn = if (pkg.isEmpty()) className else "$pkg.$className"
+        return facade.findClass(fqn, file.resolveScope)?.takeIf {
+            ArmeriaMissingBlockingSupport.isDataFetcherClass(it)
+        }
     }
 
     private fun dataFetcherClassHasBlockingCall(klass: PsiElement): Boolean =

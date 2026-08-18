@@ -18,6 +18,7 @@ import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiTypeCastExpression
 import com.intellij.psi.PsiVariable
 import com.intellij.psi.search.searches.ReferencesSearch
+import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
 
 internal enum class GraphqlBlockingCoverage {
@@ -83,6 +84,12 @@ internal object ArmeriaGraphqlBlockingSupport {
                         ArmeriaMissingBlockingSupport.isDataFetcherClass(cls) &&
                         dataFetcherClassHasBlockingCall(cls)
                     ) {
+                        found = true
+                    }
+                }
+                element is PsiMethodCallExpression &&
+                    element.methodExpression.referenceName in DATA_FETCHER_METHODS -> {
+                    if (dataFetcherCallHasBlockingTarget(element)) {
                         found = true
                     }
                 }
@@ -199,6 +206,111 @@ internal object ArmeriaGraphqlBlockingSupport {
                         }
                     }
                 }
+            }
+        }
+        return found
+    }
+
+    private fun dataFetcherCallHasBlockingTarget(call: PsiMethodCallExpression): Boolean =
+        call.argumentList.expressions.any { argument ->
+            val cls = resolveDataFetcherClass(argument) ?: return@any false
+            dataFetcherClassHasBlockingCall(cls)
+        }
+
+    private fun resolveDataFetcherClass(expression: PsiExpression): PsiClass? = resolveDataFetcherClass(expression, mutableSetOf())
+
+    private fun resolveDataFetcherClass(
+        expression: PsiExpression,
+        visited: MutableSet<PsiElement>,
+    ): PsiClass? {
+        val unwrapped = unwrap(expression) ?: return null
+        if (!visited.add(unwrapped)) {
+            return null
+        }
+        return when (unwrapped) {
+            is PsiNewExpression -> resolveFromNewExpression(unwrapped)
+            is PsiReferenceExpression -> resolveFromReference(unwrapped, visited)
+            else -> null
+        }
+    }
+
+    private fun resolveFromNewExpression(expression: PsiNewExpression): PsiClass? {
+        expression.anonymousClass
+            ?.takeIf { ArmeriaMissingBlockingSupport.isDataFetcherClass(it) }
+            ?.let { return it }
+        val resolved = expression.classOrAnonymousClassReference?.resolve() as? PsiClass
+        if (resolved != null && ArmeriaMissingBlockingSupport.isDataFetcherClass(resolved)) {
+            return resolved
+        }
+        val name = expression.classReference?.referenceName ?: return null
+        return findDataFetcherClassInFile(expression, name)
+    }
+
+    private fun resolveFromReference(
+        expression: PsiReferenceExpression,
+        visited: MutableSet<PsiElement>,
+    ): PsiClass? {
+        when (val resolved = expression.resolve()) {
+            is PsiClass ->
+                return resolved.takeIf { ArmeriaMissingBlockingSupport.isDataFetcherClass(it) }
+            is PsiVariable -> {
+                resolved.initializer?.let { resolveDataFetcherClass(it, visited) }?.let { return it }
+                val typeClass = (resolved.type as? PsiClassType)?.resolve()
+                if (typeClass != null &&
+                    ArmeriaMissingBlockingSupport.isDataFetcherClass(typeClass) &&
+                    typeClass.qualifiedName != DATA_FETCHER_CLASS
+                ) {
+                    return typeClass
+                }
+                val typeName =
+                    resolved.type.canonicalText
+                        .substringBefore('<')
+                        .substringAfterLast('.')
+                return findDataFetcherClassInFile(expression, typeName)
+            }
+        }
+        val name = expression.referenceName ?: return null
+        return findVariableDataFetcherClass(expression, name, visited)
+    }
+
+    private fun findVariableDataFetcherClass(
+        anchor: PsiElement,
+        name: String,
+        visited: MutableSet<PsiElement>,
+    ): PsiClass? {
+        val method = PsiTreeUtil.getParentOfType(anchor, PsiMethod::class.java) ?: return null
+        val body = method.body ?: return null
+        var found: PsiClass? = null
+        body.forEachDescendant { element ->
+            if (found != null) {
+                return@forEachDescendant
+            }
+            val variable = element as? PsiVariable ?: return@forEachDescendant
+            if (variable.name != name) {
+                return@forEachDescendant
+            }
+            val initializer = variable.initializer ?: return@forEachDescendant
+            found = resolveDataFetcherClass(initializer, visited)
+        }
+        return found
+    }
+
+    private fun findDataFetcherClassInFile(
+        anchor: PsiElement,
+        className: String,
+    ): PsiClass? {
+        if (className.isEmpty() || className == "DataFetcher") {
+            return null
+        }
+        val file = anchor.containingFile ?: return null
+        var found: PsiClass? = null
+        file.forEachDescendant { element ->
+            if (found != null) {
+                return@forEachDescendant
+            }
+            val cls = element as? PsiClass ?: return@forEachDescendant
+            if (cls.name == className && ArmeriaMissingBlockingSupport.isDataFetcherClass(cls)) {
+                found = cls
             }
         }
         return found
