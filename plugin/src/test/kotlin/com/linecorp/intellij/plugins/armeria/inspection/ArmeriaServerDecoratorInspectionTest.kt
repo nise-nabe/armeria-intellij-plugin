@@ -55,6 +55,48 @@ class ArmeriaServerDecoratorInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun highlightsDecorateThenPathlessFileService() {
+        configureServer(
+            """
+            FileService files = FileService.ofHttp("/var/www");
+            Server.builder()
+                  .service(files.decorate(LoggingService.newDecorator()))
+                  .build();
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.service.with.routes"), 1)
+    }
+
+    @Test
+    fun allowsGrpcServiceWithClassLiteralCorsDecorator() {
+        configureServer(
+            """
+            GrpcService grpcService = GrpcService.builder().build();
+            Server.builder()
+                  .decorator(CorsService.class)
+                  .service(grpcService)
+                  .build();
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.grpc.cors"), 0)
+    }
+
+    @Test
+    fun allowsGrpcServiceWithCorsDecoratorOutsideNestedBlock() {
+        configureServer(
+            """
+            GrpcService grpcService = GrpcService.builder().build();
+            ServerBuilder sb = Server.builder();
+            sb.decorator(CorsService.newDecorator());
+            if (true) {
+                sb.service(grpcService).build();
+            }
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.grpc.cors"), 0)
+    }
+
+    @Test
     fun highlightsDecorateThenPathlessServiceOnSplitVariable() {
         configureServer(
             """
@@ -251,6 +293,7 @@ class ArmeriaServerDecoratorInspectionTest : ArmeriaFixtureTestBase5() {
             import com.linecorp.armeria.server.ServerBuilder;
             import com.linecorp.armeria.server.auth.AuthService;
             import com.linecorp.armeria.server.cors.CorsService;
+            import com.linecorp.armeria.server.file.FileService;
             import com.linecorp.armeria.server.grpc.GrpcService;
             import com.linecorp.armeria.server.logging.LoggingService;
 

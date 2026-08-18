@@ -178,6 +178,62 @@ class ArmeriaServerDecoratorKotlinInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun allowsGrpcWhenDecoratorUnderMatchesRegistrationPath() {
+        configureServer(
+            """
+            val grpcService = GrpcService.builder().build()
+            Server.builder()
+                .decoratorUnder("/grpc", CorsService.newDecorator())
+                .service("/grpc", grpcService)
+                .build()
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.grpc.cors"), 0)
+    }
+
+    @Test
+    fun allowsGrpcWhenDecoratorUnderPathIsStringConstant() {
+        configureServer(
+            """
+            val path = "/grpc"
+            val grpcService = GrpcService.builder().build()
+            Server.builder()
+                .decoratorUnder(path, CorsService.newDecorator())
+                .service(path, grpcService)
+                .build()
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.grpc.cors"), 0)
+    }
+
+    @Test
+    fun allowsGrpcServiceWithCorsDecoratorOutsideNestedBlock() {
+        configureServer(
+            """
+            val grpcService = GrpcService.builder().build()
+            val sb = Server.builder()
+            sb.decorator(CorsService.newDecorator())
+            if (true) {
+                sb.service(grpcService).build()
+            }
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.grpc.cors"), 0)
+    }
+
+    @Test
+    fun highlightsGrpcWhenCorsDecoratorIsOnADifferentBuilder() {
+        configureServer(
+            """
+            val grpcService = GrpcService.builder().build()
+            Server.builder().decorator(CorsService.newDecorator()).service(null as HttpService?).build()
+            Server.builder().service(grpcService).build()
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.grpc.cors"), 1)
+    }
+
+    @Test
     fun allowsDecorateWhenNamedPathPatternIsPresent() {
         configureServer(
             """

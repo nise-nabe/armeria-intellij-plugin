@@ -17,6 +17,7 @@ import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
+import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 import org.jetbrains.kotlin.psi.KtTreeVisitorVoid
@@ -209,7 +210,7 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         val found = LinkedHashSet<KtCallExpression>()
         collectFluentBuilderDecoratorCalls(anchor, found)
         collectEnclosingScopeFluentDecorators(anchor, found)
-        val scope = ArmeriaKotlinExpressionSupport.containingKotlinExpressionScope(anchor)
+        val scope = builderSearchScope(anchor)
         scope.accept(
             object : KtTreeVisitorVoid() {
                 override fun visitCallExpression(expression: KtCallExpression) {
@@ -263,6 +264,12 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         }
     }
 
+    private fun builderSearchScope(call: KtCallExpression): PsiElement {
+        call.getParentOfType<KtNamedFunction>(strict = true)?.bodyExpression?.let { return it }
+        call.getParentOfType<KtLambdaExpression>(strict = true)?.let { return it }
+        return ArmeriaKotlinExpressionSupport.containingKotlinExpressionScope(call)
+    }
+
     private fun isSameBuilder(
         anchor: KtCallExpression,
         other: KtCallExpression,
@@ -285,7 +292,9 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         while (current != null && visited.add(current)) {
             when (current) {
                 is KtNameReferenceExpression -> {
-                    return current.references.firstNotNullOfOrNull { it.resolve() }
+                    return current.references
+                        .firstNotNullOfOrNull { it.resolve() }
+                        .takeIf { it is PsiVariable || it is KtProperty }
                 }
                 else -> current = chainReceiver(current)
             }
@@ -328,7 +337,7 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         if (pathExpression == null) {
             return true
         }
-        val path = stringValue(pathExpression)
+        val path = stringValue(pathExpression) ?: return false
         return ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(path, routePath)
     }
 
@@ -597,13 +606,7 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         }
     }
 
-    private fun stringValue(expression: KtExpression): String? {
-        val unwrapped = unwrap(expression)
-        if (unwrapped is KtStringTemplateExpression && unwrapped.entries.size <= 1) {
-            return unwrapped.entries.firstOrNull()?.text ?: unwrapped.text.trim('"')
-        }
-        return null
-    }
+    private fun stringValue(expression: KtExpression): String? = ArmeriaKotlinExpressionSupport.extractKotlinString(expression)
 
     private fun highlightDecorateOrArgument(expression: KtExpression): PsiElement {
         val unwrapped = unwrapAndFollow(expression)

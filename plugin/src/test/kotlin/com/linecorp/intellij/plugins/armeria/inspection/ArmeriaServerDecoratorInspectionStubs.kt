@@ -133,4 +133,19 @@ fun JavaCodeInsightTestFixture.registerServerDecoratorInspectionStubs() {
         }
         """.trimIndent(),
     )
+    addClass(
+        """
+        package com.linecorp.armeria.server.file;
+
+        public final class FileService implements com.linecorp.armeria.server.HttpServiceWithRoutes {
+            public static FileService ofHttp(String root) {
+                return null;
+            }
+
+            public com.linecorp.armeria.server.HttpService decorate(Object decorator) {
+                return this;
+            }
+        }
+        """.trimIndent(),
+    )
 }

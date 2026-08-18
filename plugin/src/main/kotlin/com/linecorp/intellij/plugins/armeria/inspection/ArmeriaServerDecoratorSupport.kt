@@ -6,7 +6,9 @@ import com.intellij.psi.PsiClassType
 import com.intellij.psi.PsiCodeBlock
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiExpression
+import com.intellij.psi.PsiLambdaExpression
 import com.intellij.psi.PsiLiteralExpression
+import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiParenthesizedExpression
 import com.intellij.psi.PsiReferenceExpression
@@ -187,13 +189,19 @@ internal object ArmeriaServerDecoratorSupport {
         val found = LinkedHashSet<PsiMethodCallExpression>()
         collectFluentBuilderDecoratorCalls(anchor, found)
         val builderVariable = resolveBuilderVariable(anchor) ?: return found.toList()
-        val block = PsiTreeUtil.getParentOfType(anchor, PsiCodeBlock::class.java) ?: return found.toList()
-        for (candidate in PsiTreeUtil.findChildrenOfType(block, PsiMethodCallExpression::class.java)) {
+        val scope = builderSearchScope(anchor) ?: return found.toList()
+        for (candidate in PsiTreeUtil.findChildrenOfType(scope, PsiMethodCallExpression::class.java)) {
             if (isBuilderDecoratorCall(candidate) && resolveBuilderVariable(candidate) == builderVariable) {
                 found += candidate
             }
         }
         return found.toList()
+    }
+
+    private fun builderSearchScope(anchor: PsiMethodCallExpression): PsiElement? {
+        PsiTreeUtil.getParentOfType(anchor, PsiMethod::class.java)?.body?.let { return it }
+        PsiTreeUtil.getParentOfType(anchor, PsiLambdaExpression::class.java)?.body?.let { return it }
+        return PsiTreeUtil.getParentOfType(anchor, PsiCodeBlock::class.java)
     }
 
     private fun collectFluentBuilderDecoratorCalls(
@@ -283,7 +291,7 @@ internal object ArmeriaServerDecoratorSupport {
         if (pathExpression == null) {
             return true
         }
-        val path = stringValue(pathExpression)
+        val path = stringValue(pathExpression) ?: return false
         return ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(path, routePath)
     }
 
