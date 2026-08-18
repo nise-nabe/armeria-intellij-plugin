@@ -4,6 +4,8 @@
 
 ### Added
 
+- Missing-`@Blocking` inspection covers GraphQL `DataFetcher` methods and lambdas registered through `GraphqlService` (suppressed when the same builder calls `useBlockingTaskExecutor(true)`), plus `HttpService` / `AbstractHttpService` handler overrides. A quick-fix adds `@Blocking` on the method, or on the class when every inspected method is blocking. `GraphqlService.builder()` gets a weak warning when blocking fetchers are registered without `useBlockingTaskExecutor(true)`.
+
 ### Changed
 
 ### Deprecated
