@@ -15,6 +15,8 @@
 
 ### Fixed
 
+- Kotlin Route Explorer gutter icons for `service()` / `serviceUnder()` / `annotatedService()` attach to the method-name identifier, matching Java and avoiding a platform warning when highlighting Kotlin server builders.
+
 ### Security
 
 ## [0.4.0] - 2026-08-17
