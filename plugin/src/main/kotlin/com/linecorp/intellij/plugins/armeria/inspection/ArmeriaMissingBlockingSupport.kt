@@ -43,17 +43,30 @@ internal object ArmeriaMissingBlockingSupport {
         if (method.isConstructor) {
             return false
         }
-        if (hasBlockingOrNonBlocking(method)) {
+        if (hasNonBlocking(method) ||
+            (!ignoreClassBlocking && method.containingClass?.let(::hasNonBlocking) == true)
+        ) {
             return false
         }
-        if (!ignoreClassBlocking && method.containingClass?.let(::hasBlockingOrNonBlocking) == true) {
-            return false
+        val annotatedOrGrpc =
+            ArmeriaRouteSupport.findRouteAnnotation(method) != null || isGrpcServiceOverride(method)
+        if (annotatedOrGrpc) {
+            if (hasBlocking(method) ||
+                (!ignoreClassBlocking && method.containingClass?.let(::hasBlocking) == true)
+            ) {
+                return false
+            }
+            return true
         }
-        return ArmeriaRouteSupport.findRouteAnnotation(method) != null ||
-            isGrpcServiceOverride(method) ||
-            isHttpServiceOverride(method) ||
-            isEventLoopDataFetcher(method)
+        return isHttpServiceOverride(method) || isEventLoopDataFetcher(method)
     }
+
+    fun problemMessageKey(method: PsiMethod): String =
+        when {
+            honorsBlockingAnnotation(method) -> "inspection.missing.blocking.problem"
+            isDataFetcherGet(method) -> "inspection.missing.blocking.problem.graphql"
+            else -> "inspection.missing.blocking.problem.httpservice"
+        }
 
     fun findings(method: PsiMethod): List<ArmeriaBlockingCallFinding> {
         val body = method.body ?: return emptyList()
@@ -187,13 +200,17 @@ internal object ArmeriaMissingBlockingSupport {
         return false
     }
 
-    fun hasBlockingOrNonBlocking(method: PsiMethod): Boolean =
-        method.hasAnnotation(ArmeriaRouteSupport.BLOCKING_ANNOTATION) ||
-            method.hasAnnotation(ArmeriaRouteSupport.NON_BLOCKING_ANNOTATION)
+    fun hasBlockingOrNonBlocking(method: PsiMethod): Boolean = hasBlocking(method) || hasNonBlocking(method)
 
-    fun hasBlockingOrNonBlocking(psiClass: PsiClass): Boolean =
-        psiClass.hasAnnotation(ArmeriaRouteSupport.BLOCKING_ANNOTATION) ||
-            psiClass.hasAnnotation(ArmeriaRouteSupport.NON_BLOCKING_ANNOTATION)
+    fun hasBlockingOrNonBlocking(psiClass: PsiClass): Boolean = hasBlocking(psiClass) || hasNonBlocking(psiClass)
+
+    fun hasBlocking(method: PsiMethod): Boolean = method.hasAnnotation(ArmeriaRouteSupport.BLOCKING_ANNOTATION)
+
+    fun hasNonBlocking(method: PsiMethod): Boolean = method.hasAnnotation(ArmeriaRouteSupport.NON_BLOCKING_ANNOTATION)
+
+    fun hasBlocking(psiClass: PsiClass): Boolean = psiClass.hasAnnotation(ArmeriaRouteSupport.BLOCKING_ANNOTATION)
+
+    fun hasNonBlocking(psiClass: PsiClass): Boolean = psiClass.hasAnnotation(ArmeriaRouteSupport.NON_BLOCKING_ANNOTATION)
 
     private fun isGrpcServiceOverride(method: PsiMethod): Boolean {
         if (method.findSuperMethods().isEmpty()) {

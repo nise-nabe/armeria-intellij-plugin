@@ -55,19 +55,30 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         function: KtNamedFunction,
         ignoreClassBlocking: Boolean,
     ): Boolean {
-        if (hasBlockingOrNonBlocking(function.annotationEntries) ||
-            (!ignoreClassBlocking && containingClass(function)?.annotationEntries?.let(::hasBlockingOrNonBlocking) == true)
+        if (hasNonBlocking(function.annotationEntries) ||
+            (!ignoreClassBlocking && containingClass(function)?.annotationEntries?.let(::hasNonBlocking) == true)
         ) {
             return false
         }
-        if (ArmeriaKotlinMethodRoute.from(function) != null) {
+        val annotatedOrGrpc = ArmeriaKotlinMethodRoute.from(function) != null || isGrpcServiceOverride(function)
+        if (annotatedOrGrpc) {
+            if (hasBlocking(function.annotationEntries) ||
+                (!ignoreClassBlocking && containingClass(function)?.annotationEntries?.let(::hasBlocking) == true)
+            ) {
+                return false
+            }
             return true
         }
-        if (isGrpcServiceOverride(function) || isHttpServiceOverride(function)) {
-            return true
-        }
-        return isEventLoopDataFetcher(function)
+        return isHttpServiceOverride(function) || isEventLoopDataFetcher(function)
     }
+
+    fun problemMessageKey(function: KtNamedFunction): String =
+        when {
+            honorsBlockingAnnotation(function) -> "inspection.missing.blocking.problem"
+            function.name == "get" && containingClass(function)?.let(::isDataFetcherHierarchy) == true ->
+                "inspection.missing.blocking.problem.graphql"
+            else -> "inspection.missing.blocking.problem.httpservice"
+        }
 
     fun findings(function: KtNamedFunction): List<ArmeriaBlockingCallFinding> {
         val body = function.bodyExpression ?: return emptyList()
@@ -279,11 +290,58 @@ internal object ArmeriaMissingBlockingKotlinSupport {
     private fun coveragesInFile(klass: KtClassOrObject): List<Boolean> {
         val className = klass.name ?: return emptyList()
         val file = klass.containingKtFile
-        val precise = graphqlBuilderCoverages(file) { root -> chainReferencesName(root, className) }
+        val precise =
+            graphqlBuilderCoverages(file) { root ->
+                chainReferencesName(root, className) || chainRegistersDataFetcherClass(root, klass)
+            }
         if (precise.isNotEmpty()) {
             return precise
         }
-        return graphqlBuilderCoverages(file) { true }
+        return emptyList()
+    }
+
+    private fun chainRegistersDataFetcherClass(
+        root: PsiElement,
+        klass: KtClassOrObject,
+    ): Boolean {
+        var found = false
+        root.forEachDescendant { element ->
+            if (found) {
+                return@forEachDescendant
+            }
+            val call = element as? KtCallExpression ?: return@forEachDescendant
+            val name = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return@forEachDescendant
+            if (name !in DATA_FETCHER_METHODS) {
+                return@forEachDescendant
+            }
+            found =
+                call.valueArguments.any { argument ->
+                    val expression = argument.getArgumentExpression() ?: return@any false
+                    if (expression is KtLambdaExpression) {
+                        return@any false
+                    }
+                    isSameDataFetcherClass(resolveDataFetcherFromExpression(expression), klass)
+                }
+        }
+        return found
+    }
+
+    private fun isSameDataFetcherClass(
+        resolved: PsiElement?,
+        klass: KtClassOrObject,
+    ): Boolean {
+        if (resolved == null) {
+            return false
+        }
+        if (resolved == klass) {
+            return true
+        }
+        val name = klass.name ?: return false
+        return when (resolved) {
+            is KtClassOrObject -> resolved.name == name && resolved.containingFile == klass.containingFile
+            is PsiClass -> resolved.name == name
+            else -> false
+        }
     }
 
     private fun graphqlBuilderCoverages(
@@ -518,21 +576,21 @@ internal object ArmeriaMissingBlockingKotlinSupport {
     private fun dataFetcherClassHasBlockingCall(klass: PsiElement): Boolean =
         when (klass) {
             is KtClassOrObject -> {
-                if (hasBlockingOrNonBlocking(klass.annotationEntries)) {
+                if (hasNonBlocking(klass.annotationEntries)) {
                     false
                 } else {
                     klass.declarations.filterIsInstance<KtNamedFunction>().any { function ->
                         function.name == "get" &&
-                            !hasBlockingOrNonBlocking(function.annotationEntries) &&
+                            !hasNonBlocking(function.annotationEntries) &&
                             findings(function).isNotEmpty()
                     }
                 }
             }
             is PsiClass ->
-                !ArmeriaMissingBlockingSupport.hasBlockingOrNonBlocking(klass) &&
+                !ArmeriaMissingBlockingSupport.hasNonBlocking(klass) &&
                     klass.methods.any { method ->
                         ArmeriaMissingBlockingSupport.isDataFetcherGet(method) &&
-                            !ArmeriaMissingBlockingSupport.hasBlockingOrNonBlocking(method) &&
+                            !ArmeriaMissingBlockingSupport.hasNonBlocking(method) &&
                             ArmeriaMissingBlockingSupport.findings(method).isNotEmpty()
                     }
             else -> false
@@ -681,12 +739,17 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         return unwrapped.text == "true"
     }
 
-    private fun hasBlockingOrNonBlocking(entries: List<KtAnnotationEntry>): Boolean =
+    private fun hasBlocking(entries: List<KtAnnotationEntry>): Boolean =
         entries.any { entry ->
-            val name = ArmeriaKotlinAnnotationSupport.qualifiedName(entry)
-            name == ArmeriaRouteSupport.BLOCKING_ANNOTATION ||
-                name == ArmeriaRouteSupport.NON_BLOCKING_ANNOTATION
+            ArmeriaKotlinAnnotationSupport.qualifiedName(entry) == ArmeriaRouteSupport.BLOCKING_ANNOTATION
         }
+
+    private fun hasNonBlocking(entries: List<KtAnnotationEntry>): Boolean =
+        entries.any { entry ->
+            ArmeriaKotlinAnnotationSupport.qualifiedName(entry) == ArmeriaRouteSupport.NON_BLOCKING_ANNOTATION
+        }
+
+    private fun hasBlockingOrNonBlocking(entries: List<KtAnnotationEntry>): Boolean = hasBlocking(entries) || hasNonBlocking(entries)
 
     fun containingClass(function: KtNamedFunction): KtClassOrObject? = PsiTreeUtil.getParentOfType(function, KtClassOrObject::class.java)
 

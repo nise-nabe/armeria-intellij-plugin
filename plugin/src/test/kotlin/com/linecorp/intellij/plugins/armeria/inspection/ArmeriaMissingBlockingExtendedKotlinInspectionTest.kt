@@ -23,14 +23,14 @@ class ArmeriaMissingBlockingExtendedKotlinInspectionTest : ArmeriaFixtureTestBas
     @Test
     fun highlightsGraphqlDataFetcherJoin() {
         configureGraphqlFetcher(useBlockingExecutor = false)
-        assertBlockingHighlights(1, "join")
+        assertGraphqlHighlights(1, "join")
         assertExecutorHighlights(1)
     }
 
     @Test
     fun allowsGraphqlDataFetcherJoinWithBlockingExecutor() {
         configureGraphqlFetcher(useBlockingExecutor = true)
-        assertBlockingHighlights(0, "join")
+        assertGraphqlHighlights(0, "join")
         assertExecutorHighlights(0)
     }
 
@@ -55,7 +55,7 @@ class ArmeriaMissingBlockingExtendedKotlinInspectionTest : ArmeriaFixtureTestBas
             }
             """.trimIndent(),
         )
-        assertBlockingHighlights(1, "join")
+        assertGraphqlHighlights(1, "join")
         assertExecutorHighlights(1)
     }
 
@@ -81,7 +81,7 @@ class ArmeriaMissingBlockingExtendedKotlinInspectionTest : ArmeriaFixtureTestBas
             }
             """.trimIndent(),
         )
-        assertBlockingHighlights(0, "join")
+        assertGraphqlHighlights(0, "join")
         assertExecutorHighlights(0)
     }
 
@@ -101,7 +101,7 @@ class ArmeriaMissingBlockingExtendedKotlinInspectionTest : ArmeriaFixtureTestBas
             }
             """.trimIndent(),
         )
-        assertBlockingHighlights(1, "join")
+        assertHttpHighlights(1, "join")
     }
 
     @Test
@@ -120,7 +120,7 @@ class ArmeriaMissingBlockingExtendedKotlinInspectionTest : ArmeriaFixtureTestBas
             }
             """.trimIndent(),
         )
-        assertBlockingHighlights(1, "join")
+        assertHttpHighlights(1, "join")
     }
 
     @Test
@@ -150,8 +150,58 @@ class ArmeriaMissingBlockingExtendedKotlinInspectionTest : ArmeriaFixtureTestBas
             }
             """.trimIndent(),
         )
-        assertBlockingHighlights(1, "join")
+        assertGraphqlHighlights(1, "join")
         assertExecutorHighlights(1)
+    }
+
+    @Test
+    fun ignoresUnregisteredDataFetcherJoin() {
+        myFixture.configureByText(
+            "UserFetcher.kt",
+            """
+            package example
+
+            import graphql.schema.DataFetcher
+            import java.util.concurrent.CompletableFuture
+
+            class UserFetcher : DataFetcher<String> {
+                override fun get(env: Any): String =
+                    CompletableFuture.completedFuture("ok").join()
+            }
+            """.trimIndent(),
+        )
+        assertGraphqlHighlights(0, "join")
+    }
+
+    @Test
+    fun graphqlDataFetcherDoesNotOfferBlockingQuickFix() {
+        myFixture.configureByText(
+            "UserFetcher.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.graphql.GraphqlService
+            import graphql.schema.DataFetcher
+            import graphql.schema.idl.TypeRuntimeWiring
+            import java.util.concurrent.CompletableFuture
+
+            class Server {
+                fun graphql(): Any =
+                    GraphqlService.builder()
+                        .runtimeWiring { TypeRuntimeWiring().dataFetcher("user", UserFetcher()) }
+                        .build()
+            }
+
+            class UserFetcher : DataFetcher<String> {
+                override fun get(env: Any): String =
+                    CompletableFuture.completedFuture("ok").<caret>join()
+            }
+            """.trimIndent(),
+        )
+        assertGraphqlHighlights(1, "join")
+        myFixture.doHighlighting()
+        val names = myFixture.getAvailableQuickFixes().map { it.text }
+        assertTrue(message("inspection.missing.blocking.quickfix.method") !in names)
     }
 
     @Test
@@ -220,10 +270,25 @@ class ArmeriaMissingBlockingExtendedKotlinInspectionTest : ArmeriaFixtureTestBas
     private fun assertBlockingHighlights(
         expectedCount: Int,
         methodName: String,
+        messageKey: String = "inspection.missing.blocking.problem",
     ) {
-        val expected = message("inspection.missing.blocking.problem", methodName)
+        val expected = message(messageKey, methodName)
         val highlights = myFixture.doHighlighting().filter { it.description == expected }
         assertEquals(expectedCount, highlights.size, highlights.joinToString { it.description.orEmpty() })
+    }
+
+    private fun assertGraphqlHighlights(
+        expectedCount: Int,
+        methodName: String,
+    ) {
+        assertBlockingHighlights(expectedCount, methodName, "inspection.missing.blocking.problem.graphql")
+    }
+
+    private fun assertHttpHighlights(
+        expectedCount: Int,
+        methodName: String,
+    ) {
+        assertBlockingHighlights(expectedCount, methodName, "inspection.missing.blocking.problem.httpservice")
     }
 
     private fun assertExecutorHighlights(expectedCount: Int) {

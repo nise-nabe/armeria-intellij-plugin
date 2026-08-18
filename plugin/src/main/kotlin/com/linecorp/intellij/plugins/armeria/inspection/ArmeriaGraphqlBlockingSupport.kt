@@ -127,11 +127,35 @@ internal object ArmeriaGraphqlBlockingSupport {
 
     private fun coveragesInFile(psiClass: PsiClass): List<Boolean> {
         val file = psiClass.containingFile ?: return emptyList()
-        val precise = graphqlBuilderCoverages(file) { outermost -> chainReferencesClass(outermost, psiClass) }
+        val precise =
+            graphqlBuilderCoverages(file) { outermost ->
+                chainReferencesClass(outermost, psiClass) || chainRegistersDataFetcherClass(outermost, psiClass)
+            }
         if (precise.isNotEmpty()) {
             return precise
         }
-        return graphqlBuilderCoverages(file) { true }
+        return emptyList()
+    }
+
+    private fun chainRegistersDataFetcherClass(
+        outermost: PsiMethodCallExpression,
+        psiClass: PsiClass,
+    ): Boolean {
+        var found = false
+        outermost.forEachDescendant { element ->
+            if (found) {
+                return@forEachDescendant
+            }
+            val call = element as? PsiMethodCallExpression ?: return@forEachDescendant
+            if (call.methodExpression.referenceName !in DATA_FETCHER_METHODS) {
+                return@forEachDescendant
+            }
+            found =
+                call.argumentList.expressions.any { argument ->
+                    resolveDataFetcherClass(argument) == psiClass
+                }
+        }
+        return found
     }
 
     private fun coveragesFromReferences(psiClass: PsiClass): List<Boolean> =
@@ -317,12 +341,12 @@ internal object ArmeriaGraphqlBlockingSupport {
     }
 
     private fun dataFetcherClassHasBlockingCall(psiClass: PsiClass): Boolean {
-        if (ArmeriaMissingBlockingSupport.hasBlockingOrNonBlocking(psiClass)) {
+        if (ArmeriaMissingBlockingSupport.hasNonBlocking(psiClass)) {
             return false
         }
         return psiClass.methods.any { method ->
             ArmeriaMissingBlockingSupport.isDataFetcherGet(method) &&
-                !ArmeriaMissingBlockingSupport.hasBlockingOrNonBlocking(method) &&
+                !ArmeriaMissingBlockingSupport.hasNonBlocking(method) &&
                 ArmeriaMissingBlockingSupport.findings(method).isNotEmpty()
         }
     }

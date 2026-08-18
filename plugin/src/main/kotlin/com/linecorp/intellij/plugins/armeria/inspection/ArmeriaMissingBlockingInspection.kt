@@ -24,11 +24,12 @@ class ArmeriaMissingBlockingInspection : AbstractBaseJavaLocalInspectionTool() {
                 if (!ArmeriaMissingBlockingSupport.shouldInspect(method)) {
                     return
                 }
+                val messageKey = ArmeriaMissingBlockingSupport.problemMessageKey(method)
                 val fixes = ArmeriaMissingBlockingSupport.quickFixes(method)
                 for (finding in ArmeriaMissingBlockingSupport.findings(method)) {
                     holder.registerProblem(
                         finding.highlight,
-                        message("inspection.missing.blocking.problem", finding.methodName),
+                        message(messageKey, finding.methodName),
                         ProblemHighlightType.WEAK_WARNING,
                         *fixes,
                     )
@@ -46,7 +47,7 @@ class ArmeriaMissingBlockingInspection : AbstractBaseJavaLocalInspectionTool() {
                 for (finding in ArmeriaMissingBlockingSupport.findingsIn(body, expression)) {
                     holder.registerProblem(
                         finding.highlight,
-                        message("inspection.missing.blocking.problem", finding.methodName),
+                        message("inspection.missing.blocking.problem.graphql", finding.methodName),
                         ProblemHighlightType.WEAK_WARNING,
                     )
                 }

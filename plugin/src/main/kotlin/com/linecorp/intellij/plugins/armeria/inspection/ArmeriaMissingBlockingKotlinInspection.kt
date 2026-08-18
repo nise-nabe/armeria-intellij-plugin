@@ -24,11 +24,12 @@ class ArmeriaMissingBlockingKotlinInspection : LocalInspectionTool() {
                 if (!ArmeriaMissingBlockingKotlinSupport.shouldInspect(function)) {
                     return
                 }
+                val messageKey = ArmeriaMissingBlockingKotlinSupport.problemMessageKey(function)
                 val fixes = ArmeriaMissingBlockingKotlinSupport.quickFixes(function)
                 for (finding in ArmeriaMissingBlockingKotlinSupport.findings(function)) {
                     holder.registerProblem(
                         finding.highlight,
-                        message("inspection.missing.blocking.problem", finding.methodName),
+                        message(messageKey, finding.methodName),
                         ProblemHighlightType.WEAK_WARNING,
                         *fixes,
                     )
@@ -70,7 +71,7 @@ class ArmeriaMissingBlockingKotlinInspection : LocalInspectionTool() {
                     for (finding in ArmeriaMissingBlockingKotlinSupport.findingsIn(body, lambda)) {
                         holder.registerProblem(
                             finding.highlight,
-                            message("inspection.missing.blocking.problem", finding.methodName),
+                            message("inspection.missing.blocking.problem.graphql", finding.methodName),
                             ProblemHighlightType.WEAK_WARNING,
                         )
                     }
