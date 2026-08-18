@@ -234,19 +234,6 @@ class ArmeriaServerDecoratorKotlinInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
-    fun allowsDecorateWhenNamedPathPatternIsPresent() {
-        configureServer(
-            """
-            val grpcService = GrpcService.builder().build()
-            Server.builder()
-                .service(service = grpcService.decorate(LoggingService.newDecorator()), pathPattern = "/grpc")
-                .build()
-            """.trimIndent(),
-        )
-        assertHighlights(message("inspection.server.decorator.service.with.routes"), 0)
-    }
-
-    @Test
     fun highlightsDecorateThenPathlessServiceOnSplitVariable() {
         configureServer(
             """

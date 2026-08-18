@@ -82,6 +82,10 @@ fun JavaCodeInsightTestFixture.registerServerDecoratorInspectionStubs() {
             public static GrpcServiceBuilder builder() {
                 return null;
             }
+
+            public com.linecorp.armeria.server.HttpService decorate(Object decorator) {
+                return this;
+            }
         }
         """.trimIndent(),
     )
