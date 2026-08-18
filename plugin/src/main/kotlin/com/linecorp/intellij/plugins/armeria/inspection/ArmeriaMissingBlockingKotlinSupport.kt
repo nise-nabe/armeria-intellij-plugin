@@ -272,14 +272,26 @@ internal object ArmeriaMissingBlockingKotlinSupport {
 
     private fun coveragesInFile(klass: KtClassOrObject): List<Boolean> {
         val className = klass.name ?: return emptyList()
+        val file = klass.containingKtFile
+        val precise = graphqlBuilderCoverages(file) { root -> chainReferencesName(root, className) }
+        if (precise.isNotEmpty()) {
+            return precise
+        }
+        return graphqlBuilderCoverages(file) { true }
+    }
+
+    private fun graphqlBuilderCoverages(
+        file: KtFile,
+        matches: (PsiElement) -> Boolean,
+    ): List<Boolean> {
         val coverages = mutableListOf<Boolean>()
-        klass.containingKtFile.forEachDescendant { element ->
+        file.forEachDescendant { element ->
             val call = element as? KtCallExpression ?: return@forEachDescendant
             if (!isGraphqlServiceBuilderCall(call)) {
                 return@forEachDescendant
             }
             val outermost = outermostChainCall(call)
-            if (!chainReferencesName(chainRoot(outermost), className)) {
+            if (!matches(chainRoot(outermost))) {
                 return@forEachDescendant
             }
             coverages += chainCalls(call, outermost).any(::isUseBlockingTaskExecutorTrue)
@@ -332,11 +344,7 @@ internal object ArmeriaMissingBlockingKotlinSupport {
             is PsiClass -> resolved.name == className
             is KtClassOrObject -> resolved.name == className
             is PsiVariable -> (resolved.type as? PsiClassType)?.resolve()?.name == className
-            is KtProperty ->
-                resolved.typeReference
-                    ?.text
-                    ?.substringBefore('<')
-                    ?.trim() == className
+            is KtProperty -> propertyRefersToClass(resolved, className)
             is KtParameter ->
                 resolved.typeReference
                     ?.text
@@ -344,6 +352,28 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                     ?.trim() == className
             else -> false
         }
+
+    private fun propertyRefersToClass(
+        property: KtProperty,
+        className: String,
+    ): Boolean {
+        val typeName =
+            property.typeReference
+                ?.text
+                ?.substringBefore('<')
+                ?.trim()
+        if (typeName == className) {
+            return true
+        }
+        val initializer = property.initializer ?: return false
+        val call =
+            when (initializer) {
+                is KtCallExpression -> initializer
+                is KtDotQualifiedExpression -> initializer.selectorExpression as? KtCallExpression
+                else -> null
+            }
+        return call != null && ArmeriaKotlinExpressionSupport.resolveCallName(call) == className
+    }
 
     private fun dataFetcherClassHasBlockingCall(klass: PsiElement): Boolean =
         when (klass) {

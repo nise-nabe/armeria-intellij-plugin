@@ -120,7 +120,11 @@ internal object ArmeriaGraphqlBlockingSupport {
 
     private fun coveragesInFile(psiClass: PsiClass): List<Boolean> {
         val file = psiClass.containingFile ?: return emptyList()
-        return graphqlBuilderCoverages(file) { outermost -> chainReferencesClass(outermost, psiClass) }
+        val precise = graphqlBuilderCoverages(file) { outermost -> chainReferencesClass(outermost, psiClass) }
+        if (precise.isNotEmpty()) {
+            return precise
+        }
+        return graphqlBuilderCoverages(file) { true }
     }
 
     private fun coveragesFromReferences(psiClass: PsiClass): List<Boolean> =
@@ -180,6 +184,16 @@ internal object ArmeriaGraphqlBlockingSupport {
                         is PsiVariable -> {
                             val typeClass = (resolved.type as? PsiClassType)?.resolve()
                             if (typeClass == psiClass) {
+                                found = true
+                            }
+                            val typeText = resolved.type.canonicalText
+                            if (typeText == className || typeText.endsWith(".$className")) {
+                                found = true
+                            }
+                            val initializer = resolved.initializer as? PsiNewExpression
+                            if (initializer?.classOrAnonymousClassReference?.resolve() == psiClass ||
+                                initializer?.classReference?.referenceName == className
+                            ) {
                                 found = true
                             }
                         }
