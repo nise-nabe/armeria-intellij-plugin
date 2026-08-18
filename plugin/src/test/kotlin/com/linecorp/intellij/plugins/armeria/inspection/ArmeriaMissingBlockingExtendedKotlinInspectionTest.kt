@@ -124,6 +124,37 @@ class ArmeriaMissingBlockingExtendedKotlinInspectionTest : ArmeriaFixtureTestBas
     }
 
     @Test
+    fun highlightsGraphqlDataFetcherPassedByVariable() {
+        myFixture.configureByText(
+            "UserFetcher.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.graphql.GraphqlService
+            import graphql.schema.DataFetcher
+            import graphql.schema.idl.TypeRuntimeWiring
+            import java.util.concurrent.CompletableFuture
+
+            class Server {
+                fun graphql(): Any {
+                    val fetcher = UserFetcher()
+                    return GraphqlService.builder()
+                        .runtimeWiring { TypeRuntimeWiring().dataFetcher("user", fetcher) }
+                        .build()
+                }
+            }
+
+            class UserFetcher : DataFetcher<String> {
+                override fun get(env: Any): String =
+                    CompletableFuture.completedFuture("ok").join()
+            }
+            """.trimIndent(),
+        )
+        assertBlockingHighlights(1, "join")
+        assertExecutorHighlights(1)
+    }
+
+    @Test
     fun addBlockingQuickFixRemovesHighlight() {
         myFixture.configureByText(
             "SlowService.kt",

@@ -4,8 +4,10 @@ import com.intellij.codeInspection.LocalQuickFix
 import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiClassType
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiVariable
 import com.intellij.psi.search.searches.ReferencesSearch
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
@@ -23,13 +25,15 @@ import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtObjectDeclaration
+import org.jetbrains.kotlin.psi.KtParameter
+import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtSuperTypeListEntry
 
 internal object ArmeriaMissingBlockingKotlinSupport {
     private const val BUILDER_METHOD = "builder"
     private const val USE_BLOCKING_TASK_EXECUTOR = "useBlockingTaskExecutor"
     private val DATA_FETCHER_METHODS = setOf("dataFetcher", "dataFetchers", "DataFetcher")
-    private val GRAPHQL_BUILDER_METHODS = setOf("runtimeWiring", "useBlockingTaskExecutor")
+    private val GRAPHQL_BUILDER_METHODS = setOf("runtimeWiring", "useBlockingTaskExecutor", "graphql")
     private val HTTP_SERVICE_HANDLER_METHODS =
         setOf(
             "serve",
@@ -41,6 +45,8 @@ internal object ArmeriaMissingBlockingKotlinSupport {
             "doPatch",
             "doOptions",
             "doTrace",
+            "doConnect",
+            "doQuery",
         )
 
     fun shouldInspect(function: KtNamedFunction): Boolean = shouldInspect(function, ignoreClassBlocking = false)
@@ -103,6 +109,9 @@ internal object ArmeriaMissingBlockingKotlinSupport {
     }
 
     fun quickFixes(function: KtNamedFunction): Array<LocalQuickFix> {
+        if (!honorsBlockingAnnotation(function)) {
+            return emptyArray()
+        }
         val fixes =
             mutableListOf<LocalQuickFix>(
                 ArmeriaAddBlockingAnnotationKotlinQuickFix.forFunction(function),
@@ -112,6 +121,9 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         }
         return fixes.toTypedArray()
     }
+
+    fun honorsBlockingAnnotation(function: KtNamedFunction): Boolean =
+        ArmeriaKotlinMethodRoute.from(function) != null || isGrpcServiceOverride(function)
 
     fun isGraphqlServiceBuilderCall(call: KtCallExpression): Boolean {
         if (ArmeriaKotlinExpressionSupport.resolveCallName(call) != BUILDER_METHOD) {
@@ -168,6 +180,11 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                 element is KtLambdaExpression && isGraphqlDataFetcherLambda(element) -> {
                     val body = element.bodyExpression ?: return@forEachDescendant
                     if (findingsIn(body, element).isNotEmpty()) {
+                        found = true
+                    }
+                }
+                element is KtObjectDeclaration && element.isObjectLiteral() -> {
+                    if (isDataFetcherHierarchy(element) && dataFetcherClassHasBlockingCall(element)) {
                         found = true
                     }
                 }
@@ -293,7 +310,7 @@ internal object ArmeriaMissingBlockingKotlinSupport {
             }
             when (element) {
                 is KtNameReferenceExpression -> {
-                    if (element.getReferencedName() == className) {
+                    if (element.getReferencedName() == className || refersToClass(element, className)) {
                         found = true
                     }
                 }
@@ -306,6 +323,27 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         }
         return found
     }
+
+    private fun refersToClass(
+        reference: KtNameReferenceExpression,
+        className: String,
+    ): Boolean =
+        when (val resolved = reference.references.firstNotNullOfOrNull { it.resolve() }) {
+            is PsiClass -> resolved.name == className
+            is KtClassOrObject -> resolved.name == className
+            is PsiVariable -> (resolved.type as? PsiClassType)?.resolve()?.name == className
+            is KtProperty ->
+                resolved.typeReference
+                    ?.text
+                    ?.substringBefore('<')
+                    ?.trim() == className
+            is KtParameter ->
+                resolved.typeReference
+                    ?.text
+                    ?.substringBefore('<')
+                    ?.trim() == className
+            else -> false
+        }
 
     private fun dataFetcherClassHasBlockingCall(klass: PsiElement): Boolean =
         when (klass) {
@@ -493,6 +531,9 @@ internal object ArmeriaMissingBlockingKotlinSupport {
     }
 
     private fun isHttpServiceOverride(function: KtNamedFunction): Boolean {
+        if (!function.hasModifier(KtTokens.OVERRIDE_KEYWORD)) {
+            return false
+        }
         val name = function.name ?: return false
         if (name !in HTTP_SERVICE_HANDLER_METHODS) {
             return false

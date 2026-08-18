@@ -30,6 +30,8 @@ internal object ArmeriaMissingBlockingSupport {
             "doPatch",
             "doOptions",
             "doTrace",
+            "doConnect",
+            "doQuery",
         )
 
     fun shouldInspect(method: PsiMethod): Boolean = shouldInspect(method, ignoreClassBlocking = false)
@@ -91,6 +93,9 @@ internal object ArmeriaMissingBlockingSupport {
     }
 
     fun quickFixes(method: PsiMethod): Array<LocalQuickFix> {
+        if (!honorsBlockingAnnotation(method)) {
+            return emptyArray()
+        }
         val fixes = mutableListOf<LocalQuickFix>(ArmeriaAddBlockingAnnotationQuickFix.forMethod(method))
         if (shouldOfferClassFix(method)) {
             method.containingClass
@@ -100,6 +105,9 @@ internal object ArmeriaMissingBlockingSupport {
         return fixes.toTypedArray()
     }
 
+    fun honorsBlockingAnnotation(method: PsiMethod): Boolean =
+        ArmeriaRouteSupport.findRouteAnnotation(method) != null || isGrpcServiceOverride(method)
+
     fun isDataFetcherGet(method: PsiMethod): Boolean {
         if (method.name != "get") {
             return false
@@ -107,17 +115,7 @@ internal object ArmeriaMissingBlockingSupport {
         return method.containingClass?.let(::isDataFetcherClass) == true
     }
 
-    fun isDataFetcherClass(psiClass: PsiClass): Boolean {
-        var current: PsiClass? = psiClass
-        while (current != null) {
-            if (isDataFetcherType(current)) {
-                return true
-            }
-            current.supers.firstOrNull(::isDataFetcherType)?.let { return true }
-            current = current.superClass
-        }
-        return false
-    }
+    fun isDataFetcherClass(psiClass: PsiClass): Boolean = hierarchyContains(psiClass, ::isDataFetcherType)
 
     fun isGrpcServiceType(psiClass: PsiClass): Boolean {
         if (psiClass.name?.endsWith("ImplBase") == true) {
@@ -160,13 +158,31 @@ internal object ArmeriaMissingBlockingSupport {
         if (method.name !in HTTP_SERVICE_HANDLER_METHODS) {
             return false
         }
-        var current: PsiClass? = method.containingClass
-        while (current != null) {
-            if (isHttpServiceType(current)) {
+        if (method.findSuperMethods().isEmpty()) {
+            return false
+        }
+        return hierarchyContains(method.containingClass, ::isHttpServiceType)
+    }
+
+    private fun hierarchyContains(
+        start: PsiClass?,
+        match: (PsiClass) -> Boolean,
+    ): Boolean {
+        if (start == null) {
+            return false
+        }
+        val visited = mutableSetOf<PsiClass>()
+        val queue = ArrayDeque<PsiClass>()
+        queue.add(start)
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            if (!visited.add(current)) {
+                continue
+            }
+            if (match(current)) {
                 return true
             }
-            current.supers.firstOrNull(::isHttpServiceType)?.let { return true }
-            current = current.superClass
+            current.supers.forEach { queue.add(it) }
         }
         return false
     }

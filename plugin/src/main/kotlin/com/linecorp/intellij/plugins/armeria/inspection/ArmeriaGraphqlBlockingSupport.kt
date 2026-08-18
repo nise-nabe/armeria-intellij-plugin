@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.inspection
 import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.psi.PsiAnonymousClass
 import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiClassType
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiExpressionList
@@ -15,6 +16,7 @@ import com.intellij.psi.PsiNewExpression
 import com.intellij.psi.PsiParenthesizedExpression
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiTypeCastExpression
+import com.intellij.psi.PsiVariable
 import com.intellij.psi.search.searches.ReferencesSearch
 import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
 
@@ -31,7 +33,7 @@ internal object ArmeriaGraphqlBlockingSupport {
     private const val BUILDER_METHOD = "builder"
     private const val USE_BLOCKING_TASK_EXECUTOR = "useBlockingTaskExecutor"
     private val DATA_FETCHER_METHODS = setOf("dataFetcher", "dataFetchers")
-    private val GRAPHQL_BUILDER_METHODS = setOf("runtimeWiring", "useBlockingTaskExecutor")
+    private val GRAPHQL_BUILDER_METHODS = setOf("runtimeWiring", "useBlockingTaskExecutor", "graphql")
 
     fun isGraphqlServiceBuilderCall(call: PsiMethodCallExpression): Boolean {
         if (call.methodExpression.referenceName != BUILDER_METHOD) {
@@ -173,8 +175,14 @@ internal object ArmeriaGraphqlBlockingSupport {
                     }
                 }
                 is PsiReferenceExpression -> {
-                    if (element.resolve() == psiClass) {
-                        found = true
+                    when (val resolved = element.resolve()) {
+                        psiClass -> found = true
+                        is PsiVariable -> {
+                            val typeClass = (resolved.type as? PsiClassType)?.resolve()
+                            if (typeClass == psiClass) {
+                                found = true
+                            }
+                        }
                     }
                 }
             }
@@ -204,7 +212,12 @@ internal object ArmeriaGraphqlBlockingSupport {
     }
 
     internal fun graphqlChainCalls(start: PsiElement): List<PsiMethodCallExpression>? {
-        var current: PsiElement? = start
+        var current: PsiElement? =
+            if (start is PsiClass || start is PsiMethod) {
+                start.parent
+            } else {
+                start
+            }
         var graphqlCall: PsiMethodCallExpression? = null
         while (current != null && current !is PsiMethod && current !is PsiClass && current !is PsiFile) {
             if (current is PsiMethodCallExpression && isGraphqlBuilderMethod(current)) {

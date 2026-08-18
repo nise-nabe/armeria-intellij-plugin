@@ -207,6 +207,100 @@ class ArmeriaMissingBlockingExtendedInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun highlightsAnonymousGraphqlDataFetcherJoin() {
+        myFixture.configureByText(
+            "Server.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.graphql.GraphqlService;
+            import graphql.schema.DataFetcher;
+            import graphql.schema.idl.TypeRuntimeWiring;
+            import java.util.concurrent.CompletableFuture;
+
+            public class Server {
+                public Object graphql() {
+                    return GraphqlService.builder()
+                            .runtimeWiring(c -> new TypeRuntimeWiring().dataFetcher("user", new DataFetcher<String>() {
+                                public String get(Object env) {
+                                    return CompletableFuture.completedFuture("ok").join();
+                                }
+                            }))
+                            .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        assertBlockingHighlights(1, "join")
+        assertExecutorHighlights(1)
+    }
+
+    @Test
+    fun highlightsGraphqlDataFetcherPassedByVariable() {
+        myFixture.configureByText(
+            "UserFetcher.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.graphql.GraphqlService;
+            import graphql.schema.DataFetcher;
+            import graphql.schema.idl.TypeRuntimeWiring;
+            import java.util.concurrent.CompletableFuture;
+
+            public class Server {
+                public Object graphql() {
+                    UserFetcher fetcher = new UserFetcher();
+                    return GraphqlService.builder()
+                            .runtimeWiring(c -> new TypeRuntimeWiring().dataFetcher("user", fetcher))
+                            .build();
+                }
+            }
+
+            class UserFetcher implements DataFetcher<String> {
+                public String get(Object env) {
+                    return CompletableFuture.completedFuture("ok").join();
+                }
+            }
+            """.trimIndent(),
+        )
+        assertBlockingHighlights(1, "join")
+        assertExecutorHighlights(1)
+    }
+
+    @Test
+    fun graphqlDataFetcherDoesNotOfferBlockingQuickFix() {
+        myFixture.configureByText(
+            "UserFetcher.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.graphql.GraphqlService;
+            import graphql.schema.DataFetcher;
+            import graphql.schema.idl.TypeRuntimeWiring;
+            import java.util.concurrent.CompletableFuture;
+
+            public class Server {
+                public Object graphql() {
+                    return GraphqlService.builder()
+                            .runtimeWiring(c -> new TypeRuntimeWiring().dataFetcher("user", new UserFetcher()))
+                            .build();
+                }
+            }
+
+            class UserFetcher implements DataFetcher<String> {
+                public String get(Object env) {
+                    return CompletableFuture.completedFuture("ok").<caret>join();
+                }
+            }
+            """.trimIndent(),
+        )
+        assertBlockingHighlights(1, "join")
+        myFixture.doHighlighting()
+        val names = myFixture.getAvailableQuickFixes().map { it.text }
+        assertTrue(message("inspection.missing.blocking.quickfix.method") !in names)
+    }
+
+    @Test
     fun addBlockingQuickFixRemovesHighlight() {
         myFixture.configureByText(
             "SlowService.java",
