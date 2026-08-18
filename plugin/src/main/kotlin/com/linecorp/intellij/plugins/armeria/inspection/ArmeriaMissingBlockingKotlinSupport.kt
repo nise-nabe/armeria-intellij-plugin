@@ -146,10 +146,10 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         if (graphqlBuilderCall(call) == null) {
             return emptyList()
         }
-        val lambdas = mutableListOf<KtLambdaExpression>()
+        val lambdas = linkedSetOf<KtLambdaExpression>()
         call.lambdaArguments.mapNotNullTo(lambdas) { it.getLambdaExpression() }
         call.valueArguments.mapNotNullTo(lambdas) { it.getArgumentExpression() as? KtLambdaExpression }
-        return lambdas
+        return lambdas.toList()
     }
 
     fun hasBlockingTaskExecutor(element: PsiElement): Boolean {
