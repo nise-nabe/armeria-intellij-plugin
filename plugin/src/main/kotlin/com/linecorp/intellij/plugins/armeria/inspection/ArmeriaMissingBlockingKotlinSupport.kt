@@ -1,0 +1,917 @@
+package com.linecorp.intellij.plugins.armeria.inspection
+
+import com.intellij.codeInspection.LocalQuickFix
+import com.intellij.openapi.project.IndexNotReadyException
+import com.intellij.psi.JavaPsiFacade
+import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiClassType
+import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiVariable
+import com.intellij.psi.search.searches.ReferencesSearch
+import com.intellij.psi.util.PsiTreeUtil
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
+import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
+import org.jetbrains.kotlin.lexer.KtTokens
+import org.jetbrains.kotlin.psi.KtAnnotationEntry
+import org.jetbrains.kotlin.psi.KtCallExpression
+import org.jetbrains.kotlin.psi.KtClassOrObject
+import org.jetbrains.kotlin.psi.KtConstructor
+import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
+import org.jetbrains.kotlin.psi.KtExpression
+import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.psi.KtLambdaExpression
+import org.jetbrains.kotlin.psi.KtNameReferenceExpression
+import org.jetbrains.kotlin.psi.KtNamedFunction
+import org.jetbrains.kotlin.psi.KtObjectDeclaration
+import org.jetbrains.kotlin.psi.KtParameter
+import org.jetbrains.kotlin.psi.KtProperty
+import org.jetbrains.kotlin.psi.KtSuperTypeListEntry
+
+internal object ArmeriaMissingBlockingKotlinSupport {
+    private const val BUILDER_METHOD = "builder"
+    private const val USE_BLOCKING_TASK_EXECUTOR = "useBlockingTaskExecutor"
+    private val DATA_FETCHER_METHODS = setOf("dataFetcher", "dataFetchers", "DataFetcher")
+    private val GRAPHQL_BUILDER_METHODS = setOf("runtimeWiring", "useBlockingTaskExecutor", "graphql")
+    private val HTTP_SERVICE_HANDLER_METHODS =
+        setOf(
+            "serve",
+            "doGet",
+            "doPost",
+            "doPut",
+            "doDelete",
+            "doHead",
+            "doPatch",
+            "doOptions",
+            "doTrace",
+            "doConnect",
+            "doQuery",
+        )
+
+    fun shouldInspect(function: KtNamedFunction): Boolean = shouldInspect(function, ignoreClassBlocking = false)
+
+    fun shouldInspect(
+        function: KtNamedFunction,
+        ignoreClassBlocking: Boolean,
+    ): Boolean {
+        if (hasNonBlocking(function.annotationEntries) ||
+            (!ignoreClassBlocking && containingClass(function)?.annotationEntries?.let(::hasNonBlocking) == true)
+        ) {
+            return false
+        }
+        val annotatedOrGrpc = ArmeriaKotlinMethodRoute.from(function) != null || isGrpcServiceOverride(function)
+        if (annotatedOrGrpc) {
+            if (hasBlocking(function.annotationEntries) ||
+                (!ignoreClassBlocking && containingClass(function)?.annotationEntries?.let(::hasBlocking) == true)
+            ) {
+                return false
+            }
+            return true
+        }
+        return isHttpServiceOverride(function) || isEventLoopDataFetcher(function)
+    }
+
+    fun problemMessageKey(function: KtNamedFunction): String =
+        when {
+            honorsBlockingAnnotation(function) -> "inspection.missing.blocking.problem"
+            function.name == "get" && containingClass(function)?.let(::isDataFetcherHierarchy) == true ->
+                "inspection.missing.blocking.problem.graphql"
+            else -> "inspection.missing.blocking.problem.httpservice"
+        }
+
+    fun findings(function: KtNamedFunction): List<ArmeriaBlockingCallFinding> {
+        val body = function.bodyExpression ?: return emptyList()
+        return findingsIn(body, function)
+    }
+
+    fun findingsIn(
+        scope: PsiElement,
+        boundary: PsiElement,
+    ): List<ArmeriaBlockingCallFinding> {
+        val findings = mutableListOf<ArmeriaBlockingCallFinding>()
+        scope.forEachDescendant { element ->
+            val call = element as? KtCallExpression ?: return@forEachDescendant
+            if (!isOnInspectedFunctionPath(boundary, call)) {
+                return@forEachDescendant
+            }
+            val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return@forEachDescendant
+            val resolved = resolvePsiMethod(call)
+            val qualifierText =
+                (call.parent as? KtDotQualifiedExpression)?.receiverExpression?.text
+                    ?: (call.calleeExpression as? KtDotQualifiedExpression)?.receiverExpression?.text
+            if (!ArmeriaBlockingCallPatterns.isBlockingCall(
+                    methodName = methodName,
+                    ownerFqn = resolved?.containingClass?.qualifiedName,
+                    unresolved = resolved == null,
+                    qualifierText = qualifierText,
+                    argumentCount = call.valueArguments.size,
+                )
+            ) {
+                return@forEachDescendant
+            }
+            findings +=
+                ArmeriaBlockingCallFinding(
+                    highlight = highlight(call),
+                    methodName = methodName,
+                )
+        }
+        return findings
+    }
+
+    fun quickFixes(function: KtNamedFunction): Array<LocalQuickFix> {
+        if (!honorsBlockingAnnotation(function)) {
+            return emptyArray()
+        }
+        val fixes =
+            mutableListOf<LocalQuickFix>(
+                ArmeriaAddBlockingAnnotationKotlinQuickFix.forFunction(function),
+            )
+        if (shouldOfferClassFix(function)) {
+            containingClass(function)?.let { fixes += ArmeriaAddBlockingAnnotationKotlinQuickFix.forClass(it) }
+        }
+        return fixes.toTypedArray()
+    }
+
+    fun honorsBlockingAnnotation(function: KtNamedFunction): Boolean =
+        ArmeriaKotlinMethodRoute.from(function) != null || isGrpcServiceOverride(function)
+
+    fun isGraphqlServiceBuilderCall(call: KtCallExpression): Boolean {
+        if (ArmeriaKotlinExpressionSupport.resolveCallName(call) != BUILDER_METHOD) {
+            return false
+        }
+        val resolved = resolvePsiMethod(call)?.containingClass?.qualifiedName
+        if (resolved == ArmeriaGraphqlBlockingSupport.GRAPHQL_SERVICE_CLASS ||
+            resolved == ArmeriaGraphqlBlockingSupport.GRAPHQL_SERVICE_BUILDER_CLASS
+        ) {
+            return true
+        }
+        val receiverText = chainReceiver(call)?.text ?: return false
+        return receiverText == "GraphqlService" || receiverText.endsWith(".GraphqlService")
+    }
+
+    fun isGraphqlDataFetcherLambda(lambda: KtLambdaExpression): Boolean {
+        if (graphqlBuilderCall(lambda) == null) {
+            return false
+        }
+        val call = enclosingCall(lambda) ?: return false
+        val name = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return false
+        if (name !in DATA_FETCHER_METHODS) {
+            return false
+        }
+        return isDirectLambdaArgument(lambda, call)
+    }
+
+    fun dataFetcherLambdas(call: KtCallExpression): List<KtLambdaExpression> {
+        if (ArmeriaKotlinExpressionSupport.resolveCallName(call) !in DATA_FETCHER_METHODS) {
+            return emptyList()
+        }
+        if (graphqlBuilderCall(call) == null) {
+            return emptyList()
+        }
+        val lambdas = linkedSetOf<KtLambdaExpression>()
+        call.lambdaArguments.mapNotNullTo(lambdas) { it.getLambdaExpression() }
+        call.valueArguments.mapNotNullTo(lambdas) { it.getArgumentExpression() as? KtLambdaExpression }
+        return lambdas.toList()
+    }
+
+    fun hasBlockingTaskExecutor(element: PsiElement): Boolean {
+        val builder = graphqlBuilderCall(element) ?: return false
+        return chainCalls(builder, outermostChainCall(builder)).any(::isUseBlockingTaskExecutorTrue)
+    }
+
+    fun hasBlockingDataFetcher(builderCall: KtCallExpression): Boolean {
+        val root = chainRoot(outermostChainCall(builderCall))
+        var found = false
+        root.forEachDescendant { element ->
+            if (found) {
+                return@forEachDescendant
+            }
+            when {
+                element is KtLambdaExpression && isGraphqlDataFetcherLambda(element) -> {
+                    val body = element.bodyExpression ?: return@forEachDescendant
+                    if (findingsIn(body, element).isNotEmpty()) {
+                        found = true
+                    }
+                }
+                element is KtObjectDeclaration && element.isObjectLiteral() -> {
+                    if (isDataFetcherHierarchy(element) && dataFetcherClassHasBlockingCall(element)) {
+                        found = true
+                    }
+                }
+                element is KtCallExpression -> {
+                    val className = ArmeriaKotlinExpressionSupport.resolveCallName(element) ?: return@forEachDescendant
+                    if (className in DATA_FETCHER_METHODS) {
+                        if (dataFetcherCallHasBlockingTarget(element)) {
+                            found = true
+                        }
+                        return@forEachDescendant
+                    }
+                    val klass = resolveClassByName(element, className) ?: return@forEachDescendant
+                    if (isDataFetcherType(klass) && dataFetcherClassHasBlockingCall(klass)) {
+                        found = true
+                    }
+                }
+            }
+        }
+        return found
+    }
+
+    fun highlight(call: KtCallExpression): PsiElement {
+        val callee = call.calleeExpression
+        if (callee is KtDotQualifiedExpression) {
+            return callee.selectorExpression ?: callee
+        }
+        return callee ?: call
+    }
+
+    private fun shouldOfferClassFix(function: KtNamedFunction): Boolean {
+        val klass = containingClass(function) ?: return false
+        if (klass is KtObjectDeclaration && klass.isObjectLiteral()) {
+            return false
+        }
+        if (hasBlockingOrNonBlocking(klass.annotationEntries)) {
+            return false
+        }
+        val inspectable =
+            klass.declarations.filterIsInstance<KtNamedFunction>().filter {
+                honorsBlockingAnnotation(it) && shouldInspect(it, ignoreClassBlocking = true)
+            }
+        if (inspectable.size <= 1) {
+            return false
+        }
+        return inspectable.all { findings(it).isNotEmpty() }
+    }
+
+    private fun isEventLoopDataFetcher(function: KtNamedFunction): Boolean {
+        if (function.name != "get") {
+            return false
+        }
+        val klass = containingClass(function) ?: return false
+        if (!isDataFetcherHierarchy(klass)) {
+            return false
+        }
+        return when (blockingExecutorCovers(klass)) {
+            GraphqlBlockingCoverage.HAS_EVENT_LOOP_REGISTRATION -> true
+            GraphqlBlockingCoverage.ALL_BLOCKING_EXECUTOR,
+            GraphqlBlockingCoverage.NOT_REGISTERED,
+            -> false
+        }
+    }
+
+    private fun blockingExecutorCovers(klass: KtClassOrObject): GraphqlBlockingCoverage {
+        if (klass is KtObjectDeclaration && klass.isObjectLiteral()) {
+            val builder = graphqlBuilderCall(klass) ?: return GraphqlBlockingCoverage.NOT_REGISTERED
+            val usesExecutor = chainCalls(builder, outermostChainCall(builder)).any(::isUseBlockingTaskExecutorTrue)
+            return if (usesExecutor) {
+                GraphqlBlockingCoverage.ALL_BLOCKING_EXECUTOR
+            } else {
+                GraphqlBlockingCoverage.HAS_EVENT_LOOP_REGISTRATION
+            }
+        }
+        val sameFile = coveragesInFile(klass)
+        if (sameFile.isNotEmpty()) {
+            return reduce(sameFile)
+        }
+        val searched = coveragesFromReferences(klass)
+        if (searched.isEmpty()) {
+            return GraphqlBlockingCoverage.NOT_REGISTERED
+        }
+        return reduce(searched)
+    }
+
+    private fun reduce(coverages: List<Boolean>): GraphqlBlockingCoverage =
+        if (coverages.all { it }) {
+            GraphqlBlockingCoverage.ALL_BLOCKING_EXECUTOR
+        } else {
+            GraphqlBlockingCoverage.HAS_EVENT_LOOP_REGISTRATION
+        }
+
+    private fun coveragesInFile(klass: KtClassOrObject): List<Boolean> {
+        val className = klass.name ?: return emptyList()
+        val file = klass.containingKtFile
+        val precise =
+            graphqlBuilderCoverages(file) { root ->
+                chainReferencesName(root, className) || chainRegistersDataFetcherClass(root, klass)
+            }
+        if (precise.isNotEmpty()) {
+            return precise
+        }
+        return emptyList()
+    }
+
+    private fun chainRegistersDataFetcherClass(
+        root: PsiElement,
+        klass: KtClassOrObject,
+    ): Boolean {
+        var found = false
+        root.forEachDescendant { element ->
+            if (found) {
+                return@forEachDescendant
+            }
+            val call = element as? KtCallExpression ?: return@forEachDescendant
+            val name = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return@forEachDescendant
+            if (name !in DATA_FETCHER_METHODS) {
+                return@forEachDescendant
+            }
+            found =
+                call.valueArguments.any { argument ->
+                    val expression = argument.getArgumentExpression() ?: return@any false
+                    if (expression is KtLambdaExpression) {
+                        return@any false
+                    }
+                    isSameDataFetcherClass(resolveDataFetcherFromExpression(expression), klass)
+                }
+        }
+        return found
+    }
+
+    private fun isSameDataFetcherClass(
+        resolved: PsiElement?,
+        klass: KtClassOrObject,
+    ): Boolean {
+        if (resolved == null) {
+            return false
+        }
+        if (resolved == klass) {
+            return true
+        }
+        val name = klass.name ?: return false
+        return when (resolved) {
+            is KtClassOrObject -> resolved.name == name && resolved.containingFile == klass.containingFile
+            is PsiClass -> resolved.name == name
+            else -> false
+        }
+    }
+
+    private fun graphqlBuilderCoverages(
+        file: KtFile,
+        matches: (PsiElement) -> Boolean,
+    ): List<Boolean> {
+        val coverages = mutableListOf<Boolean>()
+        file.forEachDescendant { element ->
+            val call = element as? KtCallExpression ?: return@forEachDescendant
+            if (!isGraphqlServiceBuilderCall(call)) {
+                return@forEachDescendant
+            }
+            val outermost = outermostChainCall(call)
+            if (!matches(chainRoot(outermost))) {
+                return@forEachDescendant
+            }
+            coverages += chainCalls(call, outermost).any(::isUseBlockingTaskExecutorTrue)
+        }
+        return coverages
+    }
+
+    private fun coveragesFromReferences(klass: KtClassOrObject): List<Boolean> =
+        try {
+            val coverages = mutableListOf<Boolean>()
+            ReferencesSearch.search(klass, klass.useScope).forEach { reference ->
+                val builder = graphqlBuilderCall(reference.element) ?: return@forEach
+                coverages += chainCalls(builder, outermostChainCall(builder)).any(::isUseBlockingTaskExecutorTrue)
+            }
+            coverages
+        } catch (_: IndexNotReadyException) {
+            emptyList()
+        }
+
+    private fun chainReferencesName(
+        root: PsiElement,
+        className: String,
+    ): Boolean {
+        var found = false
+        root.forEachDescendant { element ->
+            if (found) {
+                return@forEachDescendant
+            }
+            when (element) {
+                is KtNameReferenceExpression -> {
+                    if (element.getReferencedName() == className || refersToClass(element, className)) {
+                        found = true
+                    }
+                }
+                is KtCallExpression -> {
+                    if (ArmeriaKotlinExpressionSupport.resolveCallName(element) == className) {
+                        found = true
+                    }
+                }
+            }
+        }
+        return found
+    }
+
+    private fun refersToClass(
+        reference: KtNameReferenceExpression,
+        className: String,
+    ): Boolean =
+        when (val resolved = reference.references.firstNotNullOfOrNull { it.resolve() }) {
+            is PsiClass -> resolved.name == className
+            is KtClassOrObject -> resolved.name == className
+            is PsiVariable -> (resolved.type as? PsiClassType)?.resolve()?.name == className
+            is KtProperty -> propertyRefersToClass(resolved, className)
+            is KtParameter ->
+                resolved.typeReference
+                    ?.text
+                    ?.substringBefore('<')
+                    ?.trim() == className
+            else -> false
+        }
+
+    private fun propertyRefersToClass(
+        property: KtProperty,
+        className: String,
+    ): Boolean {
+        val typeName =
+            property.typeReference
+                ?.text
+                ?.substringBefore('<')
+                ?.trim()
+        if (typeName == className) {
+            return true
+        }
+        val initializer = property.initializer ?: return false
+        val call =
+            when (initializer) {
+                is KtCallExpression -> initializer
+                is KtDotQualifiedExpression -> initializer.selectorExpression as? KtCallExpression
+                else -> null
+            }
+        return call != null && ArmeriaKotlinExpressionSupport.resolveCallName(call) == className
+    }
+
+    private fun dataFetcherCallHasBlockingTarget(call: KtCallExpression): Boolean =
+        call.valueArguments.any { argument ->
+            val expression = argument.getArgumentExpression() ?: return@any false
+            if (expression is KtLambdaExpression) {
+                return@any false
+            }
+            val klass = resolveDataFetcherFromExpression(expression) ?: return@any false
+            dataFetcherClassHasBlockingCall(klass)
+        }
+
+    private fun resolveDataFetcherFromExpression(expression: KtExpression): PsiElement? =
+        resolveDataFetcherFromExpression(expression, mutableSetOf())
+
+    private fun resolveDataFetcherFromExpression(
+        expression: KtExpression,
+        visited: MutableSet<PsiElement>,
+    ): PsiElement? {
+        val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: expression
+        if (!visited.add(unwrapped)) {
+            return null
+        }
+        return when (unwrapped) {
+            is KtCallExpression -> {
+                val className = ArmeriaKotlinExpressionSupport.resolveCallName(unwrapped) ?: return null
+                if (className in DATA_FETCHER_METHODS) {
+                    return null
+                }
+                resolveClassByName(unwrapped, className)?.takeIf(::isDataFetcherType)
+            }
+            is KtNameReferenceExpression -> resolveFromNameReference(unwrapped, visited)
+            is KtDotQualifiedExpression -> {
+                val selector = unwrapped.selectorExpression ?: return null
+                resolveDataFetcherFromExpression(selector, visited)
+            }
+            else -> null
+        }
+    }
+
+    private fun resolveFromNameReference(
+        reference: KtNameReferenceExpression,
+        visited: MutableSet<PsiElement>,
+    ): PsiElement? {
+        when (val resolved = reference.references.firstNotNullOfOrNull { it.resolve() }) {
+            is KtProperty -> return propertyDataFetcher(resolved, visited)
+            is KtParameter -> {
+                resolved.defaultValue?.let { resolveDataFetcherFromExpression(it, visited) }?.let { return it }
+                val typeName =
+                    resolved.typeReference
+                        ?.text
+                        ?.substringBefore('<')
+                        ?.trim()
+                return typeName?.let { findDataFetcherClassInFile(reference, it) }
+            }
+            is PsiVariable -> {
+                val typeClass = (resolved.type as? PsiClassType)?.resolve()
+                if (typeClass != null &&
+                    ArmeriaMissingBlockingSupport.isDataFetcherClass(typeClass) &&
+                    typeClass.qualifiedName != ArmeriaGraphqlBlockingSupport.DATA_FETCHER_CLASS
+                ) {
+                    return typeClass
+                }
+            }
+            is KtClassOrObject -> return resolved.takeIf(::isDataFetcherHierarchy)
+            is PsiClass -> return resolved.takeIf { ArmeriaMissingBlockingSupport.isDataFetcherClass(it) }
+        }
+        return findPropertyDataFetcher(reference, reference.getReferencedName(), visited)
+    }
+
+    private fun propertyDataFetcher(
+        property: KtProperty,
+        visited: MutableSet<PsiElement>,
+    ): PsiElement? {
+        property.initializer?.let { resolveDataFetcherFromExpression(it, visited) }?.let { return it }
+        val typeName =
+            property.typeReference
+                ?.text
+                ?.substringBefore('<')
+                ?.trim() ?: return null
+        return findDataFetcherClassInFile(property, typeName)
+    }
+
+    private fun findPropertyDataFetcher(
+        anchor: PsiElement,
+        name: String,
+        visited: MutableSet<PsiElement>,
+    ): PsiElement? {
+        val function = PsiTreeUtil.getParentOfType(anchor, KtNamedFunction::class.java) ?: return null
+        var found: PsiElement? = null
+        function.forEachDescendant { element ->
+            if (found != null) {
+                return@forEachDescendant
+            }
+            val property = element as? KtProperty ?: return@forEachDescendant
+            if (property.name != name) {
+                return@forEachDescendant
+            }
+            if (PsiTreeUtil.getParentOfType(property, KtNamedFunction::class.java) != function) {
+                return@forEachDescendant
+            }
+            found = propertyDataFetcher(property, visited)
+        }
+        return found
+    }
+
+    private fun findDataFetcherClassInFile(
+        anchor: PsiElement,
+        className: String,
+    ): PsiElement? {
+        if (className.isEmpty() || className == "DataFetcher") {
+            return null
+        }
+        val file = anchor.containingFile as? KtFile ?: return null
+        file.declarations
+            .filterIsInstance<KtClassOrObject>()
+            .firstOrNull { it.name == className && isDataFetcherHierarchy(it) }
+            ?.let { return it }
+        val facade = JavaPsiFacade.getInstance(file.project)
+        file.importDirectives
+            .mapNotNull { it.importPath?.pathStr }
+            .firstOrNull { it == className || it.endsWith(".$className") }
+            ?.let { imported ->
+                facade.findClass(imported, file.resolveScope)?.let { cls ->
+                    if (ArmeriaMissingBlockingSupport.isDataFetcherClass(cls)) {
+                        return cls
+                    }
+                }
+            }
+        val pkg = file.packageFqName.asString()
+        val fqn = if (pkg.isEmpty()) className else "$pkg.$className"
+        return facade.findClass(fqn, file.resolveScope)?.takeIf {
+            ArmeriaMissingBlockingSupport.isDataFetcherClass(it)
+        }
+    }
+
+    private fun dataFetcherClassHasBlockingCall(klass: PsiElement): Boolean =
+        when (klass) {
+            is KtClassOrObject -> {
+                if (hasNonBlocking(klass.annotationEntries)) {
+                    false
+                } else {
+                    klass.declarations.filterIsInstance<KtNamedFunction>().any { function ->
+                        function.name == "get" &&
+                            !hasNonBlocking(function.annotationEntries) &&
+                            findings(function).isNotEmpty()
+                    }
+                }
+            }
+            is PsiClass ->
+                !ArmeriaMissingBlockingSupport.hasNonBlocking(klass) &&
+                    klass.methods.any { method ->
+                        ArmeriaMissingBlockingSupport.isDataFetcherGet(method) &&
+                            !ArmeriaMissingBlockingSupport.hasNonBlocking(method) &&
+                            ArmeriaMissingBlockingSupport.findings(method).isNotEmpty()
+                    }
+            else -> false
+        }
+
+    private fun isDirectLambdaArgument(
+        lambda: KtLambdaExpression,
+        call: KtCallExpression,
+    ): Boolean {
+        if (call.lambdaArguments.any { it.getLambdaExpression() == lambda }) {
+            return true
+        }
+        return call.valueArguments.any { it.getArgumentExpression() == lambda }
+    }
+
+    private fun enclosingCall(lambda: KtLambdaExpression): KtCallExpression? {
+        var current: PsiElement? = lambda.parent
+        while (current != null && current !is KtNamedFunction && current !is KtClassOrObject) {
+            if (current is KtCallExpression) {
+                return current
+            }
+            current = current.parent
+        }
+        return null
+    }
+
+    private fun graphqlBuilderCall(start: PsiElement): KtCallExpression? {
+        var current: PsiElement? = start
+        while (current != null && current !is KtFile) {
+            if (current is KtCallExpression && isGraphqlBuilderMethod(current)) {
+                return findGraphqlServiceBuilderCall(current)
+            }
+            current = current.parent
+        }
+        return null
+    }
+
+    private fun isGraphqlBuilderMethod(call: KtCallExpression): Boolean {
+        if (isGraphqlServiceBuilderCall(call)) {
+            return true
+        }
+        val resolved = resolvePsiMethod(call)?.containingClass?.qualifiedName
+        if (resolved == ArmeriaGraphqlBlockingSupport.GRAPHQL_SERVICE_CLASS ||
+            resolved == ArmeriaGraphqlBlockingSupport.GRAPHQL_SERVICE_BUILDER_CLASS
+        ) {
+            return true
+        }
+        val name = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return false
+        return name in GRAPHQL_BUILDER_METHODS
+    }
+
+    private fun findGraphqlServiceBuilderCall(seed: KtCallExpression): KtCallExpression {
+        var current: KtExpression? = seed
+        val visited = mutableSetOf<PsiElement>()
+        while (current != null && visited.add(current)) {
+            val call = asCall(current)
+            if (call != null && isGraphqlServiceBuilderCall(call)) {
+                return call
+            }
+            current = chainReceiver(current)
+        }
+        return seed
+    }
+
+    private fun asCall(expression: KtExpression): KtCallExpression? =
+        when (expression) {
+            is KtCallExpression -> expression
+            is KtDotQualifiedExpression -> expression.selectorExpression as? KtCallExpression
+            else -> null
+        }
+
+    private fun chainRoot(call: KtCallExpression): PsiElement {
+        var current: PsiElement = call
+        while (current.parent is KtDotQualifiedExpression) {
+            current = current.parent
+        }
+        return current
+    }
+
+    private fun outermostChainCall(call: KtCallExpression): KtCallExpression {
+        var current = call
+        val visited = mutableSetOf<PsiElement>()
+        while (visited.add(current)) {
+            current = nextChainedCall(current) ?: break
+        }
+        return current
+    }
+
+    private fun chainCalls(
+        builder: KtCallExpression,
+        outermost: KtCallExpression,
+    ): List<KtCallExpression> {
+        val calls = mutableListOf<KtCallExpression>()
+        var current: KtCallExpression? = builder
+        val visited = mutableSetOf<PsiElement>()
+        while (current != null && visited.add(current)) {
+            calls += current
+            if (current == outermost) {
+                break
+            }
+            current = nextChainedCall(current)
+        }
+        return calls
+    }
+
+    private fun nextChainedCall(call: KtCallExpression): KtCallExpression? {
+        val parent = call.parent
+        if (parent is KtDotQualifiedExpression && parent.receiverExpression == call) {
+            return parent.selectorExpression as? KtCallExpression
+        }
+        if (parent is KtDotQualifiedExpression) {
+            val grandParent = parent.parent as? KtDotQualifiedExpression
+            if (grandParent != null && grandParent.receiverExpression == parent) {
+                return grandParent.selectorExpression as? KtCallExpression
+            }
+        }
+        return null
+    }
+
+    private fun chainReceiver(expression: KtExpression): KtExpression? {
+        val receiver =
+            when (expression) {
+                is KtDotQualifiedExpression -> expression.receiverExpression
+                is KtCallExpression -> {
+                    val parent = expression.parent
+                    if (parent is KtDotQualifiedExpression && parent.selectorExpression == expression) {
+                        parent.receiverExpression
+                    } else {
+                        when (val callee = expression.calleeExpression) {
+                            is KtDotQualifiedExpression -> callee.receiverExpression
+                            else -> null
+                        }
+                    }
+                }
+                else -> null
+            } ?: return null
+        return ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(receiver) ?: receiver
+    }
+
+    private fun isUseBlockingTaskExecutorTrue(call: KtCallExpression): Boolean {
+        if (ArmeriaKotlinExpressionSupport.resolveCallName(call) != USE_BLOCKING_TASK_EXECUTOR) {
+            return false
+        }
+        val argument = call.valueArguments.firstOrNull()?.getArgumentExpression() ?: return false
+        val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(argument) ?: argument
+        return unwrapped.text == "true"
+    }
+
+    private fun hasBlocking(entries: List<KtAnnotationEntry>): Boolean =
+        entries.any { entry ->
+            ArmeriaKotlinAnnotationSupport.qualifiedName(entry) == ArmeriaRouteSupport.BLOCKING_ANNOTATION
+        }
+
+    private fun hasNonBlocking(entries: List<KtAnnotationEntry>): Boolean =
+        entries.any { entry ->
+            ArmeriaKotlinAnnotationSupport.qualifiedName(entry) == ArmeriaRouteSupport.NON_BLOCKING_ANNOTATION
+        }
+
+    private fun hasBlockingOrNonBlocking(entries: List<KtAnnotationEntry>): Boolean = hasBlocking(entries) || hasNonBlocking(entries)
+
+    fun containingClass(function: KtNamedFunction): KtClassOrObject? = PsiTreeUtil.getParentOfType(function, KtClassOrObject::class.java)
+
+    private fun isGrpcServiceOverride(function: KtNamedFunction): Boolean {
+        if (!function.hasModifier(KtTokens.OVERRIDE_KEYWORD)) {
+            return false
+        }
+        val klass = containingClass(function) ?: return false
+        return isHierarchy(klass, ArmeriaMissingBlockingSupport::isGrpcServiceType) { name ->
+            name.endsWith("ImplBase") || name == "BindableService"
+        }
+    }
+
+    private fun isHttpServiceOverride(function: KtNamedFunction): Boolean {
+        if (!function.hasModifier(KtTokens.OVERRIDE_KEYWORD)) {
+            return false
+        }
+        val name = function.name ?: return false
+        if (name !in HTTP_SERVICE_HANDLER_METHODS) {
+            return false
+        }
+        val klass = containingClass(function) ?: return false
+        return isHierarchy(klass, ArmeriaMissingBlockingSupport::isHttpServiceType) { typeName ->
+            typeName == "HttpService" || typeName == "AbstractHttpService"
+        }
+    }
+
+    private fun isDataFetcherHierarchy(root: PsiElement): Boolean =
+        isHierarchy(root, ArmeriaMissingBlockingSupport::isDataFetcherClass) { name ->
+            name == "DataFetcher"
+        }
+
+    private fun isHierarchy(
+        root: PsiElement,
+        javaMatch: (PsiClass) -> Boolean,
+        kotlinNameMatch: (String) -> Boolean,
+    ): Boolean {
+        val visited = mutableSetOf<PsiElement>()
+        val queue = ArrayDeque<PsiElement>()
+        queue.add(root)
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            if (!visited.add(current)) {
+                continue
+            }
+            when (current) {
+                is KtClassOrObject -> {
+                    if (current.name?.let(kotlinNameMatch) == true) {
+                        return true
+                    }
+                    current.superTypeListEntries.forEach { entry ->
+                        val referencedName = entry.typeAsUserType?.referencedName
+                        if (referencedName != null && kotlinNameMatch(referencedName)) {
+                            return true
+                        }
+                        resolveSuperType(entry, current)?.let { queue.add(it) }
+                    }
+                }
+                is PsiClass -> {
+                    if (javaMatch(current)) {
+                        return true
+                    }
+                    current.supers.forEach { queue.add(it) }
+                }
+                is PsiMethod -> current.containingClass?.let { queue.add(it) }
+                is KtConstructor<*> -> queue.add(current.getContainingClassOrObject())
+            }
+        }
+        return false
+    }
+
+    private fun resolveSuperType(
+        entry: KtSuperTypeListEntry,
+        klass: KtClassOrObject,
+    ): PsiElement? {
+        entry.typeReference
+            ?.references
+            ?.firstNotNullOfOrNull { it.resolve() }
+            ?.let { resolved -> asHierarchyType(resolved)?.let { return it } }
+        val shortName = entry.typeAsUserType?.referencedName ?: return null
+        val file = klass.containingKtFile
+        val facade = JavaPsiFacade.getInstance(file.project)
+        file.importDirectives
+            .mapNotNull { it.importPath?.pathStr }
+            .firstOrNull { it == shortName || it.endsWith(".$shortName") }
+            ?.let { imported ->
+                facade.findClass(imported, file.resolveScope)?.let { return it }
+            }
+        val pkg = file.packageFqName.asString()
+        val fqn = if (pkg.isEmpty()) shortName else "$pkg.$shortName"
+        return facade.findClass(fqn, file.resolveScope)
+    }
+
+    private fun asHierarchyType(element: PsiElement): PsiElement? =
+        when (element) {
+            is PsiClass, is KtClassOrObject -> element
+            is PsiMethod -> element.containingClass
+            is KtConstructor<*> -> element.getContainingClassOrObject()
+            else -> null
+        }
+
+    private fun isOnInspectedFunctionPath(
+        boundary: PsiElement,
+        element: PsiElement,
+    ): Boolean {
+        if (element == boundary) {
+            return true
+        }
+        var current: PsiElement? = element.parent
+        while (current != null && current != boundary) {
+            when (current) {
+                is KtLambdaExpression, is KtClassOrObject, is KtNamedFunction -> return false
+            }
+            current = current.parent
+        }
+        return current == boundary
+    }
+
+    private fun resolvePsiMethod(call: KtCallExpression): PsiMethod? {
+        val references =
+            call.calleeExpression
+                ?.references
+                ?.toList()
+                .orEmpty()
+        for (reference in references) {
+            val resolved = reference.resolve()
+            if (resolved is PsiMethod) {
+                return resolved
+            }
+        }
+        return null
+    }
+
+    private fun resolveClassByName(
+        call: KtCallExpression,
+        className: String,
+    ): PsiElement? {
+        call.calleeExpression
+            ?.references
+            ?.firstNotNullOfOrNull { it.resolve() }
+            ?.let { resolved -> asHierarchyType(resolved)?.let { return it } }
+        val file = call.containingKtFile
+        val facade = JavaPsiFacade.getInstance(file.project)
+        file.importDirectives
+            .mapNotNull { it.importPath?.pathStr }
+            .firstOrNull { it == className || it.endsWith(".$className") }
+            ?.let { imported ->
+                facade.findClass(imported, file.resolveScope)?.let { return it }
+            }
+        file.declarations
+            .filterIsInstance<KtClassOrObject>()
+            .firstOrNull { it.name == className }
+            ?.let { return it }
+        val pkg = file.packageFqName.asString()
+        val fqn = if (pkg.isEmpty()) className else "$pkg.$className"
+        return facade.findClass(fqn, file.resolveScope)
+    }
+
+    private fun isDataFetcherType(element: PsiElement): Boolean =
+        when (element) {
+            is PsiClass -> ArmeriaMissingBlockingSupport.isDataFetcherClass(element)
+            is KtClassOrObject -> isDataFetcherHierarchy(element)
+            else -> false
+        }
+}
