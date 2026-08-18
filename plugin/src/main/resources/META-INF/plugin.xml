@@ -78,6 +78,15 @@
                          implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaClientDecoratorOrderInspection" />
         <localInspection language="JAVA"
                          bundle="messages.ArmeriaBundle"
+                         key="inspection.server.decorator.display.name"
+                         groupBundle="messages.ArmeriaBundle"
+                         groupKey="inspection.group.armeria"
+                         shortName="ArmeriaServerDecorator"
+                         enabledByDefault="true"
+                         level="WEAK WARNING"
+                         implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaServerDecoratorInspection" />
+        <localInspection language="JAVA"
+                         bundle="messages.ArmeriaBundle"
                          key="inspection.parameters.flag.display.name"
                          groupBundle="messages.ArmeriaBundle"
                          groupKey="inspection.group.armeria"
