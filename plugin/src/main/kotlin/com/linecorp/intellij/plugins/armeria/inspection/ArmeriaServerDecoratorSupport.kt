@@ -37,7 +37,7 @@ internal object ArmeriaServerDecoratorSupport {
                 kinds =
                     collectBuilderDecoratorCalls(call)
                         .filter(::isGlobalBuilderDecoratorCall)
-                        .sortedBy { it.textOffset }
+                        .sortedBy(::decoratorApplicationOffset)
                         .map { it to decoratorKind(it) },
                 findings = findings,
             )
@@ -383,6 +383,9 @@ internal object ArmeriaServerDecoratorSupport {
         isBuilderDecoratorCall(call) &&
             call.methodExpression.referenceName == "decorator" &&
             call.argumentList.expressionCount == 1
+
+    private fun decoratorApplicationOffset(call: PsiMethodCallExpression): Int =
+        call.methodExpression.referenceNameElement?.textOffset ?: call.textOffset
 
     private fun isBuilderDecoratorCall(call: PsiMethodCallExpression): Boolean {
         val name = call.methodExpression.referenceName ?: return false

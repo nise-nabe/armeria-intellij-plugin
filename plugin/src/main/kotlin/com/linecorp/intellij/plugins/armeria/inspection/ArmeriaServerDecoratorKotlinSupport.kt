@@ -41,7 +41,7 @@ internal object ArmeriaServerDecoratorKotlinSupport {
                 kinds =
                     collectBuilderDecoratorCalls(call)
                         .filter(::isGlobalBuilderDecoratorCall)
-                        .sortedBy { it.textOffset }
+                        .sortedBy(::decoratorApplicationOffset)
                         .map { it to decoratorKind(it) },
                 findings = findings,
             )
@@ -421,6 +421,12 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         isBuilderDecoratorCall(call) &&
             ArmeriaKotlinExpressionSupport.resolveCallName(call) == "decorator" &&
             call.valueArguments.size == 1
+
+    private fun decoratorApplicationOffset(call: KtCallExpression): Int {
+        val callee = call.calleeExpression ?: return call.textOffset
+        val selector = (callee as? KtDotQualifiedExpression)?.selectorExpression
+        return selector?.textOffset ?: callee.textOffset
+    }
 
     private fun isBuilderDecoratorCall(call: KtCallExpression): Boolean {
         val name = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return false
