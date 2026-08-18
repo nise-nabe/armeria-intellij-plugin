@@ -139,15 +139,28 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         return isDirectLambdaArgument(lambda, call)
     }
 
+    fun dataFetcherLambdas(call: KtCallExpression): List<KtLambdaExpression> {
+        if (ArmeriaKotlinExpressionSupport.resolveCallName(call) !in DATA_FETCHER_METHODS) {
+            return emptyList()
+        }
+        if (graphqlBuilderCall(call) == null) {
+            return emptyList()
+        }
+        val lambdas = mutableListOf<KtLambdaExpression>()
+        call.lambdaArguments.mapNotNullTo(lambdas) { it.getLambdaExpression() }
+        call.valueArguments.mapNotNullTo(lambdas) { it.getArgumentExpression() as? KtLambdaExpression }
+        return lambdas
+    }
+
     fun hasBlockingTaskExecutor(element: PsiElement): Boolean {
         val builder = graphqlBuilderCall(element) ?: return false
         return chainCalls(builder, outermostChainCall(builder)).any(::isUseBlockingTaskExecutorTrue)
     }
 
     fun hasBlockingDataFetcher(builderCall: KtCallExpression): Boolean {
-        val outermost = outermostChainCall(builderCall)
+        val root = chainRoot(outermostChainCall(builderCall))
         var found = false
-        outermost.forEachDescendant { element ->
+        root.forEachDescendant { element ->
             if (found) {
                 return@forEachDescendant
             }
@@ -249,7 +262,7 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                 return@forEachDescendant
             }
             val outermost = outermostChainCall(call)
-            if (!chainReferencesName(outermost, className)) {
+            if (!chainReferencesName(chainRoot(outermost), className)) {
                 return@forEachDescendant
             }
             coverages += chainCalls(call, outermost).any(::isUseBlockingTaskExecutorTrue)
@@ -270,11 +283,11 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         }
 
     private fun chainReferencesName(
-        outermost: KtCallExpression,
+        root: PsiElement,
         className: String,
     ): Boolean {
         var found = false
-        outermost.forEachDescendant { element ->
+        root.forEachDescendant { element ->
             if (found) {
                 return@forEachDescendant
             }
@@ -382,6 +395,14 @@ internal object ArmeriaMissingBlockingKotlinSupport {
             is KtDotQualifiedExpression -> expression.selectorExpression as? KtCallExpression
             else -> null
         }
+
+    private fun chainRoot(call: KtCallExpression): PsiElement {
+        var current: PsiElement = call
+        while (current.parent is KtDotQualifiedExpression) {
+            current = current.parent
+        }
+        return current
+    }
 
     private fun outermostChainCall(call: KtCallExpression): KtCallExpression {
         var current = call

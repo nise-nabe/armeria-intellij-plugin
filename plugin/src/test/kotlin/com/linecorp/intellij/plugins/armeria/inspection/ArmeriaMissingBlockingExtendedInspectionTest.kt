@@ -296,7 +296,7 @@ class ArmeriaMissingBlockingExtendedInspectionTest : ArmeriaFixtureTestBase5() {
 
     private fun applyQuickFix(name: String) {
         myFixture.doHighlighting()
-        val quickFix = myFixture.getAvailableQuickFixes().single { it.text == name }
+        val quickFix = myFixture.getAvailableQuickFixes().first { it.text == name }
         ApplicationManager.getApplication().invokeAndWait {
             myFixture.launchAction(quickFix)
         }

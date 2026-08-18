@@ -6,7 +6,6 @@ import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.psi.PsiElementVisitor
 import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.psi.KtCallExpression
-import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtVisitorVoid
 
@@ -36,26 +35,9 @@ class ArmeriaMissingBlockingKotlinInspection : LocalInspectionTool() {
                 }
             }
 
-            override fun visitLambdaExpression(expression: KtLambdaExpression) {
-                super.visitLambdaExpression(expression)
-                if (!ArmeriaMissingBlockingKotlinSupport.isGraphqlDataFetcherLambda(expression)) {
-                    return
-                }
-                if (ArmeriaMissingBlockingKotlinSupport.hasBlockingTaskExecutor(expression)) {
-                    return
-                }
-                val body = expression.bodyExpression ?: return
-                for (finding in ArmeriaMissingBlockingKotlinSupport.findingsIn(body, expression)) {
-                    holder.registerProblem(
-                        finding.highlight,
-                        message("inspection.missing.blocking.problem", finding.methodName),
-                        ProblemHighlightType.WEAK_WARNING,
-                    )
-                }
-            }
-
             override fun visitCallExpression(expression: KtCallExpression) {
                 super.visitCallExpression(expression)
+                registerDataFetcherLambdaFindings(holder, expression)
                 if (!ArmeriaMissingBlockingKotlinSupport.isGraphqlServiceBuilderCall(expression)) {
                     return
                 }
@@ -70,6 +52,29 @@ class ArmeriaMissingBlockingKotlinInspection : LocalInspectionTool() {
                     message("inspection.missing.blocking.graphql.executor"),
                     ProblemHighlightType.WEAK_WARNING,
                 )
+            }
+
+            private fun registerDataFetcherLambdaFindings(
+                holder: ProblemsHolder,
+                call: KtCallExpression,
+            ) {
+                val lambdas = ArmeriaMissingBlockingKotlinSupport.dataFetcherLambdas(call)
+                if (lambdas.isEmpty()) {
+                    return
+                }
+                if (ArmeriaMissingBlockingKotlinSupport.hasBlockingTaskExecutor(call)) {
+                    return
+                }
+                for (lambda in lambdas) {
+                    val body = lambda.bodyExpression ?: continue
+                    for (finding in ArmeriaMissingBlockingKotlinSupport.findingsIn(body, lambda)) {
+                        holder.registerProblem(
+                            finding.highlight,
+                            message("inspection.missing.blocking.problem", finding.methodName),
+                            ProblemHighlightType.WEAK_WARNING,
+                        )
+                    }
+                }
             }
         }
 }
