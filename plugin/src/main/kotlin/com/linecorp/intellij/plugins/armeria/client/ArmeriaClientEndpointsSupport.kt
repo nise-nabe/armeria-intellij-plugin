@@ -120,18 +120,20 @@ internal object ArmeriaClientEndpointsSupport {
     private class ArmeriaClientUrlTargetInfo(
         private val endpoint: ArmeriaClientEndpoint,
     ) : UrlTargetInfo {
-        private val uriParts =
-            ArmeriaClientRouteLinkSupport.parseClientUri(
-                endpoint.requestPath ?: endpoint.uri,
-            )
+        private val pathSource = endpoint.requestPath ?: endpoint.uri
+        private val uriParts = ArmeriaClientRouteLinkSupport.parseClientUri(pathSource)
+        private val authoritySource =
+            endpoint.requestPath
+                ?.takeIf { ArmeriaClientRouteLinkSupport.isAbsoluteHttpUri(it) }
+                ?: endpoint.uri
 
         override val schemes: List<String> = HTTP_SCHEMES
 
         override val authorities: List<Authority> =
-            if (!isVisibleHttpClientUri(endpoint.uri)) {
+            if (!isVisibleHttpClientUri(authoritySource)) {
                 emptyList()
             } else {
-                authorityText(endpoint.uri)
+                authorityText(authoritySource)
                     ?.let { listOf(Authority.Exact(it)) }
                     .orEmpty()
             }

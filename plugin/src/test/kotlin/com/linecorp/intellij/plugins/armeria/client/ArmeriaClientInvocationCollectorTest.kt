@@ -38,6 +38,15 @@ class ArmeriaClientInvocationCollectorTest : ArmeriaClientFixtureTestBase() {
         assertEquals("/users/{id}", callSite.requestPath)
         assertEquals("https://example.com", callSite.uri)
         assertEquals("RestClient", callSite.clientType)
+        assertEquals(
+            "RestClient GET /users/{id} https://example.com",
+            ArmeriaClientInvocationSupport.presentableLabel(callSite),
+        )
+        assertTrue(
+            ArmeriaClientInvocationSupport
+                .chooserLabel(callSite)
+                .startsWith("RestClient GET /users/{id} https://example.com ("),
+        )
     }
 
     fun testCollectRestClientGetFromVariable() {
@@ -160,6 +169,156 @@ class ArmeriaClientInvocationCollectorTest : ArmeriaClientFixtureTestBase() {
         )
 
         assertTrue(ArmeriaClientCollector.collect(project).none { it.isCallSite })
+    }
+
+    fun testDoesNotCollectPaymentsWebClientGet() {
+        myFixture.addClass(
+            """
+            package example;
+
+            public class PaymentsWebClient {
+                public String get(String path) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            public class Main {
+                public static void main(String[] args) {
+                    new PaymentsWebClient().get("/invoices");
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertTrue(ArmeriaClientCollector.collect(project).none { it.isCallSite })
+    }
+
+    fun testDoesNotCollectWebClientMapGet() {
+        myFixture.addClass(
+            """
+            package example;
+
+            public class WebClientMap {
+                public String get(String path) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            public class Main {
+                public static void main(String[] args) {
+                    new WebClientMap().get("/x");
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertTrue(ArmeriaClientCollector.collect(project).none { it.isCallSite })
+    }
+
+    fun testCollectExecuteHttpMethodAndPath() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+            import com.linecorp.armeria.common.HttpMethod;
+
+            public class Main {
+                public static void main(String[] args) {
+                    WebClient.of("https://example.com").execute(HttpMethod.GET, "/foo");
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val callSite = ArmeriaClientCollector.collect(project).single { it.isCallSite }
+        assertEquals("GET", callSite.httpMethod)
+        assertEquals("/foo", callSite.requestPath)
+    }
+
+    fun testGetPathParamIsNotRequestBody() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.RestClient;
+
+            public class Main {
+                public static void main(String[] args) {
+                    RestClient.of("https://example.com").get("/users/{id}", "42");
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val callSite = ArmeriaClientCollector.collect(project).single { it.isCallSite }
+        assertEquals("GET", callSite.httpMethod)
+        assertEquals("/users/{id}", callSite.requestPath)
+        assertTrue(callSite.requestBody.isNullOrBlank())
+    }
+
+    fun testAbsoluteUriOnGetMatchesAndGeneratesHttp() {
+        myFixture.registerArmeriaAnnotationStubs()
+        myFixture.addFileToProject(
+            "src/Service.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class Service {
+                @Get("/users")
+                public String users() {
+                    return "users";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Client.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+
+            public class Client {
+                public static void main(String[] args) {
+                    WebClient.of("https://example.com").get("https://example.com/users");
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val callSite = ArmeriaClientCollector.collect(project).single { it.isCallSite }
+        assertEquals("https://example.com/users", callSite.requestPath)
+        val route = ArmeriaRouteCollector.collect(project).single { it.path == "/users" }
+        assertTrue(ArmeriaClientRouteLinkSupport.matches(callSite, route))
+        val generated =
+            ArmeriaHttpRequestGenerator.requestText(
+                checkNotNull(ArmeriaClientHttpRequestSupport.toRoute(callSite)),
+                ArmeriaClientHttpRequestSupport.baseUrl(callSite),
+            )
+        assertTrue(generated.contains("GET https://example.com/users"))
+        assertFalse(generated.contains("https://example.comhttps://example.com/users"))
+        assertEquals("/users", ArmeriaClientInvocationSupport.displayPath(callSite))
+        assertEquals(
+            "HTTP GET /users https://example.com",
+            ArmeriaClientInvocationSupport.presentableLabel(callSite),
+        )
     }
 
     fun testFactoryWithoutCallSitesStillCollected() {

@@ -65,6 +65,9 @@ internal object ArmeriaJavaClientInvocationCollector {
         if (ArmeriaClientSupport.isHttpClientClass(resolvedClass)) {
             return true
         }
+        if (resolvedClass != null) {
+            return false
+        }
         if (methodName !in ArmeriaClientSupport.HTTP_METHOD_INVOCATION_NAMES) {
             return looksLikeExecuteOnHttpClient(expression)
         }
@@ -75,8 +78,7 @@ internal object ArmeriaJavaClientInvocationCollector {
         if (expression.methodExpression.referenceName != "execute") {
             return false
         }
-        val first = expression.argumentList.expressions.firstOrNull() ?: return false
-        return executeInvocation(first) != null &&
+        return executeFromArguments(expression.argumentList.expressions) != null &&
             looksLikeHttpClientQualifier(expression.methodExpression.qualifierExpression)
     }
 
@@ -84,10 +86,7 @@ internal object ArmeriaJavaClientInvocationCollector {
         if (findOwningFactoryCall(qualifier) != null) {
             return true
         }
-        val text = qualifier?.text.orEmpty()
-        return text.contains("RestClient") ||
-            text.contains("WebClient") ||
-            text.contains("BlockingWebClient")
+        return ArmeriaClientInvocationSupport.containsHttpClientSimpleName(qualifier?.text.orEmpty())
     }
 
     private fun protocolFromResolvedCall(expression: PsiMethodCallExpression): ClientProtocol? {
@@ -109,8 +108,8 @@ internal object ArmeriaJavaClientInvocationCollector {
         val arguments = expression.argumentList.expressions
         val chained = collectPreparationChain(expression)
         if (methodName == "execute") {
-            val fromArg = arguments.firstOrNull()?.let(::executeInvocation) ?: return null
-            return fromArg.merge(chained)
+            val fromArgs = executeFromArguments(arguments) ?: return null
+            return fromArgs.merge(chained)
         }
         val httpMethod = ArmeriaClientSupport.httpMethodForInvocation(methodName) ?: return null
         val path =
@@ -119,7 +118,7 @@ internal object ArmeriaJavaClientInvocationCollector {
                 ?.let(ArmeriaClientCollector::extractResolvedString)
                 ?.takeIf(ArmeriaClientInvocationSupport::isResolvedPath)
                 ?: return null
-        val fromArgs = argumentPayload(arguments.drop(1))
+        val fromArgs = argumentPayload(httpMethod, arguments.drop(1))
         return InvocationInfo(
             method = httpMethod,
             path = path,
@@ -128,12 +127,32 @@ internal object ArmeriaJavaClientInvocationCollector {
         ).merge(chained)
     }
 
+    private fun executeFromArguments(arguments: Array<PsiExpression>): InvocationInfo? {
+        arguments.firstOrNull()?.let(::executeInvocation)?.let { return it }
+        if (arguments.size < 2) {
+            return null
+        }
+        val method = extractHttpMethod(arguments[0]) ?: return null
+        val path =
+            ArmeriaClientCollector
+                .extractResolvedString(arguments[1])
+                ?.takeIf(ArmeriaClientInvocationSupport::isResolvedPath)
+                ?: return null
+        return InvocationInfo(method = method, path = path)
+    }
+
     private data class Payload(
         val contentType: String? = null,
         val body: String? = null,
     )
 
-    private fun argumentPayload(arguments: List<PsiExpression>): Payload {
+    private fun argumentPayload(
+        httpMethod: String,
+        arguments: List<PsiExpression>,
+    ): Payload {
+        if (!ArmeriaClientInvocationSupport.capturesRequestBody(httpMethod)) {
+            return Payload()
+        }
         var contentType: String? = null
         var body: String? = null
         for (argument in arguments) {

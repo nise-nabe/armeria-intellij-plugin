@@ -7,14 +7,14 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpRequestGenerator
 import com.linecorp.intellij.plugins.armeria.message
-import java.net.URI
 
 internal object ArmeriaClientHttpRequestSupport {
     fun supports(endpoint: ArmeriaClientEndpoint): Boolean = endpoint.isCallSite
 
     fun toRoute(endpoint: ArmeriaClientEndpoint): ArmeriaRoute? {
         val element = endpoint.pointer.element ?: return null
-        val path = endpoint.requestPath?.takeIf { it.isNotBlank() } ?: return null
+        val rawPath = endpoint.requestPath?.takeIf { it.isNotBlank() } ?: return null
+        val path = ArmeriaClientRouteLinkSupport.pathForMatching(rawPath)
         val method = endpoint.httpMethod.takeIf { it.isNotBlank() } ?: return null
         val contentHints =
             endpoint.contentType
@@ -35,29 +35,11 @@ internal object ArmeriaClientHttpRequestSupport {
     }
 
     fun baseUrl(endpoint: ArmeriaClientEndpoint): String {
-        val trimmed = endpoint.uri.trim()
-        val schemeSeparator = trimmed.indexOf("://")
-        if (schemeSeparator <= 0) {
-            return ArmeriaHttpRequestGenerator.DEFAULT_BASE_URL
+        val requestPath = endpoint.requestPath
+        if (!requestPath.isNullOrBlank() && ArmeriaClientRouteLinkSupport.isAbsoluteHttpUri(requestPath)) {
+            ArmeriaClientRouteLinkSupport.httpOrigin(requestPath)?.let { return it }
         }
-        val scheme = trimmed.substring(0, schemeSeparator)
-        if (!ArmeriaClientRouteLinkSupport.isHttpLikeScheme(scheme)) {
-            return ArmeriaHttpRequestGenerator.DEFAULT_BASE_URL
-        }
-        return try {
-            val uri = URI(trimmed)
-            val host = uri.host ?: return ArmeriaHttpRequestGenerator.DEFAULT_BASE_URL
-            buildString {
-                append(uri.scheme ?: "http")
-                append("://")
-                append(host)
-                if (uri.port >= 0) {
-                    append(':')
-                    append(uri.port)
-                }
-            }
-        } catch (_: Exception) {
-            ArmeriaHttpRequestGenerator.DEFAULT_BASE_URL
-        }
+        return ArmeriaClientRouteLinkSupport.httpOrigin(endpoint.uri)
+            ?: ArmeriaHttpRequestGenerator.DEFAULT_BASE_URL
     }
 }

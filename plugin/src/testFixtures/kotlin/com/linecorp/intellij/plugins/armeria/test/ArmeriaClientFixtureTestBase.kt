@@ -42,6 +42,10 @@ abstract class ArmeriaClientFixtureTestBase : ArmeriaLightJavaCodeInsightFixture
                     return null;
                 }
 
+                public Object get(String path, String pathParam) {
+                    return null;
+                }
+
                 public Object post(String path) {
                     return null;
                 }
@@ -75,6 +79,12 @@ abstract class ArmeriaClientFixtureTestBase : ArmeriaLightJavaCodeInsightFixture
                 }
 
                 public Object execute(Object request) {
+                    return null;
+                }
+
+                public Object execute(
+                        com.linecorp.armeria.common.HttpMethod method,
+                        String path) {
                     return null;
                 }
             }
@@ -131,6 +141,10 @@ abstract class ArmeriaClientFixtureTestBase : ArmeriaLightJavaCodeInsightFixture
                 }
 
                 public RestClientPreparation get(String path) {
+                    return null;
+                }
+
+                public RestClientPreparation get(String path, String pathParam) {
                     return null;
                 }
 
@@ -219,6 +233,10 @@ abstract class ArmeriaClientFixtureTestBase : ArmeriaLightJavaCodeInsightFixture
                     return null;
                 }
 
+                public Object get(String path, String pathParam) {
+                    return null;
+                }
+
                 public Object post(String path) {
                     return null;
                 }
@@ -240,6 +258,12 @@ abstract class ArmeriaClientFixtureTestBase : ArmeriaLightJavaCodeInsightFixture
                 }
 
                 public Object execute(Object request) {
+                    return null;
+                }
+
+                public Object execute(
+                        com.linecorp.armeria.common.HttpMethod method,
+                        String path) {
                     return null;
                 }
             }

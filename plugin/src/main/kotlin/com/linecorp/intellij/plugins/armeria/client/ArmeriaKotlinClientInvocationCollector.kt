@@ -1,17 +1,23 @@
 package com.linecorp.intellij.plugins.armeria.client
 
+import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiEnumConstant
 import com.intellij.psi.PsiField
+import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiVariable
+import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import org.jetbrains.kotlin.psi.KtCallExpression
+import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtEscapeStringTemplateEntry
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtLiteralStringTemplateEntry
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
+import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtProperty
+import org.jetbrains.kotlin.psi.KtQualifiedExpression
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 
 internal object ArmeriaKotlinClientInvocationCollector {
@@ -57,12 +63,15 @@ internal object ArmeriaKotlinClientInvocationCollector {
         call: KtCallExpression,
         methodName: String,
     ): Boolean {
-        val resolvedClass = ArmeriaKotlinClientCollector.resolveContainingClass(call)
+        val resolvedClass = resolvedOwnerClassName(call)
         if (ArmeriaClientInvocationSupport.isPreparationClass(resolvedClass)) {
             return false
         }
         if (ArmeriaClientSupport.isHttpClientClass(resolvedClass)) {
             return true
+        }
+        if (resolvedClass != null) {
+            return false
         }
         if (methodName !in ArmeriaClientSupport.HTTP_METHOD_INVOCATION_NAMES) {
             return looksLikeExecuteOnHttpClient(call)
@@ -82,8 +91,8 @@ internal object ArmeriaKotlinClientInvocationCollector {
         if (ArmeriaKotlinExpressionSupport.resolveCallName(call) != "execute") {
             return false
         }
-        val first = call.valueArguments.firstOrNull()?.getArgumentExpression() ?: return false
-        return executeInvocation(first) != null && looksLikeHttpClientReceiver(call)
+        val arguments = call.valueArguments.mapNotNull { it.getArgumentExpression() }
+        return executeFromArguments(arguments) != null && looksLikeHttpClientReceiver(call)
     }
 
     private fun looksLikeHttpClientReceiver(call: KtCallExpression): Boolean {
@@ -91,9 +100,31 @@ internal object ArmeriaKotlinClientInvocationCollector {
             return true
         }
         val receiver = ArmeriaKotlinClientCollector.qualifierReceiver(call)?.text.orEmpty()
-        return receiver.contains("RestClient") ||
-            receiver.contains("WebClient") ||
-            receiver.contains("BlockingWebClient")
+        return ArmeriaClientInvocationSupport.containsHttpClientSimpleName(receiver)
+    }
+
+    private fun resolvedOwnerClassName(call: KtCallExpression): String? {
+        val callee = call.calleeExpression ?: return null
+        val references =
+            when (callee) {
+                is KtNameReferenceExpression -> callee.references.toList()
+                is KtQualifiedExpression -> callee.references.toList()
+                else -> emptyList()
+            }
+        for (reference in references) {
+            when (val resolved = reference.resolve()) {
+                is PsiMethod -> resolved.containingClass?.qualifiedName?.let { return it }
+                is PsiClass -> resolved.qualifiedName?.let { return it }
+                is KtNamedFunction ->
+                    PsiTreeUtil
+                        .getParentOfType(resolved, KtClass::class.java)
+                        ?.fqName
+                        ?.asString()
+                        ?.let { return it }
+                is KtClass -> resolved.fqName?.asString()?.let { return it }
+            }
+        }
+        return null
     }
 
     private fun invocationTarget(
@@ -108,8 +139,8 @@ internal object ArmeriaKotlinClientInvocationCollector {
         val arguments = call.valueArguments.mapNotNull { it.getArgumentExpression() }
         val chained = collectPreparationChain(call)
         if (methodName == "execute") {
-            val fromArg = arguments.firstOrNull()?.let(::executeInvocation) ?: return null
-            return fromArg.merge(chained)
+            val fromArgs = executeFromArguments(arguments) ?: return null
+            return fromArgs.merge(chained)
         }
         val httpMethod = ArmeriaClientSupport.httpMethodForInvocation(methodName) ?: return null
         val path =
@@ -118,7 +149,7 @@ internal object ArmeriaKotlinClientInvocationCollector {
                 ?.let(::extractResolvedString)
                 ?.takeIf(ArmeriaClientInvocationSupport::isResolvedPath)
                 ?: return null
-        val fromArgs = argumentPayload(arguments.drop(1))
+        val fromArgs = argumentPayload(httpMethod, arguments.drop(1))
         return InvocationInfo(
             method = httpMethod,
             path = path,
@@ -127,12 +158,31 @@ internal object ArmeriaKotlinClientInvocationCollector {
         ).merge(chained)
     }
 
+    private fun executeFromArguments(arguments: List<KtExpression>): InvocationInfo? {
+        arguments.firstOrNull()?.let(::executeInvocation)?.let { return it }
+        if (arguments.size < 2) {
+            return null
+        }
+        val method = extractHttpMethod(arguments[0]) ?: return null
+        val path =
+            extractResolvedString(arguments[1])
+                ?.takeIf(ArmeriaClientInvocationSupport::isResolvedPath)
+                ?: return null
+        return InvocationInfo(method = method, path = path)
+    }
+
     private data class Payload(
         val contentType: String? = null,
         val body: String? = null,
     )
 
-    private fun argumentPayload(arguments: List<KtExpression>): Payload {
+    private fun argumentPayload(
+        httpMethod: String,
+        arguments: List<KtExpression>,
+    ): Payload {
+        if (!ArmeriaClientInvocationSupport.capturesRequestBody(httpMethod)) {
+            return Payload()
+        }
         var contentType: String? = null
         var body: String? = null
         for (argument in arguments) {

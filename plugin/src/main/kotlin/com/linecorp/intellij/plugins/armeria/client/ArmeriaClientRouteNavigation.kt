@@ -181,7 +181,7 @@ internal object ArmeriaClientRouteNavigation {
             ): Component {
                 val label =
                     if (value is ArmeriaClientEndpoint) {
-                        "${value.clientType} ${value.uri} (${value.moduleName})"
+                        ArmeriaClientInvocationSupport.chooserLabel(value)
                     } else {
                         value?.toString().orEmpty()
                     }

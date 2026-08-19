@@ -277,24 +277,12 @@ class ArmeriaClientExplorerPanel(
                     append(message("client.explorer.secondary.decorators", endpoint.decorators.joinToString()))
                 }
             }
-        return if (endpoint.isCallSite) {
-            "${endpoint.clientType} ${endpoint.httpMethod} ${endpoint.requestPath}$suffix"
-        } else {
-            "${endpoint.clientType} ${endpoint.uri}$suffix"
-        }
+        return "${ArmeriaClientInvocationSupport.presentableLabel(endpoint)}$suffix"
     }
 
     private fun buildClientTooltip(endpoint: ArmeriaClientEndpoint): String =
         buildString {
-            append(endpoint.clientType)
-            append(' ')
-            if (endpoint.isCallSite) {
-                append(endpoint.httpMethod)
-                append(' ')
-                append(endpoint.requestPath)
-            } else {
-                append(endpoint.uri)
-            }
+            append(ArmeriaClientInvocationSupport.presentableLabel(endpoint))
             append(" → ")
             append(endpoint.target)
             if (!endpoint.transport.isNullOrEmpty()) {

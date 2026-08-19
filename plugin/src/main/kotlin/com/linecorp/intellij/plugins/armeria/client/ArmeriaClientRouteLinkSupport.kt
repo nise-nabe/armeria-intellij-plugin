@@ -115,23 +115,63 @@ internal object ArmeriaClientRouteLinkSupport {
         ) {
             return false
         }
-        val parts = parseClientUri(uri)
+        val factoryParts = parseClientUri(uri)
+        val requestParts = requestPath?.takeIf { it.isNotBlank() }?.let(::partsForRequestPath)
         val clientHost =
-            if (!requestPath.isNullOrBlank() && !isHttpLikeClientUri(uri)) {
-                null
-            } else {
-                parts.host
+            when {
+                requestParts?.host != null -> requestParts.host
+                !requestPath.isNullOrBlank() && !isHttpLikeClientUri(uri) -> null
+                else -> factoryParts.host
             }
         if (!hostsCompatible(clientHost, virtualHostName)) {
             return false
         }
-        val clientPath =
-            if (!requestPath.isNullOrBlank()) {
-                normalizePath(requestPath)
-            } else {
-                parts.path
-            }
+        val clientPath = requestParts?.path ?: factoryParts.path
         return pathsOverlap(clientPath, routePath)
+    }
+
+    private fun partsForRequestPath(requestPath: String): ClientUriParts {
+        if (isAbsoluteHttpUri(requestPath)) {
+            return parseClientUri(requestPath)
+        }
+        return ClientUriParts(host = null, path = normalizePath(requestPath))
+    }
+
+    fun isAbsoluteHttpUri(raw: String): Boolean {
+        val trimmed = raw.trim()
+        val schemeSeparator = trimmed.indexOf("://")
+        if (schemeSeparator <= 0) {
+            return false
+        }
+        return isHttpLikeScheme(trimmed.substring(0, schemeSeparator))
+    }
+
+    fun pathForMatching(requestPath: String): String = partsForRequestPath(requestPath).path
+
+    fun httpOrigin(raw: String): String? {
+        val trimmed = raw.trim()
+        val schemeSeparator = trimmed.indexOf("://")
+        if (schemeSeparator <= 0) {
+            return null
+        }
+        if (!isHttpLikeScheme(trimmed.substring(0, schemeSeparator))) {
+            return null
+        }
+        return try {
+            val parsed = URI(trimmed)
+            val host = parsed.host ?: return null
+            buildString {
+                append(parsed.scheme ?: "http")
+                append("://")
+                append(host)
+                if (parsed.port >= 0) {
+                    append(':')
+                    append(parsed.port)
+                }
+            }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun isHttpLikeClientUri(raw: String): Boolean {
