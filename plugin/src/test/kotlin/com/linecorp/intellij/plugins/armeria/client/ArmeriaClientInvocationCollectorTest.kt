@@ -10,7 +10,6 @@ import com.linecorp.intellij.plugins.armeria.test.ArmeriaClientFixtureTestBase
 import com.linecorp.intellij.plugins.armeria.test.registerArmeriaAnnotationStubs
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class ArmeriaClientInvocationCollectorTest : ArmeriaClientFixtureTestBase() {
@@ -274,7 +273,7 @@ class ArmeriaClientInvocationCollectorTest : ArmeriaClientFixtureTestBase() {
 
         val callSite = ArmeriaClientCollector.collect(project).single { it.isCallSite }
         assertTrue(ArmeriaClientHttpRequestSupport.supports(callSite))
-        val route = assertNotNull(ArmeriaClientHttpRequestSupport.toRoute(callSite))
+        val route = checkNotNull(ArmeriaClientHttpRequestSupport.toRoute(callSite))
         val text =
             ArmeriaHttpRequestGenerator.requestText(
                 route,
