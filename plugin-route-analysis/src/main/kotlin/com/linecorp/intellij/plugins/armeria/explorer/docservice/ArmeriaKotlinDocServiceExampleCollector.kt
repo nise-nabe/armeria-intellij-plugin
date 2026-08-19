@@ -16,9 +16,12 @@ import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClassLiteralExpression
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
+import org.jetbrains.kotlin.psi.KtEscapeStringTemplateEntry
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
+import org.jetbrains.kotlin.psi.KtStringTemplateEntryWithExpression
+import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 
 internal object ArmeriaKotlinDocServiceExampleCollector {
     fun collect(
@@ -78,7 +81,11 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
             when (val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(current) ?: current) {
                 is KtCallExpression -> {
                     val callee = unwrapped.calleeExpression
-                    current = (callee as? KtDotQualifiedExpression)?.receiverExpression
+                    current =
+                        when (callee) {
+                            is KtDotQualifiedExpression -> callee.receiverExpression
+                            else -> (unwrapped.parent as? KtDotQualifiedExpression)?.receiverExpression
+                        }
                 }
                 is KtDotQualifiedExpression -> current = unwrapped.receiverExpression
                 is KtNameReferenceExpression -> {
@@ -102,7 +109,7 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
         }
         val serviceName = extractServiceName(args[0]) ?: return
         val rest = args.drop(1)
-        val method = rest.firstOrNull()?.let { ArmeriaKotlinExpressionSupport.extractKotlinString(it) }
+        val method = rest.firstOrNull()?.let(::extractMethodName)
         val valueArgs = if (method != null) rest.drop(1) else rest
         when (methodName) {
             "exampleRequests" -> builder.addRequests(serviceName, method, valueArgs.flatMap(::extractStringValues))
@@ -117,12 +124,13 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
             if (selector?.getReferencedName() == "java") {
                 val receiver = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(unwrapped.receiverExpression)
                 if (receiver is KtClassLiteralExpression) {
-                    resolveClassLiteral(receiver)?.let { return it }
+                    return resolveClassLiteral(receiver)
                 }
+                return null
             }
         }
         if (unwrapped is KtClassLiteralExpression) {
-            resolveClassLiteral(unwrapped)?.let { return it }
+            return resolveClassLiteral(unwrapped)
         }
         return ArmeriaKotlinExpressionSupport.extractKotlinString(unwrapped)
     }
@@ -139,17 +147,26 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
             .takeIf { it.isNotEmpty() }
     }
 
+    private fun extractMethodName(expression: KtExpression): String? {
+        val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: return null
+        if (unwrapped is KtCallExpression) {
+            return null
+        }
+        return extractKotlinStringValue(unwrapped)
+    }
+
     private fun extractStringValues(expression: KtExpression): List<String> {
-        ArmeriaKotlinExpressionSupport.extractKotlinString(expression)?.let { return listOf(it) }
-        val call = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) as? KtCallExpression ?: return emptyList()
-        return call.valueArguments.mapNotNull {
-            ArmeriaKotlinExpressionSupport.extractKotlinString(it.getArgumentExpression())
+        extractKotlinStringValue(expression)?.let { return listOf(it) }
+        val call =
+            ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) as? KtCallExpression
+                ?: return emptyList()
+        return call.valueArguments.mapNotNull { argument ->
+            extractKotlinStringValue(argument.getArgumentExpression())
         }
     }
 
     private fun extractHeaders(expression: KtExpression): List<String> {
-        val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: return emptyList()
-        val call = unwrapped as? KtCallExpression ?: return emptyList()
+        val call = asCall(expression) ?: return emptyList()
         if (ArmeriaKotlinExpressionSupport.resolveCallName(call) == "of") {
             val pairs = headerPairsFromOf(call)
             if (pairs.isNotEmpty()) {
@@ -159,6 +176,15 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
         return call.valueArguments.flatMap { argument ->
             val nested = argument.getArgumentExpression() ?: return@flatMap emptyList()
             extractHeaders(nested)
+        }
+    }
+
+    private fun asCall(expression: KtExpression): KtCallExpression? {
+        val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: return null
+        return when (unwrapped) {
+            is KtCallExpression -> unwrapped
+            is KtDotQualifiedExpression -> unwrapped.selectorExpression as? KtCallExpression
+            else -> null
         }
     }
 
@@ -177,7 +203,7 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
         if (expression == null) {
             return null
         }
-        ArmeriaKotlinExpressionSupport.extractKotlinString(expression)?.let { return it }
+        extractKotlinStringValue(expression)?.let { return it }
         val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: return null
         val reference =
             unwrapped as? KtNameReferenceExpression
@@ -191,5 +217,30 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
             }
         }
         return fieldName.lowercase().replace('_', '-')
+    }
+
+    private fun extractKotlinStringValue(expression: KtExpression?): String? {
+        val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: return null
+        if (unwrapped is KtStringTemplateExpression) {
+            return decodedStringTemplate(unwrapped)
+        }
+        if (unwrapped is KtCallExpression) {
+            return null
+        }
+        return ArmeriaKotlinExpressionSupport.extractKotlinString(unwrapped)
+    }
+
+    private fun decodedStringTemplate(template: KtStringTemplateExpression): String? {
+        if (template.entries.any { it is KtStringTemplateEntryWithExpression }) {
+            return null
+        }
+        return buildString {
+            for (entry in template.entries) {
+                when (entry) {
+                    is KtEscapeStringTemplateEntry -> append(entry.unescapedValue)
+                    else -> append(entry.text)
+                }
+            }
+        }.takeIf { it.isNotEmpty() }
     }
 }
