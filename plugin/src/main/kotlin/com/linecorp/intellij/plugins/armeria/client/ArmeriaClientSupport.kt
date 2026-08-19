@@ -81,6 +81,16 @@ internal object ArmeriaClientSupport {
         return protocolForClass(containingClass)
     }
 
+    fun isClientLineMarkerMethod(
+        methodName: String,
+        containingClass: String?,
+    ): Boolean {
+        if (methodName in HTTP_INVOCATION_METHOD_NAMES) {
+            return isHttpClientClass(containingClass)
+        }
+        return protocolForInvocation(methodName, containingClass) != null
+    }
+
     fun protocolForConversion(methodName: String): ClientProtocol? =
         when (methodName) {
             "blocking" -> ClientProtocol.BLOCKING

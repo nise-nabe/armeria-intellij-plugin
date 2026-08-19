@@ -38,10 +38,8 @@ internal class ArmeriaJavaClientRouteLineMarkerProvider : LineMarkerProvider {
             return null
         }
         val methodName = call.methodExpression.referenceName ?: return null
-        if (methodName !in ArmeriaClientSupport.FACTORY_METHOD_NAMES &&
-            methodName !in ArmeriaClientSupport.CONVERSION_METHOD_NAMES &&
-            methodName !in ArmeriaClientSupport.HTTP_INVOCATION_METHOD_NAMES
-        ) {
+        val resolvedClass = call.resolveMethod()?.containingClass?.qualifiedName
+        if (!ArmeriaClientSupport.isClientLineMarkerMethod(methodName, resolvedClass)) {
             return null
         }
         val endpoint = ArmeriaClientRouteNavigation.endpointForCall(call) ?: return null

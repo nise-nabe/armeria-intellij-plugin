@@ -122,6 +122,46 @@ class ArmeriaClientRouteLineMarkerProviderTest : ArmeriaClientFixtureTestBase() 
         assertEquals(ArmeriaIcons.Armeria, marker.icon)
     }
 
+    fun testJavaMapGetHasNoRouteMarkerWhenPathsOverlap() {
+        myFixture.addFileToProject(
+            "src/Service.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class Service {
+                @Get("/hello")
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Client.java",
+            """
+            package example;
+
+            import java.util.Collections;
+            import java.util.Map;
+
+            public class Client {
+                public static void main(String[] args) {
+                    Map<String, String> map = Collections.emptyMap();
+                    map.get("/hello");
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val getCall =
+            PsiTreeUtil
+                .findChildrenOfType(myFixture.file, PsiMethodCallExpression::class.java)
+                .single { it.methodExpression.referenceName == "get" }
+        assertNull(javaProvider.getLineMarkerInfo(getCall.methodExpression.referenceNameElement!!))
+    }
+
     fun testJavaUnrelatedOfCallHasNoRouteMarker() {
         myFixture.addFileToProject(
             "src/Service.java",
