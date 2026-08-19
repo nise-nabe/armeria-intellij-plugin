@@ -7,7 +7,9 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpre
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
+import org.jetbrains.kotlin.psi.KtEscapeStringTemplateEntry
 import org.jetbrains.kotlin.psi.KtExpression
+import org.jetbrains.kotlin.psi.KtLiteralStringTemplateEntry
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
@@ -258,10 +260,14 @@ internal object ArmeriaKotlinClientInvocationCollector {
             if (unwrapped.hasInterpolation()) {
                 return null
             }
-            return if (unwrapped.entries.size == 1) {
-                unwrapped.entries[0].text
-            } else {
-                unwrapped.text.trim('"')
+            return buildString {
+                for (entry in unwrapped.entries) {
+                    when (entry) {
+                        is KtLiteralStringTemplateEntry -> append(entry.text)
+                        is KtEscapeStringTemplateEntry -> append(entry.unescapedValue)
+                        else -> return null
+                    }
+                }
             }
         }
         if (unwrapped is KtNameReferenceExpression || unwrapped is KtDotQualifiedExpression) {

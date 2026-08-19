@@ -279,7 +279,11 @@ object ArmeriaClientCollector {
         sourceOffset: Int? = null,
     ) {
         val virtualFile = element.containingFile?.virtualFile ?: return
-        val key = dedupeKey ?: "${virtualFile.path}:${element.textRange.startOffset}"
+        val offset =
+            sourceOffset
+                ?: invocationNameOffset(element)
+                ?: element.textRange.startOffset
+        val key = dedupeKey ?: "${virtualFile.path}:$offset:$httpMethod:${requestPath.orEmpty()}"
         if (!seenEndpoints.add(key)) {
             return
         }
@@ -297,9 +301,19 @@ object ArmeriaClientCollector {
                 contentType = contentType,
                 requestBody = requestBody,
                 requestHeaders = requestHeaders,
-                sourceOffset = sourceOffset,
+                sourceOffset =
+                    sourceOffset
+                        ?: invocationNameOffset(element).takeIf { httpMethod.isNotBlank() },
                 sourceFileUrl = virtualFile.url,
             )
+    }
+
+    private fun invocationNameOffset(element: PsiElement): Int? {
+        val call = element as? PsiMethodCallExpression ?: return null
+        return call.methodExpression
+            .referenceNameElement
+            ?.textRange
+            ?.startOffset
     }
 
     internal fun extractString(expression: PsiExpression?): String? =
@@ -320,12 +334,20 @@ object ArmeriaClientCollector {
         when (expression) {
             null -> null
             is PsiLiteralExpression -> expression.value as? String
-            else ->
-                JavaPsiFacade
-                    .getInstance(expression.project)
-                    .constantEvaluationHelper
-                    .computeConstantExpression(expression) as? String
+            is PsiReferenceExpression -> {
+                val resolved = expression.resolve() as? PsiVariable
+                (resolved?.computeConstantValue() as? String)
+                    ?: extractResolvedString(resolved?.initializer)
+                    ?: constantString(expression)
+            }
+            else -> constantString(expression)
         }
+
+    private fun constantString(expression: PsiExpression): String? =
+        JavaPsiFacade
+            .getInstance(expression.project)
+            .constantEvaluationHelper
+            .computeConstantExpression(expression) as? String
 
     private fun isKotlinPluginAvailable(): Boolean = PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
 
