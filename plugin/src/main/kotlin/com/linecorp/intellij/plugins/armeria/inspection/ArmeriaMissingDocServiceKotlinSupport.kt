@@ -68,8 +68,11 @@ internal object ArmeriaMissingDocServiceKotlinSupport {
     }
 
     private fun isServerBuilder(call: KtCallExpression): Boolean {
-        val callee = call.calleeExpression as? KtDotQualifiedExpression ?: return false
-        val receiver = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(callee.receiverExpression)
+        val receiverExpression =
+            (call.calleeExpression as? KtDotQualifiedExpression)?.receiverExpression
+                ?: (call.parent as? KtDotQualifiedExpression)?.receiverExpression
+                ?: return false
+        val receiver = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(receiverExpression)
         if (receiver is KtNameReferenceExpression) {
             if (receiver.getReferencedName() == "Server") {
                 return true

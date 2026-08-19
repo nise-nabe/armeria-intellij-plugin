@@ -121,6 +121,27 @@ class ArmeriaDocServiceDebugFormUrlTest {
     }
 
     @Test
+    fun apply_matchesGrpcGeneratedClassToProtobufServiceName() {
+        val route =
+            route(
+                protocol = "gRPC",
+                path = "/example.EchoService/Echo",
+                target = "example.EchoService.Echo",
+                routeMatch = RouteMatch.NON_HTTP,
+            )
+        val examples =
+            ArmeriaDocServiceExampleIndex
+                .Builder()
+                .apply {
+                    addRequests("example.EchoServiceGrpc", "Echo", listOf("""{"message":"hi"}"""))
+                }.build()
+
+        val applied = ArmeriaDocServiceExampleApplicator.apply(listOf(route), examples).single()
+
+        assertEquals(listOf("""{"message":"hi"}"""), applied.exampleRequests)
+    }
+
+    @Test
     fun docsBaseUrlFromSpecificationUrl_stripsSpecificationSuffix() {
         assertEquals(
             "http://localhost:8080/docs",

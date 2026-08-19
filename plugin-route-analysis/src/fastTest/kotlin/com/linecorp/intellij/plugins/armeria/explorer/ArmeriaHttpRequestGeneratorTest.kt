@@ -467,6 +467,21 @@ class ArmeriaHttpRequestGeneratorTest {
     }
 
     @Test
+    fun requestText_doesNotDuplicateContentTypeFromExampleHeaders() {
+        val route =
+            route(
+                httpMethod = "POST",
+                path = "/hello",
+                exampleRequests = listOf("name=Armeria"),
+                exampleHeaders = listOf("Content-Type: application/x-www-form-urlencoded"),
+            )
+
+        val text = ArmeriaHttpRequestGenerator.requestText(route)
+        assertEquals(1, text.lines().count { it.startsWith("Content-Type:", ignoreCase = true) })
+        assertTrue(text.contains("Content-Type: application/x-www-form-urlencoded"))
+    }
+
+    @Test
     fun requestText_grpcUsesExampleBodyAndDebugFormUrl() {
         val route =
             route(

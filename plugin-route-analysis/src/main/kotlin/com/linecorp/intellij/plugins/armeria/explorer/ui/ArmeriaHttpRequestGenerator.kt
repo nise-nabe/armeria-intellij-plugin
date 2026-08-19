@@ -109,10 +109,12 @@ object ArmeriaHttpRequestGenerator {
             val resolvedContentType =
                 contentType
                     ?: exampleBody?.takeIf { method.uppercase(Locale.ROOT) in METHODS_WITH_BODY }?.let { JSON_MEDIA_TYPE }
-            if (resolvedContentType != null) {
+            if (resolvedContentType != null && "content-type" !in emittedHeaderNames) {
                 appendLine("Content-Type: $resolvedContentType")
             }
-            appendLine("Accept: $accept")
+            if ("accept" !in emittedHeaderNames) {
+                appendLine("Accept: $accept")
+            }
             appendLine()
             if (method.uppercase(Locale.ROOT) in METHODS_WITH_BODY) {
                 when {

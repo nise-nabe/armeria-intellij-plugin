@@ -32,18 +32,22 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
         val builderClass =
             JavaPsiFacade
                 .getInstance(project)
-                .findClass(ArmeriaDocServiceExampleCollector.DOC_SERVICE_BUILDER_CLASS, scope)
-                ?: return
-        for (methodName in listOf("exampleRequests", "exampleHeaders")) {
-            for (method in builderClass.findMethodsByName(methodName, false)) {
-                ReferencesSearch.search(method, scope).forEach { reference ->
-                    val call =
-                        PsiTreeUtil.getParentOfType(reference.element, KtCallExpression::class.java)
-                            ?: return@forEach
-                    if (ArmeriaKotlinExpressionSupport.resolveCallName(call) != methodName) {
-                        return@forEach
+                .findClass(
+                    ArmeriaDocServiceExampleCollector.DOC_SERVICE_BUILDER_CLASS,
+                    GlobalSearchScope.allScope(project),
+                )
+        if (builderClass != null) {
+            for (methodName in listOf("exampleRequests", "exampleHeaders")) {
+                for (method in builderClass.findMethodsByName(methodName, false)) {
+                    ReferencesSearch.search(method, scope).forEach { reference ->
+                        val call =
+                            PsiTreeUtil.getParentOfType(reference.element, KtCallExpression::class.java)
+                                ?: return@forEach
+                        if (ArmeriaKotlinExpressionSupport.resolveCallName(call) != methodName) {
+                            return@forEach
+                        }
+                        parseCall(call, methodName, builder)
                     }
-                    parseCall(call, methodName, builder)
                 }
             }
         }

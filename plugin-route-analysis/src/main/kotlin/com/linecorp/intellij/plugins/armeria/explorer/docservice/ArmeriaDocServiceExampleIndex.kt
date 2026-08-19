@@ -52,10 +52,15 @@ data class ArmeriaDocServiceExampleIndex(
             if (exampleService == routeService) {
                 return true
             }
-            return simpleName(exampleService) == simpleName(routeService)
+            val exampleSimple = protobufServiceSimpleName(exampleService)
+            val routeSimple = protobufServiceSimpleName(routeService)
+            return exampleSimple.isNotEmpty() && exampleSimple == routeSimple
         }
 
         fun simpleName(serviceName: String): String = serviceName.substringAfterLast('.')
+
+        private fun protobufServiceSimpleName(serviceName: String): String =
+            simpleName(serviceName).removeSuffix("Grpc").removeSuffix("ImplBase")
     }
 
     class Builder {

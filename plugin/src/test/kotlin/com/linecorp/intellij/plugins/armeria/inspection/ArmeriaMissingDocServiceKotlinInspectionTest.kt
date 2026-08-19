@@ -4,6 +4,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase5
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
@@ -57,6 +58,7 @@ class ArmeriaMissingDocServiceKotlinInspectionTest : ArmeriaFixtureTestBase5() {
         val highlight = ArmeriaMissingDocServiceKotlinSupport.highlight(function)
         if (expected) {
             assertNotNull(highlight, "expected a missing-DocService highlight")
+            assertEquals("builder", highlight.text)
         } else {
             assertNull(highlight, "did not expect a missing-DocService highlight")
         }

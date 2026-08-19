@@ -70,7 +70,11 @@ object ArmeriaDocServiceExampleCollector {
         scope: GlobalSearchScope,
         builder: ArmeriaDocServiceExampleIndex.Builder,
     ) {
-        val builderClass = JavaPsiFacade.getInstance(project).findClass(DOC_SERVICE_BUILDER_CLASS, scope)
+        val builderClass =
+            JavaPsiFacade.getInstance(project).findClass(
+                DOC_SERVICE_BUILDER_CLASS,
+                GlobalSearchScope.allScope(project),
+            )
         if (builderClass != null) {
             for (methodName in EXAMPLE_METHOD_NAMES) {
                 for (method in builderClass.findMethodsByName(methodName, false)) {
