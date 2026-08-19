@@ -1,5 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer.ui
 
+import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceDebugFormUrl
+import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceMethodRef
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
@@ -77,22 +79,47 @@ object ArmeriaHttpRequestGenerator {
         val produces = ArmeriaRouteContentHintSupport.mediaTypes(route.contentHints, "route.explorer.hint.produces")
         val accept = produces.firstOrNull() ?: JSON_MEDIA_TYPE
         val contentType = contentTypeForMethod(method, consumes)
+        val exampleBody =
+            route.exampleRequests
+                .firstOrNull()
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
         return buildString {
             appendLine("### ${route.path}")
             for (comment in descriptionComments(route.contentHints)) {
                 appendLine("# $comment")
             }
+            if (exampleBody != null && method.uppercase(Locale.ROOT) !in METHODS_WITH_BODY) {
+                appendLine("# Example request: ${exampleBody.replace(NEWLINE_CHARACTERS, " ").trim()}")
+            }
             appendLine("$method $normalizedBaseUrl$pathWithQuery")
+            val emittedHeaderNames = linkedSetOf<String>()
             for ((name, value) in matchHeaderFields(route.contentHints)) {
                 appendLine("$name: $value")
+                emittedHeaderNames += name.lowercase(Locale.ROOT)
             }
-            if (contentType != null) {
-                appendLine("Content-Type: $contentType")
+            for (header in route.exampleHeaders) {
+                val headerName = header.substringBefore(':').trim()
+                if (headerName.isEmpty() || headerName.lowercase(Locale.ROOT) in emittedHeaderNames) {
+                    continue
+                }
+                appendLine(header)
+                emittedHeaderNames += headerName.lowercase(Locale.ROOT)
+            }
+            val resolvedContentType =
+                contentType
+                    ?: exampleBody?.takeIf { method.uppercase(Locale.ROOT) in METHODS_WITH_BODY }?.let { JSON_MEDIA_TYPE }
+            if (resolvedContentType != null) {
+                appendLine("Content-Type: $resolvedContentType")
             }
             appendLine("Accept: $accept")
             appendLine()
-            if (contentType != null && isJsonMediaType(contentType)) {
-                appendLine("{}")
+            if (method.uppercase(Locale.ROOT) in METHODS_WITH_BODY) {
+                when {
+                    resolvedContentType != null && isJsonMediaType(resolvedContentType) ->
+                        appendLine(exampleBody ?: "{}")
+                    exampleBody != null -> appendLine(exampleBody)
+                }
             }
         }
     }
@@ -122,13 +149,26 @@ object ArmeriaHttpRequestGenerator {
         baseUrl: String,
     ): String {
         val grpcPath = route.path.trim('/')
+        val exampleBody =
+            route.exampleRequests
+                .firstOrNull()
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+                ?: "{}"
+        val debugFormUrl =
+            ArmeriaDocServiceMethodRef.from(route)?.let { ref ->
+                ArmeriaDocServiceDebugFormUrl.build("$baseUrl/docs", ref)
+            } ?: "$baseUrl/docs"
         return buildString {
             appendLine("### gRPC ${route.target}")
             appendLine("GRPC $baseUrl/$grpcPath")
             appendLine()
-            appendLine("# Invoke via DocService: $baseUrl/docs")
+            appendLine("# Invoke via DocService: $debugFormUrl")
+            for (header in route.exampleHeaders) {
+                appendLine("# $header")
+            }
             appendLine("# gRPC-JSON uses POST with a JSON body:")
-            appendLine("{}")
+            appendLine(exampleBody)
             appendLine()
         }
     }

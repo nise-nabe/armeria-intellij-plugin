@@ -76,7 +76,7 @@ class ArmeriaSyncRuntimeRoutesAction :
                                     }
                                     if (explorerPanel != null) {
                                         explorerPanel.scheduleInitialRefreshIfNeeded()
-                                        explorerPanel.applyRuntimeRoutes(result.routes)
+                                        explorerPanel.applyRuntimeRoutes(result.routes, result.specificationUrl)
                                         Messages.showInfoMessage(
                                             project,
                                             message(

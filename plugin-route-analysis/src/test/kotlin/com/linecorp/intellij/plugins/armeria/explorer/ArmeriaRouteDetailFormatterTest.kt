@@ -67,6 +67,30 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
         assertTrue(attachments.contains(message("route.explorer.detail.execution", message("route.explorer.execution.blocking"))))
     }
 
+    fun testAttachmentsLine_includesExampleRequestsAndHeaders() {
+        val route =
+            ArmeriaRoute(
+                protocol = "HTTP",
+                httpMethod = "POST",
+                path = "/hello",
+                target = "example.HelloService#hello()",
+                routeMatch = RouteMatch.ANNOTATED_HTTP,
+                moduleName = "app",
+                targetUnresolved = false,
+                isDocService = false,
+                decorators = emptyList(),
+                exceptionHandlers = emptyList(),
+                exampleRequests = listOf("""{"name":"Armeria"}"""),
+                exampleHeaders = listOf("authorization: bearer-token"),
+                pointer = TestPsiPointer,
+            )
+
+        val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
+
+        assertTrue(attachments.contains(message("route.explorer.detail.exampleHeaders", "authorization: bearer-token")))
+        assertTrue(attachments.contains(message("route.explorer.detail.exampleRequests", """{"name":"Armeria"}""")))
+    }
+
     fun testAttachmentsLine_includesTimeoutHints() {
         val route =
             ArmeriaRoute(

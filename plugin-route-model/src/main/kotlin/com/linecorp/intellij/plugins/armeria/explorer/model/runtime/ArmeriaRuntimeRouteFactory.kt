@@ -13,6 +13,8 @@ object ArmeriaRuntimeRouteFactory {
         protocol: String,
         project: Project? = null,
         delegationKind: DelegationKind? = null,
+        exampleRequests: List<String> = emptyList(),
+        exampleHeaders: List<String> = emptyList(),
     ): ArmeriaRoute =
         ArmeriaRoute.createRuntime(
             httpMethod = httpMethod,
@@ -22,5 +24,7 @@ object ArmeriaRuntimeRouteFactory {
             protocol = protocol,
             delegationKind = delegationKind,
             pointer = project?.let(::ArmeriaRuntimeRoutePointer) ?: ArmeriaRuntimeRoutePointer.withoutProject(),
+            exampleRequests = exampleRequests,
+            exampleHeaders = exampleHeaders,
         )
 }

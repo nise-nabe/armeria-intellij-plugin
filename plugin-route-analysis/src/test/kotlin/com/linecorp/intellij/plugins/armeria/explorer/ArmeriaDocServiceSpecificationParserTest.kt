@@ -21,6 +21,9 @@ class ArmeriaDocServiceSpecificationParserTest {
             ),
             parsed.routes.map { "${it.httpMethod} ${it.path}" }.toSet(),
         )
+        val getUser = parsed.routes.single { it.methodName == "getUser" }
+        assertEquals(listOf("authorization: bearer-token"), getUser.exampleHeaders)
+        assertEquals(listOf("{\"id\":1}"), getUser.exampleRequests)
     }
 
     @Test

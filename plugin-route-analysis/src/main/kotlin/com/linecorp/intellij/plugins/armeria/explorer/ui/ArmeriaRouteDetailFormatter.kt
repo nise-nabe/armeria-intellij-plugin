@@ -53,6 +53,12 @@ object ArmeriaRouteDetailFormatter {
                 if (route.contentHints.isNotEmpty()) {
                     add(message("route.explorer.detail.content", route.contentHints.joinToString(" · ")))
                 }
+                if (route.exampleHeaders.isNotEmpty()) {
+                    add(message("route.explorer.detail.exampleHeaders", route.exampleHeaders.joinToString("\n")))
+                }
+                if (route.exampleRequests.isNotEmpty()) {
+                    add(message("route.explorer.detail.exampleRequests", route.exampleRequests.joinToString("\n")))
+                }
                 if (route.delegationMountPath.isNotEmpty()) {
                     add(message("route.explorer.detail.delegationMount", route.delegationMountPath))
                 }

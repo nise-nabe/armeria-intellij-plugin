@@ -106,6 +106,8 @@ object ArmeriaRuntimeRouteFetcher {
                 moduleName = moduleName,
                 protocol = protocol,
                 project = project,
+                exampleRequests = parsed.exampleRequests,
+                exampleHeaders = parsed.exampleHeaders,
             )
         }
 
