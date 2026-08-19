@@ -239,7 +239,7 @@ internal object ArmeriaJavaClientInvocationCollector {
                 is PsiEnumConstant -> resolved.name
                 is PsiField -> resolved.name
                 else -> reference?.referenceName
-            }
+            } ?: return null
         return ArmeriaClientSupport.httpMethodForInvocation(name)
     }
 
