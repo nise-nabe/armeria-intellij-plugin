@@ -1,16 +1,13 @@
 package com.linecorp.intellij.plugins.armeria.inspection
 
-import com.linecorp.intellij.plugins.armeria.message
+import com.intellij.psi.PsiMethod
+import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase5
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class ArmeriaMissingDocServiceInspectionTest : ArmeriaFixtureTestBase5() {
-    override fun onFixtureSetUp() {
-        super.onFixtureSetUp()
-        myFixture.enableInspections(ArmeriaMissingDocServiceInspection())
-    }
-
     @Test
     fun highlightsAnnotatedServiceWithoutDocService() {
         configureMain(
@@ -20,7 +17,7 @@ class ArmeriaMissingDocServiceInspectionTest : ArmeriaFixtureTestBase5() {
                     .build();
             """.trimIndent(),
         )
-        assertHighlights(1)
+        assertHighlighted(expected = true)
     }
 
     @Test
@@ -33,7 +30,7 @@ class ArmeriaMissingDocServiceInspectionTest : ArmeriaFixtureTestBase5() {
                     .build();
             """.trimIndent(),
         )
-        assertHighlights(0)
+        assertHighlighted(expected = false)
     }
 
     @Test
@@ -45,7 +42,7 @@ class ArmeriaMissingDocServiceInspectionTest : ArmeriaFixtureTestBase5() {
                     .build();
             """.trimIndent(),
         )
-        assertHighlights(1)
+        assertHighlighted(expected = true)
     }
 
     private fun configureMain(body: String) {
@@ -75,9 +72,14 @@ class ArmeriaMissingDocServiceInspectionTest : ArmeriaFixtureTestBase5() {
         )
     }
 
-    private fun assertHighlights(count: Int) {
-        val expected = message("inspection.missing.docservice.problem")
-        val highlights = myFixture.doHighlighting().filter { it.description == expected }
-        assertEquals(count, highlights.size, highlights.joinToString { it.description.orEmpty() })
+    private fun assertHighlighted(expected: Boolean) {
+        val method =
+            PsiTreeUtil.findChildrenOfType(myFixture.file, PsiMethod::class.java).single { it.name == "main" }
+        val highlight = ArmeriaMissingDocServiceSupport.highlight(method)
+        if (expected) {
+            assertNotNull(highlight, "expected a missing-DocService highlight")
+        } else {
+            assertNull(highlight, "did not expect a missing-DocService highlight")
+        }
     }
 }

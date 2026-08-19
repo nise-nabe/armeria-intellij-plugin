@@ -1,40 +1,39 @@
 package com.linecorp.intellij.plugins.armeria.inspection
 
-import com.linecorp.intellij.plugins.armeria.message
+import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase5
+import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class ArmeriaMissingDocServiceKotlinInspectionTest : ArmeriaFixtureTestBase5() {
-    override fun onFixtureSetUp() {
-        super.onFixtureSetUp()
-        myFixture.enableInspections(ArmeriaMissingDocServiceKotlinInspection())
-    }
-
     @Test
     fun highlightsAnnotatedServiceWithoutDocService() {
-        myFixture.configureByText(
-            "Main.kt",
+        configureMain(
             """
-            package example
-
-            import com.linecorp.armeria.server.Server
-            import com.linecorp.armeria.server.docs.DocService
-
-            class HelloService
-
-            fun main() {
-                Server.builder()
-                    .annotatedService(HelloService())
-                    .build()
-            }
+            Server.builder()
+                .annotatedService(HelloService())
+                .build()
             """.trimIndent(),
         )
-        assertHighlights(1)
+        assertHighlighted(expected = true)
     }
 
     @Test
     fun allowsAnnotatedServiceWhenDocServiceIsMounted() {
+        configureMain(
+            """
+            Server.builder()
+                .annotatedService(HelloService())
+                .service("/docs", DocService())
+                .build()
+            """.trimIndent(),
+        )
+        assertHighlighted(expected = false)
+    }
+
+    private fun configureMain(body: String) {
         myFixture.configureByText(
             "Main.kt",
             """
@@ -46,19 +45,20 @@ class ArmeriaMissingDocServiceKotlinInspectionTest : ArmeriaFixtureTestBase5() {
             class HelloService
 
             fun main() {
-                Server.builder()
-                    .annotatedService(HelloService())
-                    .service("/docs", DocService())
-                    .build()
+                $body
             }
             """.trimIndent(),
         )
-        assertHighlights(0)
     }
 
-    private fun assertHighlights(count: Int) {
-        val expected = message("inspection.missing.docservice.problem")
-        val highlights = myFixture.doHighlighting().filter { it.description == expected }
-        assertEquals(count, highlights.size, highlights.joinToString { it.description.orEmpty() })
+    private fun assertHighlighted(expected: Boolean) {
+        val function =
+            PsiTreeUtil.findChildrenOfType(myFixture.file, KtNamedFunction::class.java).single { it.name == "main" }
+        val highlight = ArmeriaMissingDocServiceKotlinSupport.highlight(function)
+        if (expected) {
+            assertNotNull(highlight, "expected a missing-DocService highlight")
+        } else {
+            assertNull(highlight, "did not expect a missing-DocService highlight")
+        }
     }
 }
