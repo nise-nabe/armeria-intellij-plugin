@@ -68,6 +68,15 @@
                          implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaAnnotationProcessorKotlinInspection" />
         <localInspection language="kotlin"
                          bundle="messages.ArmeriaBundle"
+                         key="inspection.missing.docservice.kotlin.display.name"
+                         groupBundle="messages.ArmeriaBundle"
+                         groupKey="inspection.group.armeria"
+                         shortName="ArmeriaMissingDocServiceKotlin"
+                         enabledByDefault="false"
+                         level="INFORMATION"
+                         implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaMissingDocServiceKotlinInspection" />
+        <localInspection language="kotlin"
+                         bundle="messages.ArmeriaBundle"
                          key="inspection.duplicate.registration.kotlin.display.name"
                          groupBundle="messages.ArmeriaBundle"
                          groupKey="inspection.group.armeria"

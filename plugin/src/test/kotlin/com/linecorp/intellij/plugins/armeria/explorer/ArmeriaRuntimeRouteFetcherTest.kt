@@ -19,6 +19,9 @@ class ArmeriaRuntimeRouteFetcherTest {
 
         assertEquals(3, routes.size)
         assertTrue(routes.all { it.routeMatch == RouteMatch.RUNTIME })
+        val getUser = routes.single { it.path == "/api/users/{id}" }
+        assertEquals(listOf("authorization: bearer-token"), getUser.exampleHeaders)
+        assertEquals(listOf("{\"id\":1}"), getUser.exampleRequests)
         assertEquals(
             setOf("GET /api/users/{id}", "POST /api/users"),
             routes

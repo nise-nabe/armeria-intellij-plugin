@@ -12,7 +12,14 @@
               "pathMapping": "/api/users/{id}"
             }
           ],
-          "examplePaths": ["/api/users/1"]
+          "examplePaths": ["/api/users/1"],
+          "exampleHttpHeaders": [
+            {
+              ":method": "GET",
+              "authorization": "bearer-token"
+            }
+          ],
+          "exampleRequests": ["{\"id\":1}"]
         },
         {
           "name": "createUser",

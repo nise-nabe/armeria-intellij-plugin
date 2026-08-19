@@ -40,6 +40,15 @@ class ArmeriaRouteExplorerRouteStateTest {
         assertEquals(listOf(second), state.runtimeRoutes)
     }
 
+    @Test
+    fun applyRuntime_remembersDocServiceBaseUrlAcrossStaticRefresh() {
+        val state = ArmeriaRouteExplorerRouteState()
+        state.applyRuntime(listOf(testRoute(moduleName = "Runtime (DocService)", path = "/a")), "http://127.0.0.1:9090/docs/")
+        state.applyStatic(listOf(testRoute(moduleName = "app", path = "/new")))
+
+        assertEquals("http://127.0.0.1:9090/docs", state.lastDocServiceBaseUrl)
+    }
+
     private fun testRoute(
         moduleName: String,
         path: String,

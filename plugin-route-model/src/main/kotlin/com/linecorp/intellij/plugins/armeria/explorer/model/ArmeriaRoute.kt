@@ -31,6 +31,8 @@ data class ArmeriaRoute(
      */
     val sourceOffset: Int? = null,
     val excludeFromDuplicateIndex: Boolean = false,
+    val exampleRequests: List<String> = emptyList(),
+    val exampleHeaders: List<String> = emptyList(),
 ) {
     fun resolveSourceHint(): String {
         val element = pointer.element ?: return ""
@@ -114,6 +116,8 @@ data class ArmeriaRoute(
             moduleName: String? = null,
             sourceOffset: Int? = null,
             excludeFromDuplicateIndex: Boolean = false,
+            exampleRequests: List<String> = emptyList(),
+            exampleHeaders: List<String> = emptyList(),
         ): ArmeriaRoute =
             ArmeriaRoute(
                 protocol = protocol,
@@ -137,6 +141,8 @@ data class ArmeriaRoute(
                 pointer = SmartPointerManager.createPointer(element),
                 sourceOffset = sourceOffset,
                 excludeFromDuplicateIndex = excludeFromDuplicateIndex,
+                exampleRequests = exampleRequests,
+                exampleHeaders = exampleHeaders,
             )
 
         fun createRuntime(
@@ -147,6 +153,8 @@ data class ArmeriaRoute(
             protocol: String,
             pointer: SmartPsiElementPointer<PsiElement>,
             delegationKind: DelegationKind? = null,
+            exampleRequests: List<String> = emptyList(),
+            exampleHeaders: List<String> = emptyList(),
         ): ArmeriaRoute =
             ArmeriaRoute(
                 protocol = protocol,
@@ -161,6 +169,8 @@ data class ArmeriaRoute(
                 exceptionHandlers = emptyList(),
                 delegationKind = delegationKind,
                 pointer = pointer,
+                exampleRequests = exampleRequests,
+                exampleHeaders = exampleHeaders,
             )
 
         fun truncateTarget(

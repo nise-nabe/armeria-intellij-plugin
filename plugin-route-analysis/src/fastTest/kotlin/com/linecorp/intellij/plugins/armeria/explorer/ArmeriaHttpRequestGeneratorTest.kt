@@ -220,7 +220,7 @@ class ArmeriaHttpRequestGeneratorTest {
             ### gRPC example.EchoService.Echo
             GRPC http://localhost:8080/example.EchoService/Echo
 
-            # Invoke via DocService: http://localhost:8080/docs
+            # Invoke via DocService: http://localhost:8080/docs/#/methods/example.EchoService/Echo
             # gRPC-JSON uses POST with a JSON body:
             {}
 
@@ -273,7 +273,7 @@ class ArmeriaHttpRequestGeneratorTest {
             ### gRPC Greeter.Ping
             GRPC http://localhost:8080/Greeter/Ping
 
-            # Invoke via DocService: http://localhost:8080/docs
+            # Invoke via DocService: http://localhost:8080/docs/#/methods/Greeter/Ping
             # gRPC-JSON uses POST with a JSON body:
             {}
 
@@ -308,7 +308,7 @@ class ArmeriaHttpRequestGeneratorTest {
             ### gRPC example.EchoService.Echo
             GRPC http://localhost:8080/example.EchoService/Echo
 
-            # Invoke via DocService: http://localhost:8080/docs
+            # Invoke via DocService: http://localhost:8080/docs/#/methods/example.EchoService/Echo
             # gRPC-JSON uses POST with a JSON body:
             {}
 
@@ -441,6 +441,64 @@ class ArmeriaHttpRequestGeneratorTest {
         assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("""{"query": "mutation { createUser }"}"""))
     }
 
+    @Test
+    fun requestText_usesDocServiceExampleHeadersAndBody() {
+        val route =
+            route(
+                httpMethod = "POST",
+                path = "/hello",
+                target = "example.HelloService#hello()",
+                exampleRequests = listOf("""{"name":"Armeria"}"""),
+                exampleHeaders = listOf("authorization: bearer-token"),
+            )
+
+        assertEquals(
+            """
+            ### /hello
+            POST http://localhost:8080/hello
+            authorization: bearer-token
+            Content-Type: application/json
+            Accept: application/json
+
+            {"name":"Armeria"}
+            """.trimIndent() + "\n",
+            ArmeriaHttpRequestGenerator.requestText(route),
+        )
+    }
+
+    @Test
+    fun requestText_doesNotDuplicateContentTypeFromExampleHeaders() {
+        val route =
+            route(
+                httpMethod = "POST",
+                path = "/hello",
+                exampleRequests = listOf("name=Armeria"),
+                exampleHeaders = listOf("Content-Type: application/x-www-form-urlencoded"),
+            )
+
+        val text = ArmeriaHttpRequestGenerator.requestText(route)
+        assertEquals(1, text.lines().count { it.startsWith("Content-Type:", ignoreCase = true) })
+        assertTrue(text.contains("Content-Type: application/x-www-form-urlencoded"))
+    }
+
+    @Test
+    fun requestText_grpcUsesExampleBodyAndDebugFormUrl() {
+        val route =
+            route(
+                protocol = "gRPC",
+                path = "/example.EchoService/Echo",
+                target = "example.EchoService.Echo",
+                routeMatch = RouteMatch.NON_HTTP,
+                exampleRequests = listOf("""{"message":"hi"}"""),
+                exampleHeaders = listOf("authorization: bearer-token"),
+            )
+
+        val text = ArmeriaHttpRequestGenerator.requestText(route)
+        assertTrue(text.contains("# Invoke via DocService: http://localhost:8080/docs/#/methods/example.EchoService/Echo"))
+        assertTrue(text.contains("# authorization: bearer-token"))
+        assertTrue(text.contains("""{"message":"hi"}"""))
+    }
+
     private fun route(
         httpMethod: String = "GET",
         path: String = "/api",
@@ -449,6 +507,8 @@ class ArmeriaHttpRequestGeneratorTest {
         pathType: PathType = PathType.EXACT,
         target: String = "Handler",
         contentHints: List<String> = emptyList(),
+        exampleRequests: List<String> = emptyList(),
+        exampleHeaders: List<String> = emptyList(),
     ): ArmeriaRoute =
         ArmeriaRoute(
             protocol = protocol,
@@ -464,6 +524,8 @@ class ArmeriaHttpRequestGeneratorTest {
             exceptionHandlers = emptyList(),
             contentHints = contentHints,
             pointer = TestPsiPointer,
+            exampleRequests = exampleRequests,
+            exampleHeaders = exampleHeaders,
         )
 
     private object TestPsiPointer : SmartPsiElementPointer<PsiElement> {

@@ -14,6 +14,8 @@ object ArmeriaDocServiceSpecificationParser {
         val path: String,
         val serviceName: String,
         val methodName: String,
+        val exampleRequests: List<String> = emptyList(),
+        val exampleHeaders: List<String> = emptyList(),
     )
 
     fun parse(json: String): ParsedSpecification {
@@ -26,9 +28,10 @@ object ArmeriaDocServiceSpecificationParser {
         val servicesJson = extractJsonArray(trimmed, "services") ?: return ParsedSpecification(emptyList(), docServiceMountPath)
         for (serviceJson in splitJsonObjects(servicesJson)) {
             val serviceName = extractJsonString(serviceJson, "name") ?: continue
+            val serviceHeaders = extractExampleHeaders(serviceJson)
             val methodsJson = extractJsonArray(serviceJson, "methods") ?: continue
             for (methodJson in splitJsonObjects(methodsJson)) {
-                routes += parseMethodRoutes(serviceName, methodJson)
+                routes += parseMethodRoutes(serviceName, methodJson, serviceHeaders)
             }
         }
         return ParsedSpecification(deduplicate(routes), docServiceMountPath)
@@ -37,26 +40,98 @@ object ArmeriaDocServiceSpecificationParser {
     private fun parseMethodRoutes(
         serviceName: String,
         methodJson: String,
+        serviceHeaders: List<String>,
     ): List<ParsedRoute> {
         val methodName = extractJsonString(methodJson, "name").orEmpty()
         val httpMethod = extractJsonString(methodJson, "httpMethod")?.uppercase().orEmpty().ifBlank { "GET" }
+        val exampleRequests = extractExampleRequests(methodJson)
+        val exampleHeaders = (serviceHeaders + extractExampleHeaders(methodJson)).distinct()
         val routes = mutableListOf<ParsedRoute>()
         val endpointsJson = extractJsonArray(methodJson, "endpoints")
         if (endpointsJson != null) {
             for (endpointJson in splitJsonObjects(endpointsJson)) {
                 val pathMapping = extractJsonString(endpointJson, "pathMapping") ?: continue
-                routes += ParsedRoute(httpMethod = httpMethod, path = pathMapping, serviceName = serviceName, methodName = methodName)
+                routes +=
+                    ParsedRoute(
+                        httpMethod = httpMethod,
+                        path = pathMapping,
+                        serviceName = serviceName,
+                        methodName = methodName,
+                        exampleRequests = exampleRequests,
+                        exampleHeaders = exampleHeaders,
+                    )
             }
         }
         if (routes.isEmpty()) {
             val examplePathsJson = extractJsonArray(methodJson, "examplePaths")
             if (examplePathsJson != null) {
                 for (path in splitJsonStrings(examplePathsJson)) {
-                    routes += ParsedRoute(httpMethod = httpMethod, path = path, serviceName = serviceName, methodName = methodName)
+                    routes +=
+                        ParsedRoute(
+                            httpMethod = httpMethod,
+                            path = path,
+                            serviceName = serviceName,
+                            methodName = methodName,
+                            exampleRequests = exampleRequests,
+                            exampleHeaders = exampleHeaders,
+                        )
                 }
             }
         }
         return routes
+    }
+
+    private fun extractExampleRequests(methodJson: String): List<String> {
+        val arrayJson = extractJsonArray(methodJson, "exampleRequests") ?: return emptyList()
+        return splitJsonStrings(arrayJson)
+    }
+
+    private fun extractExampleHeaders(json: String): List<String> {
+        val arrayJson = extractJsonArray(json, "exampleHttpHeaders") ?: return emptyList()
+        val headers = mutableListOf<String>()
+        for (headerObject in splitJsonObjects(arrayJson)) {
+            for ((name, value) in extractJsonObjectStringFields(headerObject)) {
+                if (name.startsWith(':') || name.isBlank() || value.isBlank()) {
+                    continue
+                }
+                headers += "$name: $value"
+            }
+        }
+        return headers.distinct()
+    }
+
+    private fun extractJsonObjectStringFields(objectJson: String): List<Pair<String, String>> {
+        val trimmed = objectJson.trim()
+        if (!trimmed.startsWith("{")) {
+            return emptyList()
+        }
+        val fields = mutableListOf<Pair<String, String>>()
+        var index = skipWhitespace(trimmed, 1)
+        while (index < trimmed.length) {
+            index = skipWhitespace(trimmed, index)
+            if (index >= trimmed.length || trimmed[index] == '}') {
+                break
+            }
+            if (trimmed[index] != '"') {
+                return fields
+            }
+            val key = readJsonString(trimmed, index) ?: return fields
+            index = skipWhitespace(trimmed, key.endIndex)
+            if (index >= trimmed.length || trimmed[index] != ':') {
+                return fields
+            }
+            val valueStart = skipWhitespace(trimmed, index + 1)
+            if (valueStart < trimmed.length && trimmed[valueStart] == '"') {
+                val value = readJsonString(trimmed, valueStart) ?: return fields
+                fields += key.value to value.value
+            }
+            index = skipJsonValue(trimmed, valueStart) ?: return fields
+            index = skipWhitespace(trimmed, index)
+            if (index < trimmed.length && trimmed[index] == ',') {
+                index++
+            }
+        }
+        return fields
     }
 
     private fun parseDocServiceMount(json: String): String? {

@@ -22,6 +22,7 @@ import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
 import com.linecorp.intellij.plugins.armeria.expireWithPluginUnload
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnalysisCollector
+import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceDebugFormUrl
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaRouteNavigation
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteTreeBuilder
@@ -98,7 +99,19 @@ class ArmeriaRouteExplorerPanel(
                     ),
                 )
                 add(ArmeriaSyncRuntimeRoutesAction())
-                add(ArmeriaOpenDocServiceAction { filterRoutes(allRoutes()) })
+                add(
+                    ArmeriaOpenDocServiceAction(
+                        routesProvider = { filterRoutes(allRoutes()) },
+                        lastSyncedBaseUrlProvider = { routeState.lastDocServiceBaseUrl },
+                    ),
+                )
+                add(
+                    ArmeriaOpenDocServiceDebugFormAction(
+                        selectedRouteProvider = { selectedRouteFromTree() },
+                        routesProvider = { filterRoutes(allRoutes()) },
+                        lastSyncedBaseUrlProvider = { routeState.lastDocServiceBaseUrl },
+                    ),
+                )
             }
         toolbar =
             ActionManager
@@ -217,8 +230,12 @@ class ArmeriaRouteExplorerPanel(
 
     fun staticRoutes(): List<ArmeriaRoute> = routeState.staticRoutes
 
-    fun applyRuntimeRoutes(routes: List<ArmeriaRoute>) {
-        routeState.applyRuntime(routes)
+    fun applyRuntimeRoutes(
+        routes: List<ArmeriaRoute>,
+        specificationUrl: String? = null,
+    ) {
+        val docsBaseUrl = specificationUrl?.let(ArmeriaDocServiceDebugFormUrl::docsBaseUrlFromSpecificationUrl)
+        routeState.applyRuntime(routes, docsBaseUrl)
         rebuildTree()
         updateStatusLabel()
         updateDetailFootnote()
