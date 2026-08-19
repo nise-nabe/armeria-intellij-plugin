@@ -41,6 +41,15 @@
                          implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaClientDecoratorOrderKotlinInspection" />
         <localInspection language="kotlin"
                          bundle="messages.ArmeriaBundle"
+                         key="inspection.server.decorator.kotlin.display.name"
+                         groupBundle="messages.ArmeriaBundle"
+                         groupKey="inspection.group.armeria"
+                         shortName="ArmeriaServerDecoratorKotlin"
+                         enabledByDefault="true"
+                         level="WEAK WARNING"
+                         implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaServerDecoratorKotlinInspection" />
+        <localInspection language="kotlin"
+                         bundle="messages.ArmeriaBundle"
                          key="inspection.parameters.flag.kotlin.display.name"
                          groupBundle="messages.ArmeriaBundle"
                          groupKey="inspection.group.armeria"

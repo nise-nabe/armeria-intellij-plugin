@@ -19,6 +19,9 @@ import org.jetbrains.kotlin.psi.KtValueArgument
 
 internal class ArmeriaKotlinRouteLineMarkerProvider : LineMarkerProvider {
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? {
+        if (element.firstChild != null) {
+            return null
+        }
         if (DumbService.isDumb(element.project)) {
             return null
         }
