@@ -86,6 +86,9 @@ internal object ArmeriaClientRouteLinkSupport {
             routePath = route.path,
             virtualHostName = route.virtualHostName,
             routeMatch = route.routeMatch,
+            requestPath = endpoint.requestPath,
+            httpMethod = endpoint.httpMethod,
+            routeHttpMethod = route.httpMethod,
         )
 
     fun matches(
@@ -95,6 +98,9 @@ internal object ArmeriaClientRouteLinkSupport {
         routePath: String,
         virtualHostName: String = "",
         routeMatch: RouteMatch = RouteMatch.ANNOTATED_HTTP,
+        requestPath: String? = null,
+        httpMethod: String = "",
+        routeHttpMethod: String = "",
     ): Boolean {
         if (routeMatch !in MATCHABLE_ROUTE_MATCHES) {
             return false
@@ -103,11 +109,38 @@ internal object ArmeriaClientRouteLinkSupport {
         if (!protocol.matchesRouteProtocol(routeProtocol)) {
             return false
         }
-        val parts = parseClientUri(uri)
-        if (!hostsCompatible(parts.host, virtualHostName)) {
+        if (httpMethod.isNotBlank() &&
+            routeHttpMethod.isNotBlank() &&
+            !httpMethod.equals(routeHttpMethod, ignoreCase = true)
+        ) {
             return false
         }
-        return pathsOverlap(parts.path, routePath)
+        val parts = parseClientUri(uri)
+        val clientHost =
+            if (!requestPath.isNullOrBlank() && !isHttpLikeClientUri(uri)) {
+                null
+            } else {
+                parts.host
+            }
+        if (!hostsCompatible(clientHost, virtualHostName)) {
+            return false
+        }
+        val clientPath =
+            if (!requestPath.isNullOrBlank()) {
+                normalizePath(requestPath)
+            } else {
+                parts.path
+            }
+        return pathsOverlap(clientPath, routePath)
+    }
+
+    private fun isHttpLikeClientUri(raw: String): Boolean {
+        val trimmed = raw.trim()
+        val schemeSeparator = trimmed.indexOf("://")
+        if (schemeSeparator <= 0) {
+            return true
+        }
+        return isHttpLikeScheme(trimmed.substring(0, schemeSeparator))
     }
 
     fun parseClientUri(raw: String): ClientUriParts {

@@ -17,6 +17,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
 import com.linecorp.intellij.plugins.armeria.expireWithPluginUnload
+import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaGenerateClientHttpRequestAction
 import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaRouteNavigation
 import com.linecorp.intellij.plugins.armeria.message
 import java.awt.BorderLayout
@@ -72,6 +73,7 @@ class ArmeriaClientExplorerPanel(
                         }
                     },
                 )
+                add(ArmeriaGenerateClientHttpRequestAction { endpointList.selectedValue })
             }
         toolbar =
             ActionManager
@@ -275,14 +277,24 @@ class ArmeriaClientExplorerPanel(
                     append(message("client.explorer.secondary.decorators", endpoint.decorators.joinToString()))
                 }
             }
-        return "${endpoint.clientType} ${endpoint.uri}$suffix"
+        return if (endpoint.isCallSite) {
+            "${endpoint.clientType} ${endpoint.httpMethod} ${endpoint.requestPath}$suffix"
+        } else {
+            "${endpoint.clientType} ${endpoint.uri}$suffix"
+        }
     }
 
     private fun buildClientTooltip(endpoint: ArmeriaClientEndpoint): String =
         buildString {
             append(endpoint.clientType)
             append(' ')
-            append(endpoint.uri)
+            if (endpoint.isCallSite) {
+                append(endpoint.httpMethod)
+                append(' ')
+                append(endpoint.requestPath)
+            } else {
+                append(endpoint.uri)
+            }
             append(" → ")
             append(endpoint.target)
             if (!endpoint.transport.isNullOrEmpty()) {

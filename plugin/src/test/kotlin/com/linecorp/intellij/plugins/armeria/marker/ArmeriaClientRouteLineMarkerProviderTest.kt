@@ -4,6 +4,7 @@ import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.ArmeriaIcons
 import com.linecorp.intellij.plugins.armeria.client.ArmeriaKotlinClientCollector
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaClientFixtureTestBase
 import com.linecorp.intellij.plugins.armeria.test.registerArmeriaAnnotationStubs
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -78,6 +79,47 @@ class ArmeriaClientRouteLineMarkerProviderTest : ArmeriaClientFixtureTestBase() 
 
         val call = PsiTreeUtil.findChildOfType(myFixture.file, PsiMethodCallExpression::class.java)!!
         assertNull(javaProvider.getLineMarkerInfo(call.methodExpression.referenceNameElement!!))
+    }
+
+    fun testJavaGetCallSiteHasRouteMarkerWhenPathsOverlap() {
+        myFixture.addFileToProject(
+            "src/Service.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class Service {
+                @Get("/hello")
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Client.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.RestClient;
+
+            public class Client {
+                public static void main(String[] args) {
+                    RestClient.of("https://example.com").get("/hello");
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val getCall =
+            PsiTreeUtil
+                .findChildrenOfType(myFixture.file, PsiMethodCallExpression::class.java)
+                .single { it.methodExpression.referenceName == "get" }
+        val marker = javaProvider.getLineMarkerInfo(getCall.methodExpression.referenceNameElement!!)
+
+        kotlinAssertNotNull(marker)
+        assertEquals(ArmeriaIcons.Armeria, marker.icon)
     }
 
     fun testJavaUnrelatedOfCallHasNoRouteMarker() {
@@ -155,6 +197,45 @@ class ArmeriaClientRouteLineMarkerProviderTest : ArmeriaClientFixtureTestBase() 
 
         val call = PsiTreeUtil.findChildOfType(myFixture.file, KtCallExpression::class.java)!!
         val name = kotlinCallName(call)
+        val leaf = name.firstChild ?: name
+        val marker = kotlinProvider.getLineMarkerInfo(leaf)
+
+        kotlinAssertNotNull(marker)
+        assertEquals(ArmeriaIcons.Armeria, marker.icon)
+    }
+
+    fun testKotlinGetCallSiteHasRouteMarkerWhenPathsOverlap() {
+        myFixture.addFileToProject(
+            "src/Service.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+
+            class Service {
+                @Get("/hello")
+                fun hello(): String = "hello"
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Client.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.RestClient
+
+            fun main() {
+                RestClient.of("https://example.com").get("/hello")
+            }
+            """.trimIndent(),
+        )
+
+        val getCall =
+            PsiTreeUtil
+                .findChildrenOfType(myFixture.file, KtCallExpression::class.java)
+                .first { ArmeriaKotlinExpressionSupport.resolveCallName(it) == "get" }
+        val name = kotlinCallName(getCall)
         val leaf = name.firstChild ?: name
         val marker = kotlinProvider.getLineMarkerInfo(leaf)
 

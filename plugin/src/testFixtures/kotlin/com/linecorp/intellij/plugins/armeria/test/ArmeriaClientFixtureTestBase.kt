@@ -37,6 +37,46 @@ abstract class ArmeriaClientFixtureTestBase : ArmeriaLightJavaCodeInsightFixture
                 public Object asRestClient() {
                     return null;
                 }
+
+                public Object get(String path) {
+                    return null;
+                }
+
+                public Object post(String path) {
+                    return null;
+                }
+
+                public Object post(String path, String content) {
+                    return null;
+                }
+
+                public Object post(String path, com.linecorp.armeria.common.MediaType contentType, String content) {
+                    return null;
+                }
+
+                public Object put(String path) {
+                    return null;
+                }
+
+                public Object put(String path, String content) {
+                    return null;
+                }
+
+                public Object delete(String path) {
+                    return null;
+                }
+
+                public Object patch(String path) {
+                    return null;
+                }
+
+                public Object patch(String path, String content) {
+                    return null;
+                }
+
+                public Object execute(Object request) {
+                    return null;
+                }
             }
             """.trimIndent(),
         )
@@ -89,6 +129,26 @@ abstract class ArmeriaClientFixtureTestBase : ArmeriaLightJavaCodeInsightFixture
                         com.linecorp.armeria.client.endpoint.EndpointGroup endpointGroup) {
                     return null;
                 }
+
+                public RestClientPreparation get(String path) {
+                    return null;
+                }
+
+                public RestClientPreparation post(String path) {
+                    return null;
+                }
+
+                public RestClientPreparation put(String path) {
+                    return null;
+                }
+
+                public RestClientPreparation delete(String path) {
+                    return null;
+                }
+
+                public RestClientPreparation patch(String path) {
+                    return null;
+                }
             }
             """.trimIndent(),
         )
@@ -111,6 +171,37 @@ abstract class ArmeriaClientFixtureTestBase : ArmeriaLightJavaCodeInsightFixture
             """
             package com.linecorp.armeria.client;
 
+            public final class RestClientPreparation {
+                public RestClientPreparation header(CharSequence name, Object value) {
+                    return this;
+                }
+
+                public RestClientPreparation content(String content) {
+                    return this;
+                }
+
+                public RestClientPreparation content(com.linecorp.armeria.common.MediaType contentType, String content) {
+                    return this;
+                }
+
+                public RestClientPreparation pathParam(String name, Object value) {
+                    return this;
+                }
+
+                public Object execute() {
+                    return null;
+                }
+
+                public <T> Object execute(Class<T> type) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client;
+
             public final class BlockingWebClient {
                 public static BlockingWebClient of(String uri) {
                     return null;
@@ -121,6 +212,34 @@ abstract class ArmeriaClientFixtureTestBase : ArmeriaLightJavaCodeInsightFixture
                 }
 
                 public static BlockingWebClientBuilder builder(String uri) {
+                    return null;
+                }
+
+                public Object get(String path) {
+                    return null;
+                }
+
+                public Object post(String path) {
+                    return null;
+                }
+
+                public Object post(String path, String content) {
+                    return null;
+                }
+
+                public Object put(String path) {
+                    return null;
+                }
+
+                public Object delete(String path) {
+                    return null;
+                }
+
+                public Object patch(String path) {
+                    return null;
+                }
+
+                public Object execute(Object request) {
                     return null;
                 }
             }
@@ -148,6 +267,67 @@ abstract class ArmeriaClientFixtureTestBase : ArmeriaLightJavaCodeInsightFixture
             public final class SessionProtocol {
                 public static final SessionProtocol HTTP = new SessionProtocol();
                 public static final SessionProtocol HTTPS = new SessionProtocol();
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.common;
+
+            public final class MediaType {
+                public static final MediaType JSON = new MediaType();
+                public static final MediaType JSON_UTF_8 = new MediaType();
+                public static final MediaType PLAIN_TEXT = new MediaType();
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.common;
+
+            public final class HttpMethod {
+                public static final HttpMethod GET = new HttpMethod();
+                public static final HttpMethod POST = new HttpMethod();
+                public static final HttpMethod PUT = new HttpMethod();
+                public static final HttpMethod DELETE = new HttpMethod();
+                public static final HttpMethod PATCH = new HttpMethod();
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.common;
+
+            public final class HttpHeaderNames {
+                public static final CharSequence CONTENT_TYPE = "Content-Type";
+                public static final CharSequence ACCEPT = "Accept";
+                public static final CharSequence AUTHORIZATION = "Authorization";
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.common;
+
+            public final class RequestHeaders {
+                public static RequestHeaders of(HttpMethod method, String path, Object... rest) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.common;
+
+            public final class HttpRequest {
+                public static HttpRequest of(HttpMethod method, String path) {
+                    return null;
+                }
+
+                public static HttpRequest of(RequestHeaders headers) {
+                    return null;
+                }
             }
             """.trimIndent(),
         )

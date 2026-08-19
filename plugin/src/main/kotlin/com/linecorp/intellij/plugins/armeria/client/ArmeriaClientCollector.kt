@@ -41,7 +41,16 @@ object ArmeriaClientCollector {
             ArmeriaKotlinClientCollector.collect(project, scope, endpoints, seenEndpoints)
         }
         ArmeriaScalaClientCollector.collect(project, scope, endpoints, seenEndpoints)
-        val sorted = endpoints.sortedWith(compareBy({ it.clientType }, { it.uri }, { it.target }))
+        val sorted =
+            endpoints.sortedWith(
+                compareBy(
+                    { it.clientType },
+                    { it.uri },
+                    { it.httpMethod },
+                    { it.requestPath.orEmpty() },
+                    { it.target },
+                ),
+            )
         return CachedValueProvider.Result.create(
             sorted,
             PsiModificationTracker.MODIFICATION_COUNT,
@@ -76,6 +85,9 @@ object ArmeriaClientCollector {
         seenEndpoints: MutableSet<String>,
     ) {
         if (isNestedInsideClientFactoryArgument(expression) || isQualifierOfClientConversion(expression)) {
+            return
+        }
+        if (ArmeriaJavaClientInvocationCollector.collect(expression, endpoints, seenEndpoints)) {
             return
         }
         val methodName = expression.methodExpression.referenceName ?: return
@@ -258,6 +270,11 @@ object ArmeriaClientCollector {
         decorators: List<String> = emptyList(),
         endpointGroup: String? = null,
         transport: String? = null,
+        httpMethod: String = "",
+        requestPath: String? = null,
+        contentType: String? = null,
+        requestBody: String? = null,
+        requestHeaders: List<String> = emptyList(),
         dedupeKey: String? = null,
         sourceOffset: Int? = null,
     ) {
@@ -275,6 +292,11 @@ object ArmeriaClientCollector {
                 decorators = decorators,
                 endpointGroup = endpointGroup,
                 transport = transport,
+                httpMethod = httpMethod,
+                requestPath = requestPath,
+                contentType = contentType,
+                requestBody = requestBody,
+                requestHeaders = requestHeaders,
                 sourceOffset = sourceOffset,
                 sourceFileUrl = virtualFile.url,
             )
@@ -292,6 +314,17 @@ object ArmeriaClientCollector {
                         .computeConstantExpression(expression) as? String
                 constantValue ?: expression.text.takeIf { StringUtil.isNotEmpty(it) }
             }
+        }
+
+    internal fun extractResolvedString(expression: PsiExpression?): String? =
+        when (expression) {
+            null -> null
+            is PsiLiteralExpression -> expression.value as? String
+            else ->
+                JavaPsiFacade
+                    .getInstance(expression.project)
+                    .constantEvaluationHelper
+                    .computeConstantExpression(expression) as? String
         }
 
     private fun isKotlinPluginAvailable(): Boolean = PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
@@ -333,7 +366,7 @@ object ArmeriaClientCollector {
         }
     }
 
-    private fun findEnclosingQualifierCall(expression: PsiExpression): PsiMethodCallExpression? {
+    internal fun findEnclosingQualifierCall(expression: PsiExpression): PsiMethodCallExpression? {
         var element: PsiElement? = expression.parent
         while (element != null) {
             if (element is PsiMethodCallExpression &&
