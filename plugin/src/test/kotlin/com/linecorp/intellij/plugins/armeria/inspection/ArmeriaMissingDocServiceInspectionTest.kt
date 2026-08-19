@@ -34,6 +34,19 @@ class ArmeriaMissingDocServiceInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun allowsAnnotatedServiceWhenDocServiceBuilderChainIsMounted() {
+        configureMain(
+            """
+            Server.builder()
+                    .annotatedService(new HelloService())
+                    .service("/docs", DocService.builder().build())
+                    .build();
+            """.trimIndent(),
+        )
+        assertHighlighted(expected = false)
+    }
+
+    @Test
     fun highlightsGrpcServiceWithoutDocService() {
         configureMain(
             """

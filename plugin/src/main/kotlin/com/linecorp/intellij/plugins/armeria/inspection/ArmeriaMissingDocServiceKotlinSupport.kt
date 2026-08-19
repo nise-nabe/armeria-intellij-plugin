@@ -110,7 +110,10 @@ internal object ArmeriaMissingDocServiceKotlinSupport {
                             is KtDotQualifiedExpression -> callee.receiverExpression
                             is KtNameReferenceExpression -> {
                                 val kind = ArmeriaKnownHttpServiceClassifier.classify(callee.getReferencedName())
-                                return if (kind != KnownHttpServiceKind.HTTP) kind else KnownHttpServiceKind.HTTP
+                                if (kind != KnownHttpServiceKind.HTTP) {
+                                    return kind
+                                }
+                                (unwrapped.parent as? KtDotQualifiedExpression)?.receiverExpression
                             }
                             else -> null
                         }
