@@ -13,22 +13,30 @@ import javax.swing.JPanel
 class ArmeriaClientDetailPanel : JPanel(BorderLayout()) {
     private val detailClientType = JBLabel()
     private val detailUri = wrappingValueLabel()
+    private val detailHttpMethod = JBLabel()
+    private val detailRequestPath = wrappingValueLabel()
     private val detailTarget = wrappingValueLabel()
     private val detailModule = JBLabel()
     private val detailTransport = JBLabel()
     private val detailEndpointGroup = wrappingValueLabel()
     private val detailDecorators = wrappingValueLabel()
 
+    private val httpMethodRow: JPanel
+    private val requestPathRow: JPanel
     private val transportRow: JPanel
     private val endpointGroupRow: JPanel
     private val metadataBlock: JPanel
     private val decoratorsBlock: JPanel
 
     init {
+        httpMethodRow = labeledField(message("client.explorer.detail.httpMethod"), detailHttpMethod)
+        requestPathRow = labeledField(message("client.explorer.detail.requestPath"), detailRequestPath)
         val overviewBody =
             formBody(
                 labeledField(message("client.explorer.detail.clientType"), detailClientType),
                 labeledField(message("client.explorer.detail.uri"), detailUri),
+                httpMethodRow,
+                requestPathRow,
                 labeledField(message("client.explorer.detail.target"), detailTarget),
                 labeledField(message("client.explorer.detail.module"), detailModule),
             )
@@ -68,6 +76,10 @@ class ArmeriaClientDetailPanel : JPanel(BorderLayout()) {
         }
         detailClientType.text = endpoint.clientType
         setWrappingText(detailUri, endpoint.uri)
+        detailHttpMethod.text = endpoint.httpMethod
+        httpMethodRow.isVisible = endpoint.httpMethod.isNotBlank()
+        setWrappingText(detailRequestPath, endpoint.requestPath.orEmpty())
+        requestPathRow.isVisible = !endpoint.requestPath.isNullOrBlank()
         setWrappingText(detailTarget, endpoint.target)
         detailModule.text = endpoint.moduleName
 
@@ -88,11 +100,15 @@ class ArmeriaClientDetailPanel : JPanel(BorderLayout()) {
     fun clear() {
         detailClientType.text = ""
         setWrappingText(detailUri, "")
+        detailHttpMethod.text = ""
+        setWrappingText(detailRequestPath, "")
         setWrappingText(detailTarget, "")
         detailModule.text = ""
         detailTransport.text = ""
         setWrappingText(detailEndpointGroup, "")
         setWrappingText(detailDecorators, "")
+        httpMethodRow.isVisible = false
+        requestPathRow.isVisible = false
         transportRow.isVisible = false
         endpointGroupRow.isVisible = false
         metadataBlock.isVisible = false

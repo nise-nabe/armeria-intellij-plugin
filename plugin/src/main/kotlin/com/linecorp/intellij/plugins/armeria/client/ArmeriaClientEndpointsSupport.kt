@@ -15,6 +15,10 @@ internal object ArmeriaClientEndpointsSupport {
     private val HTTP_SCHEMES = listOf("http", "https")
 
     fun isVisible(endpoint: ArmeriaClientEndpoint): Boolean {
+        val requestPath = endpoint.requestPath
+        if (!requestPath.isNullOrBlank()) {
+            return isVisibleHttpClientUri(requestPath)
+        }
         if (!endpoint.endpointGroup.isNullOrBlank()) {
             return false
         }
@@ -65,6 +69,9 @@ internal object ArmeriaClientEndpointsSupport {
     }
 
     fun httpMethods(endpoint: ArmeriaClientEndpoint): List<String> {
+        if (endpoint.httpMethod.isNotBlank()) {
+            return listOf(endpoint.httpMethod)
+        }
         val protocol = ClientProtocol.fromPresentableName(endpoint.clientType) ?: return emptyList()
         return when (protocol) {
             ClientProtocol.GRPC,
@@ -113,17 +120,29 @@ internal object ArmeriaClientEndpointsSupport {
     private class ArmeriaClientUrlTargetInfo(
         private val endpoint: ArmeriaClientEndpoint,
     ) : UrlTargetInfo {
-        private val uriParts = ArmeriaClientRouteLinkSupport.parseClientUri(endpoint.uri)
+        private val pathSource = endpoint.requestPath ?: endpoint.uri
+        private val uriParts = ArmeriaClientRouteLinkSupport.parseClientUri(pathSource)
+        private val authoritySource =
+            endpoint.requestPath
+                ?.takeIf { ArmeriaClientRouteLinkSupport.isAbsoluteHttpUri(it) }
+                ?: endpoint.uri
 
         override val schemes: List<String> = HTTP_SCHEMES
 
         override val authorities: List<Authority> =
-            authorityText(endpoint.uri)
-                ?.let { listOf(Authority.Exact(it)) }
-                .orEmpty()
+            if (!isVisibleHttpClientUri(authoritySource)) {
+                emptyList()
+            } else {
+                authorityText(authoritySource)
+                    ?.let { listOf(Authority.Exact(it)) }
+                    .orEmpty()
+            }
 
         override val path: UrlPath =
-            ArmeriaEndpointUrlPath.toUrlPath(uriParts.path, PathType.PREFIX)
+            ArmeriaEndpointUrlPath.toUrlPath(
+                uriParts.path,
+                if (endpoint.requestPath.isNullOrBlank()) PathType.PREFIX else PathType.EXACT,
+            )
 
         override val methods: Set<String> = httpMethods(endpoint).toSet()
 

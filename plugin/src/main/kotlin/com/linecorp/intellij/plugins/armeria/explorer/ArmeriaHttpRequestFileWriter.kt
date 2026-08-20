@@ -18,8 +18,9 @@ internal object ArmeriaHttpRequestFileWriter {
     fun createOrUpdate(
         project: Project,
         route: ArmeriaRoute,
+        baseUrl: String = ArmeriaHttpRequestGenerator.DEFAULT_BASE_URL,
     ) {
-        val content = ArmeriaHttpRequestGenerator.requestText(route)
+        val content = ArmeriaHttpRequestGenerator.requestText(route, baseUrl)
         val fileName = ArmeriaHttpRequestGenerator.fileName(route)
         val baseDir = project.basePath ?: return
         val filePath = Path.of(baseDir, ".idea", "httpRequests", fileName)

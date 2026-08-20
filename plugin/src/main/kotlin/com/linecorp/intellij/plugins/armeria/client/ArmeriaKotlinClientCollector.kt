@@ -45,6 +45,12 @@ internal object ArmeriaKotlinClientCollector {
 
     internal fun protocolForCall(call: KtCallExpression): ClientProtocol? {
         val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return null
+        if (methodName in ArmeriaClientSupport.HTTP_INVOCATION_METHOD_NAMES &&
+            ArmeriaKotlinClientInvocationCollector.isHttpClientInvocation(call, methodName)
+        ) {
+            return ArmeriaClientSupport.protocolForClass(resolveContainingClass(call))
+                ?: ClientProtocol.HTTP
+        }
         if (methodName !in ArmeriaClientSupport.FACTORY_METHOD_NAMES &&
             methodName !in ArmeriaClientSupport.CONVERSION_METHOD_NAMES
         ) {
@@ -66,6 +72,9 @@ internal object ArmeriaKotlinClientCollector {
         seenEndpoints: MutableSet<String>,
     ) {
         if (isNestedInsideClientFactoryArgument(call) || isQualifierOfClientConversion(call)) {
+            return
+        }
+        if (ArmeriaKotlinClientInvocationCollector.collect(call, endpoints, seenEndpoints)) {
             return
         }
         val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return
@@ -266,14 +275,14 @@ internal object ArmeriaKotlinClientCollector {
         return simpleName == "WebClient" || receiverText.endsWith(".WebClient")
     }
 
-    private fun callExpressionInChain(expression: KtExpression): KtCallExpression? =
+    internal fun callExpressionInChain(expression: KtExpression): KtCallExpression? =
         when (val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: expression) {
             is KtCallExpression -> unwrapped
             is KtQualifiedExpression -> unwrapped.selectorExpression as? KtCallExpression
             else -> null
         }
 
-    private fun qualifierReceiver(expression: KtExpression): KtExpression? =
+    internal fun qualifierReceiver(expression: KtExpression): KtExpression? =
         when (expression) {
             is KtCallExpression -> {
                 when (val callee = expression.calleeExpression) {
@@ -327,7 +336,7 @@ internal object ArmeriaKotlinClientCollector {
         }
     }
 
-    private fun findNextChainedCall(call: KtCallExpression): KtCallExpression? {
+    internal fun findNextChainedCall(call: KtCallExpression): KtCallExpression? {
         var current: PsiElement = call
         while (true) {
             val parent = current.parent ?: return null
@@ -365,7 +374,7 @@ internal object ArmeriaKotlinClientCollector {
         return receiver?.text
     }
 
-    private fun resolveContainingClass(call: KtCallExpression): String? {
+    internal fun resolveContainingClass(call: KtCallExpression): String? {
         val callee = call.calleeExpression ?: return null
         val references =
             when (callee) {

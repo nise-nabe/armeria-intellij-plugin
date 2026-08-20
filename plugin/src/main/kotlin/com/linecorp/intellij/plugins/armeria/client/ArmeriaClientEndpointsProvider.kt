@@ -91,10 +91,11 @@ class ArmeriaClientEndpointsProvider : EndpointsUrlTargetProvider<ArmeriaClientE
     ): ItemPresentation {
         val methods = ArmeriaClientEndpointsSupport.httpMethods(endpoint)
         val icon = ArmeriaIcons.Armeria
+        val presentable = ArmeriaClientInvocationSupport.displayPath(endpoint)
         return if (methods.size <= 1) {
-            HttpMethodPresentation(endpoint.uri, methods.singleOrNull(), endpoint.target, icon)
+            HttpMethodPresentation(presentable, methods.singleOrNull(), endpoint.target, icon)
         } else {
-            HttpMethodPresentation(endpoint.uri, methods, endpoint.target, icon)
+            HttpMethodPresentation(presentable, methods, endpoint.target, icon)
         }
     }
 

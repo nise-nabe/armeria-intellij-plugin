@@ -51,6 +51,13 @@ internal object ArmeriaClientSupport {
 
     val CONVERSION_METHOD_NAMES = setOf("blocking", "asRestClient")
 
+    val HTTP_METHOD_INVOCATION_NAMES = setOf("get", "post", "put", "delete", "patch")
+
+    val HTTP_INVOCATION_METHOD_NAMES = HTTP_METHOD_INVOCATION_NAMES + "execute"
+
+    private val HTTP_CLIENT_PROTOCOLS =
+        setOf(ClientProtocol.HTTP, ClientProtocol.REST, ClientProtocol.BLOCKING)
+
     private val WEB_CLIENT_CLASS_NAMES =
         setOf(
             WEB_CLIENT_CLASS,
@@ -74,6 +81,16 @@ internal object ArmeriaClientSupport {
         return protocolForClass(containingClass)
     }
 
+    fun isClientLineMarkerMethod(
+        methodName: String,
+        containingClass: String?,
+    ): Boolean {
+        if (methodName in HTTP_INVOCATION_METHOD_NAMES) {
+            return isHttpClientClass(containingClass)
+        }
+        return protocolForInvocation(methodName, containingClass) != null
+    }
+
     fun protocolForConversion(methodName: String): ClientProtocol? =
         when (methodName) {
             "blocking" -> ClientProtocol.BLOCKING
@@ -87,6 +104,21 @@ internal object ArmeriaClientSupport {
     fun isWebClientClass(qualifiedName: String?): Boolean =
         qualifiedName != null &&
             (qualifiedName in WEB_CLIENT_CLASS_NAMES || qualifiedName.endsWith(".WebClient"))
+
+    fun isHttpClientClass(qualifiedName: String?): Boolean {
+        val protocol = protocolForClass(qualifiedName) ?: return false
+        return protocol in HTTP_CLIENT_PROTOCOLS
+    }
+
+    fun httpMethodForInvocation(methodName: String): String? =
+        when (methodName) {
+            "get", "GET" -> "GET"
+            "post", "POST" -> "POST"
+            "put", "PUT" -> "PUT"
+            "delete", "DELETE" -> "DELETE"
+            "patch", "PATCH" -> "PATCH"
+            else -> null
+        }
 
     fun wrapsWebClientTransport(protocol: ClientProtocol): Boolean = protocol == ClientProtocol.RETROFIT || protocol == ClientProtocol.REST
 

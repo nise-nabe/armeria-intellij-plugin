@@ -127,6 +127,33 @@ class ArmeriaClientRouteLinkSupportTest : ArmeriaClientFixtureTestBase() {
         assertEquals(endpoint.uri, ArmeriaClientRouteLinkSupport.matchingClients(project, route).single().uri)
     }
 
+    fun testAbsoluteRequestPathMatchesRoutePathNotConcatenatedUri() {
+        assertTrue(
+            ArmeriaClientRouteLinkSupport.matches(
+                clientType = "HTTP",
+                uri = "https://example.com",
+                routeProtocol = "HTTP",
+                routePath = "/users",
+                requestPath = "https://example.com/users",
+                httpMethod = "GET",
+                routeHttpMethod = "GET",
+            ),
+        )
+        assertFalse(
+            ArmeriaClientRouteLinkSupport.matches(
+                clientType = "HTTP",
+                uri = "https://example.com",
+                routeProtocol = "HTTP",
+                routePath = "/https://example.com/users",
+                requestPath = "https://example.com/users",
+                httpMethod = "GET",
+                routeHttpMethod = "GET",
+            ),
+        )
+        assertEquals("/users", ArmeriaClientRouteLinkSupport.pathForMatching("https://example.com/users"))
+        assertEquals("https://example.com", ArmeriaClientRouteLinkSupport.httpOrigin("https://example.com/users"))
+    }
+
     fun testDiscoveryZkUriDoesNotMatchHttpRoutePath() {
         val parts = ArmeriaClientRouteLinkSupport.parseClientUri("zk://zk.example.com/armeria")
 
