@@ -189,4 +189,24 @@ class ArmeriaKotlinClientInvocationCollectorTest : ArmeriaClientFixtureTestBase(
             ),
         )
     }
+
+    fun testDoesNotHangOnCyclicPathInitializer() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.RestClient
+
+            fun main() {
+                val path = path
+                RestClient.of("https://example.com").get(path)
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+        assertTrue(endpoints.any { !it.isCallSite && it.uri == "https://example.com" })
+        assertTrue(endpoints.none { it.isCallSite })
+    }
 }

@@ -198,7 +198,8 @@ internal object ArmeriaJavaClientInvocationCollector {
 
     private fun unwrapToMethodCall(expression: PsiExpression): PsiMethodCallExpression? {
         var current: PsiExpression? = expression
-        while (current != null) {
+        val visited = mutableSetOf<PsiExpression>()
+        while (current != null && visited.add(current)) {
             when (current) {
                 is PsiMethodCallExpression -> return current
                 is PsiReferenceExpression -> {

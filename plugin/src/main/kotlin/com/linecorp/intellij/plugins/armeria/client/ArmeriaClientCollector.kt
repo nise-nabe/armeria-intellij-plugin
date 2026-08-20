@@ -330,18 +330,29 @@ object ArmeriaClientCollector {
             }
         }
 
-    internal fun extractResolvedString(expression: PsiExpression?): String? =
-        when (expression) {
-            null -> null
+    internal fun extractResolvedString(expression: PsiExpression?): String? = extractResolvedString(expression, mutableSetOf())
+
+    private fun extractResolvedString(
+        expression: PsiExpression?,
+        visited: MutableSet<PsiElement>,
+    ): String? {
+        if (expression == null || !visited.add(expression)) {
+            return null
+        }
+        return when (expression) {
             is PsiLiteralExpression -> expression.value as? String
             is PsiReferenceExpression -> {
                 val resolved = expression.resolve() as? PsiVariable
+                if (resolved != null && !visited.add(resolved)) {
+                    return null
+                }
                 (resolved?.computeConstantValue() as? String)
-                    ?: extractResolvedString(resolved?.initializer)
+                    ?: extractResolvedString(resolved?.initializer, visited)
                     ?: constantString(expression)
             }
             else -> constantString(expression)
         }
+    }
 
     private fun constantString(expression: PsiExpression): String? =
         JavaPsiFacade

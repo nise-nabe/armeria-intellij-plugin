@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.client
 
 import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiEnumConstant
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiMethod
@@ -304,8 +305,16 @@ internal object ArmeriaKotlinClientInvocationCollector {
         }
     }
 
-    private fun extractResolvedString(expression: KtExpression?): String? {
+    private fun extractResolvedString(expression: KtExpression?): String? = extractResolvedString(expression, mutableSetOf())
+
+    private fun extractResolvedString(
+        expression: KtExpression?,
+        visited: MutableSet<PsiElement>,
+    ): String? {
         val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: return null
+        if (!visited.add(unwrapped)) {
+            return null
+        }
         if (unwrapped is KtStringTemplateExpression) {
             if (unwrapped.hasInterpolation()) {
                 return null
@@ -323,11 +332,19 @@ internal object ArmeriaKotlinClientInvocationCollector {
         if (unwrapped is KtNameReferenceExpression || unwrapped is KtDotQualifiedExpression) {
             val resolved = unwrapped.references.firstOrNull()?.resolve()
             when (resolved) {
-                is KtProperty -> return extractResolvedString(resolved.initializer)
+                is KtProperty -> {
+                    if (!visited.add(resolved)) {
+                        return null
+                    }
+                    return extractResolvedString(resolved.initializer, visited)
+                }
                 is PsiVariable -> {
+                    if (!visited.add(resolved)) {
+                        return null
+                    }
                     val initializer = resolved.initializer
                     if (initializer is KtExpression) {
-                        return extractResolvedString(initializer)
+                        return extractResolvedString(initializer, visited)
                     }
                     return ArmeriaRouteSupport.evaluateJavaStringConstant(resolved)
                 }

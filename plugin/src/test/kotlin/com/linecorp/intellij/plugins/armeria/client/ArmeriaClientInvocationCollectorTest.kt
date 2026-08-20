@@ -477,4 +477,49 @@ class ArmeriaClientInvocationCollectorTest : ArmeriaClientFixtureTestBase() {
             ),
         )
     }
+
+    fun testDoesNotHangOnCyclicPathInitializer() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.RestClient;
+
+            public class Main {
+                public static void main(String[] args) {
+                    String path = path;
+                    RestClient.of("https://example.com").get(path);
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+        assertTrue(endpoints.any { !it.isCallSite && it.uri == "https://example.com" })
+        assertTrue(endpoints.none { it.isCallSite })
+    }
+
+    fun testDoesNotHangOnCyclicExecuteRequestInitializer() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+            import com.linecorp.armeria.common.HttpRequest;
+
+            public class Main {
+                public static void main(String[] args) {
+                    HttpRequest request = request;
+                    WebClient.of("https://example.com").execute(request);
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+        assertTrue(endpoints.any { !it.isCallSite && it.uri == "https://example.com" })
+        assertTrue(endpoints.none { it.isCallSite })
+    }
 }
