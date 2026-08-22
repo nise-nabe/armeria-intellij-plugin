@@ -203,6 +203,5 @@ object ArmeriaKnownHttpServiceClassifier {
         kind == KnownHttpServiceKind.DOC_SERVICE ||
             kind == KnownHttpServiceKind.GRPC ||
             kind == KnownHttpServiceKind.GRAPHQL ||
-            kind == KnownHttpServiceKind.THRIFT ||
-            kind == KnownHttpServiceKind.WEBSOCKET
+            kind == KnownHttpServiceKind.THRIFT
 }

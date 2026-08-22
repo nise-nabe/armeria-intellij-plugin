@@ -4,6 +4,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteColl
 import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
+import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -458,10 +459,11 @@ class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
         )
 
         val websocketRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/chat" }
-        assertEquals(RouteMatch.NON_HTTP, websocketRoute.routeMatch)
+        assertEquals(RouteMatch.SERVICE, websocketRoute.routeMatch)
         assertEquals(RouteProtocol.WEBSOCKET.presentableName(), websocketRoute.protocol)
         assertEquals("com.linecorp.armeria.server.websocket.WebSocketService", websocketRoute.target)
         assertEquals("", websocketRoute.httpMethod)
+        assertFalse(websocketRoute.excludeFromDuplicateIndex)
     }
 
     fun testCollectHealthCheckServiceViaServiceRegistration() {
@@ -514,6 +516,10 @@ class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
         assertEquals(RouteProtocol.SSE.presentableName(), sseRoute.protocol)
         assertEquals("GET", sseRoute.httpMethod)
         assertEquals("com.linecorp.armeria.server.streaming.ServerSentEvents", sseRoute.target)
+        assertEquals(
+            listOf(message("route.explorer.hint.produces", "text/event-stream")),
+            sseRoute.contentHints,
+        )
     }
 
     fun testCollectDocServiceRegistrationFromHttpServiceVariable() {

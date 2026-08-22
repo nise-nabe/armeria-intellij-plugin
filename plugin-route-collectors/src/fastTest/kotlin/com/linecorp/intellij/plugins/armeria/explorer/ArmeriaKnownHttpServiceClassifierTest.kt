@@ -207,10 +207,15 @@ class ArmeriaKnownHttpServiceClassifierTest {
         val websocket = KnownHttpServiceKind.WEBSOCKET
         assertEquals(RouteProtocol.WEBSOCKET, ArmeriaKnownHttpServiceClassifier.protocol(websocket))
         assertEquals(
-            RouteMatch.NON_HTTP,
+            RouteMatch.SERVICE,
             ArmeriaKnownHttpServiceClassifier.routeMatch(websocket, CoreServiceRegistrationMethod.SERVICE),
         )
+        assertEquals(
+            RouteMatch.SERVICE_UNDER,
+            ArmeriaKnownHttpServiceClassifier.routeMatch(websocket, CoreServiceRegistrationMethod.SERVICE_UNDER),
+        )
         assertEquals("", ArmeriaKnownHttpServiceClassifier.defaultHttpMethod(websocket))
+        assertFalse(ArmeriaKnownHttpServiceClassifier.excludeFromDuplicateIndex(websocket))
 
         val sse = KnownHttpServiceKind.SSE
         assertEquals(RouteProtocol.SSE, ArmeriaKnownHttpServiceClassifier.protocol(sse))

@@ -298,6 +298,47 @@ class ArmeriaAnnotatedMetadataSupportTest : ArmeriaFixtureTestBase() {
         )
     }
 
+    fun testCollectProducesTextEventStreamAnnotationValueAsSse() {
+        myFixture.configureByText(
+            "EventsService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.*;
+
+            @ProducesEventStream
+            public class EventsService {
+                @Get("/class-events")
+                public String classEvents() {
+                    return "ok";
+                }
+
+                @Get("/produces-events")
+                @Produces("text/event-stream")
+                public String producesEvents() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        assertEquals(2, routes.size)
+        assertTrue(routes.all { it.protocol == RouteProtocol.SSE.presentableName() })
+        assertTrue(
+            routes.any {
+                it.path == "/class-events" &&
+                    it.contentHints == listOf(message("route.explorer.hint.produces", "text/event-stream"))
+            },
+        )
+        assertTrue(
+            routes.any {
+                it.path == "/produces-events" &&
+                    it.contentHints == listOf(message("route.explorer.hint.produces", "text/event-stream"))
+            },
+        )
+    }
+
     fun testCollectProducesEventStreamFromKotlin() {
         myFixture.configureByText(
             "EventsService.kt",

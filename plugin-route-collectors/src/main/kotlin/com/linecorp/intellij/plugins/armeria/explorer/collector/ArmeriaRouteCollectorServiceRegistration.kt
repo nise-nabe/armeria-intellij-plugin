@@ -26,6 +26,8 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKnownHttpSe
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteTargetExtractor
+import com.linecorp.intellij.plugins.armeria.explorer.support.KnownHttpServiceKind
+import com.linecorp.intellij.plugins.armeria.message
 
 object ArmeriaRouteCollectorServiceRegistration {
     fun collectServiceRegistrationsIndexed(
@@ -188,11 +190,19 @@ object ArmeriaRouteCollectorServiceRegistration {
                 annotatedServiceHasPathPrefix = annotatedServiceHasPathPrefix,
                 decorators = programmaticDecorators,
                 timeoutHints = timeoutHints,
+                contentHints = sseContentHints(kind),
                 delegationKind = delegationKind,
                 sourceOffset = sourceOffset,
             )
         return true
     }
+
+    private fun sseContentHints(kind: KnownHttpServiceKind): List<String> =
+        if (kind == KnownHttpServiceKind.SSE) {
+            listOf(message("route.explorer.hint.produces", "text/event-stream"))
+        } else {
+            emptyList()
+        }
 
     private fun serviceRegistrationKey(expression: PsiMethodCallExpression): String? {
         val virtualFile = expression.containingFile?.virtualFile ?: return null

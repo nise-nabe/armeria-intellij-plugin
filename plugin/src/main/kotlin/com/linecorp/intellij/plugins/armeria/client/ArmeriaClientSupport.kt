@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.client
 
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.message
 
 internal enum class ClientProtocol(
@@ -17,13 +18,19 @@ internal enum class ClientProtocol(
 
     fun matchesRouteProtocol(routeProtocol: String): Boolean =
         when (this) {
-            HTTP, RETROFIT, REST, BLOCKING -> routeProtocol == HTTP.presentableName()
+            HTTP, RETROFIT, REST, BLOCKING -> isHttpCompatibleRouteProtocol(routeProtocol)
             GRPC -> routeProtocol == GRPC.presentableName()
             THRIFT -> routeProtocol == THRIFT.presentableName()
         }
 
     companion object {
         fun fromPresentableName(name: String): ClientProtocol? = entries.firstOrNull { it.presentableName() == name }
+
+        private fun isHttpCompatibleRouteProtocol(routeProtocol: String): Boolean =
+            routeProtocol == HTTP.presentableName() ||
+                routeProtocol == RouteProtocol.SSE.presentableName() ||
+                routeProtocol == RouteProtocol.HEALTH_CHECK.presentableName() ||
+                routeProtocol == RouteProtocol.WEBSOCKET.presentableName()
     }
 }
 
