@@ -464,6 +464,75 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         assertEquals(RouteProtocol.HTTP.presentableName(), servletRoute.protocol)
     }
 
+    fun testCollectKotlinWebSocketServiceViaServiceRegistration() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.websocket.WebSocketService
+
+            fun main() {
+                Server.builder()
+                    .service("/chat", WebSocketService.of(null))
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val websocketRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/chat" }
+        assertEquals(RouteMatch.NON_HTTP, websocketRoute.routeMatch)
+        assertEquals(RouteProtocol.WEBSOCKET.presentableName(), websocketRoute.protocol)
+        assertEquals("", websocketRoute.httpMethod)
+    }
+
+    fun testCollectKotlinHealthCheckServiceViaServiceRegistration() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.healthcheck.HealthCheckService
+
+            fun main() {
+                Server.builder()
+                    .service("/health", HealthCheckService.of())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val healthRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/health" }
+        assertEquals(RouteMatch.HEALTH_CHECK, healthRoute.routeMatch)
+        assertEquals(RouteProtocol.HEALTH_CHECK.presentableName(), healthRoute.protocol)
+        assertEquals("GET", healthRoute.httpMethod)
+    }
+
+    fun testCollectKotlinServerSentEventsViaServiceRegistration() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.streaming.ServerSentEvents
+
+            fun main() {
+                Server.builder()
+                    .service("/events", ServerSentEvents.fromPublisher(null))
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val sseRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/events" }
+        assertEquals(RouteMatch.SERVICE, sseRoute.routeMatch)
+        assertEquals(RouteProtocol.SSE.presentableName(), sseRoute.protocol)
+        assertEquals("GET", sseRoute.httpMethod)
+    }
+
     fun testCollectDocServiceRegistrationFromHttpServiceVariable() {
         myFixture.configureByText(
             "Main.kt",
@@ -539,6 +608,37 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         val fileRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/files" }
         assertEquals(RouteMatch.SERVICE, fileRoute.routeMatch)
         assertFalse(fileRoute.excludeFromDuplicateIndex)
+    }
+
+    fun testUserWebSocketServiceTypedPropertyIsNotArmeriaWebSocketService() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                val chat: WebSocketService = WebSocketService()
+                Server.builder()
+                    .service("/chat", chat)
+                    .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class WebSocketService {
+            }
+            """.trimIndent(),
+        )
+
+        val websocketRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/chat" }
+        assertEquals(RouteMatch.SERVICE, websocketRoute.routeMatch)
+        assertEquals(RouteProtocol.HTTP.presentableName(), websocketRoute.protocol)
+        assertFalse(websocketRoute.excludeFromDuplicateIndex)
     }
 
     fun testCollectDocServiceRegistrationFromCast() {

@@ -11,6 +11,7 @@ class ArmeriaDecoratorSupportTest : TestCase() {
     fun testLabelDecoratorKnownService() {
         assertEquals("Logging", ArmeriaDecoratorSupport.labelDecorator("LoggingService.class"))
         assertEquals("CORS", ArmeriaDecoratorSupport.labelDecorator("com.linecorp.armeria.server.cors.CorsService"))
+        assertEquals("WebSocketService", ArmeriaDecoratorSupport.labelDecorator("WebSocketService"))
     }
 
     fun testLabelDecoratorUnknownService() {

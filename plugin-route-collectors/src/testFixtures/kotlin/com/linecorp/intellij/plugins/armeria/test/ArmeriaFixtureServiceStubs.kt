@@ -178,6 +178,69 @@ fun JavaCodeInsightTestFixture.registerKnownHttpServiceStubs() {
         }
         """.trimIndent(),
     )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.websocket;
+
+        public final class WebSocketService {
+            public static WebSocketService of(Object handler) {
+                return null;
+            }
+
+            public static WebSocketServiceBuilder builder() {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.websocket;
+
+        public final class WebSocketServiceBuilder {
+            public com.linecorp.armeria.server.websocket.WebSocketService build() {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.healthcheck;
+
+        public final class HealthCheckService {
+            public static HealthCheckService of() {
+                return null;
+            }
+
+            public static HealthCheckServiceBuilder builder() {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.healthcheck;
+
+        public final class HealthCheckServiceBuilder {
+            public com.linecorp.armeria.server.healthcheck.HealthCheckService build() {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.streaming;
+
+        public final class ServerSentEvents {
+            public static Object fromPublisher(Object publisher) {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
 }
 
 fun JavaCodeInsightTestFixture.registerArmeriaIdlStubs() {

@@ -20,8 +20,11 @@ object ArmeriaHttpRequestGenerator {
     private val SIMPLE_HEADER_MATCH = Regex("""^([A-Za-z0-9_.+-]+)=([^=].*)$""")
     private val METHODS_WITH_BODY = setOf("POST", "PUT", "PATCH")
 
-    fun supports(route: ArmeriaRoute): Boolean =
-        when (route.routeMatch) {
+    fun supports(route: ArmeriaRoute): Boolean {
+        if (isWebSocketRoute(route)) {
+            return false
+        }
+        return when (route.routeMatch) {
             RouteMatch.ANNOTATED_HTTP -> route.httpMethod.isNotBlank()
             RouteMatch.DELEGATED -> true
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.HEALTH_CHECK, RouteMatch.ROUTE_FLUENT -> true
@@ -31,6 +34,7 @@ object ArmeriaHttpRequestGenerator {
             RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
             -> false
         }
+    }
 
     fun httpMethod(route: ArmeriaRoute): String =
         when (route.routeMatch) {
@@ -125,6 +129,9 @@ object ArmeriaHttpRequestGenerator {
             }
         }
     }
+
+    private fun isWebSocketRoute(route: ArmeriaRoute): Boolean =
+        route.protocol.equals(RouteProtocol.WEBSOCKET.presentableName(), ignoreCase = true)
 
     private fun isGrpcRoute(route: ArmeriaRoute): Boolean {
         if (route.routeMatch != RouteMatch.NON_HTTP) {

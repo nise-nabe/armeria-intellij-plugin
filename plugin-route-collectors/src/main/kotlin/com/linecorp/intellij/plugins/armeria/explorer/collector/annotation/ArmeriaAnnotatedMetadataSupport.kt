@@ -6,6 +6,7 @@ import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiParameter
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaPathVariableSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.message
@@ -20,6 +21,7 @@ internal object ArmeriaAnnotatedMetadataSupport {
     private const val JSON_MEDIA_TYPE = "application/json"
     private const val PLAIN_TEXT_MEDIA_TYPE = "text/plain"
     private const val BINARY_MEDIA_TYPE = "application/binary"
+    private const val EVENT_STREAM_MEDIA_TYPE = "text/event-stream"
 
     private val CONSUMES_HELPERS =
         mapOf(
@@ -30,6 +32,7 @@ internal object ArmeriaAnnotatedMetadataSupport {
             ArmeriaRouteSupport.PRODUCES_JSON_ANNOTATION to JSON_MEDIA_TYPE,
             ArmeriaRouteSupport.PRODUCES_TEXT_ANNOTATION to PLAIN_TEXT_MEDIA_TYPE,
             ArmeriaRouteSupport.PRODUCES_BINARY_ANNOTATION to BINARY_MEDIA_TYPE,
+            ArmeriaRouteSupport.PRODUCES_EVENT_STREAM_ANNOTATION to EVENT_STREAM_MEDIA_TYPE,
         )
     private val BINDING_NAME_ANNOTATIONS =
         listOf(
@@ -38,6 +41,13 @@ internal object ArmeriaAnnotatedMetadataSupport {
             ArmeriaRouteSupport.ATTRIBUTE_ANNOTATION,
             ArmeriaRouteSupport.COOKIE_ANNOTATION,
         )
+
+    fun protocol(method: PsiMethod): RouteProtocol =
+        if (producesEventStream(method)) {
+            RouteProtocol.SSE
+        } else {
+            RouteProtocol.HTTP
+        }
 
     fun collectContentHints(
         method: PsiMethod,
@@ -109,6 +119,12 @@ internal object ArmeriaAnnotatedMetadataSupport {
             return null
         }
         return message(messageKey, types.joinToString(", "))
+    }
+
+    private fun producesEventStream(method: PsiMethod): Boolean {
+        val annotations = method.annotations.toList() + method.containingClass?.annotations.orEmpty()
+        return mediaTypesOn(annotations.toTypedArray(), PRODUCES_ANNOTATION, PRODUCES_HELPERS)
+            .any { it.equals(EVENT_STREAM_MEDIA_TYPE, ignoreCase = true) }
     }
 
     private fun mediaTypesOn(

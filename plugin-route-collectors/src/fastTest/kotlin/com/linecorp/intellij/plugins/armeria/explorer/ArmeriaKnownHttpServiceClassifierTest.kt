@@ -48,6 +48,28 @@ class ArmeriaKnownHttpServiceClassifierTest {
             ArmeriaKnownHttpServiceClassifier.classify("new FileService()"),
         )
         assertEquals(
+            KnownHttpServiceKind.WEBSOCKET,
+            ArmeriaKnownHttpServiceClassifier.classify(
+                "com.linecorp.armeria.server.websocket.WebSocketService",
+            ),
+        )
+        assertEquals(
+            KnownHttpServiceKind.WEBSOCKET,
+            ArmeriaKnownHttpServiceClassifier.classify("WebSocketServiceBuilder"),
+        )
+        assertEquals(
+            KnownHttpServiceKind.HEALTH_CHECK,
+            ArmeriaKnownHttpServiceClassifier.classify(
+                "com.linecorp.armeria.server.healthcheck.HealthCheckService",
+            ),
+        )
+        assertEquals(
+            KnownHttpServiceKind.SSE,
+            ArmeriaKnownHttpServiceClassifier.classify(
+                "com.linecorp.armeria.server.streaming.ServerSentEvents",
+            ),
+        )
+        assertEquals(
             KnownHttpServiceKind.DOC_SERVICE,
             ArmeriaKnownHttpServiceClassifier.classify("new DocService()"),
         )
@@ -79,6 +101,22 @@ class ArmeriaKnownHttpServiceClassifierTest {
             KnownHttpServiceKind.HTTP,
             ArmeriaKnownHttpServiceClassifier.classify("new example.FileService()"),
         )
+        assertEquals(
+            KnownHttpServiceKind.HTTP,
+            ArmeriaKnownHttpServiceClassifier.classify("example.WebSocketService"),
+        )
+        assertEquals(
+            KnownHttpServiceKind.HTTP,
+            ArmeriaKnownHttpServiceClassifier.classify("example.WebSocketService.of()"),
+        )
+        assertEquals(
+            KnownHttpServiceKind.HTTP,
+            ArmeriaKnownHttpServiceClassifier.classify("example.HealthCheckService"),
+        )
+        assertEquals(
+            KnownHttpServiceKind.HTTP,
+            ArmeriaKnownHttpServiceClassifier.classify("example.ServerSentEvents"),
+        )
     }
 
     @Test
@@ -96,6 +134,18 @@ class ArmeriaKnownHttpServiceClassifierTest {
             ArmeriaKnownHttpServiceClassifier.classify(
                 "com.linecorp.armeria.server.docs.DocService.builder().build()",
             ),
+        )
+        assertEquals(
+            KnownHttpServiceKind.WEBSOCKET,
+            ArmeriaKnownHttpServiceClassifier.classify("WebSocketService.of(handler)"),
+        )
+        assertEquals(
+            KnownHttpServiceKind.SSE,
+            ArmeriaKnownHttpServiceClassifier.classify("ServerSentEvents.fromPublisher(publisher)"),
+        )
+        assertEquals(
+            KnownHttpServiceKind.HEALTH_CHECK,
+            ArmeriaKnownHttpServiceClassifier.classify("HealthCheckService.builder().build()"),
         )
     }
 
@@ -150,6 +200,41 @@ class ArmeriaKnownHttpServiceClassifierTest {
                 CoreServiceRegistrationMethod.ANNOTATED_SERVICE,
             ),
         )
+    }
+
+    @Test
+    fun protocolAndRouteMatch_websocketSseAndHealthCheck() {
+        val websocket = KnownHttpServiceKind.WEBSOCKET
+        assertEquals(RouteProtocol.WEBSOCKET, ArmeriaKnownHttpServiceClassifier.protocol(websocket))
+        assertEquals(
+            RouteMatch.NON_HTTP,
+            ArmeriaKnownHttpServiceClassifier.routeMatch(websocket, CoreServiceRegistrationMethod.SERVICE),
+        )
+        assertEquals("", ArmeriaKnownHttpServiceClassifier.defaultHttpMethod(websocket))
+
+        val sse = KnownHttpServiceKind.SSE
+        assertEquals(RouteProtocol.SSE, ArmeriaKnownHttpServiceClassifier.protocol(sse))
+        assertEquals(
+            RouteMatch.SERVICE,
+            ArmeriaKnownHttpServiceClassifier.routeMatch(sse, CoreServiceRegistrationMethod.SERVICE),
+        )
+        assertEquals("GET", ArmeriaKnownHttpServiceClassifier.defaultHttpMethod(sse))
+
+        val health = KnownHttpServiceKind.HEALTH_CHECK
+        assertEquals(RouteProtocol.HEALTH_CHECK, ArmeriaKnownHttpServiceClassifier.protocol(health))
+        assertEquals(
+            RouteMatch.HEALTH_CHECK,
+            ArmeriaKnownHttpServiceClassifier.routeMatch(health, CoreServiceRegistrationMethod.SERVICE),
+        )
+        assertEquals(
+            RouteMatch.ANNOTATED_SERVICE,
+            ArmeriaKnownHttpServiceClassifier.routeMatch(
+                health,
+                CoreServiceRegistrationMethod.ANNOTATED_SERVICE,
+            ),
+        )
+        assertEquals("GET", ArmeriaKnownHttpServiceClassifier.defaultHttpMethod(health))
+        assertFalse(ArmeriaKnownHttpServiceClassifier.excludeFromDuplicateIndex(health))
     }
 
     @Test

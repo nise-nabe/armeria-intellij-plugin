@@ -438,6 +438,84 @@ class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
         assertEquals("com.linecorp.armeria.server.file.FileService", fileRoute.target)
     }
 
+    fun testCollectWebSocketServiceViaServiceRegistration() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.websocket.WebSocketService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/chat", WebSocketService.of(null))
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val websocketRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/chat" }
+        assertEquals(RouteMatch.NON_HTTP, websocketRoute.routeMatch)
+        assertEquals(RouteProtocol.WEBSOCKET.presentableName(), websocketRoute.protocol)
+        assertEquals("com.linecorp.armeria.server.websocket.WebSocketService", websocketRoute.target)
+        assertEquals("", websocketRoute.httpMethod)
+    }
+
+    fun testCollectHealthCheckServiceViaServiceRegistration() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.healthcheck.HealthCheckService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/health", HealthCheckService.of())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val healthRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/health" }
+        assertEquals(RouteMatch.HEALTH_CHECK, healthRoute.routeMatch)
+        assertEquals(RouteProtocol.HEALTH_CHECK.presentableName(), healthRoute.protocol)
+        assertEquals("GET", healthRoute.httpMethod)
+        assertEquals("com.linecorp.armeria.server.healthcheck.HealthCheckService", healthRoute.target)
+    }
+
+    fun testCollectServerSentEventsViaServiceRegistration() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.streaming.ServerSentEvents;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/events", ServerSentEvents.fromPublisher(null))
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val sseRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/events" }
+        assertEquals(RouteMatch.SERVICE, sseRoute.routeMatch)
+        assertEquals(RouteProtocol.SSE.presentableName(), sseRoute.protocol)
+        assertEquals("GET", sseRoute.httpMethod)
+        assertEquals("com.linecorp.armeria.server.streaming.ServerSentEvents", sseRoute.target)
+    }
+
     fun testCollectDocServiceRegistrationFromHttpServiceVariable() {
         myFixture.configureByText(
             "Main.java",
@@ -517,6 +595,39 @@ class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
         val fileRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/files" }
         assertEquals(RouteMatch.SERVICE, fileRoute.routeMatch)
         assertEquals("example.FileService", fileRoute.target)
+        assertEquals(RouteProtocol.HTTP.presentableName(), fileRoute.protocol)
+    }
+
+    fun testUserWebSocketServiceIsNotArmeriaWebSocketService() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/chat", new WebSocketService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class WebSocketService {
+            }
+            """.trimIndent(),
+        )
+
+        val websocketRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/chat" }
+        assertEquals(RouteMatch.SERVICE, websocketRoute.routeMatch)
+        assertEquals(RouteProtocol.HTTP.presentableName(), websocketRoute.protocol)
+        assertEquals("example.WebSocketService", websocketRoute.target)
     }
 
     fun testUserFileServiceVariableIsNotArmeriaFileService() {

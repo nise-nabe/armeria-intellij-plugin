@@ -162,6 +162,7 @@ object ArmeriaRouteCollectorServiceRegistration {
         val kind = ArmeriaKnownHttpServiceClassifier.classify(serviceTypeHint)
         val protocol = ArmeriaKnownHttpServiceClassifier.protocol(kind)
         val routeMatch = ArmeriaKnownHttpServiceClassifier.routeMatch(kind, registrationMethod)
+        val httpMethod = ArmeriaKnownHttpServiceClassifier.defaultHttpMethod(kind)
         val annotatedServiceHasPathPrefix =
             registrationMethod == CoreServiceRegistrationMethod.ANNOTATED_SERVICE && argumentCount > 1
         val normalizedPath = ArmeriaRouteSupport.normalizePath(path)
@@ -177,7 +178,7 @@ object ArmeriaRouteCollectorServiceRegistration {
             ArmeriaRoute.create(
                 element = element,
                 protocol = protocol.presentableName(),
-                httpMethod = "",
+                httpMethod = httpMethod,
                 path = normalizedPath,
                 target = target,
                 routeMatch = routeMatch,

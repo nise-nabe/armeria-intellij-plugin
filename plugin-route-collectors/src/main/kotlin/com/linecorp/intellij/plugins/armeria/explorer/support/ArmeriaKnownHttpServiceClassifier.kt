@@ -11,6 +11,9 @@ enum class KnownHttpServiceKind {
     THRIFT,
     METRICS,
     FILE,
+    WEBSOCKET,
+    SSE,
+    HEALTH_CHECK,
     HTTP,
 }
 
@@ -34,6 +37,9 @@ object ArmeriaKnownHttpServiceClassifier {
             "THttpService" to KnownHttpServiceKind.THRIFT,
             "PrometheusExpositionService" to KnownHttpServiceKind.METRICS,
             "FileService" to KnownHttpServiceKind.FILE,
+            "WebSocketService" to KnownHttpServiceKind.WEBSOCKET,
+            "ServerSentEvents" to KnownHttpServiceKind.SSE,
+            "HealthCheckService" to KnownHttpServiceKind.HEALTH_CHECK,
         )
 
     fun classify(typeName: String): KnownHttpServiceKind {
@@ -92,6 +98,9 @@ object ArmeriaKnownHttpServiceClassifier {
             KnownHttpServiceKind.GRPC -> RouteProtocol.GRPC
             KnownHttpServiceKind.GRAPHQL -> RouteProtocol.GRAPHQL
             KnownHttpServiceKind.THRIFT -> RouteProtocol.THRIFT
+            KnownHttpServiceKind.WEBSOCKET -> RouteProtocol.WEBSOCKET
+            KnownHttpServiceKind.SSE -> RouteProtocol.SSE
+            KnownHttpServiceKind.HEALTH_CHECK -> RouteProtocol.HEALTH_CHECK
             KnownHttpServiceKind.METRICS,
             KnownHttpServiceKind.FILE,
             KnownHttpServiceKind.HTTP,
@@ -110,12 +119,23 @@ object ArmeriaKnownHttpServiceClassifier {
         ) {
             return RouteMatch.FILE_SERVICE
         }
+        if (kind == KnownHttpServiceKind.HEALTH_CHECK &&
+            registrationMethod != CoreServiceRegistrationMethod.ANNOTATED_SERVICE
+        ) {
+            return RouteMatch.HEALTH_CHECK
+        }
         return when (registrationMethod) {
             CoreServiceRegistrationMethod.SERVICE -> RouteMatch.SERVICE
             CoreServiceRegistrationMethod.ANNOTATED_SERVICE -> RouteMatch.ANNOTATED_SERVICE
             CoreServiceRegistrationMethod.SERVICE_UNDER -> RouteMatch.SERVICE_UNDER
         }
     }
+
+    fun defaultHttpMethod(kind: KnownHttpServiceKind): String =
+        when (kind) {
+            KnownHttpServiceKind.HEALTH_CHECK, KnownHttpServiceKind.SSE -> "GET"
+            else -> ""
+        }
 
     fun isDocService(kind: KnownHttpServiceKind): Boolean = kind == KnownHttpServiceKind.DOC_SERVICE
 
@@ -183,5 +203,6 @@ object ArmeriaKnownHttpServiceClassifier {
         kind == KnownHttpServiceKind.DOC_SERVICE ||
             kind == KnownHttpServiceKind.GRPC ||
             kind == KnownHttpServiceKind.GRAPHQL ||
-            kind == KnownHttpServiceKind.THRIFT
+            kind == KnownHttpServiceKind.THRIFT ||
+            kind == KnownHttpServiceKind.WEBSOCKET
 }

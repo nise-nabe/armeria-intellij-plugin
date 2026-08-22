@@ -86,6 +86,20 @@ class ArmeriaHttpRequestGeneratorTest {
     }
 
     @Test
+    fun supports_rejectsWebSocketRoutes() {
+        assertFalse(
+            ArmeriaHttpRequestGenerator.supports(
+                route(protocol = "WebSocket", path = "/chat", routeMatch = RouteMatch.NON_HTTP),
+            ),
+        )
+        assertFalse(
+            ArmeriaHttpRequestGenerator.supports(
+                route(protocol = "WebSocket", path = "/chat", routeMatch = RouteMatch.SERVICE),
+            ),
+        )
+    }
+
+    @Test
     fun httpMethod_defaultsHealthCheckAndFluentRoutesToGet() {
         assertEquals("GET", ArmeriaHttpRequestGenerator.httpMethod(route(routeMatch = RouteMatch.HEALTH_CHECK)))
         assertEquals("GET", ArmeriaHttpRequestGenerator.httpMethod(route(httpMethod = "", routeMatch = RouteMatch.ROUTE_FLUENT)))

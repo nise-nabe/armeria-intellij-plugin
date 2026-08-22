@@ -110,7 +110,7 @@ object ArmeriaExtendedRegistrationCollector {
         routes +=
             ArmeriaRoute.create(
                 element = expression,
-                protocol = RouteProtocol.HTTP.presentableName(),
+                protocol = RouteProtocol.HEALTH_CHECK.presentableName(),
                 httpMethod = "GET",
                 path = path,
                 target = message("route.explorer.target.healthCheck"),

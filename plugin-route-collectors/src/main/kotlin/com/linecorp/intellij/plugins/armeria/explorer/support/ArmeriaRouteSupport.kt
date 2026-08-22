@@ -61,6 +61,7 @@ object ArmeriaRouteSupport {
     const val PRODUCES_JSON_ANNOTATION = ArmeriaRouteAnnotationSupport.PRODUCES_JSON_ANNOTATION
     const val PRODUCES_TEXT_ANNOTATION = ArmeriaRouteAnnotationSupport.PRODUCES_TEXT_ANNOTATION
     const val PRODUCES_BINARY_ANNOTATION = ArmeriaRouteAnnotationSupport.PRODUCES_BINARY_ANNOTATION
+    const val PRODUCES_EVENT_STREAM_ANNOTATION = ArmeriaRouteAnnotationSupport.PRODUCES_EVENT_STREAM_ANNOTATION
     const val DESCRIPTION_ANNOTATION = ArmeriaRouteAnnotationSupport.DESCRIPTION_ANNOTATION
     const val DEFAULT_ANNOTATION = ArmeriaRouteAnnotationSupport.DEFAULT_ANNOTATION
     const val ATTRIBUTE_ANNOTATION = ArmeriaRouteAnnotationSupport.ATTRIBUTE_ANNOTATION

@@ -2,9 +2,11 @@ package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 import com.linecorp.intellij.plugins.armeria.test.assertRoute
 import com.linecorp.intellij.plugins.armeria.test.singleRoute
+import kotlin.test.assertEquals
 
 class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
@@ -50,7 +52,13 @@ class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBa
 
     fun testCollectKotlinHealthCheckRegistration() {
         configureFixture("extendedRegistration/kotlin/basic/healthCheck/Main.kt")
-        collectRoutes().also { it.singleRoute() }.assertRoute(RouteMatch.HEALTH_CHECK, path = "/internal/healthcheck")
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.HEALTH_CHECK, path = "/internal/healthcheck")
+            .also { route ->
+                assertEquals(RouteProtocol.HEALTH_CHECK.presentableName(), route.protocol)
+                assertEquals("GET", route.httpMethod)
+            }
     }
 
     fun testCollectKotlinFluentRoutePathPrefix() {
