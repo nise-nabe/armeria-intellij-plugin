@@ -86,6 +86,35 @@ class ArmeriaHttpRequestGeneratorTest {
     }
 
     @Test
+    fun supports_rejectsWebSocketRoutes() {
+        assertFalse(
+            ArmeriaHttpRequestGenerator.supports(
+                route(protocol = "WebSocket", path = "/chat", routeMatch = RouteMatch.NON_HTTP),
+            ),
+        )
+        assertFalse(
+            ArmeriaHttpRequestGenerator.supports(
+                route(protocol = "WebSocket", path = "/chat", routeMatch = RouteMatch.SERVICE),
+            ),
+        )
+    }
+
+    @Test
+    fun requestText_sseServiceUsesEventStreamAccept() {
+        val route =
+            route(
+                protocol = "SSE",
+                httpMethod = "GET",
+                path = "/events",
+                routeMatch = RouteMatch.SERVICE,
+                contentHints = listOf(message("route.explorer.hint.produces", "text/event-stream")),
+            )
+
+        assertTrue(ArmeriaHttpRequestGenerator.supports(route))
+        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("Accept: text/event-stream"))
+    }
+
+    @Test
     fun httpMethod_defaultsHealthCheckAndFluentRoutesToGet() {
         assertEquals("GET", ArmeriaHttpRequestGenerator.httpMethod(route(routeMatch = RouteMatch.HEALTH_CHECK)))
         assertEquals("GET", ArmeriaHttpRequestGenerator.httpMethod(route(httpMethod = "", routeMatch = RouteMatch.ROUTE_FLUENT)))

@@ -6,6 +6,7 @@ import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringConfigRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaYamlSpringConfigReader
 import com.linecorp.intellij.plugins.armeria.explorer.spring.SpringArmeriaPortBinding
@@ -45,7 +46,8 @@ class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixture
             routes.any {
                 it.path == "/internal/healthcheck" &&
                     it.routeMatch == RouteMatch.CONFIG &&
-                    it.httpMethod == "GET"
+                    it.httpMethod == "GET" &&
+                    it.protocol == RouteProtocol.HEALTH_CHECK.presentableName()
             },
         )
         assertTrue(
@@ -368,6 +370,7 @@ class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixture
 
         val health = routes.single { it.path == "/internal/healthcheck" }
         assertEquals(RouteMatch.CONFIG, health.routeMatch)
+        assertEquals(RouteProtocol.HEALTH_CHECK.presentableName(), health.protocol)
         // CONFIG routes with a non-blank httpMethod support HTTP request generation.
         assertTrue(health.httpMethod.isNotBlank())
         assertEquals("GET", health.httpMethod)

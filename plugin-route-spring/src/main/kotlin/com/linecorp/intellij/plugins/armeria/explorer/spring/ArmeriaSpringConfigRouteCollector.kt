@@ -84,7 +84,7 @@ object ArmeriaSpringConfigRouteCollector {
                 path = { it.resolvedHealthPath() },
                 pathElement = { it.healthPathElement },
                 messageKey = "route.explorer.spring.healthCheck",
-                protocol = RouteProtocol.HTTP.presentableName(),
+                protocol = RouteProtocol.HEALTH_CHECK.presentableName(),
                 httpMethod = "GET",
                 isDocService = false,
                 routeMatch = RouteMatch.CONFIG,

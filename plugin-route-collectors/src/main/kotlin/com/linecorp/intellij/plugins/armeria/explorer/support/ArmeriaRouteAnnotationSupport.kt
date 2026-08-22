@@ -35,6 +35,7 @@ internal object ArmeriaRouteAnnotationSupport {
     const val PRODUCES_JSON_ANNOTATION = "com.linecorp.armeria.server.annotation.ProducesJson"
     const val PRODUCES_TEXT_ANNOTATION = "com.linecorp.armeria.server.annotation.ProducesText"
     const val PRODUCES_BINARY_ANNOTATION = "com.linecorp.armeria.server.annotation.ProducesBinary"
+    const val PRODUCES_EVENT_STREAM_ANNOTATION = "com.linecorp.armeria.server.annotation.ProducesEventStream"
     const val DESCRIPTION_ANNOTATION = "com.linecorp.armeria.server.annotation.Description"
     const val DEFAULT_ANNOTATION = "com.linecorp.armeria.server.annotation.Default"
     const val ATTRIBUTE_ANNOTATION = "com.linecorp.armeria.server.annotation.Attribute"

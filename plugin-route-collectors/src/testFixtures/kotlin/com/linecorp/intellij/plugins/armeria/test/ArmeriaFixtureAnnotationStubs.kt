@@ -188,6 +188,13 @@ fun JavaCodeInsightTestFixture.registerContentAnnotationStubs() {
         """
         package com.linecorp.armeria.server.annotation;
 
+        public @interface ProducesEventStream {}
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.annotation;
+
         public @interface RequestConverter {
             Class<?>[] value();
         }

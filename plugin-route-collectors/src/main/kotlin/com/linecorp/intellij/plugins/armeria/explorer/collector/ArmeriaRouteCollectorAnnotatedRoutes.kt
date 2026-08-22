@@ -7,7 +7,6 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.annotation.Armer
 import com.linecorp.intellij.plugins.armeria.explorer.collector.annotation.ArmeriaTimeoutSupport
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
-import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 
 object ArmeriaRouteCollectorAnnotatedRoutes {
@@ -61,7 +60,7 @@ object ArmeriaRouteCollectorAnnotatedRoutes {
             routes +=
                 ArmeriaRoute.create(
                     element = method,
-                    protocol = RouteProtocol.HTTP.presentableName(),
+                    protocol = ArmeriaAnnotatedMetadataSupport.protocol(method).presentableName(),
                     httpMethod = annotation.second,
                     path = combinedPath,
                     target = target,

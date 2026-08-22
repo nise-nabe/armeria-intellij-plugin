@@ -2,6 +2,7 @@ package com.linecorp.intellij.plugins.armeria.client
 
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaClientFixtureTestBase
 import com.linecorp.intellij.plugins.armeria.test.registerArmeriaAnnotationStubs
 import kotlin.test.assertEquals
@@ -72,6 +73,36 @@ class ArmeriaClientRouteLinkSupportTest : ArmeriaClientFixtureTestBase() {
                 uri = "https://example.com/hello",
                 routeProtocol = "HTTP",
                 routePath = "/hello",
+            ),
+        )
+    }
+
+    fun testHttpClientMatchesSseHealthCheckAndWebSocketRoutes() {
+        assertTrue(
+            ArmeriaClientRouteLinkSupport.matches(
+                clientType = "HTTP",
+                uri = "https://example.com/events",
+                routeProtocol = RouteProtocol.SSE.presentableName(),
+                routePath = "/events",
+                routeMatch = RouteMatch.SERVICE,
+            ),
+        )
+        assertTrue(
+            ArmeriaClientRouteLinkSupport.matches(
+                clientType = "HTTP",
+                uri = "https://example.com/internal/healthcheck",
+                routeProtocol = RouteProtocol.HEALTH_CHECK.presentableName(),
+                routePath = "/internal/healthcheck",
+                routeMatch = RouteMatch.HEALTH_CHECK,
+            ),
+        )
+        assertTrue(
+            ArmeriaClientRouteLinkSupport.matches(
+                clientType = "HTTP",
+                uri = "https://example.com/chat",
+                routeProtocol = RouteProtocol.WEBSOCKET.presentableName(),
+                routePath = "/chat",
+                routeMatch = RouteMatch.SERVICE,
             ),
         )
     }

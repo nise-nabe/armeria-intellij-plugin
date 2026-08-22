@@ -161,6 +161,11 @@ class ArmeriaEndpointsSupportTest {
     fun isVisibleServerRoute_allowsHttpServerMatches() {
         assertTrue(ArmeriaEndpointsSupport.isVisibleServerRoute(route(routeMatch = RouteMatch.ANNOTATED_HTTP)))
         assertTrue(ArmeriaEndpointsSupport.isVisibleServerRoute(route(httpMethod = "", routeMatch = RouteMatch.SERVICE)))
+        assertTrue(
+            ArmeriaEndpointsSupport.isVisibleServerRoute(
+                route(protocol = "WebSocket", httpMethod = "", routeMatch = RouteMatch.SERVICE),
+            ),
+        )
         assertTrue(ArmeriaEndpointsSupport.isVisibleServerRoute(route(httpMethod = "", routeMatch = RouteMatch.SERVICE_UNDER)))
         assertTrue(ArmeriaEndpointsSupport.isVisibleServerRoute(route(httpMethod = "", routeMatch = RouteMatch.HEALTH_CHECK)))
         assertTrue(ArmeriaEndpointsSupport.isVisibleServerRoute(route(httpMethod = "GET", routeMatch = RouteMatch.ROUTE_FLUENT)))

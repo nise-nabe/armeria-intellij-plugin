@@ -31,7 +31,6 @@ object ArmeriaDecoratorSupport {
             "EncodingService" to DecoratorInfo("route.explorer.decorator.encoding"),
             "DecodingService" to DecoratorInfo("route.explorer.decorator.decoding"),
             "CacheControlDecorator" to DecoratorInfo("route.explorer.decorator.cacheControl"),
-            "WebSocketService" to DecoratorInfo("route.explorer.decorator.webSocket"),
             "BraveService" to DecoratorInfo("route.explorer.decorator.brave", "route.explorer.observability.tracing"),
             "ThrottlingService" to DecoratorInfo("route.explorer.decorator.throttling", "route.explorer.observability.throttling"),
             "PrometheusMetricCollectingService" to

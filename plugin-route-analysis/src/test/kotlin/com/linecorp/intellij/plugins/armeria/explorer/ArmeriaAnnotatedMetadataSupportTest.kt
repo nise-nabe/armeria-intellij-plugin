@@ -2,6 +2,7 @@ package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteDetailFormatter
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
@@ -266,6 +267,100 @@ class ArmeriaAnnotatedMetadataSupportTest : ArmeriaFixtureTestBase() {
         val route = routes.single()
         assertEquals(
             listOf(message("route.explorer.hint.produces", "application/binary")),
+            route.contentHints,
+        )
+    }
+
+    fun testCollectProducesEventStreamAsSseProtocol() {
+        myFixture.configureByText(
+            "EventsService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.*;
+
+            public class EventsService {
+                @Get("/events")
+                @ProducesEventStream
+                public String events() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val route = routes.single()
+        assertEquals(RouteProtocol.SSE.presentableName(), route.protocol)
+        assertEquals(
+            listOf(message("route.explorer.hint.produces", "text/event-stream")),
+            route.contentHints,
+        )
+    }
+
+    fun testCollectProducesTextEventStreamAnnotationValueAsSse() {
+        myFixture.configureByText(
+            "EventsService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.*;
+
+            @ProducesEventStream
+            public class EventsService {
+                @Get("/class-events")
+                public String classEvents() {
+                    return "ok";
+                }
+
+                @Get("/produces-events")
+                @Produces("text/event-stream")
+                public String producesEvents() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        assertEquals(2, routes.size)
+        assertTrue(routes.all { it.protocol == RouteProtocol.SSE.presentableName() })
+        assertTrue(
+            routes.any {
+                it.path == "/class-events" &&
+                    it.contentHints == listOf(message("route.explorer.hint.produces", "text/event-stream"))
+            },
+        )
+        assertTrue(
+            routes.any {
+                it.path == "/produces-events" &&
+                    it.contentHints == listOf(message("route.explorer.hint.produces", "text/event-stream"))
+            },
+        )
+    }
+
+    fun testCollectProducesEventStreamFromKotlin() {
+        myFixture.configureByText(
+            "EventsService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+            import com.linecorp.armeria.server.annotation.ProducesEventStream
+
+            class EventsService {
+                @Get("/events")
+                @ProducesEventStream
+                fun events(): String = "ok"
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val route = routes.single()
+        assertEquals(RouteProtocol.SSE.presentableName(), route.protocol)
+        assertEquals(
+            listOf(message("route.explorer.hint.produces", "text/event-stream")),
             route.contentHints,
         )
     }
