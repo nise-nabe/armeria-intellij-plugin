@@ -19,6 +19,7 @@ import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.util.Key
 import com.linecorp.intellij.plugins.armeria.message
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 class ArmeriaRunProfileState(
     environment: ExecutionEnvironment,
@@ -54,53 +55,62 @@ class ArmeriaRunProfileState(
         runner: ProgramRunner<*>,
     ): ExecutionResult {
         val result = super.execute(executor, runner)
-        val urls = resolveServiceUrls()
-        if (urls.listen != null || !urls.isEmpty) {
-            val openedDocService = AtomicBoolean(false)
-            result.processHandler.addProcessListener(
-                object : ProcessListener {
-                    override fun startNotified(event: ProcessEvent) {
-                        printServiceHints(result, urls)
-                        ApplicationManager.getApplication().invokeLater {
-                            if (configuration.project.isDisposed) {
-                                return@invokeLater
-                            }
-                            urls.listen?.let { ArmeriaHttpClientEnvironmentWriter.write(configuration.project, it) }
-                        }
+        val openedDocService = AtomicBoolean(false)
+        val serverStarted = AtomicBoolean(false)
+        val urlsRef = AtomicReference<ArmeriaRunServiceUrls?>(null)
+        result.processHandler.addProcessListener(
+            object : ProcessListener {
+                override fun onTextAvailable(
+                    event: ProcessEvent,
+                    outputType: Key<*>,
+                ) {
+                    if (!looksLikeServerStarted(event.text)) {
+                        return
                     }
-
-                    override fun onTextAvailable(
-                        event: ProcessEvent,
-                        outputType: Key<*>,
-                    ) {
-                        if (!configuration.isOpenDocServiceAfterLaunch()) {
-                            return
-                        }
-                        val url = urls.docService ?: return
-                        if (!looksLikeServerStarted(event.text)) {
-                            return
-                        }
-                        if (!openedDocService.compareAndSet(false, true)) {
-                            return
-                        }
-                        ApplicationManager.getApplication().invokeLater {
-                            if (!configuration.project.isDisposed) {
-                                BrowserUtil.browse(url)
-                            }
-                        }
+                    if (!serverStarted.compareAndSet(false, true)) {
+                        return
                     }
-                },
-            )
+                    openDocServiceIfReady(
+                        configuration,
+                        urlsRef.get(),
+                        openedDocService,
+                    )
+                }
+            },
+        )
+        ArmeriaRunLaunchInfo.resolveLater(
+            project = configuration.project,
+            module = configuration.getConfigurationModule().module,
+            mainClassFqn = configuration.getMainClass(),
+        ) { urls ->
+            urlsRef.set(urls)
+            printServiceHints(result, urls)
+            urls.listen?.let { ArmeriaHttpClientEnvironmentWriter.write(configuration.project, it) }
+            if (serverStarted.get()) {
+                openDocServiceIfReady(configuration, urls, openedDocService)
+            }
         }
         return result
     }
 
-    private fun resolveServiceUrls(): ArmeriaRunServiceUrls =
-        ArmeriaRunLaunchInfo.resolve(
-            project = configuration.project,
-            module = configuration.getConfigurationModule().module,
-            mainClassFqn = configuration.getMainClass(),
-        )
+    private fun openDocServiceIfReady(
+        configuration: ArmeriaRunConfiguration,
+        urls: ArmeriaRunServiceUrls?,
+        openedDocService: AtomicBoolean,
+    ) {
+        if (!configuration.isOpenDocServiceAfterLaunch()) {
+            return
+        }
+        val url = urls?.docService ?: return
+        if (!openedDocService.compareAndSet(false, true)) {
+            return
+        }
+        ApplicationManager.getApplication().invokeLater {
+            if (!configuration.project.isDisposed) {
+                BrowserUtil.browse(url)
+            }
+        }
+    }
 
     private fun printServiceHints(
         result: ExecutionResult,
