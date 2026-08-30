@@ -16,6 +16,8 @@ object ArmeriaSpringBootConfigSupport {
             "application.properties",
         )
     private val INDEXED_KEY_PATH = Regex("""\[\d+]""")
+    private val CAMEL_BOUNDARY = Regex("([a-z0-9])([A-Z])")
+    private val INLINE_COMMENT = Regex("""\s+[#!].*$""")
 
     fun isApplicationConfigFileName(fileName: String): Boolean =
         fileName in APPLICATION_CONFIG_NAMES ||
@@ -25,6 +27,20 @@ object ArmeriaSpringBootConfigSupport {
             )
 
     fun normalizeIndexedKeyPath(keyPath: String): String = keyPath.replace(INDEXED_KEY_PATH, "")
+
+    /**
+     * Spring Boot relaxed binding: `docsPath` / `internalServices` → `docs-path` / `internal-services`.
+     * List indexes are stripped first so `armeria.ports[0].port` → `armeria.ports.port`.
+     */
+    fun canonicalConfigKey(keyPath: String): String =
+        normalizeIndexedKeyPath(keyPath)
+            .split('.')
+            .joinToString(".") { segment ->
+                segment.replace(CAMEL_BOUNDARY, "$1-$2").lowercase()
+            }
+
+    /** Drop unquoted trailing `#` / `!` comments left by the lightweight YAML/properties flatteners. */
+    fun stripInlineComment(raw: String): String = raw.trim().replace(INLINE_COMMENT, "").trimEnd()
 
     fun summaryText(files: List<ArmeriaSpringBootConfigFile>): String {
         if (files.isEmpty()) {

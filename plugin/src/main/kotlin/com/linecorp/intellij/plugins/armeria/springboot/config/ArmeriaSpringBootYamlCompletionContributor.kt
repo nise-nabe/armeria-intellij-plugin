@@ -10,7 +10,6 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
 import org.jetbrains.yaml.psi.YAMLKeyValue
 import org.jetbrains.yaml.psi.YAMLMapping
-import org.jetbrains.yaml.psi.YAMLSequence
 import org.jetbrains.yaml.psi.YAMLSequenceItem
 
 class ArmeriaSpringBootYamlCompletionContributor : CompletionContributor() {
@@ -85,77 +84,41 @@ class ArmeriaSpringBootYamlCompletionContributor : CompletionContributor() {
         when (val parent = position.parent) {
             is YAMLKeyValue -> {
                 val isKey = parent.key?.textRange?.contains(offset) == true
-                return YamlCompletionTarget(yamlKeyPath(parent), isValue = !isKey)
+                return YamlCompletionTarget(ArmeriaSpringBootYamlPsiSupport.yamlKeyPath(parent), isValue = !isKey)
             }
             is YAMLSequenceItem -> {
-                return YamlCompletionTarget(yamlSequenceItemPath(parent), isValue = true)
+                return YamlCompletionTarget(
+                    ArmeriaSpringBootYamlPsiSupport.yamlSequenceItemPath(parent),
+                    isValue = true,
+                )
             }
             else -> {
                 val keyValue = PsiTreeUtil.getParentOfType(position, YAMLKeyValue::class.java, false)
                 if (keyValue != null) {
                     val isKey = keyValue.key?.textRange?.contains(offset) == true
-                    return YamlCompletionTarget(yamlKeyPath(keyValue), isValue = !isKey)
+                    return YamlCompletionTarget(
+                        ArmeriaSpringBootYamlPsiSupport.yamlKeyPath(keyValue),
+                        isValue = !isKey,
+                    )
                 }
                 val sequenceItem = PsiTreeUtil.getParentOfType(position, YAMLSequenceItem::class.java, false)
                 if (sequenceItem != null) {
-                    return YamlCompletionTarget(yamlSequenceItemPath(sequenceItem), isValue = true)
+                    return YamlCompletionTarget(
+                        ArmeriaSpringBootYamlPsiSupport.yamlSequenceItemPath(sequenceItem),
+                        isValue = true,
+                    )
                 }
                 val mapping = PsiTreeUtil.getParentOfType(position, YAMLMapping::class.java, false)
                 val owner = mapping?.parent as? YAMLKeyValue
                 if (owner != null) {
-                    return YamlCompletionTarget(yamlKeyPath(owner), isValue = false, stripLeaf = false)
+                    return YamlCompletionTarget(
+                        ArmeriaSpringBootYamlPsiSupport.yamlKeyPath(owner),
+                        isValue = false,
+                        stripLeaf = false,
+                    )
                 }
                 return YamlCompletionTarget("", isValue = false, stripLeaf = false)
             }
         }
-    }
-
-    /**
-     * Full dotted path of [keyValue], including list indexes (e.g. `armeria.ports[0].port`).
-     *
-     * Walks via the immediate PSI parent ([YAMLMapping] / sequence item), not `parent.parent`,
-     * so nested block mappings continue through their owning [YAMLKeyValue].
-     */
-    private fun yamlKeyPath(keyValue: YAMLKeyValue): String {
-        val segments = mutableListOf<String>()
-        var current: YAMLKeyValue? = keyValue
-        while (current != null) {
-            current.keyText.takeIf { it.isNotBlank() }?.let { segments.add(0, it) }
-            when (val container = current.parent) {
-                is YAMLMapping -> {
-                    when (val owner = container.parent) {
-                        is YAMLKeyValue -> {
-                            current = owner
-                        }
-                        is YAMLSequenceItem -> {
-                            val sequence = owner.parent as? YAMLSequence
-                            val index = sequence?.items?.indexOf(owner) ?: -1
-                            val seqKey = sequence?.parent as? YAMLKeyValue
-                            if (index >= 0 && seqKey?.keyText != null) {
-                                segments.add(0, "${seqKey.keyText}[$index]")
-                                current =
-                                    when (val seqParent = seqKey.parent) {
-                                        is YAMLMapping -> seqParent.parent as? YAMLKeyValue
-                                        else -> null
-                                    }
-                            } else {
-                                current = null
-                            }
-                        }
-                        else -> current = null
-                    }
-                }
-                else -> current = null
-            }
-        }
-        return segments.joinToString(".")
-    }
-
-    private fun yamlSequenceItemPath(item: YAMLSequenceItem): String {
-        val sequence = item.parent as? YAMLSequence ?: return ""
-        val index = sequence.items.indexOf(item)
-        val seqKey = sequence.parent as? YAMLKeyValue ?: return ""
-        val base = yamlKeyPath(seqKey)
-        return if (index >= 0) "$base[$index]" else base
     }
 }

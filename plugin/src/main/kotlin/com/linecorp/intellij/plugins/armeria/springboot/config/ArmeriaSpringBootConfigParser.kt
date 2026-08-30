@@ -26,11 +26,45 @@ object ArmeriaSpringBootConfigParser {
             else -> emptyList()
         }
 
+    /**
+     * Armeria-related keys in document order (not sorted). Repeating a key moves it to the
+     * last map position so last-wins follows the last occurrence, including when a kebab or
+     * camel alias is overridden after another alias.
+     */
+    fun flattenRelatedInOrder(
+        fileName: String,
+        text: String,
+    ): Map<String, String> {
+        val flattened =
+            when {
+                fileName.endsWith(".yml") || fileName.endsWith(".yaml") -> flattenYaml(text)
+                fileName.endsWith(".properties") -> flattenProperties(text)
+                else -> emptyMap()
+            }
+        if (flattened.isEmpty()) {
+            return emptyMap()
+        }
+        return flattened.filterKeys(ArmeriaSpringBootConfigKeys::isArmeriaRelatedKey)
+    }
+
     internal fun flattenProperties(text: String): Map<String, String> =
         try {
             val properties = Properties()
             properties.load(StringReader(text))
-            properties.stringPropertyNames().associateWith { key -> properties.getProperty(key).orEmpty() }
+            val loaded = properties.stringPropertyNames()
+            if (loaded.isEmpty()) {
+                emptyMap()
+            } else {
+                val ordered = linkedMapOf<String, String>()
+                for (raw in text.lineSequence()) {
+                    val key = matchLoadedPropertyKey(raw, loaded) ?: continue
+                    putLast(ordered, key, properties.getProperty(key).orEmpty())
+                }
+                for (key in loaded) {
+                    ordered.putIfAbsent(key, properties.getProperty(key).orEmpty())
+                }
+                ordered
+            }
         } catch (_: Exception) {
             emptyMap()
         }
@@ -66,12 +100,12 @@ object ArmeriaSpringBootConfigParser {
                             val key = content.substring(0, ci).trim()
                             val value = content.substring(ci + 1).trim()
                             if (value.isNotEmpty()) {
-                                result["$listPath.$key"] = unquote(value)
+                                putLast(result, "$listPath.$key", unquote(value))
                             } else {
                                 stack.addLast(YamlFrame(indent + 2, "$listPath.$key"))
                             }
                         } else {
-                            result[listPath] = unquote(content)
+                            putLast(result, listPath, unquote(content))
                             stack.removeLast()
                         }
                     }
@@ -86,7 +120,7 @@ object ArmeriaSpringBootConfigParser {
                         if (value.isEmpty()) {
                             stack.addLast(YamlFrame(indent, path))
                         } else {
-                            result[path] = unquote(value)
+                            putLast(result, path, unquote(value))
                         }
                     }
                 }
@@ -95,6 +129,35 @@ object ArmeriaSpringBootConfigParser {
             }
         }
         return result
+    }
+
+    private fun putLast(
+        map: MutableMap<String, String>,
+        key: String,
+        value: String,
+    ) {
+        map.remove(key)
+        map[key] = value
+    }
+
+    private fun matchLoadedPropertyKey(
+        raw: String,
+        keys: Set<String>,
+    ): String? {
+        val line = raw.trim()
+        if (line.isEmpty() || line.startsWith('#') || line.startsWith('!')) {
+            return null
+        }
+        return keys
+            .filter { key ->
+                line.startsWith(key) &&
+                    (
+                        line.length == key.length ||
+                            line[key.length] == '=' ||
+                            line[key.length] == ':' ||
+                            line[key.length].isWhitespace()
+                    )
+            }.maxByOrNull { it.length }
     }
 
     private fun isInlineMappingListItem(content: String): Boolean {
