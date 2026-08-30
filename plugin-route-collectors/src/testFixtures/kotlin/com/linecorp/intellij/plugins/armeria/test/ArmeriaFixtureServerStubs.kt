@@ -88,6 +88,22 @@ fun JavaCodeInsightTestFixture.registerArmeriaServerStubs() {
                 return this;
             }
 
+            public ServerBuilder http(int port) {
+                return this;
+            }
+
+            public ServerBuilder https(int port) {
+                return this;
+            }
+
+            public ServerBuilder port(int port) {
+                return this;
+            }
+
+            public ServerBuilder port(int port, Object... protocols) {
+                return this;
+            }
+
             public com.linecorp.armeria.server.Server build() {
                 return null;
             }

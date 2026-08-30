@@ -17,6 +17,12 @@ object ArmeriaSpringConfigRouteCollector {
     private val YAML_PLUGIN_ID = PluginId.getId("org.jetbrains.plugins.yaml")
 
     private val APPLICATION_FILE_PATTERN = Regex("""^application(-[\w.-]+)?\.(yml|yaml|properties)$""")
+    private val WELL_KNOWN_APPLICATION_FILES =
+        listOf(
+            "application.properties",
+            "application.yml",
+            "application.yaml",
+        )
     private val PROPERTIES_DELIMITER = """[:=]"""
     private val PROPERTIES_LINE_START = """^\s*"""
     private val PROPERTIES_MULTILINE = setOf(RegexOption.MULTILINE)
@@ -122,12 +128,18 @@ object ArmeriaSpringConfigRouteCollector {
     ) {
         // Resolve only filenames that match application*.{yml,yaml,properties} instead of
         // enumerating every yml/yaml/properties file in scope (common in large Spring repos).
-        val configFiles =
+        val configFileNames =
             FilenameIndex
                 .getAllFilenames(project)
                 .asSequence()
                 .filter { isApplicationConfigFile(it) }
+                .toMutableSet()
+        configFileNames += WELL_KNOWN_APPLICATION_FILES
+        val configFiles =
+            configFileNames
+                .asSequence()
                 .flatMap { name -> FilenameIndex.getVirtualFilesByName(name, scope) }
+                .distinctBy { it.path }
                 .sortedWith(compareBy({ it.path }, { it.name }))
         val psiManager = PsiManager.getInstance(project)
         for (virtualFile in configFiles) {

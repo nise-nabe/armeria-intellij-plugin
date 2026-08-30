@@ -41,6 +41,24 @@ class ArmeriaRunConfiguration(
         options.moduleName.setValue(options, module?.name)
     }
 
+    fun isVerboseResponses(): Boolean = options.isVerboseResponses()
+
+    fun setVerboseResponses(value: Boolean) {
+        options.setVerboseResponses(value)
+    }
+
+    fun isReportBlockedEventLoop(): Boolean = options.isReportBlockedEventLoop()
+
+    fun setReportBlockedEventLoop(value: Boolean) {
+        options.setReportBlockedEventLoop(value)
+    }
+
+    fun isOpenDocServiceAfterLaunch(): Boolean = options.isOpenDocServiceAfterLaunch()
+
+    fun setOpenDocServiceAfterLaunch(value: Boolean) {
+        options.setOpenDocServiceAfterLaunch(value)
+    }
+
     override fun checkConfiguration() {
         if (getConfigurationModule().module == null) {
             throw RuntimeConfigurationError(message("armeria.run.configuration.module.not.specified"))
