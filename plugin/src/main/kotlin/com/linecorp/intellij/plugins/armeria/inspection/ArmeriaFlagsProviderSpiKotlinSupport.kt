@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.inspection
 
 import com.intellij.psi.PsiElement
+import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtClassOrObject
 
@@ -9,7 +10,15 @@ internal object ArmeriaFlagsProviderSpiKotlinSupport {
         if (declaration.name == null) {
             return null
         }
-        if (declaration is KtClass && (declaration.isInterface() || declaration.isEnum() || declaration.isAnnotation())) {
+        if (declaration is KtClass &&
+            (
+                declaration.isInterface() ||
+                    declaration.isEnum() ||
+                    declaration.isAnnotation() ||
+                    declaration.hasModifier(KtTokens.ABSTRACT_KEYWORD) ||
+                    declaration.isSealed()
+            )
+        ) {
             return null
         }
         val psiClass = ArmeriaKotlinInspectionCallChains.toPsiClass(declaration)

@@ -8,6 +8,9 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSuppor
 
 internal object ArmeriaServerLimitsSupport {
     fun highlight(call: PsiMethodCallExpression): PsiElement? {
+        if (ArmeriaProductionChecklist.isTestSource(call.containingFile)) {
+            return null
+        }
         if (!isServerBuilder(call)) {
             return null
         }
@@ -19,6 +22,9 @@ internal object ArmeriaServerLimitsSupport {
     }
 
     fun missingLimits(call: PsiMethodCallExpression): List<String> {
+        if (ArmeriaProductionChecklist.isTestSource(call.containingFile)) {
+            return emptyList()
+        }
         if (!isServerBuilder(call)) {
             return emptyList()
         }

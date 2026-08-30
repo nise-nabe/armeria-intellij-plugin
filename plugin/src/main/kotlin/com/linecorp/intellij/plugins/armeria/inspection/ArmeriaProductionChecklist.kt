@@ -1,10 +1,10 @@
 package com.linecorp.intellij.plugins.armeria.inspection
 
 import com.intellij.openapi.fileEditor.impl.LoadTextUtil
-import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.openapi.roots.ProjectRootManager
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -61,12 +61,27 @@ internal object ArmeriaProductionChecklist {
 
     fun isDynamicEndpointGroup(simpleName: String): Boolean = simpleName in DYNAMIC_ENDPOINT_GROUP_SIMPLE_NAMES
 
+    fun isDynamicEndpointGroupTypeName(simpleName: String): Boolean {
+        if (isDynamicEndpointGroup(simpleName)) {
+            return true
+        }
+        return simpleName.endsWith("Builder") &&
+            isDynamicEndpointGroup(simpleName.removeSuffix("Builder"))
+    }
+
     fun isClientFactoryClass(qualifiedName: String?): Boolean =
         qualifiedName == CLIENT_FACTORY_CLASS || qualifiedName?.endsWith(".ClientFactory") == true
 
-    fun isArmeriaClientClass(qualifiedName: String?): Boolean =
-        ArmeriaClientSupport.protocolForClass(qualifiedName) != null ||
-            qualifiedName?.let { ArmeriaClientSupport.protocolForSimpleName(it.substringAfterLast('.')) } != null
+    fun isArmeriaClientClass(qualifiedName: String?): Boolean {
+        if (qualifiedName == null) {
+            return false
+        }
+        if (ArmeriaClientSupport.protocolForClass(qualifiedName) != null) {
+            return true
+        }
+        return !qualifiedName.contains('.') &&
+            ArmeriaClientSupport.protocolForSimpleName(qualifiedName) != null
+    }
 
     fun isFlagsProviderRegistered(psiClass: PsiClass): Boolean {
         val fqcn = psiClass.qualifiedName ?: return true
@@ -78,11 +93,11 @@ internal object ArmeriaProductionChecklist {
         fqcn: String,
     ): Boolean {
         val project = element.project
-        val module = ModuleUtilCore.findModuleForPsiElement(element)
-        val scope = module?.moduleContentWithDependenciesScope ?: GlobalSearchScope.projectScope(project)
+        val scope = GlobalSearchScope.projectScope(project)
         return try {
             FilenameIndex.getVirtualFilesByName(FLAGS_PROVIDER_SPI_FILE, scope).any { file ->
-                spiListsClass(LoadTextUtil.loadText(file).toString(), fqcn)
+                val text = loadSpiText(file) ?: return@any false
+                spiListsClass(text, fqcn)
             }
         } catch (exception: ProcessCanceledException) {
             throw exception
@@ -90,6 +105,15 @@ internal object ArmeriaProductionChecklist {
             true
         }
     }
+
+    private fun loadSpiText(file: VirtualFile): String? =
+        try {
+            LoadTextUtil.loadText(file).toString()
+        } catch (exception: ProcessCanceledException) {
+            throw exception
+        } catch (_: Exception) {
+            null
+        }
 
     private fun spiListsClass(
         text: String,

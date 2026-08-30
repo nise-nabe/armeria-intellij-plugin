@@ -31,7 +31,9 @@ internal object ArmeriaEndpointGroupCloseSupport {
             return false
         }
         val resolved = ArmeriaJavaInspectionCallChains.resolvedContainingClass(call)
-        if (resolved != null && ArmeriaProductionChecklist.isDynamicEndpointGroup(resolved.substringAfterLast('.'))) {
+        if (resolved != null &&
+            ArmeriaProductionChecklist.isDynamicEndpointGroupTypeName(resolved.substringAfterLast('.'))
+        ) {
             return true
         }
         val qualifierName = constructionTypeSimpleName(call) ?: return false
@@ -42,10 +44,10 @@ internal object ArmeriaEndpointGroupCloseSupport {
         if (ArmeriaJavaInspectionCallChains.methodName(call) == "of") {
             return ArmeriaJavaInspectionCallChains.qualifierSimpleName(call)
         }
-        val qualifier = ArmeriaJavaInspectionCallChains.unwrapOrNull(call.methodExpression.qualifierExpression)
-        val builderCall = qualifier as? PsiMethodCallExpression
-        if (builderCall != null && ArmeriaJavaInspectionCallChains.methodName(builderCall) == "builder") {
-            return ArmeriaJavaInspectionCallChains.qualifierSimpleName(builderCall)
+        for (qualifierCall in ArmeriaJavaInspectionCallChains.qualifierCallChain(call)) {
+            if (ArmeriaJavaInspectionCallChains.methodName(qualifierCall) == "builder") {
+                return ArmeriaJavaInspectionCallChains.qualifierSimpleName(qualifierCall)
+            }
         }
         val typeName = ArmeriaJavaInspectionCallChains.qualifierTypeName(call) ?: return null
         return typeName.substringAfterLast('.')

@@ -29,6 +29,9 @@ internal object ArmeriaFlagsProviderSpiSupport {
         if (psiClass.isInterface || psiClass.isAnnotationType || psiClass.isEnum) {
             return false
         }
+        if (psiClass.hasModifierProperty(PsiModifier.ABSTRACT)) {
+            return false
+        }
         if (psiClass.name == null || psiClass.qualifiedName == ArmeriaProductionChecklist.FLAGS_PROVIDER_CLASS) {
             return false
         }

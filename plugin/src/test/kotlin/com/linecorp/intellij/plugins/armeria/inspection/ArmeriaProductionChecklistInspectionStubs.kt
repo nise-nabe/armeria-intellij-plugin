@@ -148,12 +148,31 @@ fun JavaCodeInsightTestFixture.registerProductionChecklistInspectionStubs() {
                 return new DnsAddressEndpointGroup();
             }
 
+            public static DnsAddressEndpointGroupBuilder builder(String hostname, int port) {
+                return new DnsAddressEndpointGroupBuilder();
+            }
+
             @Override
             public void close() {
             }
 
             @Override
             public void closeAsync() {
+            }
+        }
+        """.trimIndent(),
+    )
+    addClass(
+        """
+        package com.linecorp.armeria.client.endpoint.dns;
+
+        public final class DnsAddressEndpointGroupBuilder {
+            public DnsAddressEndpointGroupBuilder ttl(int minTtl, int maxTtl) {
+                return this;
+            }
+
+            public DnsAddressEndpointGroup build() {
+                return new DnsAddressEndpointGroup();
             }
         }
         """.trimIndent(),

@@ -10,6 +10,9 @@ import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 internal object ArmeriaServerLimitsKotlinSupport {
     fun highlight(call: KtCallExpression): PsiElement? {
+        if (ArmeriaProductionChecklist.isTestSource(call.containingFile)) {
+            return null
+        }
         if (!isServerBuilder(call)) {
             return null
         }
@@ -21,6 +24,9 @@ internal object ArmeriaServerLimitsKotlinSupport {
     }
 
     fun missingLimits(call: KtCallExpression): List<String> {
+        if (ArmeriaProductionChecklist.isTestSource(call.containingFile)) {
+            return emptyList()
+        }
         if (!isServerBuilder(call)) {
             return emptyList()
         }
@@ -37,15 +43,7 @@ internal object ArmeriaServerLimitsKotlinSupport {
 
     private fun collectBuilderMethodNames(call: KtCallExpression): Set<String> {
         val names = mutableSetOf<String>()
-        for (chained in ArmeriaKotlinInspectionCallChains.forwardChainCalls(call)) {
-            val name = ArmeriaKotlinInspectionCallChains.callName(chained) ?: continue
-            names += name
-            if (name in ArmeriaProductionChecklist.SCOPE_FUNCTION_NAMES) {
-                for (bodyCall in ArmeriaKotlinInspectionCallChains.lambdaBodyCalls(chained)) {
-                    ArmeriaKotlinInspectionCallChains.callName(bodyCall)?.let { names += it }
-                }
-            }
-        }
+        addCallNames(call, names)
         val property = ArmeriaKotlinInspectionCallChains.assignedProperty(call)
         val scope =
             if (property != null && isMemberProperty(property)) {
@@ -55,20 +53,19 @@ internal object ArmeriaServerLimitsKotlinSupport {
             }
         if (property != null) {
             for (usage in ArmeriaKotlinInspectionCallChains.callsOnProperty(property, scope)) {
-                ArmeriaKotlinInspectionCallChains.callName(usage)?.let { names += it }
-                for (chained in ArmeriaKotlinInspectionCallChains.forwardChainCalls(usage)) {
-                    ArmeriaKotlinInspectionCallChains.callName(chained)?.let { names += it }
-                    if (ArmeriaKotlinInspectionCallChains.callName(chained) in
-                        ArmeriaProductionChecklist.SCOPE_FUNCTION_NAMES
-                    ) {
-                        for (bodyCall in ArmeriaKotlinInspectionCallChains.lambdaBodyCalls(chained)) {
-                            ArmeriaKotlinInspectionCallChains.callName(bodyCall)?.let { names += it }
-                        }
-                    }
-                }
+                addCallNames(usage, names)
             }
         }
         return names
+    }
+
+    private fun addCallNames(
+        call: KtCallExpression,
+        names: MutableSet<String>,
+    ) {
+        for (candidate in ArmeriaKotlinInspectionCallChains.callAndScopeBodyCalls(call)) {
+            ArmeriaKotlinInspectionCallChains.callName(candidate)?.let { names += it }
+        }
     }
 
     private fun isMemberProperty(property: KtProperty): Boolean =

@@ -6,7 +6,10 @@ import com.intellij.psi.PsiMethod
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
 import org.jetbrains.kotlin.asJava.toLightClass
+import org.jetbrains.kotlin.lexer.KtTokens
+import org.jetbrains.kotlin.psi.KtBinaryExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
+import org.jetbrains.kotlin.psi.KtCallableReferenceExpression
 import org.jetbrains.kotlin.psi.KtClassInitializer
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
@@ -14,7 +17,9 @@ import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtNamedFunction
+import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtProperty
+import org.jetbrains.kotlin.psi.KtQualifiedExpression
 
 internal object ArmeriaKotlinInspectionCallChains {
     fun callName(call: KtCallExpression): String? = ArmeriaKotlinExpressionSupport.resolveCallName(call)
@@ -74,16 +79,43 @@ internal object ArmeriaKotlinInspectionCallChains {
         var current: PsiElement = call
         while (true) {
             val parent = current.parent ?: return null
-            if (parent is KtProperty) {
-                return parent
+            when (parent) {
+                is KtProperty -> return parent
+                is KtBinaryExpression -> {
+                    val right = parent.right
+                    if (parent.operationToken == KtTokens.EQ &&
+                        right != null &&
+                        (right == current || PsiTreeUtil.isAncestor(right, current, false))
+                    ) {
+                        return propertyFromLhs(parent.left)
+                    }
+                    return null
+                }
+                is KtQualifiedExpression,
+                is KtCallExpression,
+                is KtParenthesizedExpression,
+                -> {
+                    current = parent
+                }
+                else -> return null
             }
-            if (parent is KtDotQualifiedExpression || parent is KtCallExpression) {
-                current = parent
-                continue
-            }
-            return null
         }
     }
+
+    private fun propertyFromLhs(expression: KtExpression?): KtProperty? {
+        val unwrapped =
+            ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression ?: return null)
+                ?: expression
+        return when (unwrapped) {
+            is KtNameReferenceExpression -> resolvedProperty(unwrapped)
+            is KtQualifiedExpression ->
+                (unwrapped.selectorExpression as? KtNameReferenceExpression)?.let(::resolvedProperty)
+            else -> null
+        }
+    }
+
+    private fun resolvedProperty(reference: KtNameReferenceExpression): KtProperty? =
+        reference.references.firstNotNullOfOrNull { it.resolve() as? KtProperty }
 
     fun callsOnProperty(
         property: KtProperty,
@@ -100,10 +132,14 @@ internal object ArmeriaKotlinInspectionCallChains {
         var current: KtExpression? = chainReceiver(call)
         while (current != null) {
             when (current) {
-                is KtNameReferenceExpression -> return current.references.any { it.resolve() == property }
+                is KtNameReferenceExpression -> return resolvedProperty(current) == property
                 is KtCallExpression -> current = chainReceiver(current)
-                is KtDotQualifiedExpression ->
-                    current = current.selectorExpression as? KtCallExpression ?: current.receiverExpression
+                is KtQualifiedExpression ->
+                    when (val selector = current.selectorExpression) {
+                        is KtCallExpression -> current = selector
+                        is KtNameReferenceExpression -> return resolvedProperty(selector) == property
+                        else -> current = current.receiverExpression
+                    }
                 else -> return false
             }
         }
@@ -163,8 +199,16 @@ internal object ArmeriaKotlinInspectionCallChains {
     }
 
     fun decoratorClassSimpleName(expression: KtExpression): String {
-        var current: KtExpression =
-            ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: expression
+        val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: expression
+        if (unwrapped is KtCallableReferenceExpression) {
+            val receiver = unwrapped.receiverExpression
+            return (receiver as? KtNameReferenceExpression)?.getReferencedName()
+                ?: receiver?.text?.substringAfterLast('.').orEmpty()
+        }
+        asCall(unwrapped)?.let { call ->
+            resolvedContainingClass(call)?.substringAfterLast('.')?.let { return it }
+        }
+        var current: KtExpression = unwrapped
         while (true) {
             when (current) {
                 is KtCallExpression -> {
@@ -187,6 +231,20 @@ internal object ArmeriaKotlinInspectionCallChains {
             }
         }
     }
+
+    fun callAndScopeBodyCalls(call: KtCallExpression): Sequence<KtCallExpression> =
+        sequence {
+            yield(call)
+            if (callName(call) in ArmeriaProductionChecklist.SCOPE_FUNCTION_NAMES) {
+                yieldAll(lambdaBodyCalls(call))
+            }
+            for (chained in forwardChainCalls(call)) {
+                yield(chained)
+                if (callName(chained) in ArmeriaProductionChecklist.SCOPE_FUNCTION_NAMES) {
+                    yieldAll(lambdaBodyCalls(chained))
+                }
+            }
+        }
 
     fun lambdaBodyCalls(call: KtCallExpression): List<KtCallExpression> {
         val lambda =

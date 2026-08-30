@@ -1,15 +1,15 @@
 package com.linecorp.intellij.plugins.armeria.inspection
 
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.vfs.VfsUtil
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.util.PsiTreeUtil
-import com.intellij.testFramework.PsiTestUtil
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase5
 import com.linecorp.intellij.plugins.armeria.test.withTemporaryMainSourceRoot
+import com.linecorp.intellij.plugins.armeria.test.withTemporaryTestSourceRoot
 import org.junit.jupiter.api.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -22,15 +22,16 @@ class ArmeriaProductionChecklistInspectionTest : ArmeriaFixtureTestBase5() {
 
     @Test
     fun highlightsServerBuilderWithoutLimits() {
-        configureJava("Server.builder().http(8080).build();")
-        val call = serverBuilderCall()
-        assertNotNull(ArmeriaServerLimitsSupport.highlight(call))
-        assertTrue(ArmeriaServerLimitsSupport.missingLimits(call).containsAll(ArmeriaProductionChecklist.SERVER_LIMIT_METHODS))
+        configureJavaInMain("Server.builder().http(8080).build();") {
+            val call = serverBuilderCall()
+            assertNotNull(ArmeriaServerLimitsSupport.highlight(call))
+            assertTrue(ArmeriaServerLimitsSupport.missingLimits(call).containsAll(ArmeriaProductionChecklist.SERVER_LIMIT_METHODS))
+        }
     }
 
     @Test
     fun allowsServerBuilderWithAllLimits() {
-        configureJava(
+        configureJavaInMain(
             """
             Server.builder()
                     .maxNumConnections(500)
@@ -38,13 +39,14 @@ class ArmeriaProductionChecklistInspectionTest : ArmeriaFixtureTestBase5() {
                     .maxRequestLength(1048576)
                     .build();
             """.trimIndent(),
-        )
-        assertNull(ArmeriaServerLimitsSupport.highlight(serverBuilderCall()))
+        ) {
+            assertNull(ArmeriaServerLimitsSupport.highlight(serverBuilderCall()))
+        }
     }
 
     @Test
     fun allowsServerBuilderLimitsOnAssignedVariable() {
-        configureJava(
+        configureJavaInMain(
             """
             ServerBuilder sb = Server.builder();
             sb.maxNumConnections(500);
@@ -52,8 +54,16 @@ class ArmeriaProductionChecklistInspectionTest : ArmeriaFixtureTestBase5() {
             sb.maxRequestLength(1048576);
             sb.build();
             """.trimIndent(),
-        )
-        assertNull(ArmeriaServerLimitsSupport.highlight(serverBuilderCall()))
+        ) {
+            assertNull(ArmeriaServerLimitsSupport.highlight(serverBuilderCall()))
+        }
+    }
+
+    @Test
+    fun skipsServerBuilderInTestSources() {
+        configureJavaInTest("Server.builder().http(8080).build();") {
+            assertNull(ArmeriaServerLimitsSupport.highlight(serverBuilderCall()))
+        }
     }
 
     @Test
@@ -78,9 +88,40 @@ class ArmeriaProductionChecklistInspectionTest : ArmeriaFixtureTestBase5() {
 
     @Test
     fun skipsWebClientBuilderInTestSources() {
-        markDefaultSourceRootAsTest()
-        configureJava("""WebClient.builder("https://example.com").build();""")
-        assertNull(ArmeriaClientResilienceSupport.highlight(webClientBuilderCall()))
+        configureJavaInTest("""WebClient.builder("https://example.com").build();""") {
+            assertNull(ArmeriaClientResilienceSupport.highlight(webClientBuilderCall()))
+        }
+    }
+
+    @Test
+    fun allowsWebClientBuilderWithStaticImportedRetryDecorator() {
+        myFixture.withTemporaryMainSourceRoot { mainRoot ->
+            val content =
+                """
+                package example;
+
+                import static com.linecorp.armeria.client.retry.RetryingClient.newDecorator;
+
+                import com.linecorp.armeria.client.WebClient;
+
+                public class Main {
+                    public static void main(String[] args) {
+                        WebClient.builder("https://example.com")
+                                .decorator(newDecorator())
+                                .build();
+                    }
+                }
+                """.trimIndent()
+            val virtualFile =
+                ApplicationManager.getApplication().runWriteAction<com.intellij.openapi.vfs.VirtualFile> {
+                    val file = mainRoot.createChildData(this, "Main.java")
+                    VfsUtil.saveText(file, content)
+                    file
+                }
+            PsiDocumentManager.getInstance(project).commitAllDocuments()
+            myFixture.configureFromExistingVirtualFile(virtualFile)
+            assertNull(ArmeriaClientResilienceSupport.highlight(webClientBuilderCall()))
+        }
     }
 
     @Test
@@ -157,12 +198,52 @@ class ArmeriaProductionChecklistInspectionTest : ArmeriaFixtureTestBase5() {
                 private final DnsAddressEndpointGroup group = DnsAddressEndpointGroup.of("example.com", 8080);
 
                 public void shutdown() {
-                    group.close();
+                    this.group.close();
                 }
             }
             """.trimIndent(),
         )
         assertNull(ArmeriaEndpointGroupCloseSupport.highlight(endpointGroupOfCall()))
+    }
+
+    @Test
+    fun highlightsUnclosedFluentDnsEndpointGroup() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
+
+            public class Main {
+                private final DnsAddressEndpointGroup group =
+                        DnsAddressEndpointGroup.builder("example.com", 8080).ttl(1, 5).build();
+            }
+            """.trimIndent(),
+        )
+        assertNotNull(ArmeriaEndpointGroupCloseSupport.highlight(endpointGroupBuildCall()))
+    }
+
+    @Test
+    fun allowsClosedFluentDnsEndpointGroup() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
+
+            public class Main {
+                private final DnsAddressEndpointGroup group =
+                        DnsAddressEndpointGroup.builder("example.com", 8080).ttl(1, 5).build();
+
+                public void shutdown() {
+                    group.close();
+                }
+            }
+            """.trimIndent(),
+        )
+        assertNull(ArmeriaEndpointGroupCloseSupport.highlight(endpointGroupBuildCall()))
     }
 
     @Test
@@ -201,22 +282,55 @@ class ArmeriaProductionChecklistInspectionTest : ArmeriaFixtureTestBase5() {
         assertNull(ArmeriaFlagsProviderSpiSupport.highlight(flagsProviderClass()))
     }
 
+    @Test
+    fun skipsAbstractFlagsProvider() {
+        myFixture.configureByText(
+            "BaseFlagsProvider.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.common.FlagsProvider;
+
+            public abstract class BaseFlagsProvider implements FlagsProvider {
+            }
+            """.trimIndent(),
+        )
+        assertNull(ArmeriaFlagsProviderSpiSupport.highlight(classNamed("BaseFlagsProvider")))
+    }
+
     private fun configureJavaInMain(
         body: String,
         assertions: () -> Unit,
     ) {
-        myFixture.withTemporaryMainSourceRoot { mainRoot ->
-            val content = javaSource(body)
-            val virtualFile =
-                ApplicationManager.getApplication().runWriteAction<com.intellij.openapi.vfs.VirtualFile> {
-                    val file = mainRoot.createChildData(this, "Main.java")
-                    VfsUtil.saveText(file, content)
-                    file
-                }
-            PsiDocumentManager.getInstance(project).commitAllDocuments()
-            myFixture.configureFromExistingVirtualFile(virtualFile)
-            assertions()
+        myFixture.withTemporaryMainSourceRoot { root ->
+            configureJavaFile(root, body, assertions)
         }
+    }
+
+    private fun configureJavaInTest(
+        body: String,
+        assertions: () -> Unit,
+    ) {
+        myFixture.withTemporaryTestSourceRoot { root ->
+            configureJavaFile(root, body, assertions)
+        }
+    }
+
+    private fun configureJavaFile(
+        root: VirtualFile,
+        body: String,
+        assertions: () -> Unit,
+    ) {
+        val content = javaSource(body)
+        val virtualFile =
+            ApplicationManager.getApplication().runWriteAction<VirtualFile> {
+                val file = root.createChildData(this, "Main.java")
+                VfsUtil.saveText(file, content)
+                file
+            }
+        PsiDocumentManager.getInstance(project).commitAllDocuments()
+        myFixture.configureFromExistingVirtualFile(virtualFile)
+        assertions()
     }
 
     private fun configureJava(body: String) {
@@ -242,12 +356,6 @@ class ArmeriaProductionChecklistInspectionTest : ArmeriaFixtureTestBase5() {
         }
         """.trimIndent()
 
-    private fun markDefaultSourceRootAsTest() {
-        val contentRoot = ModuleRootManager.getInstance(module).contentRoots.first()
-        PsiTestUtil.removeSourceRoot(module, contentRoot)
-        PsiTestUtil.addSourceRoot(module, contentRoot, true)
-    }
-
     private fun serverBuilderCall(): PsiMethodCallExpression = callNamed("builder", "Server")
 
     private fun webClientBuilderCall(): PsiMethodCallExpression = callNamed("builder", "WebClient")
@@ -255,6 +363,14 @@ class ArmeriaProductionChecklistInspectionTest : ArmeriaFixtureTestBase5() {
     private fun clientFactoryBuilderCall(): PsiMethodCallExpression = callNamed("builder", "ClientFactory")
 
     private fun endpointGroupOfCall(): PsiMethodCallExpression = callNamed("of", "DnsAddressEndpointGroup")
+
+    private fun endpointGroupBuildCall(): PsiMethodCallExpression =
+        PsiTreeUtil.findChildrenOfType(myFixture.file, PsiMethodCallExpression::class.java).first { call ->
+            call.methodExpression.referenceName == "build" &&
+                ArmeriaJavaInspectionCallChains.qualifierSimpleName(call) != "Server" &&
+                ArmeriaJavaInspectionCallChains.qualifierSimpleName(call) != "WebClient" &&
+                ArmeriaJavaInspectionCallChains.qualifierSimpleName(call) != "ClientFactory"
+        }
 
     private fun callNamed(
         methodName: String,
@@ -265,6 +381,8 @@ class ArmeriaProductionChecklistInspectionTest : ArmeriaFixtureTestBase5() {
                 ArmeriaJavaInspectionCallChains.qualifierSimpleName(call) == qualifierSimpleName
         }
 
-    private fun flagsProviderClass(): PsiClass =
-        PsiTreeUtil.findChildrenOfType(myFixture.file, PsiClass::class.java).first { it.name == "MyFlagsProvider" }
+    private fun flagsProviderClass(): PsiClass = classNamed("MyFlagsProvider")
+
+    private fun classNamed(name: String): PsiClass =
+        PsiTreeUtil.findChildrenOfType(myFixture.file, PsiClass::class.java).first { it.name == name }
 }

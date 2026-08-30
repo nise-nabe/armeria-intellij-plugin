@@ -42,22 +42,11 @@ internal object ArmeriaClientResilienceKotlinSupport {
     }
 
     private fun decoratorNamesFromChain(call: KtCallExpression): Sequence<String> =
-        sequence {
-            if (ArmeriaKotlinInspectionCallChains.callName(call) == "decorator") {
-                decoratorName(call)?.let { yield(it) }
-            }
-            for (chained in ArmeriaKotlinInspectionCallChains.forwardChainCalls(call)) {
-                val name = ArmeriaKotlinInspectionCallChains.callName(chained)
-                if (name == "decorator") {
-                    decoratorName(chained)?.let { yield(it) }
-                }
-                if (name in ArmeriaProductionChecklist.SCOPE_FUNCTION_NAMES) {
-                    for (bodyCall in ArmeriaKotlinInspectionCallChains.lambdaBodyCalls(chained)) {
-                        if (ArmeriaKotlinInspectionCallChains.callName(bodyCall) == "decorator") {
-                            decoratorName(bodyCall)?.let { yield(it) }
-                        }
-                    }
-                }
+        ArmeriaKotlinInspectionCallChains.callAndScopeBodyCalls(call).mapNotNull { candidate ->
+            if (ArmeriaKotlinInspectionCallChains.callName(candidate) == "decorator") {
+                decoratorName(candidate)
+            } else {
+                null
             }
         }
 

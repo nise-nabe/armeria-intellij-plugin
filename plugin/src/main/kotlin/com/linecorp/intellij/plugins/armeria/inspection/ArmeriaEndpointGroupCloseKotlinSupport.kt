@@ -30,7 +30,9 @@ internal object ArmeriaEndpointGroupCloseKotlinSupport {
             return false
         }
         val resolved = ArmeriaKotlinInspectionCallChains.resolvedContainingClass(call)
-        if (resolved != null && ArmeriaProductionChecklist.isDynamicEndpointGroup(resolved.substringAfterLast('.'))) {
+        if (resolved != null &&
+            ArmeriaProductionChecklist.isDynamicEndpointGroupTypeName(resolved.substringAfterLast('.'))
+        ) {
             return true
         }
         val qualifierName = constructionTypeSimpleName(call) ?: return false
@@ -41,10 +43,13 @@ internal object ArmeriaEndpointGroupCloseKotlinSupport {
         if (ArmeriaKotlinInspectionCallChains.callName(call) == "of") {
             return ArmeriaKotlinInspectionCallChains.qualifierSimpleName(call)
         }
-        val receiver = ArmeriaKotlinInspectionCallChains.chainReceiver(call)
-        val builderCall = receiver?.let { ArmeriaKotlinInspectionCallChains.asCall(it) }
-        if (builderCall != null && ArmeriaKotlinInspectionCallChains.callName(builderCall) == "builder") {
-            return ArmeriaKotlinInspectionCallChains.qualifierSimpleName(builderCall)
+        var current = ArmeriaKotlinInspectionCallChains.chainReceiver(call)
+        while (current != null) {
+            val currentCall = ArmeriaKotlinInspectionCallChains.asCall(current)
+            if (currentCall != null && ArmeriaKotlinInspectionCallChains.callName(currentCall) == "builder") {
+                return ArmeriaKotlinInspectionCallChains.qualifierSimpleName(currentCall)
+            }
+            current = currentCall?.let { ArmeriaKotlinInspectionCallChains.chainReceiver(it) }
         }
         return ArmeriaKotlinInspectionCallChains.qualifierSimpleName(call)
     }

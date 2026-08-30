@@ -5,7 +5,9 @@ import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiField
+import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
+import com.intellij.psi.PsiMethodReferenceExpression
 import com.intellij.psi.PsiParenthesizedExpression
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiResourceVariable
@@ -29,6 +31,15 @@ internal object ArmeriaJavaInspectionCallChains {
     }
 
     fun unwrapOrNull(expression: PsiExpression?): PsiExpression? = expression?.let(::unwrap)
+
+    fun qualifierCallChain(call: PsiMethodCallExpression): Sequence<PsiMethodCallExpression> =
+        sequence {
+            var current: PsiExpression? = unwrapOrNull(call.methodExpression.qualifierExpression)
+            while (current is PsiMethodCallExpression) {
+                yield(current)
+                current = unwrapOrNull(current.methodExpression.qualifierExpression)
+            }
+        }
 
     fun enclosingQualifierCall(expression: PsiExpression): PsiMethodCallExpression? {
         var element: PsiElement? = expression.parent
@@ -141,7 +152,9 @@ internal object ArmeriaJavaInspectionCallChains {
     }
 
     fun decoratorClassSimpleName(expression: PsiExpression): String {
-        var current: PsiExpression = unwrap(expression)
+        val unwrapped = unwrap(expression)
+        resolvedDecoratorClassName(unwrapped)?.let { return it }
+        var current: PsiExpression = unwrapped
         while (current is PsiMethodCallExpression) {
             current = unwrapOrNull(current.methodExpression.qualifierExpression) ?: break
         }
@@ -151,6 +164,14 @@ internal object ArmeriaJavaInspectionCallChains {
             else -> current.text.substringAfterLast('.').substringBefore('(')
         }
     }
+
+    private fun resolvedDecoratorClassName(expression: PsiExpression): String? =
+        when (expression) {
+            is PsiMethodReferenceExpression ->
+                (expression.resolve() as? PsiMethod)?.containingClass?.name
+            is PsiMethodCallExpression -> expression.resolveMethod()?.containingClass?.name
+            else -> null
+        }
 
     fun containingClass(element: PsiElement): PsiClass? = PsiTreeUtil.getParentOfType(element, PsiClass::class.java)
 
