@@ -62,6 +62,21 @@ class ArmeriaMissingDocServiceKotlinInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun highlightsWhenMountedServiceVariablesCycle() {
+        configureMain(
+            """
+            val first = second
+            val second = first
+            Server.builder()
+                .annotatedService(HelloService())
+                .service("/x", first)
+                .build()
+            """.trimIndent(),
+        )
+        assertHighlighted(expected = true)
+    }
+
+    @Test
     fun highlightsWhenDocServiceIsBuiltButNotMounted() {
         configureMain(
             """

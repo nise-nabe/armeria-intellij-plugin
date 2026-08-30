@@ -103,6 +103,9 @@ internal object ArmeriaMissingDocServiceSupport {
             is PsiMethodCallExpression -> classifyCallChain(unwrapped)
             is PsiReferenceExpression -> {
                 val resolved = unwrapped.resolve() as? PsiVariable ?: return KnownHttpServiceKind.HTTP
+                if (!visited.add(resolved)) {
+                    return KnownHttpServiceKind.HTTP
+                }
                 val initializer = resolved.initializer ?: return KnownHttpServiceKind.HTTP
                 classifyExpression(initializer, visited)
             }

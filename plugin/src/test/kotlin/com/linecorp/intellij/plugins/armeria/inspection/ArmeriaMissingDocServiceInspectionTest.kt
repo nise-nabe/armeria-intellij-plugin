@@ -85,6 +85,21 @@ class ArmeriaMissingDocServiceInspectionTest : ArmeriaFixtureTestBase5() {
         assertHighlighted(expected = false)
     }
 
+    @Test
+    fun highlightsWhenMountedServiceVariablesCycle() {
+        configureMain(
+            """
+            Object first = second;
+            Object second = first;
+            Server.builder()
+                    .annotatedService(new HelloService())
+                    .service("/x", first)
+                    .build();
+            """.trimIndent(),
+        )
+        assertHighlighted(expected = true)
+    }
+
     private fun configureMain(body: String) {
         myFixture.addClass(
             """

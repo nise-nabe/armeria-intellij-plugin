@@ -131,8 +131,16 @@ internal object ArmeriaMissingDocServiceKotlinSupport {
                         is PsiClass -> {
                             return ArmeriaKnownHttpServiceClassifier.classify(resolved.qualifiedName.orEmpty())
                         }
-                        is KtProperty -> current = resolved.initializer
+                        is KtProperty -> {
+                            if (!visited.add(resolved)) {
+                                return KnownHttpServiceKind.HTTP
+                            }
+                            current = resolved.initializer
+                        }
                         is PsiVariable -> {
+                            if (!visited.add(resolved)) {
+                                return KnownHttpServiceKind.HTTP
+                            }
                             val initializer = resolved.initializer
                             current = initializer as? KtExpression
                             if (current == null) {
