@@ -8,7 +8,9 @@ import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiReferenceExpression
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
+import org.jetbrains.kotlin.psi.KtEscapeStringTemplateEntry
 import org.jetbrains.kotlin.psi.KtExpression
+import org.jetbrains.kotlin.psi.KtLiteralStringTemplateEntry
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
@@ -67,13 +69,15 @@ internal object ArmeriaBlockingClientPathSupport {
             .constantEvaluationHelper
             .computeConstantExpression(template)
             ?.let { return it as? String }
-        if (template.entries.size != 1) {
-            return null
+        return buildString {
+            for (entry in template.entries) {
+                when (entry) {
+                    is KtLiteralStringTemplateEntry -> append(entry.text)
+                    is KtEscapeStringTemplateEntry -> append(entry.unescapedValue)
+                    else -> return null
+                }
+            }
         }
-        return template.entries
-            .single()
-            .text
-            .removeSurrounding("\"")
     }
 
     private fun resolveKotlinStringConstant(reference: KtNameReferenceExpression): String? {

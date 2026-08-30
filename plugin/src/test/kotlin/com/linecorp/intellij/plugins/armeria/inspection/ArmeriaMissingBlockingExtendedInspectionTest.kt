@@ -413,6 +413,31 @@ class ArmeriaMissingBlockingExtendedInspectionTest : ArmeriaFixtureTestBase5() {
         assertTrue(myFixture.file.text.contains("@Blocking"))
     }
 
+    @Test
+    fun ignoresUnrelatedRuntimeWiringFluentApi() {
+        myFixture.configureByText(
+            "Other.java",
+            """
+            package example;
+
+            import java.util.concurrent.CompletableFuture;
+            import java.util.function.Consumer;
+
+            public class Other {
+                public Other runtimeWiring(Consumer<Object> configurer) {
+                    return this;
+                }
+
+                public void setup() {
+                    runtimeWiring(c -> CompletableFuture.completedFuture("ok").join());
+                }
+            }
+            """.trimIndent(),
+        )
+        assertGraphqlHighlights(0, "join")
+        assertExecutorHighlights(0)
+    }
+
     private fun configureGraphqlFetcher(useBlockingExecutor: Boolean) {
         val executorCall =
             if (useBlockingExecutor) {

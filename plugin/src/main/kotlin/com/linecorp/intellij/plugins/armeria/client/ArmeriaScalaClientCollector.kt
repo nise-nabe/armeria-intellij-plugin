@@ -61,7 +61,7 @@ internal object ArmeriaScalaClientCollector {
             }
             val factoryCloseParen = findMatchingCloseParen(scan.textWithoutComments, factoryOpenParen)
             val protocol =
-                conversionProtocolAfterFactory(scan.textWithoutComments, factoryCloseParen)
+                conversionProtocolAfterFactory(scan.textWithoutComments, factoryCloseParen, fqcn)
                     ?: ArmeriaClientSupport.protocolForClass(fqcn)
                     ?: continue
             qualifiedFactoryOpenParens += factoryOpenParen
@@ -87,7 +87,7 @@ internal object ArmeriaScalaClientCollector {
             val fqcn = importedClientClasses[simpleName] ?: continue
             val factoryCloseParen = findMatchingCloseParen(scan.textWithoutComments, factoryOpenParen)
             val protocol =
-                conversionProtocolAfterFactory(scan.textWithoutComments, factoryCloseParen)
+                conversionProtocolAfterFactory(scan.textWithoutComments, factoryCloseParen, fqcn)
                     ?: ArmeriaClientSupport.protocolForClass(fqcn)
                     ?: continue
             matches +=
@@ -142,7 +142,11 @@ internal object ArmeriaScalaClientCollector {
     private fun conversionProtocolAfterFactory(
         text: String,
         factoryCloseParen: Int?,
+        factoryFqcn: String,
     ): ClientProtocol? {
+        if (ArmeriaClientSupport.protocolForClass(factoryFqcn) != ClientProtocol.HTTP) {
+            return null
+        }
         factoryCloseParen ?: return null
         var index = factoryCloseParen + 1
         while (index < text.length && text[index].isWhitespace()) {

@@ -37,7 +37,7 @@ object ArmeriaKotlinRouteCollector {
     fun referencesArmeriaKotlinContent(file: KtFile): Boolean {
         val hasArmeriaImports =
             file.importList?.imports?.any { import ->
-                import.importedFqName?.asString()?.startsWith(ArmeriaRouteSupport.ARMERIA_PACKAGE_PREFIX) == true
+                import.importedFqName?.asString()?.let(ArmeriaRouteSupport::isArmeriaQualifiedName) == true
             } ?: false
         if (hasArmeriaImports) {
             return true

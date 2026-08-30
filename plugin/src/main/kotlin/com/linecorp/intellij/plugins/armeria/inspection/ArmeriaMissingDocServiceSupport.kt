@@ -5,6 +5,7 @@ import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiNewExpression
 import com.intellij.psi.PsiReferenceExpression
+import com.intellij.psi.PsiVariable
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.PsiUtil
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKnownHttpServiceClassifier
@@ -21,24 +22,15 @@ internal object ArmeriaMissingDocServiceSupport {
 
     fun highlight(root: PsiElement): PsiElement? {
         val calls = PsiTreeUtil.findChildrenOfType(root, PsiMethodCallExpression::class.java)
-        val news = PsiTreeUtil.findChildrenOfType(root, PsiNewExpression::class.java)
-        var hasDocService = news.any { classifyNew(it) == KnownHttpServiceKind.DOC_SERVICE }
         val annotatedOrRpc = mutableListOf<PsiMethodCallExpression>()
         var serverBuilder: PsiMethodCallExpression? = null
+        var hasDocService = false
         for (call in calls) {
             val name = call.methodExpression.referenceName ?: continue
             when (name) {
                 "builder" -> {
                     if (isServerBuilder(call)) {
                         serverBuilder = serverBuilder ?: call
-                    }
-                    if (classifyCallChain(call) == KnownHttpServiceKind.DOC_SERVICE) {
-                        hasDocService = true
-                    }
-                }
-                "build", "of" -> {
-                    if (classifyCallChain(call) == KnownHttpServiceKind.DOC_SERVICE) {
-                        hasDocService = true
                     }
                 }
                 "annotatedService" -> annotatedOrRpc += call
@@ -89,8 +81,16 @@ internal object ArmeriaMissingDocServiceSupport {
         return ArmeriaKnownHttpServiceClassifier.classify(name)
     }
 
-    private fun classifyExpression(expression: PsiExpression): KnownHttpServiceKind {
+    private fun classifyExpression(expression: PsiExpression): KnownHttpServiceKind = classifyExpression(expression, mutableSetOf())
+
+    private fun classifyExpression(
+        expression: PsiExpression,
+        visited: MutableSet<PsiElement>,
+    ): KnownHttpServiceKind {
         val unwrapped = PsiUtil.skipParenthesizedExprDown(expression) ?: expression
+        if (!visited.add(unwrapped)) {
+            return KnownHttpServiceKind.HTTP
+        }
         val typeName = unwrapped.type?.canonicalText
         if (!typeName.isNullOrBlank()) {
             val kind = ArmeriaKnownHttpServiceClassifier.classify(typeName)
@@ -101,6 +101,11 @@ internal object ArmeriaMissingDocServiceSupport {
         return when (unwrapped) {
             is PsiNewExpression -> classifyNew(unwrapped)
             is PsiMethodCallExpression -> classifyCallChain(unwrapped)
+            is PsiReferenceExpression -> {
+                val resolved = unwrapped.resolve() as? PsiVariable ?: return KnownHttpServiceKind.HTTP
+                val initializer = resolved.initializer ?: return KnownHttpServiceKind.HTTP
+                classifyExpression(initializer, visited)
+            }
             else -> KnownHttpServiceKind.HTTP
         }
     }

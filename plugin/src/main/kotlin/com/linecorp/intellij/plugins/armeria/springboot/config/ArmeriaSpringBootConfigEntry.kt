@@ -14,4 +14,5 @@ data class ArmeriaSpringBootConfigFile(
     val fileName: String,
     val filePath: String,
     val entries: List<ArmeriaSpringBootConfigEntry>,
+    val synthetic: Boolean = false,
 )

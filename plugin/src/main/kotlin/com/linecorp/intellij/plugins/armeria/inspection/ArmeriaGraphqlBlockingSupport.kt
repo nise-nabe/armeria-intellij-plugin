@@ -377,7 +377,7 @@ internal object ArmeriaGraphqlBlockingSupport {
             current = current.parent
         }
         val seed = graphqlCall ?: return null
-        val builder = findGraphqlServiceBuilderCall(seed)
+        val builder = findGraphqlServiceBuilderCall(seed) ?: return null
         val outermost = outermostChainCall(builder)
         return chainCalls(builder, outermost)
     }
@@ -393,7 +393,7 @@ internal object ArmeriaGraphqlBlockingSupport {
         return call.methodExpression.referenceName in GRAPHQL_BUILDER_METHODS
     }
 
-    private fun findGraphqlServiceBuilderCall(seed: PsiMethodCallExpression): PsiMethodCallExpression {
+    private fun findGraphqlServiceBuilderCall(seed: PsiMethodCallExpression): PsiMethodCallExpression? {
         var current: PsiExpression? = seed
         val visited = mutableSetOf<PsiElement>()
         while (current != null && visited.add(current)) {
@@ -407,7 +407,15 @@ internal object ArmeriaGraphqlBlockingSupport {
                     null
                 }
         }
-        return seed
+        return seed.takeIf(::isResolvedGraphqlBuilderCall)
+    }
+
+    private fun isResolvedGraphqlBuilderCall(call: PsiMethodCallExpression): Boolean {
+        if (isGraphqlServiceBuilderCall(call)) {
+            return true
+        }
+        val resolved = call.resolveMethod()?.containingClass?.qualifiedName
+        return resolved == GRAPHQL_SERVICE_CLASS || resolved == GRAPHQL_SERVICE_BUILDER_CLASS
     }
 
     private fun chainCalls(

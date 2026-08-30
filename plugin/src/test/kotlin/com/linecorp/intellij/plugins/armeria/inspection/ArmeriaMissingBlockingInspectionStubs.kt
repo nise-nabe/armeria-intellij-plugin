@@ -39,7 +39,7 @@ fun JavaCodeInsightTestFixture.registerMissingBlockingGraphqlStubs() {
         package com.linecorp.armeria.server.graphql;
 
         public final class GraphqlServiceBuilder {
-            public GraphqlServiceBuilder runtimeWiring(Object configurer) {
+            public GraphqlServiceBuilder runtimeWiring(java.util.function.Consumer<Object> configurer) {
                 return this;
             }
 

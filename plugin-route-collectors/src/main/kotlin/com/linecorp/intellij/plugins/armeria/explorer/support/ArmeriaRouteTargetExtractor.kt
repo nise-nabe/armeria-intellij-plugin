@@ -21,8 +21,12 @@ internal object ArmeriaRouteTargetExtractor {
         val unwrapped = unwrapCast(expression) ?: return null
         return when (unwrapped) {
             is PsiNewExpression -> {
+                ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
+                val resolved = unwrapped.classReference?.resolve() as? PsiClass
                 val classReference =
-                    unwrapped.classReference?.qualifiedName ?: unwrapped.classReference?.referenceName
+                    resolved?.qualifiedName
+                        ?: unwrapped.classReference?.qualifiedName
+                        ?: unwrapped.classReference?.referenceName
                 classReference?.let(ArmeriaKnownHttpServiceClassifier::canonicalServiceTypeName)
             }
             is PsiMethodCallExpression -> extractKnownServiceTypeFromCall(unwrapped, visitedVariables)

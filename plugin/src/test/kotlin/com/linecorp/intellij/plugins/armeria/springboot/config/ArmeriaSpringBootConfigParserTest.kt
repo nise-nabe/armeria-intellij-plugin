@@ -207,6 +207,11 @@ class ArmeriaSpringBootConfigParserTest {
             "armeria.internal-services.include ".indexOf(' '),
             ArmeriaSpringBootCompletionSupport.propertiesValueSeparatorIndex("armeria.internal-services.include "),
         )
+        assertEquals(-1, ArmeriaSpringBootCompletionSupport.propertiesValueSeparatorIndex(" armeria.docs-path"))
+        assertEquals(
+            "  armeria.docs-path=".indexOf('='),
+            ArmeriaSpringBootCompletionSupport.propertiesValueSeparatorIndex("  armeria.docs-path="),
+        )
     }
 
     @Test
@@ -233,6 +238,39 @@ class ArmeriaSpringBootConfigParserTest {
         assertTrue(ArmeriaSpringBootConfigKeys.isRelevantCompletionPath("server"))
         assertTrue(ArmeriaSpringBootConfigKeys.isRelevantCompletionPath("management.server"))
         assertFalse(ArmeriaSpringBootConfigKeys.isRelevantCompletionPath("logging.level"))
+    }
+
+    @Test
+    fun summaryText_excludesSyntheticConfiguratorBeansFromFileCounts() {
+        val config =
+            ArmeriaSpringBootConfigFile(
+                fileName = "application.yml",
+                filePath = "/app/application.yml",
+                entries = listOf(ArmeriaSpringBootConfigEntry("armeria.docs-path", "/docs")),
+            )
+        val beans =
+            ArmeriaSpringBootConfigFile(
+                fileName = "Configurator beans",
+                filePath = "beans",
+                entries =
+                    listOf(
+                        ArmeriaSpringBootConfigEntry("ArmeriaServerConfigurator", "MyConfigurator"),
+                    ),
+                synthetic = true,
+            )
+
+        assertEquals(
+            message("springboot.config.summary.entries", 1, 1),
+            ArmeriaSpringBootConfigSupport.summaryText(listOf(config)),
+        )
+        assertEquals(
+            message("springboot.config.summary.beans", 1),
+            ArmeriaSpringBootConfigSupport.summaryText(listOf(beans)),
+        )
+        assertEquals(
+            "${message("springboot.config.summary.entries", 1, 1)} · ${message("springboot.config.summary.beans", 1)}",
+            ArmeriaSpringBootConfigSupport.summaryText(listOf(config, beans)),
+        )
     }
 
     private fun fixture(path: String) = javaClass.classLoader.getResource(path)!!.readText()

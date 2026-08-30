@@ -26,7 +26,6 @@ enum class KnownHttpServiceKind {
  * is classified by identifier tokens for Scala registrations.
  */
 object ArmeriaKnownHttpServiceClassifier {
-    private const val ARMERIA_PACKAGE_PREFIX = "com.linecorp.armeria"
     private val IDENTIFIER = Regex("[A-Za-z_][A-Za-z0-9_]*")
 
     private val KIND_BY_SIMPLE_NAME =
@@ -52,7 +51,7 @@ object ArmeriaKnownHttpServiceClassifier {
                 .substringBefore('(')
                 .trim()
         val packagePrefix = className.substringBeforeLast('.', missingDelimiterValue = "")
-        if (packagePrefix.startsWith(ARMERIA_PACKAGE_PREFIX)) {
+        if (ArmeriaRouteSupport.isArmeriaQualifiedName(packagePrefix)) {
             kindForSimpleName(canonicalSimpleName(className.substringAfterLast('.')))
                 ?.let { return it }
             return if ('(' in typeName && '#' !in typeName) {

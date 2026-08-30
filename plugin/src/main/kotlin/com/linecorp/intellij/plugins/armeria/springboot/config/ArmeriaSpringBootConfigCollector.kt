@@ -6,6 +6,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
+import com.linecorp.intellij.plugins.armeria.message
 
 object ArmeriaSpringBootConfigSupport {
     private val APPLICATION_CONFIG_NAMES =
@@ -24,6 +25,27 @@ object ArmeriaSpringBootConfigSupport {
             )
 
     fun normalizeIndexedKeyPath(keyPath: String): String = keyPath.replace(INDEXED_KEY_PATH, "")
+
+    fun summaryText(files: List<ArmeriaSpringBootConfigFile>): String {
+        if (files.isEmpty()) {
+            return message("springboot.config.summary.empty")
+        }
+        val configFiles = files.filterNot { it.synthetic }
+        val beanCount = files.filter { it.synthetic }.sumOf { it.entries.size }
+        val parts = mutableListOf<String>()
+        if (configFiles.isNotEmpty()) {
+            parts +=
+                message(
+                    "springboot.config.summary.entries",
+                    configFiles.size,
+                    configFiles.sumOf { it.entries.size },
+                )
+        }
+        if (beanCount > 0) {
+            parts += message("springboot.config.summary.beans", beanCount)
+        }
+        return parts.joinToString(" · ").ifEmpty { message("springboot.config.summary.empty") }
+    }
 
     /**
      * Parent path used for YAML key completion: strip the leaf being edited, then drop list indexes.

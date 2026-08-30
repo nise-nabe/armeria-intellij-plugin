@@ -20,6 +20,14 @@
 ### Fixed
 
 - Kotlin Route Explorer gutter icons for `service()` / `serviceUnder()` / `annotatedService()` attach to the method-name identifier, matching Java and avoiding a platform warning when highlighting Kotlin server builders.
+- Missing-DocService inspection only treats DocService as present when it is mounted with `service` / `serviceUnder`, including local assignments such as `val docs = DocService.builder().build()`.
+- GraphQL missing-blocking detection no longer treats unrelated fluent APIs named `runtimeWiring` / `graphql` as `GraphqlService` builders.
+- Version-catalog mentions of `armeria-annotation-processor` in the root `gradle/libs.versions.toml` are found from submodules.
+- Generate HTTP Request accepts RFC 7230 token characters in `@MatchesHeader` names (for example `x~foo=bar`).
+- Spring Boot config summary counts application files and properties separately from synthetic configurator-bean rows.
+- `.properties` completion treats leading whitespace as part of the key, matching `Properties.load`.
+- Built-in HTTP service classification requires an Armeria package boundary, so types under `com.linecorp.armeriafoo` are not treated as Armeria services.
+- Scala client conversion (`.blocking()` / `.asRestClient()`) applies only to `WebClient` factories.
 
 ### Security
 

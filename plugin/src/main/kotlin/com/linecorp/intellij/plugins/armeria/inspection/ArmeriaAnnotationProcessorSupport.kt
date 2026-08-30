@@ -96,10 +96,15 @@ internal object ArmeriaAnnotationProcessorSupport {
             }
         }
         try {
-            val scope = module?.moduleContentScope ?: GlobalSearchScope.projectScope(project)
-            for (name in PROCESSOR_FILE_NAMES) {
-                files += FilenameIndex.getVirtualFilesByName(name, scope)
+            val buildScriptScope = module?.moduleContentScope ?: GlobalSearchScope.projectScope(project)
+            for (name in listOf("build.gradle", "build.gradle.kts")) {
+                files += FilenameIndex.getVirtualFilesByName(name, buildScriptScope)
             }
+            files +=
+                FilenameIndex.getVirtualFilesByName(
+                    "libs.versions.toml",
+                    GlobalSearchScope.projectScope(project),
+                )
         } catch (_: IndexNotReadyException) {
             return files
         }

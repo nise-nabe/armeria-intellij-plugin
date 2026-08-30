@@ -127,12 +127,7 @@ class ArmeriaSpringBootConfigPanel(
                         file.entries.map { entry -> ConfigRow(file.fileName, file.filePath, entry) }
                     }
                 tableModel.setRows(rows)
-                statusLabel.text =
-                    if (files.isEmpty()) {
-                        message("springboot.config.summary.empty")
-                    } else {
-                        message("springboot.config.summary.entries", files.size, files.sumOf { configFile -> configFile.entries.size })
-                    }
+                statusLabel.text = ArmeriaSpringBootConfigSupport.summaryText(files)
             }.submit(AppExecutorUtil.getAppExecutorService())
     }
 

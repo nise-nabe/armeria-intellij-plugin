@@ -25,7 +25,7 @@ internal object ArmeriaRouteContentScan {
 
     fun referencesArmeriaSourceContent(contents: CharSequence): Boolean {
         val header = contents.subSequence(0, minOf(contents.length, ArmeriaRouteSupport.ARMERIA_HEADER_SCAN_LIMIT))
-        if (header.contains("import ${ArmeriaRouteSupport.ARMERIA_PACKAGE_PREFIX}")) {
+        if (header.contains("import ${ArmeriaRouteSupport.ARMERIA_PACKAGE_PREFIX}.")) {
             return true
         }
         return referencesArmeriaInText(contents)

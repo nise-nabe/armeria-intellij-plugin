@@ -539,7 +539,7 @@ internal object ArmeriaServerDecoratorSupport {
     private fun stringValue(expression: PsiExpression): String? = ArmeriaRouteSupport.extractJavaStringConstant(expression)
 
     private fun highlightDecorateOrArgument(expression: PsiExpression): PsiElement {
-        val unwrapped = unwrapAndFollow(expression)
+        val unwrapped = unwrap(expression)
         if (unwrapped is PsiMethodCallExpression && isHttpServiceDecorateCall(unwrapped)) {
             return unwrapped.methodExpression.referenceNameElement ?: unwrapped
         }

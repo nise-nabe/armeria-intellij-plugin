@@ -61,6 +61,19 @@ class ArmeriaMissingDocServiceKotlinInspectionTest : ArmeriaFixtureTestBase5() {
         assertHighlighted(expected = false)
     }
 
+    @Test
+    fun highlightsWhenDocServiceIsBuiltButNotMounted() {
+        configureMain(
+            """
+            val docs = DocService.builder().build()
+            Server.builder()
+                .annotatedService(HelloService())
+                .build()
+            """.trimIndent(),
+        )
+        assertHighlighted(expected = true)
+    }
+
     private fun configureMain(body: String) {
         myFixture.configureByText(
             "Main.kt",

@@ -223,6 +223,35 @@ class ArmeriaParamPathVariableInspectionTest : ArmeriaFixtureTestBase5() {
         assertEquals(1, highlights.size)
     }
 
+    @Test
+    fun ignoresStaticSetterParamBinding() {
+        myFixture.configureByText(
+            "UserService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.Param;
+
+            public class UserService {
+                @Get("/users/{id}")
+                public String handler(UserRequest request) {
+                    return "ok";
+                }
+            }
+
+            class UserRequest {
+                @Param
+                public static void setId(String id) {
+                }
+            }
+            """.trimIndent(),
+        )
+        val expected = message("inspection.param.path.variable.missing", "id")
+        val highlights = myFixture.doHighlighting().filter { it.description == expected }
+        assertEquals(1, highlights.size)
+    }
+
     private fun configureUsersGet(methodBody: String) {
         myFixture.configureByText(
             "UserService.java",

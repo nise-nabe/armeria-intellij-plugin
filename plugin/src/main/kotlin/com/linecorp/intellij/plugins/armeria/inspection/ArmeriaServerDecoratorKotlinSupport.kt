@@ -609,7 +609,7 @@ internal object ArmeriaServerDecoratorKotlinSupport {
     private fun stringValue(expression: KtExpression): String? = ArmeriaKotlinExpressionSupport.extractKotlinString(expression)
 
     private fun highlightDecorateOrArgument(expression: KtExpression): PsiElement {
-        val unwrapped = unwrapAndFollow(expression)
+        val unwrapped = unwrap(expression)
         val decorateCall = asCall(unwrapped)
         if (decorateCall != null && isHttpServiceDecorateCall(decorateCall)) {
             return decorateCall.calleeExpression ?: decorateCall
