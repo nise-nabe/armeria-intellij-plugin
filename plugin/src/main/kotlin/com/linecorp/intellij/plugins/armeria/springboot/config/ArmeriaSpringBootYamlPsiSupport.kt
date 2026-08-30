@@ -63,12 +63,11 @@ internal object ArmeriaSpringBootYamlPsiSupport {
 
     fun highlightForPath(
         file: PsiFile,
-        normalizedPath: String,
+        canonicalPath: String,
     ): PsiElement? {
-        val keyValues = yamlKeyValues(file)
         val match =
-            keyValues.firstOrNull { keyValue ->
-                ArmeriaSpringBootConfigSupport.normalizeIndexedKeyPath(yamlKeyPath(keyValue)) == normalizedPath
+            yamlKeyValues(file).lastOrNull { keyValue ->
+                ArmeriaSpringBootConfigSupport.canonicalConfigKey(yamlKeyPath(keyValue)) == canonicalPath
             } ?: return null
         return highlightElement(match)
     }
@@ -77,8 +76,9 @@ internal object ArmeriaSpringBootYamlPsiSupport {
         file: PsiFile,
         includeId: String,
     ): PsiElement? {
+        var last: PsiElement? = null
         for (keyValue in yamlKeyValues(file)) {
-            if (!ArmeriaSpringBootConfigKeys.isIncludeValuePath(yamlKeyPath(keyValue))) {
+            if (!isIncludeKey(yamlKeyPath(keyValue))) {
                 continue
             }
             when (val value = keyValue.value) {
@@ -86,23 +86,33 @@ internal object ArmeriaSpringBootYamlPsiSupport {
                     for (item in value.items) {
                         val scalar = item.value as? YAMLScalar ?: continue
                         if (includeTokenMatches(scalar.textValue, includeId)) {
-                            return scalar
+                            last = scalar
                         }
                     }
-                    return highlightElement(keyValue)
                 }
-                is YAMLScalar -> return value
-                else -> return highlightElement(keyValue)
+                is YAMLScalar -> {
+                    if (includeTokenMatches(value.textValue, includeId)) {
+                        last = value
+                    }
+                }
+                else -> last = highlightElement(keyValue)
             }
         }
-        return null
+        return last
     }
+
+    private fun isIncludeKey(keyPath: String): Boolean =
+        ArmeriaSpringBootConfigSupport.canonicalConfigKey(keyPath) ==
+            ArmeriaSpringBootConfigKeys.INTERNAL_SERVICES_INCLUDE
 
     private fun includeTokenMatches(
         raw: String,
         includeId: String,
     ): Boolean {
-        val tokens = SpringArmeriaConfigSemantics.parseIncludeTokens(raw)
+        val tokens =
+            SpringArmeriaConfigSemantics.parseIncludeTokens(
+                ArmeriaSpringBootConfigSupport.stripInlineComment(raw),
+            )
         return includeId in SpringArmeriaConfigSemantics.expandIncludes(tokens)
     }
 

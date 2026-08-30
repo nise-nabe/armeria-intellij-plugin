@@ -53,28 +53,34 @@ private object PropertiesSettingsHighlightLocator : SettingsHighlightLocator {
         file: PropertiesFile,
         includeId: String,
     ): PsiElement? {
+        var last: PsiElement? = null
         for (property in file.properties) {
             val key = property.unescapedKey ?: continue
-            if (!ArmeriaSpringBootConfigKeys.isIncludeValuePath(key)) {
+            if (ArmeriaSpringBootConfigSupport.canonicalConfigKey(key) !=
+                ArmeriaSpringBootConfigKeys.INTERNAL_SERVICES_INCLUDE
+            ) {
                 continue
             }
             val value = property.value ?: continue
-            val tokens = SpringArmeriaConfigSemantics.parseIncludeTokens(value)
+            val tokens =
+                SpringArmeriaConfigSemantics.parseIncludeTokens(
+                    ArmeriaSpringBootConfigSupport.stripInlineComment(value),
+                )
             if (includeId in SpringArmeriaConfigSemantics.expandIncludes(tokens)) {
-                return property.psiElement
+                last = property.psiElement
             }
         }
-        return highlightProperty(file, ArmeriaSpringBootConfigKeys.INTERNAL_SERVICES_INCLUDE)
+        return last
     }
 
     private fun highlightProperty(
         file: PropertiesFile,
-        normalizedPath: String,
+        canonicalPath: String,
     ): PsiElement? {
         val property =
-            file.properties.firstOrNull { candidate ->
-                val key = candidate.unescapedKey ?: return@firstOrNull false
-                ArmeriaSpringBootConfigSupport.normalizeIndexedKeyPath(key) == normalizedPath
+            file.properties.lastOrNull { candidate ->
+                val key = candidate.unescapedKey ?: return@lastOrNull false
+                ArmeriaSpringBootConfigSupport.canonicalConfigKey(key) == canonicalPath
             } ?: return null
         return property.psiElement
     }

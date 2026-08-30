@@ -71,25 +71,27 @@ internal object ArmeriaSpringBootSettingsConflict {
 
     fun isPortConflict(entries: Map<String, String>): Boolean = armeriaWouldBind(entries) && springWebWouldBind(entries)
 
+    fun needsBeanScan(entries: Map<String, String>): Boolean = includedServiceIds(entries).isNotEmpty()
+
     private fun armeriaWouldBind(entries: Map<String, String>): Boolean {
-        val enabled = lastValue(entries, SERVER_ENABLED_KEY)?.trim()
+        val enabled = lastValue(entries, SERVER_ENABLED_KEY)
         if (enabled.equals("false", ignoreCase = true)) {
             return false
         }
         val hasPorts =
             entries.keys.any { key ->
-                val normalized = ArmeriaSpringBootConfigSupport.normalizeIndexedKeyPath(key)
-                normalized == PORTS_KEY || normalized.startsWith("$PORTS_KEY.")
+                val canonical = ArmeriaSpringBootConfigSupport.canonicalConfigKey(key)
+                canonical == PORTS_KEY || canonical.startsWith("$PORTS_KEY.")
             }
         return hasPorts || enabled.equals("true", ignoreCase = true)
     }
 
     private fun springWebWouldBind(entries: Map<String, String>): Boolean {
-        val webType = lastValue(entries, ArmeriaSpringBootConfigKeys.SPRING_WEB_APPLICATION_TYPE)?.trim()
+        val webType = lastValue(entries, ArmeriaSpringBootConfigKeys.SPRING_WEB_APPLICATION_TYPE)
         if (webType.equals("none", ignoreCase = true)) {
             return false
         }
-        val port = lastValue(entries, ArmeriaSpringBootConfigKeys.SERVER_PORT)?.trim() ?: return false
+        val port = lastValue(entries, ArmeriaSpringBootConfigKeys.SERVER_PORT) ?: return false
         val parsed = port.toIntOrNull() ?: return false
         return parsed > 0
     }
@@ -124,8 +126,8 @@ internal object ArmeriaSpringBootSettingsConflict {
     private fun includedServiceIds(entries: Map<String, String>): Set<String> {
         val tokens = mutableSetOf<String>()
         for ((key, value) in entries) {
-            if (ArmeriaSpringBootConfigKeys.isIncludeValuePath(key)) {
-                tokens += SpringArmeriaConfigSemantics.parseIncludeTokens(value)
+            if (isIncludeKey(key)) {
+                tokens += SpringArmeriaConfigSemantics.parseIncludeTokens(cleanValue(value))
             }
         }
         return SpringArmeriaConfigSemantics.expandIncludes(tokens)
@@ -133,18 +135,25 @@ internal object ArmeriaSpringBootSettingsConflict {
 
     private fun hasNonBlank(
         entries: Map<String, String>,
-        normalizedKey: String,
+        canonicalKey: String,
     ): Boolean =
         entries.any { (key, value) ->
-            ArmeriaSpringBootConfigSupport.normalizeIndexedKeyPath(key) == normalizedKey &&
-                value.trim().isNotEmpty()
+            ArmeriaSpringBootConfigSupport.canonicalConfigKey(key) == canonicalKey &&
+                cleanValue(value).isNotEmpty()
         }
 
     private fun lastValue(
         entries: Map<String, String>,
-        normalizedKey: String,
+        canonicalKey: String,
     ): String? =
         entries.entries
-            .lastOrNull { ArmeriaSpringBootConfigSupport.normalizeIndexedKeyPath(it.key) == normalizedKey }
+            .lastOrNull { ArmeriaSpringBootConfigSupport.canonicalConfigKey(it.key) == canonicalKey }
             ?.value
+            ?.let(::cleanValue)
+
+    private fun isIncludeKey(key: String): Boolean =
+        ArmeriaSpringBootConfigSupport.canonicalConfigKey(key) ==
+            ArmeriaSpringBootConfigKeys.INTERNAL_SERVICES_INCLUDE
+
+    private fun cleanValue(raw: String): String = ArmeriaSpringBootConfigSupport.stripInlineComment(raw)
 }

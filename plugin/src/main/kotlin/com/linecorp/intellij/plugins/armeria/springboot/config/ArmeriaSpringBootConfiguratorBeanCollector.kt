@@ -1,5 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.springboot.config
 
+import com.intellij.openapi.progress.ProgressManager
+import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaPsiFacade
@@ -57,14 +59,18 @@ object ArmeriaSpringBootConfiguratorBeanCollector {
      * Configurator (and related) FQNs present in the project.
      * Returns `null` when indexes are not ready so callers can skip bean-dependent warnings.
      */
-    fun presentInspectionFqns(project: Project): Set<String>? =
-        try {
+    fun presentInspectionFqns(project: Project): Set<String>? {
+        if (DumbService.isDumb(project)) {
+            return null
+        }
+        return try {
             collectBeans(project, includeInspectionExtras = true)
                 .mapNotNull { it.configuratorFqn }
                 .toSet()
         } catch (_: IndexNotReadyException) {
             null
         }
+    }
 
     private fun collectBeans(
         project: Project,
@@ -80,6 +86,7 @@ object ArmeriaSpringBootConfiguratorBeanCollector {
         val beanAnnotation = psiFacade.findClass(ArmeriaRouteSupport.SPRING_BEAN_ANNOTATION, classpathScope)
         if (beanAnnotation != null) {
             AnnotatedElementsSearch.searchPsiMethods(beanAnnotation, projectScope).forEach { method ->
+                ProgressManager.checkCanceled()
                 val configuratorFqn =
                     matchingConfiguratorFqn(method, psiFacade, classpathScope, includeInspectionExtras)
                         ?: return@forEach
@@ -89,6 +96,7 @@ object ArmeriaSpringBootConfiguratorBeanCollector {
         for (fqn in EXPLORER_TYPES) {
             val iface = psiFacade.findClass(fqn, classpathScope) ?: continue
             ClassInheritorsSearch.search(iface, projectScope, true).forEach { psiClass ->
+                ProgressManager.checkCanceled()
                 if (psiClass.isInterface || psiClass.hasModifierProperty(PsiModifier.ABSTRACT)) {
                     return@forEach
                 }

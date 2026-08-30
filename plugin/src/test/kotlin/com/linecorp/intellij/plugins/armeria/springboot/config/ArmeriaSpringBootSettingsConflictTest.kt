@@ -188,4 +188,97 @@ class ArmeriaSpringBootSettingsConflictTest {
             )
         assertTrue(findings.none { it.kind == ArmeriaSpringBootSettingsConflict.Kind.MISSING_INTERNAL_SERVICE })
     }
+
+    @Test
+    fun camelCaseKeys_matchRelaxedBinding() {
+        val silentPort =
+            ArmeriaSpringBootSettingsConflict.findings(
+                mapOf(
+                    ArmeriaSpringBootConfigKeys.SERVER_PORT to "8080",
+                    "spring.main.webApplicationType" to "none",
+                    "armeria.ports[0].port" to "8080",
+                ),
+                emptySet(),
+            )
+        assertTrue(silentPort.none { it.kind == ArmeriaSpringBootSettingsConflict.Kind.PORT_CONFLICT })
+
+        val silentDocs =
+            ArmeriaSpringBootSettingsConflict.findings(
+                mapOf(
+                    "armeria.internalServices.include" to "docs",
+                    "armeria.docsPath" to "/docs",
+                ),
+                emptySet(),
+            )
+        assertTrue(silentDocs.none { it.kind == ArmeriaSpringBootSettingsConflict.Kind.MISSING_INTERNAL_SERVICE })
+
+        val disabled =
+            ArmeriaSpringBootSettingsConflict.findings(
+                mapOf(
+                    ArmeriaSpringBootConfigKeys.SERVER_PORT to "8080",
+                    "armeria.serverEnabled" to "false",
+                    "armeria.ports[0].port" to "8080",
+                ),
+                emptySet(),
+            )
+        assertTrue(disabled.none { it.kind == ArmeriaSpringBootSettingsConflict.Kind.PORT_CONFLICT })
+    }
+
+    @Test
+    fun inlineComments_areStrippedFromValues() {
+        assertTrue(
+            ArmeriaSpringBootSettingsConflict.isPortConflict(
+                mapOf(
+                    ArmeriaSpringBootConfigKeys.SERVER_PORT to "8080 # tomcat",
+                    "armeria.ports[0].port" to "8080",
+                ),
+            ),
+        )
+        assertFalse(
+            ArmeriaSpringBootSettingsConflict.isPortConflict(
+                mapOf(
+                    ArmeriaSpringBootConfigKeys.SERVER_PORT to "8080",
+                    ArmeriaSpringBootConfigKeys.SPRING_WEB_APPLICATION_TYPE to "none # armeria only",
+                    "armeria.ports[0].port" to "8080",
+                ),
+            ),
+        )
+        val docs =
+            ArmeriaSpringBootSettingsConflict.findings(
+                mapOf(
+                    ArmeriaSpringBootConfigKeys.INTERNAL_SERVICES_INCLUDE to "docs # ui",
+                    ArmeriaSpringBootSettingsConflict.DOCS_PATH_KEY to "/docs # explicit",
+                ),
+                emptySet(),
+            )
+        assertTrue(docs.none { it.kind == ArmeriaSpringBootSettingsConflict.Kind.MISSING_INTERNAL_SERVICE })
+    }
+
+    @Test
+    fun lastWins_duplicateServerPort() {
+        val entries =
+            linkedMapOf(
+                ArmeriaSpringBootConfigKeys.SERVER_PORT to "8080",
+                "armeria.ports[0].port" to "8080",
+            )
+        // LinkedHashMap associate last-wins: overwrite the port with -1 after ports are set.
+        val lastDisabled = entries + (ArmeriaSpringBootConfigKeys.SERVER_PORT to "-1")
+        assertFalse(ArmeriaSpringBootSettingsConflict.isPortConflict(lastDisabled))
+    }
+
+    @Test
+    fun canonicalConfigKey_kebabizesCamelSegments() {
+        assertEquals(
+            "armeria.docs-path",
+            ArmeriaSpringBootConfigSupport.canonicalConfigKey("armeria.docsPath"),
+        )
+        assertEquals(
+            "armeria.internal-services.include",
+            ArmeriaSpringBootConfigSupport.canonicalConfigKey("armeria.internalServices.include[0]"),
+        )
+        assertEquals(
+            "spring.main.web-application-type",
+            ArmeriaSpringBootConfigSupport.canonicalConfigKey("spring.main.webApplicationType"),
+        )
+    }
 }

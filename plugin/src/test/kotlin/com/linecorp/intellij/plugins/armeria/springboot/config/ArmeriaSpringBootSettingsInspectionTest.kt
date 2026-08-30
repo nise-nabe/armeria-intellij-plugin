@@ -9,6 +9,7 @@ import kotlin.test.assertTrue
 class ArmeriaSpringBootSettingsInspectionTest : ArmeriaFixtureTestBase5() {
     override fun registerArmeriaStubs() {
         registerArmeriaServerStubs()
+        registerArmeriaServiceStubs()
         registerSpringAnnotationStubs()
         registerArmeriaSpringStubs()
     }
@@ -238,6 +239,94 @@ class ArmeriaSpringBootSettingsInspectionTest : ArmeriaFixtureTestBase5() {
                 ArmeriaSpringBootSettingsConflict.DOCS_PATH_KEY,
             )
         assertTrue(highlights(expected).isEmpty())
+    }
+
+    @Test
+    fun yamlDoesNotHighlightIncludeDocsWhenDocServiceBeanPresent() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.docs.DocService;
+            import org.springframework.context.annotation.Bean;
+            import org.springframework.context.annotation.Configuration;
+
+            @Configuration
+            public class ArmeriaConfiguration {
+                @Bean
+                public DocService docService() {
+                    return DocService.builder().build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "application.yml",
+            """
+            armeria:
+              internal-services:
+                include: docs
+            """.trimIndent(),
+        )
+        val expected =
+            message(
+                "inspection.springboot.settings.internal.missing",
+                "docs",
+                ArmeriaSpringBootSettingsConflict.DOCS_PATH_KEY,
+            )
+        assertTrue(highlights(expected).isEmpty(), myFixture.doHighlighting().map { it.description }.toString())
+    }
+
+    @Test
+    fun yamlCamelCaseDocsPathSuppressesIncludeWarning() {
+        myFixture.configureByText(
+            "application.yml",
+            """
+            armeria:
+              docsPath: /docs
+              internalServices:
+                include: docs
+            """.trimIndent(),
+        )
+        val expected =
+            message(
+                "inspection.springboot.settings.internal.missing",
+                "docs",
+                ArmeriaSpringBootSettingsConflict.DOCS_PATH_KEY,
+            )
+        assertTrue(highlights(expected).isEmpty())
+    }
+
+    @Test
+    fun yamlInlineCommentOnServerPortStillWarns() {
+        myFixture.configureByText(
+            "application.yml",
+            """
+            server:
+              port: 8080 # tomcat
+            armeria:
+              ports:
+                - port: 8080
+            """.trimIndent(),
+        )
+        assertEquals(1, highlights(message("inspection.springboot.settings.port.conflict")).size)
+    }
+
+    @Test
+    fun yamlLastServerPortWins() {
+        myFixture.configureByText(
+            "application.yml",
+            """
+            server:
+              port: 8080
+            armeria:
+              ports:
+                - port: 8080
+            server:
+              port: -1
+            """.trimIndent(),
+        )
+        assertTrue(highlights(message("inspection.springboot.settings.port.conflict")).isEmpty())
     }
 
     private fun highlights(description: String) = myFixture.doHighlighting().filter { it.description == description }

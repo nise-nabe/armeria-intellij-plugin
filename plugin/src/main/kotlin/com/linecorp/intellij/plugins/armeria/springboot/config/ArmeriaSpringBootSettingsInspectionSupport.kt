@@ -22,7 +22,12 @@ internal object ArmeriaSpringBootSettingsInspectionSupport {
         if (entries.isEmpty()) {
             return
         }
-        val beans = ArmeriaSpringBootConfiguratorBeanCollector.presentInspectionFqns(file.project)
+        val beans =
+            if (ArmeriaSpringBootSettingsConflict.needsBeanScan(entries)) {
+                ArmeriaSpringBootConfiguratorBeanCollector.presentInspectionFqns(file.project)
+            } else {
+                emptySet()
+            }
         for (finding in ArmeriaSpringBootSettingsConflict.findings(entries, beans)) {
             val element = locator.locate(file, finding) ?: continue
             holder.registerProblem(
