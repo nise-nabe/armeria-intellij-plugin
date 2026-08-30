@@ -120,7 +120,6 @@ internal object ArmeriaProductionChecklist {
         fqcn: String,
     ): Boolean =
         text.lineSequence().any { line ->
-            val trimmed = line.trim()
-            trimmed.isNotEmpty() && !trimmed.startsWith('#') && trimmed == fqcn
+            line.substringBefore('#').trim() == fqcn
         }
 }

@@ -283,6 +283,26 @@ class ArmeriaProductionChecklistInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun allowsFlagsProviderWithInlineSpiComment() {
+        myFixture.addFileToProject(
+            "META-INF/services/com.linecorp.armeria.common.FlagsProvider",
+            "example.MyFlagsProvider  # ServiceLoader inline comment\n",
+        )
+        myFixture.configureByText(
+            "MyFlagsProvider.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.common.FlagsProvider;
+
+            public class MyFlagsProvider implements FlagsProvider {
+            }
+            """.trimIndent(),
+        )
+        assertNull(ArmeriaFlagsProviderSpiSupport.highlight(flagsProviderClass()))
+    }
+
+    @Test
     fun skipsAbstractFlagsProvider() {
         myFixture.configureByText(
             "BaseFlagsProvider.java",
