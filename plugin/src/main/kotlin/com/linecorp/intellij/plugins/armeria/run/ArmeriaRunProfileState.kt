@@ -141,9 +141,7 @@ class ArmeriaRunProfileState(
             if (text.isNullOrBlank()) {
                 return false
             }
-            return text.contains("Serving HTTP") ||
-                text.contains("Serving HTTPS") ||
-                text.contains("Started server")
+            return text.contains("Serving HTTP") || text.contains("Started server")
         }
     }
 }
