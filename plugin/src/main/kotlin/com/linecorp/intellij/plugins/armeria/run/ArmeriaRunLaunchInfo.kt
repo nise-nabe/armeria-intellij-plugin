@@ -6,7 +6,10 @@ import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.openapi.project.Project
+import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnalysisCollector
+import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.spring.ArmeriaSpringConfigRouteCollector
 
 internal object ArmeriaRunLaunchInfo {
     private val LOG = logger<ArmeriaRunLaunchInfo>()
@@ -21,14 +24,16 @@ internal object ArmeriaRunLaunchInfo {
         }
         return try {
             ReadAction.computeBlocking<ArmeriaRunServiceUrls, RuntimeException> {
-                val routes =
+                val moduleRoutes =
                     ArmeriaRouteAnalysisCollector
                         .collect(project)
                         .filter { it.moduleName == module.name }
+                val springRoutes = collectSpringConfigRoutes(project, module)
+                val combined = mergeRoutes(moduleRoutes, springRoutes)
                 val programmatic =
                     ArmeriaServerListenPortSupport.extractFromMainClass(project, module, mainClassFqn)
-                val listen = programmatic ?: ArmeriaRunUrlBuilder.listenPortFromSpringRoutes(routes)
-                ArmeriaRunUrlBuilder.fromRoutes(listen, routes)
+                val listen = programmatic ?: ArmeriaRunUrlBuilder.listenPortFromSpringRoutes(combined)
+                ArmeriaRunUrlBuilder.fromRoutes(listen, combined)
             }
         } catch (_: IndexNotReadyException) {
             ArmeriaRunServiceUrls()
@@ -36,5 +41,44 @@ internal object ArmeriaRunLaunchInfo {
             LOG.warn("Failed to resolve Armeria run service URLs", e)
             ArmeriaRunServiceUrls()
         }
+    }
+
+    private fun collectSpringConfigRoutes(
+        project: Project,
+        module: Module,
+    ): List<ArmeriaRoute> {
+        val routes = mutableListOf<ArmeriaRoute>()
+        val seen = mutableSetOf<String>()
+        ArmeriaSpringConfigRouteCollector.collect(
+            project,
+            GlobalSearchScope.moduleScope(module),
+            routes,
+            seen,
+        )
+        if (routes.none { it.path.startsWith(":") }) {
+            ArmeriaSpringConfigRouteCollector.collect(
+                project,
+                GlobalSearchScope.projectScope(project),
+                routes,
+                seen,
+            )
+        }
+        return routes
+    }
+
+    private fun mergeRoutes(
+        primary: List<ArmeriaRoute>,
+        extra: List<ArmeriaRoute>,
+    ): List<ArmeriaRoute> {
+        if (extra.isEmpty()) {
+            return primary
+        }
+        if (primary.isEmpty()) {
+            return extra
+        }
+        return primary +
+            extra.filter { extraRoute ->
+                primary.none { it.path == extraRoute.path && it.routeMatch == extraRoute.routeMatch }
+            }
     }
 }

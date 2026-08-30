@@ -184,7 +184,9 @@ class ArmeriaServerListenPortSupportTest : ArmeriaFixtureTestBase() {
     }
 
     fun testLaunchInfoUsesSpringPortWhenMainHasNoHttp() {
-        myFixture.configureByText(
+        registerSpringAnnotationStubs()
+        registerArmeriaSpringStubs()
+        myFixture.addFileToProject(
             "application.properties",
             """
             armeria.ports[0].port=8080
