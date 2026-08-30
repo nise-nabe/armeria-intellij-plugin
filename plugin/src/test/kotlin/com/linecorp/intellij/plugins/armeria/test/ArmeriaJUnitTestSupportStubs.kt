@@ -16,6 +16,16 @@ internal fun JavaCodeInsightTestFixture.withTemporaryMainSourceRoot(block: (Virt
     }
 }
 
+internal fun JavaCodeInsightTestFixture.withTemporaryTestSourceRoot(block: (VirtualFile) -> Unit) {
+    val testRoot = tempDirFixture.findOrCreateDir("test-sources")
+    try {
+        PsiTestUtil.addSourceRoot(module, testRoot, true)
+        block(testRoot)
+    } finally {
+        PsiTestUtil.removeSourceRoot(module, testRoot)
+    }
+}
+
 internal fun JavaCodeInsightTestFixture.registerArmeriaJUnitTestSupportStubs() {
     markDefaultSourceRootAsTestSource(module)
     registerArmeriaAnnotationStubs()
