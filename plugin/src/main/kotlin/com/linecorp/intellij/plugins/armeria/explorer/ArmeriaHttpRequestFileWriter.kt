@@ -9,6 +9,7 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpRequestGenerator
 import com.linecorp.intellij.plugins.armeria.message
+import com.linecorp.intellij.plugins.armeria.run.ArmeriaHttpClientEnvironment
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 
@@ -20,7 +21,7 @@ internal object ArmeriaHttpRequestFileWriter {
         route: ArmeriaRoute,
         baseUrl: String = ArmeriaHttpRequestGenerator.DEFAULT_BASE_URL,
     ) {
-        val content = ArmeriaHttpRequestGenerator.requestText(route, baseUrl)
+        val content = ArmeriaHttpRequestGenerator.requestText(route, resolveBaseUrl(project, baseUrl))
         val fileName = ArmeriaHttpRequestGenerator.fileName(route)
         val baseDir = project.basePath ?: return
         val filePath = Path.of(baseDir, ".idea", "httpRequests", fileName)
@@ -68,5 +69,20 @@ internal object ArmeriaHttpRequestFileWriter {
                 },
             )
         }
+    }
+
+    internal fun resolveBaseUrl(
+        project: Project,
+        requested: String,
+    ): String {
+        val baseDir = project.basePath
+        val envFileExists =
+            baseDir != null &&
+                Path.of(baseDir, ".idea", "httpRequests", ArmeriaHttpClientEnvironment.FILE_NAME).toFile().isFile
+        return ArmeriaHttpClientEnvironment.requestBaseUrl(
+            requested,
+            ArmeriaHttpRequestGenerator.DEFAULT_BASE_URL,
+            envFileExists,
+        )
     }
 }

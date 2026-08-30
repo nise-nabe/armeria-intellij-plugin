@@ -12,14 +12,10 @@ import com.intellij.execution.runners.ProgramRunner
 import com.intellij.execution.ui.ConsoleView
 import com.intellij.execution.ui.ConsoleViewContentType
 import com.intellij.execution.util.JavaParametersUtil
+import com.intellij.ide.BrowserUtil
 import com.intellij.ide.browsers.OpenUrlHyperlinkInfo
-import com.intellij.openapi.application.ReadAction
-import com.intellij.openapi.project.DumbService
-import com.intellij.openapi.project.IndexNotReadyException
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.roots.ModuleRootManager
-import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnalysisCollector
-import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceSupport
-import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.message
 
 class ArmeriaRunProfileState(
@@ -43,6 +39,11 @@ class ArmeriaRunProfileState(
                 .firstOrNull()
                 ?.path
             ?: configuration.project.basePath
+        ArmeriaRunFlags.apply(
+            params,
+            configuration.isVerboseResponses(),
+            configuration.isReportBlockedEventLoop(),
+        )
         return params
     }
 
@@ -51,12 +52,21 @@ class ArmeriaRunProfileState(
         runner: ProgramRunner<*>,
     ): ExecutionResult {
         val result = super.execute(executor, runner)
-        val docServiceUrl = resolveDocServiceUrl()
-        if (docServiceUrl != null) {
+        val urls = resolveServiceUrls()
+        if (urls.listen != null || !urls.isEmpty) {
             result.processHandler.addProcessListener(
                 object : ProcessListener {
                     override fun startNotified(event: ProcessEvent) {
-                        printDocServiceHint(result, docServiceUrl)
+                        printServiceHints(result, urls)
+                        ApplicationManager.getApplication().invokeLater {
+                            if (configuration.project.isDisposed) {
+                                return@invokeLater
+                            }
+                            if (configuration.isOpenDocServiceAfterLaunch()) {
+                                urls.docService?.let { BrowserUtil.browse(it) }
+                            }
+                            urls.listen?.let { ArmeriaHttpClientEnvironmentWriter.write(configuration.project, it) }
+                        }
                     }
                 },
             )
@@ -64,29 +74,32 @@ class ArmeriaRunProfileState(
         return result
     }
 
-    private fun resolveDocServiceUrl(): String? {
-        val project = configuration.project
-        val module = configuration.getConfigurationModule().module ?: return null
-        if (DumbService.isDumb(project)) {
-            return null
-        }
-        return try {
-            val routes =
-                ReadAction.computeBlocking<List<ArmeriaRoute>, RuntimeException> {
-                    ArmeriaRouteAnalysisCollector.collect(project)
-                }
-            ArmeriaDocServiceSupport.primaryUrl(routes.filter { it.moduleName == module.name })
-        } catch (_: IndexNotReadyException) {
-            null
-        }
-    }
+    private fun resolveServiceUrls(): ArmeriaRunServiceUrls =
+        ArmeriaRunLaunchInfo.resolve(
+            project = configuration.project,
+            module = configuration.getConfigurationModule().module,
+            mainClassFqn = configuration.getMainClass(),
+        )
 
-    private fun printDocServiceHint(
+    private fun printServiceHints(
         result: ExecutionResult,
-        url: String,
+        urls: ArmeriaRunServiceUrls,
     ) {
         val console = result.executionConsole as? ConsoleView ?: return
-        console.print(message("armeria.run.docService.console.prefix"), ConsoleViewContentType.SYSTEM_OUTPUT)
+        printHint(console, message("armeria.run.docService.console.prefix"), urls.docService)
+        printHint(console, message("armeria.run.health.console.prefix"), urls.health)
+        printHint(console, message("armeria.run.metrics.console.prefix"), urls.metrics)
+    }
+
+    private fun printHint(
+        console: ConsoleView,
+        prefix: String,
+        url: String?,
+    ) {
+        if (url.isNullOrBlank()) {
+            return
+        }
+        console.print(prefix, ConsoleViewContentType.SYSTEM_OUTPUT)
         console.print(" ", ConsoleViewContentType.SYSTEM_OUTPUT)
         console.printHyperlink(url, OpenUrlHyperlinkInfo(url))
         console.print("\n", ConsoleViewContentType.SYSTEM_OUTPUT)
