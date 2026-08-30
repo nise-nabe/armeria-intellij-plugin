@@ -126,4 +126,71 @@ class ArmeriaSpringBootConfiguratorBeanCollectorTest : ArmeriaFixtureTestBase5()
         assertEquals("ArmeriaServerConfigurator", beans.single().value)
         assertNotNull(beans.single().navigationPointer?.element)
     }
+
+    @Test
+    fun collectsConsumerServerBuilderBean() {
+        myFixture.configureByText(
+            "ArmeriaConfiguration.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.ServerBuilder;
+            import java.util.function.Consumer;
+            import org.springframework.context.annotation.Bean;
+            import org.springframework.context.annotation.Configuration;
+
+            @Configuration
+            public class ArmeriaConfiguration {
+                @Bean
+                public Consumer<ServerBuilder> customizeServer() {
+                    return serverBuilder -> {};
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val beans =
+            ArmeriaSpringBootConfiguratorBeanCollector
+                .collect(project)
+                .single()
+                .entries
+        assertEquals(1, beans.size)
+        assertEquals("customizeServer", beans.single().key)
+        assertEquals("Consumer<ServerBuilder>", beans.single().value)
+        assertEquals(ArmeriaRouteSupport.SERVER_BUILDER_CONSUMER_TYPE, beans.single().configuratorFqn)
+        assertNotNull(beans.single().navigationPointer?.element)
+    }
+
+    @Test
+    fun collectsArmeriaClientConfiguratorBean() {
+        myFixture.configureByText(
+            "ArmeriaConfiguration.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.spring.ArmeriaClientConfigurator;
+            import org.springframework.context.annotation.Bean;
+            import org.springframework.context.annotation.Configuration;
+
+            @Configuration
+            public class ArmeriaConfiguration {
+                @Bean
+                public ArmeriaClientConfigurator armeriaClientConfigurator() {
+                    return builder -> {};
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val beans =
+            ArmeriaSpringBootConfiguratorBeanCollector
+                .collect(project)
+                .single()
+                .entries
+        assertEquals(1, beans.size)
+        assertEquals("armeriaClientConfigurator", beans.single().key)
+        assertEquals("ArmeriaClientConfigurator", beans.single().value)
+        assertEquals(ArmeriaRouteSupport.ARMERIA_CLIENT_CONFIGURATOR_CLASS, beans.single().configuratorFqn)
+        assertNotNull(beans.single().navigationPointer?.element)
+    }
 }

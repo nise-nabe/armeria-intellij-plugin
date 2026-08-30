@@ -3,5 +3,14 @@
         <completion.contributor language="yaml"
                                 order="first"
                                 implementationClass="com.linecorp.intellij.plugins.armeria.springboot.config.ArmeriaSpringBootYamlCompletionContributor" />
+        <localInspection language="yaml"
+                         bundle="messages.ArmeriaBundle"
+                         key="inspection.springboot.settings.display.name"
+                         groupBundle="messages.ArmeriaBundle"
+                         groupKey="inspection.group.armeria"
+                         shortName="ArmeriaSpringBootYamlSettings"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         implementationClass="com.linecorp.intellij.plugins.armeria.springboot.config.ArmeriaSpringBootYamlSettingsInspection" />
     </extensions>
 </idea-plugin>

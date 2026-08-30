@@ -16,12 +16,16 @@ object ArmeriaRouteSupport {
     const val ARMERIA_SERVER_PACKAGE_PREFIX = "com.linecorp.armeria.server"
     const val ARMERIA_SERVER_CLASS = "com.linecorp.armeria.server.Server"
     const val ARMERIA_SERVER_CONFIGURATOR_CLASS = "$ARMERIA_SPRING_PACKAGE_PREFIX.ArmeriaServerConfigurator"
+    const val ARMERIA_CLIENT_CONFIGURATOR_CLASS = "$ARMERIA_SPRING_PACKAGE_PREFIX.ArmeriaClientConfigurator"
     const val DOC_SERVICE_CONFIGURATOR_CLASS = "$ARMERIA_SPRING_PACKAGE_PREFIX.DocServiceConfigurator"
     const val HEALTH_CHECK_SERVICE_CONFIGURATOR_CLASS =
         "$ARMERIA_SPRING_PACKAGE_PREFIX.HealthCheckServiceConfigurator"
     const val METRIC_COLLECTING_SERVICE_CONFIGURATOR_CLASS =
         "$ARMERIA_SPRING_PACKAGE_PREFIX.MetricCollectingServiceConfigurator"
     const val SERVER_BUILDER_CLASS = "com.linecorp.armeria.server.ServerBuilder"
+    const val DOC_SERVICE_CLASS = "com.linecorp.armeria.server.docs.DocService"
+    const val CONSUMER_CLASS = "java.util.function.Consumer"
+    const val SERVER_BUILDER_CONSUMER_TYPE = "$CONSUMER_CLASS<$SERVER_BUILDER_CLASS>"
     const val SPRING_BEAN_ANNOTATION = "org.springframework.context.annotation.Bean"
 
     val SPRING_BOOT_ARMERIA_FILE_INDICATORS =

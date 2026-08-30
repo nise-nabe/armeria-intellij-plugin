@@ -3,5 +3,14 @@
         <completion.contributor language="Properties"
                                 order="first"
                                 implementationClass="com.linecorp.intellij.plugins.armeria.springboot.config.ArmeriaSpringBootPropertiesCompletionContributor" />
+        <localInspection language="Properties"
+                         bundle="messages.ArmeriaBundle"
+                         key="inspection.springboot.settings.properties.display.name"
+                         groupBundle="messages.ArmeriaBundle"
+                         groupKey="inspection.group.armeria"
+                         shortName="ArmeriaSpringBootPropertiesSettings"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         implementationClass="com.linecorp.intellij.plugins.armeria.springboot.config.ArmeriaSpringBootPropertiesSettingsInspection" />
     </extensions>
 </idea-plugin>

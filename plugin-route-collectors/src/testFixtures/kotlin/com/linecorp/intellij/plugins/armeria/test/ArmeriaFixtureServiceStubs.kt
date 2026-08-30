@@ -322,4 +322,14 @@ fun JavaCodeInsightTestFixture.registerArmeriaSpringStubs() {
         }
         """.trimIndent(),
     )
+    this.addClass(
+        """
+        package com.linecorp.armeria.spring;
+
+        @FunctionalInterface
+        public interface ArmeriaClientConfigurator {
+            void configure(Object builder);
+        }
+        """.trimIndent(),
+    )
 }
