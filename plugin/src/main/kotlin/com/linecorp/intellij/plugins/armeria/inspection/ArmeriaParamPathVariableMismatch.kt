@@ -95,7 +95,10 @@ internal object ArmeriaParamPathVariableMismatch {
             paramName(field.getAnnotation(ArmeriaRouteSupport.PARAM_ANNOTATION), field.name)?.let { names += it }
         }
         type.allMethods.forEach { method ->
-            if (method.parameterList.parametersCount != 1 || !method.name.startsWith("set")) {
+            if (method.hasModifierProperty(PsiModifier.STATIC) ||
+                method.parameterList.parametersCount != 1 ||
+                !method.name.startsWith("set")
+            ) {
                 return@forEach
             }
             val annotation =

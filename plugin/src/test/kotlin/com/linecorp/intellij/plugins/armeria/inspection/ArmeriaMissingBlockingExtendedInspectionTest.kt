@@ -413,6 +413,67 @@ class ArmeriaMissingBlockingExtendedInspectionTest : ArmeriaFixtureTestBase5() {
         assertTrue(myFixture.file.text.contains("@Blocking"))
     }
 
+    @Test
+    fun ignoresUnrelatedRuntimeWiringFluentApi() {
+        myFixture.configureByText(
+            "Other.java",
+            """
+            package example;
+
+            import java.util.concurrent.CompletableFuture;
+            import java.util.function.Consumer;
+
+            public class Other {
+                public Other runtimeWiring(Consumer<Object> configurer) {
+                    return this;
+                }
+
+                public void setup() {
+                    runtimeWiring(c -> CompletableFuture.completedFuture("ok").join());
+                }
+            }
+            """.trimIndent(),
+        )
+        assertGraphqlHighlights(0, "join")
+        assertExecutorHighlights(0)
+    }
+
+    @Test
+    fun highlightsGraphqlJoinNestedInsideUnrelatedRuntimeWiring() {
+        myFixture.configureByText(
+            "Server.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.graphql.GraphqlService;
+            import graphql.schema.idl.TypeRuntimeWiring;
+            import java.util.concurrent.CompletableFuture;
+            import java.util.function.Consumer;
+
+            public class Server {
+                public Object graphql() {
+                    return GraphqlService.builder()
+                            .runtimeWiring(c -> {
+                                new Other().runtimeWiring(x ->
+                                        new TypeRuntimeWiring().dataFetcher("user", env ->
+                                                CompletableFuture.completedFuture("ok").join()));
+                                return c;
+                            })
+                            .build();
+                }
+            }
+
+            class Other {
+                public Other runtimeWiring(Consumer<Object> configurer) {
+                    return this;
+                }
+            }
+            """.trimIndent(),
+        )
+        assertGraphqlHighlights(1, "join")
+        assertExecutorHighlights(1)
+    }
+
     private fun configureGraphqlFetcher(useBlockingExecutor: Boolean) {
         val executorCall =
             if (useBlockingExecutor) {

@@ -115,7 +115,11 @@ class ArmeriaKnownHttpServiceClassifierTest {
         )
         assertEquals(
             KnownHttpServiceKind.HTTP,
-            ArmeriaKnownHttpServiceClassifier.classify("example.ServerSentEvents"),
+            ArmeriaKnownHttpServiceClassifier.classify("com.linecorp.armeriafoo.DocService"),
+        )
+        assertEquals(
+            KnownHttpServiceKind.HTTP,
+            ArmeriaKnownHttpServiceClassifier.classify("com.linecorp.armeriafoo.server.docs.DocService"),
         )
     }
 

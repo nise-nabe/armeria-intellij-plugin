@@ -70,6 +70,8 @@ object ArmeriaRouteSupport {
 
     val routeAnnotations = ArmeriaRouteAnnotationSupport.routeAnnotations
 
+    fun isArmeriaQualifiedName(name: String): Boolean = name == ARMERIA_PACKAGE_PREFIX || name.startsWith("$ARMERIA_PACKAGE_PREFIX.")
+
     fun findRouteAnnotation(method: PsiMethod): Pair<PsiAnnotation, String>? = ArmeriaRouteAnnotationSupport.findRouteAnnotation(method)
 
     fun extractPaths(annotation: com.intellij.psi.PsiAnnotation): List<String> = ArmeriaRouteAnnotationSupport.extractPaths(annotation)
@@ -228,7 +230,7 @@ object ArmeriaRouteSupport {
             file.importList
                 ?.allImportStatements
                 ?.any { statement ->
-                    statement.importReference?.qualifiedName?.startsWith(ARMERIA_PACKAGE_PREFIX) == true
+                    statement.importReference?.qualifiedName?.let(::isArmeriaQualifiedName) == true
                 } ?: false
         if (hasArmeriaImports) {
             return true

@@ -58,6 +58,48 @@ class ArmeriaMissingDocServiceInspectionTest : ArmeriaFixtureTestBase5() {
         assertHighlighted(expected = true)
     }
 
+    @Test
+    fun highlightsWhenDocServiceIsBuiltButNotMounted() {
+        configureMain(
+            """
+            DocService.builder().build();
+            Server.builder()
+                    .annotatedService(new HelloService())
+                    .build();
+            """.trimIndent(),
+        )
+        assertHighlighted(expected = true)
+    }
+
+    @Test
+    fun allowsAssignedDocServicePassedToService() {
+        configureMain(
+            """
+            DocService docs = DocService.builder().build();
+            Server.builder()
+                    .annotatedService(new HelloService())
+                    .service("/docs", docs)
+                    .build();
+            """.trimIndent(),
+        )
+        assertHighlighted(expected = false)
+    }
+
+    @Test
+    fun highlightsWhenMountedServiceVariablesCycle() {
+        configureMain(
+            """
+            Object first = second;
+            Object second = first;
+            Server.builder()
+                    .annotatedService(new HelloService())
+                    .service("/x", first)
+                    .build();
+            """.trimIndent(),
+        )
+        assertHighlighted(expected = true)
+    }
+
     private fun configureMain(body: String) {
         myFixture.addClass(
             """

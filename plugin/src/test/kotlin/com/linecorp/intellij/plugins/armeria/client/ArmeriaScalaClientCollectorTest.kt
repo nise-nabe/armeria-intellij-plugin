@@ -252,4 +252,32 @@ class ArmeriaScalaClientCollectorTest : ArmeriaLightJavaCodeInsightFixtureTestCa
         assertEquals("HTTP", endpoint.clientType)
         assertEquals("https://example.com/users", endpoint.uri)
     }
+
+    fun testDoesNotTreatThriftBlockingAsWebClientConversionFromScala() {
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client.thrift;
+
+            public final class ThriftClients {
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Main.scala",
+            """
+            package example
+
+            import com.linecorp.armeria.client.thrift.ThriftClients
+
+            object Main {
+              val client = ThriftClients.of("tbinary+http://example.com/hello").blocking()
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("Thrift", endpoint.clientType)
+        assertEquals("tbinary+http://example.com/hello", endpoint.uri)
+    }
 }

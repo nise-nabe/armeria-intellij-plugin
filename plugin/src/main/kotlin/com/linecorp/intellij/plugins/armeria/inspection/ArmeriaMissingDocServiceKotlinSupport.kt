@@ -2,6 +2,7 @@ package com.linecorp.intellij.plugins.armeria.inspection
 
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiVariable
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKnownHttpServiceClassifier
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
@@ -10,6 +11,7 @@ import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
+import org.jetbrains.kotlin.psi.KtProperty
 
 internal object ArmeriaMissingDocServiceKotlinSupport {
     private val RPC_KINDS =
@@ -30,14 +32,6 @@ internal object ArmeriaMissingDocServiceKotlinSupport {
                 "builder" -> {
                     if (isServerBuilder(call)) {
                         serverBuilder = serverBuilder ?: call
-                    }
-                    if (classifyExpression(call) == KnownHttpServiceKind.DOC_SERVICE) {
-                        hasDocService = true
-                    }
-                }
-                "build", "of" -> {
-                    if (classifyExpression(call) == KnownHttpServiceKind.DOC_SERVICE) {
-                        hasDocService = true
                     }
                 }
                 "annotatedService" -> annotatedOrRpc += call
@@ -99,10 +93,19 @@ internal object ArmeriaMissingDocServiceKotlinSupport {
         }
     }
 
-    private fun classifyExpression(expression: KtExpression): KnownHttpServiceKind {
+    private fun classifyExpression(expression: KtExpression): KnownHttpServiceKind = classifyExpression(expression, mutableSetOf())
+
+    private fun classifyExpression(
+        expression: KtExpression,
+        visited: MutableSet<PsiElement>,
+    ): KnownHttpServiceKind {
         var current: KtExpression? = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression)
         while (current != null) {
-            when (val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(current) ?: current) {
+            val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(current) ?: current
+            if (!visited.add(unwrapped)) {
+                return KnownHttpServiceKind.HTTP
+            }
+            when (unwrapped) {
                 is KtCallExpression -> {
                     val callee = unwrapped.calleeExpression
                     current =
@@ -124,11 +127,28 @@ internal object ArmeriaMissingDocServiceKotlinSupport {
                     if (kind != KnownHttpServiceKind.HTTP) {
                         return kind
                     }
-                    val resolved = unwrapped.references.firstOrNull()?.resolve()
-                    if (resolved is PsiClass) {
-                        return ArmeriaKnownHttpServiceClassifier.classify(resolved.qualifiedName.orEmpty())
+                    when (val resolved = unwrapped.references.firstOrNull()?.resolve()) {
+                        is PsiClass -> {
+                            return ArmeriaKnownHttpServiceClassifier.classify(resolved.qualifiedName.orEmpty())
+                        }
+                        is KtProperty -> {
+                            if (!visited.add(resolved)) {
+                                return KnownHttpServiceKind.HTTP
+                            }
+                            current = resolved.initializer
+                        }
+                        is PsiVariable -> {
+                            if (!visited.add(resolved)) {
+                                return KnownHttpServiceKind.HTTP
+                            }
+                            val initializer = resolved.initializer
+                            current = initializer as? KtExpression
+                            if (current == null) {
+                                return ArmeriaKnownHttpServiceClassifier.classify(resolved.type.canonicalText)
+                            }
+                        }
+                        else -> current = null
                     }
-                    current = null
                 }
                 else -> current = null
             }

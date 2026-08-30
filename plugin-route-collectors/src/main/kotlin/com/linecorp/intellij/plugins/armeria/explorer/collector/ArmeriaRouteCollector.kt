@@ -95,13 +95,17 @@ object ArmeriaRouteCollector {
                 // Look up the key after [cachedProjectRoutes] so it matches the interned Key
                 // that call just stored under (do not capture a Key across a concurrent clear).
                 val baseKey = cacheKey(contributors)
-                val baseCachedValue =
-                    project.getUserData(baseKey)
-                        ?: error("base route cache not registered for $baseKey")
+                val baseCachedValue = project.getUserData(baseKey)
+                val dependencies =
+                    buildList {
+                        if (baseCachedValue != null) {
+                            add(baseCachedValue)
+                        }
+                        addAll(routeCacheInvalidators(project))
+                    }
                 CachedValueProvider.Result.create(
                     mergeProtoRoutes(project, baseRoutes, contributors),
-                    baseCachedValue,
-                    *routeCacheInvalidators(project),
+                    *dependencies.toTypedArray(),
                 )
             },
             false,

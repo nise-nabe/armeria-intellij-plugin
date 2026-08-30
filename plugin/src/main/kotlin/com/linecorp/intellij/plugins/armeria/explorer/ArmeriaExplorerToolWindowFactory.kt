@@ -44,7 +44,9 @@ class ArmeriaExplorerToolWindowFactory :
         val selectionListener =
             object : ContentManagerListener {
                 override fun selectionChanged(event: ContentManagerEvent) {
-                    scheduleInitialRefresh(event.content.component)
+                    if (toolWindow.isVisible) {
+                        scheduleInitialRefresh(event.content.component)
+                    }
                 }
             }
         contentManager.addContentManagerListener(selectionListener)

@@ -368,18 +368,17 @@ internal object ArmeriaGraphqlBlockingSupport {
             } else {
                 start
             }
-        var graphqlCall: PsiMethodCallExpression? = null
         while (current != null && current !is PsiMethod && current !is PsiClass && current !is PsiFile) {
             if (current is PsiMethodCallExpression && isGraphqlBuilderMethod(current)) {
-                graphqlCall = current
-                break
+                val builder = findGraphqlServiceBuilderCall(current)
+                if (builder != null) {
+                    val outermost = outermostChainCall(builder)
+                    return chainCalls(builder, outermost)
+                }
             }
             current = current.parent
         }
-        val seed = graphqlCall ?: return null
-        val builder = findGraphqlServiceBuilderCall(seed)
-        val outermost = outermostChainCall(builder)
-        return chainCalls(builder, outermost)
+        return null
     }
 
     private fun isGraphqlBuilderMethod(call: PsiMethodCallExpression): Boolean {
@@ -393,7 +392,7 @@ internal object ArmeriaGraphqlBlockingSupport {
         return call.methodExpression.referenceName in GRAPHQL_BUILDER_METHODS
     }
 
-    private fun findGraphqlServiceBuilderCall(seed: PsiMethodCallExpression): PsiMethodCallExpression {
+    private fun findGraphqlServiceBuilderCall(seed: PsiMethodCallExpression): PsiMethodCallExpression? {
         var current: PsiExpression? = seed
         val visited = mutableSetOf<PsiElement>()
         while (current != null && visited.add(current)) {
@@ -407,7 +406,15 @@ internal object ArmeriaGraphqlBlockingSupport {
                     null
                 }
         }
-        return seed
+        return seed.takeIf(::isResolvedGraphqlBuilderCall)
+    }
+
+    private fun isResolvedGraphqlBuilderCall(call: PsiMethodCallExpression): Boolean {
+        if (isGraphqlServiceBuilderCall(call)) {
+            return true
+        }
+        val resolved = call.resolveMethod()?.containingClass?.qualifiedName
+        return resolved == GRAPHQL_SERVICE_CLASS || resolved == GRAPHQL_SERVICE_BUILDER_CLASS
     }
 
     private fun chainCalls(

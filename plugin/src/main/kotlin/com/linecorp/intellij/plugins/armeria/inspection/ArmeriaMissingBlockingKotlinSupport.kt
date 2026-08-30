@@ -621,7 +621,7 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         var current: PsiElement? = start
         while (current != null && current !is KtFile) {
             if (current is KtCallExpression && isGraphqlBuilderMethod(current)) {
-                return findGraphqlServiceBuilderCall(current)
+                findGraphqlServiceBuilderCall(current)?.let { return it }
             }
             current = current.parent
         }
@@ -642,7 +642,7 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         return name in GRAPHQL_BUILDER_METHODS
     }
 
-    private fun findGraphqlServiceBuilderCall(seed: KtCallExpression): KtCallExpression {
+    private fun findGraphqlServiceBuilderCall(seed: KtCallExpression): KtCallExpression? {
         var current: KtExpression? = seed
         val visited = mutableSetOf<PsiElement>()
         while (current != null && visited.add(current)) {
@@ -652,7 +652,16 @@ internal object ArmeriaMissingBlockingKotlinSupport {
             }
             current = chainReceiver(current)
         }
-        return seed
+        return seed.takeIf(::isResolvedGraphqlBuilderCall)
+    }
+
+    private fun isResolvedGraphqlBuilderCall(call: KtCallExpression): Boolean {
+        if (isGraphqlServiceBuilderCall(call)) {
+            return true
+        }
+        val resolved = resolvePsiMethod(call)?.containingClass?.qualifiedName
+        return resolved == ArmeriaGraphqlBlockingSupport.GRAPHQL_SERVICE_CLASS ||
+            resolved == ArmeriaGraphqlBlockingSupport.GRAPHQL_SERVICE_BUILDER_CLASS
     }
 
     private fun asCall(expression: KtExpression): KtCallExpression? =

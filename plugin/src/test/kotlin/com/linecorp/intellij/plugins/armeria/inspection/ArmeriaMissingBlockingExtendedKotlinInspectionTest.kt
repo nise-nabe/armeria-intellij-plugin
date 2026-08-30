@@ -251,6 +251,61 @@ class ArmeriaMissingBlockingExtendedKotlinInspectionTest : ArmeriaFixtureTestBas
         assertTrue(myFixture.file.text.contains("@Blocking"))
     }
 
+    @Test
+    fun ignoresUnrelatedRuntimeWiringFluentApi() {
+        myFixture.configureByText(
+            "Other.kt",
+            """
+            package example
+
+            import java.util.concurrent.CompletableFuture
+
+            class Other {
+                fun runtimeWiring(configurer: (Any) -> Unit): Other = this
+
+                fun setup() {
+                    runtimeWiring { CompletableFuture.completedFuture("ok").join() }
+                }
+            }
+            """.trimIndent(),
+        )
+        assertGraphqlHighlights(0, "join")
+        assertExecutorHighlights(0)
+    }
+
+    @Test
+    fun highlightsGraphqlJoinNestedInsideUnrelatedRuntimeWiring() {
+        myFixture.configureByText(
+            "Server.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.graphql.GraphqlService
+            import graphql.schema.idl.TypeRuntimeWiring
+            import java.util.concurrent.CompletableFuture
+
+            class Server {
+                fun graphql(): Any =
+                    GraphqlService.builder()
+                        .runtimeWiring {
+                            Other().runtimeWiring {
+                                TypeRuntimeWiring().dataFetcher("user") { env ->
+                                    CompletableFuture.completedFuture("ok").join()
+                                }
+                            }
+                        }
+                        .build()
+            }
+
+            class Other {
+                fun runtimeWiring(configurer: (Any) -> Unit): Other = this
+            }
+            """.trimIndent(),
+        )
+        assertGraphqlHighlights(1, "join")
+        assertExecutorHighlights(1)
+    }
+
     private fun configureGraphqlFetcher(useBlockingExecutor: Boolean) {
         val executorCall =
             if (useBlockingExecutor) {

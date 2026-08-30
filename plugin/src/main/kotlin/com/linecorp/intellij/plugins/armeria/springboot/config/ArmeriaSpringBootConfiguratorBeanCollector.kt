@@ -41,6 +41,7 @@ object ArmeriaSpringBootConfiguratorBeanCollector {
                 fileName = message("springboot.config.beans.fileName"),
                 filePath = message("springboot.config.beans.filePath"),
                 entries = beans,
+                synthetic = true,
             ),
         )
     }

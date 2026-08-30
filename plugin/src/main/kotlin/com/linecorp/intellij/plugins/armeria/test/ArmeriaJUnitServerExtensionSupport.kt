@@ -154,7 +154,7 @@ internal object ArmeriaJUnitServerExtensionSupport {
         function: KtNamedFunction,
         scope: GlobalSearchScope,
     ): ArmeriaJUnitServerExtension? {
-        if (function.valueParameters.isNotEmpty()) {
+        if (function.valueParameters.isNotEmpty() || function.receiverTypeReference != null) {
             return null
         }
         val containingDeclaration = kotlinClassBodyOwner(function) ?: return null
@@ -493,11 +493,14 @@ internal object ArmeriaJUnitServerExtensionSupport {
             is PsiMethodCallExpression ->
                 expression.methodExpression.referenceName == serverVariableName &&
                     expression.argumentList.expressionCount == 0 &&
-                    isValidFactoryQualifier(expression.methodExpression.qualifierExpression)
+                    isValidFactoryQualifier(expression.methodExpression.qualifierExpression, expression)
             else -> false
         }
 
-    private fun isValidFactoryQualifier(qualifier: PsiElement?): Boolean {
+    private fun isValidFactoryQualifier(
+        qualifier: PsiElement?,
+        expression: PsiElement,
+    ): Boolean {
         qualifier ?: return true
         if (qualifier is PsiThisExpression) {
             return true
@@ -506,9 +509,61 @@ internal object ArmeriaJUnitServerExtensionSupport {
             if (qualifier.referenceName == "this") {
                 return true
             }
-            return qualifier.resolve() is PsiClass
+            val resolved = qualifier.resolve() as? PsiClass ?: return false
+            return isSameOrEnclosingOrSuperClass(resolved, expression)
         }
         return false
+    }
+
+    private fun isSameOrEnclosingOrSuperClass(
+        resolved: PsiClass,
+        context: PsiElement,
+    ): Boolean {
+        var current = PsiTreeUtil.getParentOfType(context, PsiClass::class.java)
+        while (current != null) {
+            if (current.isEquivalentTo(resolved) || current.isInheritor(resolved, true)) {
+                return true
+            }
+            current = current.containingClass
+        }
+        var kotlinClass = PsiTreeUtil.getParentOfType(context, KtClassOrObject::class.java)
+        while (kotlinClass != null) {
+            if (kotlinTypeIsSameOrInherits(kotlinClass, resolved)) {
+                return true
+            }
+            kotlinClass =
+                if (kotlinClass is KtObjectDeclaration && kotlinClass.isCompanion()) {
+                    kotlinClassBodyOwner(kotlinClass)
+                } else {
+                    PsiTreeUtil.getParentOfType(kotlinClass, KtClassOrObject::class.java)
+                }
+        }
+        return false
+    }
+
+    private fun kotlinTypeIsSameOrInherits(
+        kotlinClass: KtClassOrObject,
+        resolved: PsiClass,
+    ): Boolean {
+        val light = kotlinClass.toLightClass()
+        if (light != null && (light.isEquivalentTo(resolved) || light.isInheritor(resolved, true))) {
+            return true
+        }
+        val resolvedName = resolved.qualifiedName
+        if (resolvedName != null && resolvedName == kotlinClass.fqName?.asString()) {
+            return true
+        }
+        if (kotlinClass.name == resolved.name) {
+            return true
+        }
+        val ktClass = kotlinClass as? KtClass ?: return false
+        if (resolvedName != null && resolvedName in collectKotlinSuperTypeNames(ktClass)) {
+            return true
+        }
+        return resolved.name != null &&
+            ktClass.superTypeListEntries.any { entry ->
+                entry.typeAsUserType?.referencedName == resolved.name
+            }
     }
 
     private fun isKotlinServerExtensionInitializer(
@@ -615,13 +670,36 @@ internal object ArmeriaJUnitServerExtensionSupport {
 
     private fun isKotlinClassReference(reference: KtNameReferenceExpression): Boolean {
         when (val resolved = reference.reference?.resolve()) {
-            is PsiClass, is KtClass -> return true
+            is PsiClass ->
+                if (isSameOrEnclosingOrSuperClass(resolved, reference)) {
+                    return true
+                }
+            is KtClassOrObject -> {
+                val light = resolved.toLightClass()
+                if (light != null && isSameOrEnclosingOrSuperClass(light, reference)) {
+                    return true
+                }
+            }
         }
         val name = reference.getReferencedName()
-        return reference.containingKtFile.declarations.any { declaration ->
-            (declaration is KtClass && declaration.name == name) ||
-                (declaration is KtObjectDeclaration && declaration.name == name)
+        var current = reference.getParentOfType<KtClassOrObject>(true)
+        while (current != null) {
+            if (current.name == name) {
+                return true
+            }
+            if (current is KtClass &&
+                current.superTypeListEntries.any { it.typeAsUserType?.referencedName == name }
+            ) {
+                return true
+            }
+            current =
+                if (current is KtObjectDeclaration && current.isCompanion()) {
+                    kotlinClassBodyOwner(current)
+                } else {
+                    current.getParentOfType<KtClassOrObject>(true)
+                }
         }
+        return false
     }
 
     private fun kotlinClassBodyOwner(declaration: KtDeclaration): KtClassOrObject? =

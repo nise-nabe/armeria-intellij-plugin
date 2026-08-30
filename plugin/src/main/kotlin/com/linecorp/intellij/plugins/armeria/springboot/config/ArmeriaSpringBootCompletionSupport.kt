@@ -71,14 +71,21 @@ internal object ArmeriaSpringBootCompletionSupport {
 
     /**
      * Index of the `.properties` key/value delimiter in [lineToCaret], or `-1` while still
-     * typing the key. `Properties.load` accepts `=`, `:`, or whitespace.
+     * typing the key. `Properties.load` accepts `=`, `:`, or whitespace after the key;
+     * leading whitespace is ignored and is not a separator.
      */
     fun propertiesValueSeparatorIndex(lineToCaret: String): Int {
-        val explicit = lineToCaret.indexOfFirst { it == '=' || it == ':' }
-        if (explicit >= 0) {
-            return explicit
+        val keyStart = lineToCaret.indexOfFirst { !it.isWhitespace() }
+        if (keyStart < 0) {
+            return -1
         }
-        return lineToCaret.indexOfFirst { it.isWhitespace() }
+        for (index in keyStart until lineToCaret.length) {
+            val char = lineToCaret[index]
+            if (char == '=' || char == ':' || (index > keyStart && char.isWhitespace())) {
+                return index
+            }
+        }
+        return -1
     }
 
     /**
