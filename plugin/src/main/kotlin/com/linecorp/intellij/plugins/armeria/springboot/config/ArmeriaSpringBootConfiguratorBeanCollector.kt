@@ -20,8 +20,8 @@ import com.intellij.psi.search.searches.ClassInheritorsSearch
 import com.intellij.psi.util.CachedValue
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
-import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.PsiTreeUtil
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCacheSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.message
 
@@ -65,6 +65,7 @@ object ArmeriaSpringBootConfiguratorBeanCollector {
     /**
      * Configurator (and related) FQNs present in the project.
      * Returns `null` when indexes are not ready so callers can skip bean-dependent warnings.
+     * Cached until PSI, project roots, libraries, or dumb-mode state change.
      */
     fun presentInspectionFqns(project: Project): Set<String>? {
         if (DumbService.isDumb(project)) {
@@ -79,7 +80,10 @@ object ArmeriaSpringBootConfiguratorBeanCollector {
                         collectBeans(project, includeInspectionExtras = true)
                             .mapNotNull { it.configuratorFqn }
                             .toSet()
-                    CachedValueProvider.Result.create(fqns, PsiModificationTracker.MODIFICATION_COUNT)
+                    CachedValueProvider.Result.create(
+                        fqns,
+                        *ArmeriaRouteCacheSupport.invalidators(project),
+                    )
                 },
                 false,
             )
