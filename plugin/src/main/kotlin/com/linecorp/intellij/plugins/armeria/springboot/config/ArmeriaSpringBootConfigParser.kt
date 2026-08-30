@@ -27,9 +27,9 @@ object ArmeriaSpringBootConfigParser {
         }
 
     /**
-     * Armeria-related keys in document order (not sorted). Same-key duplicates are last-wins
-     * via the flatteners; kebab/camel aliases stay as separate keys so callers can take the
-     * last canonical match.
+     * Armeria-related keys in document order (not sorted). Repeating a key moves it to the
+     * last map position so last-wins follows the last occurrence, including when a kebab or
+     * camel alias is overridden after another alias.
      */
     fun flattenRelatedInOrder(
         fileName: String,
@@ -58,7 +58,7 @@ object ArmeriaSpringBootConfigParser {
                 val ordered = linkedMapOf<String, String>()
                 for (raw in text.lineSequence()) {
                     val key = matchLoadedPropertyKey(raw, loaded) ?: continue
-                    ordered.putIfAbsent(key, properties.getProperty(key).orEmpty())
+                    putLast(ordered, key, properties.getProperty(key).orEmpty())
                 }
                 for (key in loaded) {
                     ordered.putIfAbsent(key, properties.getProperty(key).orEmpty())
@@ -100,12 +100,12 @@ object ArmeriaSpringBootConfigParser {
                             val key = content.substring(0, ci).trim()
                             val value = content.substring(ci + 1).trim()
                             if (value.isNotEmpty()) {
-                                result["$listPath.$key"] = unquote(value)
+                                putLast(result, "$listPath.$key", unquote(value))
                             } else {
                                 stack.addLast(YamlFrame(indent + 2, "$listPath.$key"))
                             }
                         } else {
-                            result[listPath] = unquote(content)
+                            putLast(result, listPath, unquote(content))
                             stack.removeLast()
                         }
                     }
@@ -120,7 +120,7 @@ object ArmeriaSpringBootConfigParser {
                         if (value.isEmpty()) {
                             stack.addLast(YamlFrame(indent, path))
                         } else {
-                            result[path] = unquote(value)
+                            putLast(result, path, unquote(value))
                         }
                     }
                 }
@@ -129,6 +129,15 @@ object ArmeriaSpringBootConfigParser {
             }
         }
         return result
+    }
+
+    private fun putLast(
+        map: MutableMap<String, String>,
+        key: String,
+        value: String,
+    ) {
+        map.remove(key)
+        map[key] = value
     }
 
     private fun matchLoadedPropertyKey(

@@ -331,6 +331,53 @@ class ArmeriaSpringBootSettingsConflictTest {
     }
 
     @Test
+    fun lastWins_repeatedAliasAfterOtherAlias() {
+        val lastCamelNone =
+            ArmeriaSpringBootConfigParser.flattenRelatedInOrder(
+                "application.properties",
+                """
+                server.port=8080
+                spring.main.webApplicationType=none
+                spring.main.web-application-type=servlet
+                spring.main.webApplicationType=none
+                armeria.ports[0].port=8080
+                """.trimIndent(),
+            )
+        assertFalse(ArmeriaSpringBootSettingsConflict.isPortConflict(lastCamelNone))
+
+        val lastKebabServlet =
+            ArmeriaSpringBootConfigParser.flattenRelatedInOrder(
+                "application.properties",
+                """
+                server.port=8080
+                spring.main.web-application-type=servlet
+                spring.main.webApplicationType=none
+                spring.main.web-application-type=servlet
+                armeria.ports[0].port=8080
+                """.trimIndent(),
+            )
+        assertTrue(ArmeriaSpringBootSettingsConflict.isPortConflict(lastKebabServlet))
+
+        val yamlLastCamelNone =
+            ArmeriaSpringBootConfigParser.flattenRelatedInOrder(
+                "application.yml",
+                """
+                server:
+                  port: 8080
+                spring:
+                  main:
+                    webApplicationType: none
+                    web-application-type: servlet
+                    webApplicationType: none
+                armeria:
+                  ports:
+                    - port: 8080
+                """.trimIndent(),
+            )
+        assertFalse(ArmeriaSpringBootSettingsConflict.isPortConflict(yamlLastCamelNone))
+    }
+
+    @Test
     fun canonicalConfigKey_kebabizesCamelSegments() {
         assertEquals(
             "armeria.docs-path",

@@ -4,6 +4,7 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Key
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiClassType
@@ -16,6 +17,10 @@ import com.intellij.psi.SmartPointerManager
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.searches.AnnotatedElementsSearch
 import com.intellij.psi.search.searches.ClassInheritorsSearch
+import com.intellij.psi.util.CachedValue
+import com.intellij.psi.util.CachedValueProvider
+import com.intellij.psi.util.CachedValuesManager
+import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.message
@@ -34,6 +39,8 @@ object ArmeriaSpringBootConfiguratorBeanCollector {
         setOf(
             ArmeriaRouteSupport.DOC_SERVICE_CLASS,
         )
+    private val INSPECTION_FQNS_KEY =
+        Key.create<CachedValue<Set<String>>>("armeria.springboot.inspectionConfiguratorFqns")
 
     fun collect(project: Project): List<ArmeriaSpringBootConfigFile> {
         val beans =
@@ -64,9 +71,18 @@ object ArmeriaSpringBootConfiguratorBeanCollector {
             return null
         }
         return try {
-            collectBeans(project, includeInspectionExtras = true)
-                .mapNotNull { it.configuratorFqn }
-                .toSet()
+            CachedValuesManager.getManager(project).getCachedValue(
+                project,
+                INSPECTION_FQNS_KEY,
+                CachedValueProvider {
+                    val fqns =
+                        collectBeans(project, includeInspectionExtras = true)
+                            .mapNotNull { it.configuratorFqn }
+                            .toSet()
+                    CachedValueProvider.Result.create(fqns, PsiModificationTracker.MODIFICATION_COUNT)
+                },
+                false,
+            )
         } catch (_: IndexNotReadyException) {
             null
         }

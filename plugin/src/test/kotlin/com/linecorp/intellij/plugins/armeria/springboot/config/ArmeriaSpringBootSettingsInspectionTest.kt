@@ -395,5 +395,20 @@ class ArmeriaSpringBootSettingsInspectionTest : ArmeriaFixtureTestBase5() {
         assertTrue(highlights(message("inspection.springboot.settings.port.conflict")).isEmpty())
     }
 
+    @Test
+    fun propertiesLastRepeatedAliasWins() {
+        myFixture.configureByText(
+            "application.properties",
+            """
+            server.port=8080
+            spring.main.webApplicationType=none
+            spring.main.web-application-type=servlet
+            spring.main.webApplicationType=none
+            armeria.ports[0].port=8080
+            """.trimIndent(),
+        )
+        assertTrue(highlights(message("inspection.springboot.settings.port.conflict")).isEmpty())
+    }
+
     private fun highlights(description: String) = myFixture.doHighlighting().filter { it.description == description }
 }
