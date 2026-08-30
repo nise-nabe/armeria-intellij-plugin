@@ -528,10 +528,7 @@ internal object ArmeriaJUnitServerExtensionSupport {
         }
         var kotlinClass = PsiTreeUtil.getParentOfType(context, KtClassOrObject::class.java)
         while (kotlinClass != null) {
-            val light = kotlinClass.toLightClass()
-            if (light != null &&
-                (light.isEquivalentTo(resolved) || light.isInheritor(resolved, true))
-            ) {
+            if (kotlinTypeIsSameOrInherits(kotlinClass, resolved)) {
                 return true
             }
             kotlinClass =
@@ -542,6 +539,31 @@ internal object ArmeriaJUnitServerExtensionSupport {
                 }
         }
         return false
+    }
+
+    private fun kotlinTypeIsSameOrInherits(
+        kotlinClass: KtClassOrObject,
+        resolved: PsiClass,
+    ): Boolean {
+        val light = kotlinClass.toLightClass()
+        if (light != null && (light.isEquivalentTo(resolved) || light.isInheritor(resolved, true))) {
+            return true
+        }
+        val resolvedName = resolved.qualifiedName
+        if (resolvedName != null && resolvedName == kotlinClass.fqName?.asString()) {
+            return true
+        }
+        if (kotlinClass.name == resolved.name) {
+            return true
+        }
+        val ktClass = kotlinClass as? KtClass ?: return false
+        if (resolvedName != null && resolvedName in collectKotlinSuperTypeNames(ktClass)) {
+            return true
+        }
+        return resolved.name != null &&
+            ktClass.superTypeListEntries.any { entry ->
+                entry.typeAsUserType?.referencedName == resolved.name
+            }
     }
 
     private fun isKotlinServerExtensionInitializer(
@@ -663,6 +685,11 @@ internal object ArmeriaJUnitServerExtensionSupport {
         var current = reference.getParentOfType<KtClassOrObject>(true)
         while (current != null) {
             if (current.name == name) {
+                return true
+            }
+            if (current is KtClass &&
+                current.superTypeListEntries.any { it.typeAsUserType?.referencedName == name }
+            ) {
                 return true
             }
             current =
