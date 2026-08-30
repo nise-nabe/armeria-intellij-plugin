@@ -357,6 +357,7 @@ class ArmeriaHttpRequestGeneratorTest {
                         message("route.explorer.hint.matchesHeader", "client-type=android"),
                         message("route.explorer.hint.matchesHeader", "x.foo=bar"),
                         message("route.explorer.hint.matchesHeader", "x~foo=bar"),
+                        message("route.explorer.hint.matchesHeader", "x!foo=bar"),
                         message("route.explorer.hint.matchesHeader", "authorization"),
                         message("route.explorer.hint.matchesHeader", "env!=prod"),
                         message("route.explorer.hint.consumes", "application/xml, application/json"),
@@ -371,6 +372,7 @@ class ArmeriaHttpRequestGeneratorTest {
             client-type: android
             x.foo: bar
             x~foo: bar
+            x!foo: bar
             Content-Type: application/json
             Accept: application/json
 

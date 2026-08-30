@@ -621,7 +621,7 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         var current: PsiElement? = start
         while (current != null && current !is KtFile) {
             if (current is KtCallExpression && isGraphqlBuilderMethod(current)) {
-                return findGraphqlServiceBuilderCall(current)
+                findGraphqlServiceBuilderCall(current)?.let { return it }
             }
             current = current.parent
         }

@@ -526,6 +526,21 @@ internal object ArmeriaJUnitServerExtensionSupport {
             }
             current = current.containingClass
         }
+        var kotlinClass = PsiTreeUtil.getParentOfType(context, KtClassOrObject::class.java)
+        while (kotlinClass != null) {
+            val light = kotlinClass.toLightClass()
+            if (light != null &&
+                (light.isEquivalentTo(resolved) || light.isInheritor(resolved, true))
+            ) {
+                return true
+            }
+            kotlinClass =
+                if (kotlinClass is KtObjectDeclaration && kotlinClass.isCompanion()) {
+                    kotlinClassBodyOwner(kotlinClass)
+                } else {
+                    PsiTreeUtil.getParentOfType(kotlinClass, KtClassOrObject::class.java)
+                }
+        }
         return false
     }
 
@@ -633,11 +648,14 @@ internal object ArmeriaJUnitServerExtensionSupport {
 
     private fun isKotlinClassReference(reference: KtNameReferenceExpression): Boolean {
         when (val resolved = reference.reference?.resolve()) {
-            is PsiClass -> return isSameOrEnclosingOrSuperClass(resolved, reference)
+            is PsiClass ->
+                if (isSameOrEnclosingOrSuperClass(resolved, reference)) {
+                    return true
+                }
             is KtClassOrObject -> {
                 val light = resolved.toLightClass()
-                if (light != null) {
-                    return isSameOrEnclosingOrSuperClass(light, reference)
+                if (light != null && isSameOrEnclosingOrSuperClass(light, reference)) {
+                    return true
                 }
             }
         }

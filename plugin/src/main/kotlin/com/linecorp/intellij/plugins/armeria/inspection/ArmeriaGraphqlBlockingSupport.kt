@@ -368,18 +368,17 @@ internal object ArmeriaGraphqlBlockingSupport {
             } else {
                 start
             }
-        var graphqlCall: PsiMethodCallExpression? = null
         while (current != null && current !is PsiMethod && current !is PsiClass && current !is PsiFile) {
             if (current is PsiMethodCallExpression && isGraphqlBuilderMethod(current)) {
-                graphqlCall = current
-                break
+                val builder = findGraphqlServiceBuilderCall(current)
+                if (builder != null) {
+                    val outermost = outermostChainCall(builder)
+                    return chainCalls(builder, outermost)
+                }
             }
             current = current.parent
         }
-        val seed = graphqlCall ?: return null
-        val builder = findGraphqlServiceBuilderCall(seed) ?: return null
-        val outermost = outermostChainCall(builder)
-        return chainCalls(builder, outermost)
+        return null
     }
 
     private fun isGraphqlBuilderMethod(call: PsiMethodCallExpression): Boolean {
