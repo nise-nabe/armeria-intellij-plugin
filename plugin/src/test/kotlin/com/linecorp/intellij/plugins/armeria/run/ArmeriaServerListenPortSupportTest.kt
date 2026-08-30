@@ -116,6 +116,51 @@ class ArmeriaServerListenPortSupportTest : ArmeriaFixtureTestBase() {
         )
     }
 
+    fun testExtractsKotlinHttpPortFromApplyBlock() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                Server.builder().apply {
+                    http(8080)
+                }.build()
+            }
+            """.trimIndent(),
+        )
+
+        assertEquals(
+            ArmeriaListenEndpoint(8080, https = false),
+            ArmeriaServerListenPortSupport.extractFromFile(myFixture.file),
+        )
+    }
+
+    fun testExtractsKotlinHttpPortFromApplyOnBuilderVariable() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                val sb = Server.builder()
+                sb.apply {
+                    http(9090)
+                }.build()
+            }
+            """.trimIndent(),
+        )
+
+        assertEquals(
+            ArmeriaListenEndpoint(9090, https = false),
+            ArmeriaServerListenPortSupport.extractFromFile(myFixture.file),
+        )
+    }
+
     fun testMissingPortReturnsNull() {
         myFixture.configureByText(
             "Main.java",
@@ -214,6 +259,44 @@ class ArmeriaServerListenPortSupportTest : ArmeriaFixtureTestBase() {
         assertEquals("http://127.0.0.1:8080/docs/", urls.docService)
         assertEquals("http://127.0.0.1:8080/internal/healthcheck", urls.health)
         assertEquals("http://127.0.0.1:8080/internal/metrics", urls.metrics)
+    }
+
+    fun testLaunchInfoPrefersDefaultApplicationPortOverProfile() {
+        registerSpringAnnotationStubs()
+        registerArmeriaSpringStubs()
+        myFixture.addFileToProject(
+            "application-prod.yml",
+            """
+            armeria:
+              ports:
+                - port: 9999
+                  protocols:
+                    - http
+            """.trimIndent(),
+        )
+        myFixture.addFileToProject(
+            "application.properties",
+            """
+            armeria.ports[0].port=8080
+            armeria.ports[0].protocols[0]=http
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            public class Main {
+                public static void main(String[] args) {
+                    System.out.println("spring");
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val urls = ArmeriaRunLaunchInfo.resolve(project, myFixture.module, "example.Main")
+
+        assertEquals(8080, urls.listen?.port)
     }
 
     fun testLaunchInfoMissingPortDoesNotFail() {

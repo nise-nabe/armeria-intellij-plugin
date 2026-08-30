@@ -78,6 +78,15 @@ class ArmeriaRunUrlBuilderTest {
     }
 
     @Test
+    fun isDefaultApplicationConfigName_prefersUnprofiledFiles() {
+        assertTrue(ArmeriaRunUrlBuilder.isDefaultApplicationConfigName("application.properties"))
+        assertTrue(ArmeriaRunUrlBuilder.isDefaultApplicationConfigName("application.yml"))
+        assertTrue(ArmeriaRunUrlBuilder.isDefaultApplicationConfigName("application.yaml"))
+        assertEquals(false, ArmeriaRunUrlBuilder.isDefaultApplicationConfigName("application-prod.yml"))
+        assertEquals(false, ArmeriaRunUrlBuilder.isDefaultApplicationConfigName(null))
+    }
+
+    @Test
     fun listenPortFromSpringRoutes_httpsOnly() {
         val listen =
             ArmeriaRunUrlBuilder.listenPortFromSpringRoutes(
@@ -93,6 +102,18 @@ class ArmeriaRunUrlBuilderTest {
         assertEquals(9090, ArmeriaRunUrlBuilder.parsePort("9090"))
         assertNull(ArmeriaRunUrlBuilder.parsePort("0"))
         assertNull(ArmeriaRunUrlBuilder.parsePort("\${SERVER_PORT}"))
+    }
+
+    @Test
+    fun fromRoutes_usesInternalServicePortForDocs() {
+        val urls =
+            ArmeriaRunUrlBuilder.fromRoutes(
+                ArmeriaListenEndpoint(8080),
+                listOf(route(path = "/docs", target = "DocService · :18080", isDocService = true)),
+            )
+
+        assertEquals("http://127.0.0.1:18080/docs/", urls.docService)
+        assertEquals(8080, urls.listen?.port)
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.run
 
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -18,6 +19,8 @@ internal object ArmeriaKotlinServerListenPortSupport {
     private val LISTEN_METHODS = setOf("http", "https", "port")
     private val HTTPS_TOKEN = Regex("""\bHTTPS\b""")
     private val HTTP_TOKEN = Regex("""\bHTTP\b|\bH1C\b|\bH2C\b|\bH1\b""")
+    private val SERVER_BUILDER_CALL = Regex("""\bServer\.builder\(\)""")
+    private val SCOPE_METHODS = setOf("apply", "run", "also", "let")
 
     fun extractFromFile(file: PsiFile): ArmeriaListenEndpoint? {
         val calls = PsiTreeUtil.findChildrenOfType(file, KtCallExpression::class.java)
@@ -57,25 +60,66 @@ internal object ArmeriaKotlinServerListenPortSupport {
     }
 
     private fun looksLikeServerBuilder(call: KtCallExpression): Boolean {
-        val parent = call.parent as? KtDotQualifiedExpression ?: return false
-        var receiver: KtExpression? = parent.receiverExpression
+        val parent = call.parent as? KtDotQualifiedExpression
+        var receiver: KtExpression? = parent?.receiverExpression
         var hops = 0
         while (receiver != null && hops < 32) {
-            val text = receiver.text
-            if (text == "Server.builder()" ||
-                text.endsWith(".Server.builder()") ||
-                text.contains("Server.builder()")
-            ) {
+            if (SERVER_BUILDER_CALL.containsMatchIn(receiver.text)) {
                 return true
             }
             receiver =
                 when (receiver) {
                     is KtDotQualifiedExpression -> receiver.receiverExpression
+                    is KtNameReferenceExpression -> {
+                        if (propertyInitializerLooksLikeServerBuilder(receiver)) {
+                            return true
+                        }
+                        null
+                    }
                     else -> null
                 }
             hops++
         }
+        return hasServerBuilderScopeReceiver(call)
+    }
+
+    private fun hasServerBuilderScopeReceiver(call: KtCallExpression): Boolean {
+        var current: PsiElement? = call.parent
+        var hops = 0
+        while (current != null && hops < 32) {
+            if (current is KtCallExpression) {
+                val name = callName(current)
+                if (name in SCOPE_METHODS) {
+                    val qualified = current.parent as? KtDotQualifiedExpression
+                    val receiver = qualified?.receiverExpression
+                    if (receiverLooksLikeServerBuilder(receiver)) {
+                        return true
+                    }
+                }
+            }
+            current = current.parent
+            hops++
+        }
         return false
+    }
+
+    private fun receiverLooksLikeServerBuilder(receiver: KtExpression?): Boolean {
+        if (receiver == null) {
+            return false
+        }
+        if (SERVER_BUILDER_CALL.containsMatchIn(receiver.text)) {
+            return true
+        }
+        return (receiver as? KtNameReferenceExpression)?.let(::propertyInitializerLooksLikeServerBuilder) == true
+    }
+
+    private fun propertyInitializerLooksLikeServerBuilder(receiver: KtNameReferenceExpression): Boolean {
+        val resolved = receiver.references.firstOrNull()?.resolve()
+        if (resolved !is KtProperty) {
+            return false
+        }
+        val initializer = resolved.initializer ?: return false
+        return SERVER_BUILDER_CALL.containsMatchIn(initializer.text)
     }
 
     private fun extraArgsSuggestHttps(call: KtCallExpression): Boolean {

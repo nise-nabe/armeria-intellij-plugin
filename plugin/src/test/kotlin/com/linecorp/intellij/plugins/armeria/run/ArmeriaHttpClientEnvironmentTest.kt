@@ -12,6 +12,7 @@ class ArmeriaHttpClientEnvironmentTest {
         assertTrue(json.contains("\"armeria\""))
         assertTrue(json.contains("\"host\": \"127.0.0.1\""))
         assertTrue(json.contains("\"port\": \"8080\""))
+        assertTrue(json.contains("\"scheme\": \"http\""))
     }
 
     @Test
@@ -42,8 +43,37 @@ class ArmeriaHttpClientEnvironmentTest {
 
         assertTrue(merged.contains("\"host\": \"127.0.0.1\""))
         assertTrue(merged.contains("\"port\": \"9090\""))
+        assertTrue(merged.contains("\"scheme\": \"http\""))
         assertTrue(merged.contains("\"prod\""))
         assertTrue(merged.contains("example.com"))
+        assertTrue(merged.contains("\"port\": \"443\""))
+    }
+
+    @Test
+    fun merge_insertsArmeriaEnvWithoutDroppingOthers() {
+        val existing =
+            """
+            {
+              "prod": {
+                "host": "example.com",
+                "port": "443"
+              }
+            }
+            """.trimIndent()
+
+        val merged = ArmeriaHttpClientEnvironment.merge(existing, "127.0.0.1", 8080)
+
+        assertTrue(merged.contains("\"armeria\""))
+        assertTrue(merged.contains("\"host\": \"127.0.0.1\""))
+        assertTrue(merged.contains("example.com"))
+    }
+
+    @Test
+    fun merge_writesHttpsScheme() {
+        val json = ArmeriaHttpClientEnvironment.merge(null, "127.0.0.1", 8443, https = true)
+
+        assertTrue(json.contains("\"scheme\": \"https\""))
+        assertTrue(json.contains("\"port\": \"8443\""))
     }
 
     @Test
@@ -56,6 +86,7 @@ class ArmeriaHttpClientEnvironmentTest {
                 envFileExists = true,
             ),
         )
+        assertEquals("{{scheme}}://{{host}}:{{port}}", ArmeriaHttpClientEnvironment.REQUEST_BASE_URL)
         assertEquals(
             "http://localhost:8080",
             ArmeriaHttpClientEnvironment.requestBaseUrl(

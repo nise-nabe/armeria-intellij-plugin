@@ -4,6 +4,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.fileEditor.impl.LoadTextUtil
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.linecorp.intellij.plugins.armeria.message
@@ -59,9 +60,12 @@ internal object ArmeriaHttpClientEnvironmentWriter {
                                 previous,
                                 ArmeriaRunUrlBuilder.LOOPBACK_HOST,
                                 listen.port,
+                                listen.https,
                             )
                         val virtualFile = existing ?: parent.createChildData(this, ArmeriaHttpClientEnvironment.FILE_NAME)
                         virtualFile.setBinaryContent(content.toByteArray(StandardCharsets.UTF_8))
+                    } catch (e: ProcessCanceledException) {
+                        throw e
                     } catch (e: Exception) {
                         LOG.warn("Failed to write HTTP Client environment file", e)
                     }

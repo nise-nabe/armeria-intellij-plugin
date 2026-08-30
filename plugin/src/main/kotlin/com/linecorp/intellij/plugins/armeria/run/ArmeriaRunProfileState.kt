@@ -16,7 +16,9 @@ import com.intellij.ide.BrowserUtil
 import com.intellij.ide.browsers.OpenUrlHyperlinkInfo
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.roots.ModuleRootManager
+import com.intellij.openapi.util.Key
 import com.linecorp.intellij.plugins.armeria.message
+import java.util.concurrent.atomic.AtomicBoolean
 
 class ArmeriaRunProfileState(
     environment: ExecutionEnvironment,
@@ -54,6 +56,7 @@ class ArmeriaRunProfileState(
         val result = super.execute(executor, runner)
         val urls = resolveServiceUrls()
         if (urls.listen != null || !urls.isEmpty) {
+            val openedDocService = AtomicBoolean(false)
             result.processHandler.addProcessListener(
                 object : ProcessListener {
                     override fun startNotified(event: ProcessEvent) {
@@ -62,10 +65,28 @@ class ArmeriaRunProfileState(
                             if (configuration.project.isDisposed) {
                                 return@invokeLater
                             }
-                            if (configuration.isOpenDocServiceAfterLaunch()) {
-                                urls.docService?.let { BrowserUtil.browse(it) }
-                            }
                             urls.listen?.let { ArmeriaHttpClientEnvironmentWriter.write(configuration.project, it) }
+                        }
+                    }
+
+                    override fun onTextAvailable(
+                        event: ProcessEvent,
+                        outputType: Key<*>,
+                    ) {
+                        if (!configuration.isOpenDocServiceAfterLaunch()) {
+                            return
+                        }
+                        val url = urls.docService ?: return
+                        if (!looksLikeServerStarted(event.text)) {
+                            return
+                        }
+                        if (!openedDocService.compareAndSet(false, true)) {
+                            return
+                        }
+                        ApplicationManager.getApplication().invokeLater {
+                            if (!configuration.project.isDisposed) {
+                                BrowserUtil.browse(url)
+                            }
                         }
                     }
                 },
@@ -103,5 +124,16 @@ class ArmeriaRunProfileState(
         console.print(" ", ConsoleViewContentType.SYSTEM_OUTPUT)
         console.printHyperlink(url, OpenUrlHyperlinkInfo(url))
         console.print("\n", ConsoleViewContentType.SYSTEM_OUTPUT)
+    }
+
+    companion object {
+        internal fun looksLikeServerStarted(text: String?): Boolean {
+            if (text.isNullOrBlank()) {
+                return false
+            }
+            return text.contains("Serving HTTP") ||
+                text.contains("Serving HTTPS") ||
+                text.contains("Started server")
+        }
     }
 }

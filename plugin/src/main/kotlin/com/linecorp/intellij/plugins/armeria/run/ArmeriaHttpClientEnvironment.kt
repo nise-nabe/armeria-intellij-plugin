@@ -5,17 +5,22 @@ object ArmeriaHttpClientEnvironment {
     const val ENV_NAME = "armeria"
     const val HOST_KEY = "host"
     const val PORT_KEY = "port"
-    const val REQUEST_BASE_URL = "http://{{host}}:{{port}}"
+    const val SCHEME_KEY = "scheme"
+    const val REQUEST_BASE_URL = "{{scheme}}://{{host}}:{{port}}"
+
+    private val ARMERIA_OBJECT = Regex(""""$ENV_NAME"\s*:\s*\{([^{}]*)}""")
 
     fun content(
         host: String,
         port: Int,
+        https: Boolean = false,
     ): String =
         buildString {
             appendLine("{")
             appendLine("  \"$ENV_NAME\": {")
             appendLine("    \"$HOST_KEY\": ${jsonString(host)},")
-            appendLine("    \"$PORT_KEY\": \"$port\"")
+            appendLine("    \"$PORT_KEY\": \"$port\",")
+            appendLine("    \"$SCHEME_KEY\": ${jsonString(scheme(https))}")
             appendLine("  }")
             appendLine("}")
         }
@@ -24,18 +29,20 @@ object ArmeriaHttpClientEnvironment {
         existing: String?,
         host: String,
         port: Int,
+        https: Boolean = false,
     ): String {
         if (existing.isNullOrBlank()) {
-            return content(host, port)
+            return content(host, port, https)
         }
-        val updatedHost = replaceJsonProperty(existing, HOST_KEY, host)
-        if (updatedHost != null) {
-            val updatedPort = replaceJsonProperty(updatedHost, PORT_KEY, port.toString())
-            if (updatedPort != null) {
-                return updatedPort
-            }
+        val match = ARMERIA_OBJECT.find(existing)
+        if (match == null) {
+            return insertArmeriaEnv(existing, host, port, https) ?: content(host, port, https)
         }
-        return content(host, port)
+        var body = match.groupValues[1]
+        body = upsertProperty(body, HOST_KEY, host)
+        body = upsertProperty(body, PORT_KEY, port.toString())
+        body = upsertProperty(body, SCHEME_KEY, scheme(https))
+        return existing.replaceRange(match.groups[1]!!.range, body)
     }
 
     fun requestBaseUrl(
@@ -49,17 +56,49 @@ object ArmeriaHttpClientEnvironment {
             requested
         }
 
-    private fun replaceJsonProperty(
-        json: String,
-        key: String,
-        value: String,
+    private fun insertArmeriaEnv(
+        existing: String,
+        host: String,
+        port: Int,
+        https: Boolean,
     ): String? {
-        val pattern = Regex("(\"$key\"\\s*:\\s*)\"([^\"\\\\]*)\"")
-        if (!pattern.containsMatchIn(json)) {
+        val rootEnd = existing.lastIndexOf('}')
+        if (rootEnd < 0) {
             return null
         }
-        return pattern.replaceFirst(json, "$1${jsonString(value)}")
+        val before = existing.substring(0, rootEnd).trimEnd()
+        val needsComma = before.lastOrNull()?.let { it != '{' && it != ',' } == true
+        val envBlock =
+            buildString {
+                if (needsComma) {
+                    append(',')
+                }
+                appendLine()
+                appendLine("  \"$ENV_NAME\": {")
+                appendLine("    \"$HOST_KEY\": ${jsonString(host)},")
+                appendLine("    \"$PORT_KEY\": \"$port\",")
+                appendLine("    \"$SCHEME_KEY\": ${jsonString(scheme(https))}")
+                append("  }")
+                appendLine()
+            }
+        return before + envBlock + existing.substring(rootEnd)
     }
+
+    private fun upsertProperty(
+        body: String,
+        key: String,
+        value: String,
+    ): String {
+        val pattern = Regex("(\"$key\"\\s*:\\s*)\"([^\"\\\\]*)\"")
+        if (pattern.containsMatchIn(body)) {
+            return pattern.replace(body, "$1${jsonString(value)}")
+        }
+        val trimmed = body.trimEnd()
+        val separator = if (trimmed.isEmpty() || trimmed.endsWith(',') || trimmed.endsWith('{')) "" else ","
+        return "$trimmed$separator\n    \"$key\": ${jsonString(value)}\n  "
+    }
+
+    private fun scheme(https: Boolean): String = if (https) "https" else "http"
 
     private fun jsonString(value: String): String =
         buildString {

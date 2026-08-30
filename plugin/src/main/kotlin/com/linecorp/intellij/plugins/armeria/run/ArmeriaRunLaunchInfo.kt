@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.run
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.module.Module
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.openapi.project.Project
@@ -28,13 +29,17 @@ internal object ArmeriaRunLaunchInfo {
                     ArmeriaRouteAnalysisCollector
                         .collect(project)
                         .filter { it.moduleName == module.name }
-                val springRoutes = collectSpringConfigRoutes(project, module)
-                val combined = mergeRoutes(moduleRoutes, springRoutes)
                 val programmatic =
                     ArmeriaServerListenPortSupport.extractFromMainClass(project, module, mainClassFqn)
+                var combined = moduleRoutes
+                if (programmatic == null && ArmeriaRunUrlBuilder.listenPortFromSpringRoutes(combined) == null) {
+                    combined = mergeRoutes(combined, collectSpringConfigRoutes(project, module))
+                }
                 val listen = programmatic ?: ArmeriaRunUrlBuilder.listenPortFromSpringRoutes(combined)
                 ArmeriaRunUrlBuilder.fromRoutes(listen, combined)
             }
+        } catch (e: ProcessCanceledException) {
+            throw e
         } catch (_: IndexNotReadyException) {
             ArmeriaRunServiceUrls()
         } catch (e: Exception) {

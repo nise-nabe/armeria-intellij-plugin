@@ -18,7 +18,9 @@ object ArmeriaRunUrlBuilder {
 
     private val SPRING_PORT_PATH = Regex("""^:(.+)$""")
     private val PLACEHOLDER_DEFAULT_PORT = Regex("""\$\{[^:}]+:(\d+)\}""")
+    private val INTERNAL_SERVICE_PORT = Regex("""· :(\d+)""")
     private val HTTP_PROTOCOLS = setOf("HTTP", "H1C", "H2C", "H1")
+    private val DEFAULT_APPLICATION_FILES = setOf("application.properties", "application.yml", "application.yaml")
 
     fun baseUrl(listen: ArmeriaListenEndpoint): String {
         val scheme = if (listen.https) "https" else "http"
@@ -46,37 +48,40 @@ object ArmeriaRunUrlBuilder {
         if (listen == null) {
             return ArmeriaRunServiceUrls()
         }
-        val docsPath = routes.firstOrNull { it.isDocService }?.path
-        val healthPath =
-            routes.firstOrNull { it.routeMatch == RouteMatch.HEALTH_CHECK }?.path
-                ?: routes
-                    .firstOrNull { route ->
+        val docsRoute = routes.firstOrNull { it.isDocService }
+        val healthRoute =
+            routes.firstOrNull { it.routeMatch == RouteMatch.HEALTH_CHECK }
+                ?: routes.firstOrNull { route ->
+                    route.routeMatch == RouteMatch.CONFIG &&
+                        route.path.contains("health", ignoreCase = true)
+                }
+        val metricsRoute =
+            routes.firstOrNull { route ->
+                route.target.contains("PrometheusExpositionService") ||
+                    (
                         route.routeMatch == RouteMatch.CONFIG &&
-                            route.path.contains("health", ignoreCase = true)
-                    }?.path
-        val metricsPath =
-            routes
-                .firstOrNull { route ->
-                    route.target.contains("PrometheusExpositionService") ||
-                        (
-                            route.routeMatch == RouteMatch.CONFIG &&
-                                route.path.contains("metrics", ignoreCase = true)
-                        )
-                }?.path
+                            route.path.contains("metrics", ignoreCase = true)
+                    )
+            }
         return ArmeriaRunServiceUrls(
-            docService = docsPath?.let { serviceUrl(listen, it, trailingSlash = true) },
-            health = healthPath?.let { serviceUrl(listen, it) },
-            metrics = metricsPath?.let { serviceUrl(listen, it) },
+            docService = docsRoute?.let { serviceUrl(listenFor(it, listen), it.path, trailingSlash = true) },
+            health = healthRoute?.let { serviceUrl(listenFor(it, listen), it.path) },
+            metrics = metricsRoute?.let { serviceUrl(listenFor(it, listen), it.path) },
             listen = listen,
         )
     }
 
     fun listenPortFromSpringRoutes(routes: List<ArmeriaRoute>): ArmeriaListenEndpoint? {
-        for (route in routes) {
-            val port = parsePort(springPortPath(route.path) ?: continue) ?: continue
-            return ArmeriaListenEndpoint(port, https = isHttpsOnly(route.protocol))
-        }
-        return null
+        val candidates =
+            routes.mapNotNull { route ->
+                val port = parsePort(springPortPath(route.path) ?: return@mapNotNull null) ?: return@mapNotNull null
+                SpringPortCandidate(
+                    endpoint = ArmeriaListenEndpoint(port, https = isHttpsOnly(route.protocol)),
+                    defaultApplicationFile = isDefaultApplicationConfigName(route.pointer.containingFile?.name),
+                )
+            }
+        return candidates.firstOrNull { it.defaultApplicationFile }?.endpoint
+            ?: candidates.firstOrNull()?.endpoint
     }
 
     fun parsePort(raw: String): Int? {
@@ -85,6 +90,25 @@ object ArmeriaRunUrlBuilder {
         val placeholderDefault = PLACEHOLDER_DEFAULT_PORT.matchEntire(trimmed) ?: return null
         return placeholderDefault.groupValues[1].toIntOrNull()?.takeIf(::isValidPort)
     }
+
+    private fun listenFor(
+        route: ArmeriaRoute,
+        fallback: ArmeriaListenEndpoint,
+    ): ArmeriaListenEndpoint {
+        val internal =
+            INTERNAL_SERVICE_PORT
+                .find(route.target)
+                ?.groupValues
+                ?.get(1)
+                ?.let(::parsePort)
+        return if (internal != null) {
+            ArmeriaListenEndpoint(internal, https = fallback.https)
+        } else {
+            fallback
+        }
+    }
+
+    internal fun isDefaultApplicationConfigName(name: String?): Boolean = name != null && name in DEFAULT_APPLICATION_FILES
 
     private fun springPortPath(path: String): String? = SPRING_PORT_PATH.matchEntire(path)?.groupValues?.get(1)
 
@@ -103,4 +127,9 @@ object ArmeriaRunUrlBuilder {
     }
 
     private fun isValidPort(port: Int): Boolean = port in 1..65535
+
+    private data class SpringPortCandidate(
+        val endpoint: ArmeriaListenEndpoint,
+        val defaultApplicationFile: Boolean,
+    )
 }
