@@ -265,13 +265,10 @@ class ArmeriaServerListenPortSupportTest : ArmeriaFixtureTestBase() {
         registerSpringAnnotationStubs()
         registerArmeriaSpringStubs()
         myFixture.addFileToProject(
-            "application-prod.yml",
+            "application-prod.properties",
             """
-            armeria:
-              ports:
-                - port: 9999
-                  protocols:
-                    - http
+            armeria.ports[0].port=9999
+            armeria.ports[0].protocols[0]=http
             """.trimIndent(),
         )
         myFixture.addFileToProject(
