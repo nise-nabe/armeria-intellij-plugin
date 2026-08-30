@@ -26,11 +26,45 @@ object ArmeriaSpringBootConfigParser {
             else -> emptyList()
         }
 
+    /**
+     * Armeria-related keys in document order (not sorted). Same-key duplicates are last-wins
+     * via the flatteners; kebab/camel aliases stay as separate keys so callers can take the
+     * last canonical match.
+     */
+    fun flattenRelatedInOrder(
+        fileName: String,
+        text: String,
+    ): Map<String, String> {
+        val flattened =
+            when {
+                fileName.endsWith(".yml") || fileName.endsWith(".yaml") -> flattenYaml(text)
+                fileName.endsWith(".properties") -> flattenProperties(text)
+                else -> emptyMap()
+            }
+        if (flattened.isEmpty()) {
+            return emptyMap()
+        }
+        return flattened.filterKeys(ArmeriaSpringBootConfigKeys::isArmeriaRelatedKey)
+    }
+
     internal fun flattenProperties(text: String): Map<String, String> =
         try {
             val properties = Properties()
             properties.load(StringReader(text))
-            properties.stringPropertyNames().associateWith { key -> properties.getProperty(key).orEmpty() }
+            val loaded = properties.stringPropertyNames()
+            if (loaded.isEmpty()) {
+                emptyMap()
+            } else {
+                val ordered = linkedMapOf<String, String>()
+                for (raw in text.lineSequence()) {
+                    val key = matchLoadedPropertyKey(raw, loaded) ?: continue
+                    ordered.putIfAbsent(key, properties.getProperty(key).orEmpty())
+                }
+                for (key in loaded) {
+                    ordered.putIfAbsent(key, properties.getProperty(key).orEmpty())
+                }
+                ordered
+            }
         } catch (_: Exception) {
             emptyMap()
         }
@@ -95,6 +129,26 @@ object ArmeriaSpringBootConfigParser {
             }
         }
         return result
+    }
+
+    private fun matchLoadedPropertyKey(
+        raw: String,
+        keys: Set<String>,
+    ): String? {
+        val line = raw.trim()
+        if (line.isEmpty() || line.startsWith('#') || line.startsWith('!')) {
+            return null
+        }
+        return keys
+            .filter { key ->
+                line.startsWith(key) &&
+                    (
+                        line.length == key.length ||
+                            line[key.length] == '=' ||
+                            line[key.length] == ':' ||
+                            line[key.length].isWhitespace()
+                    )
+            }.maxByOrNull { it.length }
     }
 
     private fun isInlineMappingListItem(content: String): Boolean {

@@ -329,5 +329,71 @@ class ArmeriaSpringBootSettingsInspectionTest : ArmeriaFixtureTestBase5() {
         assertTrue(highlights(message("inspection.springboot.settings.port.conflict")).isEmpty())
     }
 
+    @Test
+    fun yamlLastAliasWinsOverAlphabeticalSort() {
+        myFixture.configureByText(
+            "application.yml",
+            """
+            server:
+              port: 8080
+            spring:
+              main:
+                webApplicationType: none
+                web-application-type: servlet
+            armeria:
+              ports:
+                - port: 8080
+            """.trimIndent(),
+        )
+        assertEquals(1, highlights(message("inspection.springboot.settings.port.conflict")).size)
+    }
+
+    @Test
+    fun yamlLastAliasWinsWhenKebabThenCamel() {
+        myFixture.configureByText(
+            "application.yml",
+            """
+            server:
+              port: 8080
+            spring:
+              main:
+                web-application-type: servlet
+                webApplicationType: none
+            armeria:
+              ports:
+                - port: 8080
+            """.trimIndent(),
+        )
+        assertTrue(highlights(message("inspection.springboot.settings.port.conflict")).isEmpty())
+    }
+
+    @Test
+    fun propertiesLastAliasWinsOverAlphabeticalSort() {
+        myFixture.configureByText(
+            "application.properties",
+            """
+            server.port=8080
+            spring.main.webApplicationType=none
+            spring.main.web-application-type=servlet
+            armeria.ports[0].port=8080
+            """.trimIndent(),
+        )
+        assertEquals(1, highlights(message("inspection.springboot.settings.port.conflict")).size)
+    }
+
+    @Test
+    fun propertiesLastAliasWinsWhenKebabThenCamel() {
+        myFixture.configureByText(
+            "application.properties",
+            """
+            server.port=8080
+            spring.main.web-application-type=servlet
+            spring.main.webApplicationType=none
+            armeria.ports[0].port=8080
+            """.trimIndent(),
+        )
+        assertTrue(highlights(message("inspection.springboot.settings.port.conflict")).isEmpty())
+    }
+
     private fun highlights(description: String) = myFixture.doHighlighting().filter { it.description == description }
 }

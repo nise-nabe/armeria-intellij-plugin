@@ -15,10 +15,7 @@ internal object ArmeriaSpringBootSettingsInspectionSupport {
         if (!ArmeriaSpringBootConfigSupport.isApplicationConfigFileName(file.name)) {
             return
         }
-        val entries =
-            ArmeriaSpringBootConfigParser
-                .parseFile(file.name, file.text)
-                .associate { it.key to it.value }
+        val entries = ArmeriaSpringBootConfigParser.flattenRelatedInOrder(file.name, file.text)
         if (entries.isEmpty()) {
             return
         }

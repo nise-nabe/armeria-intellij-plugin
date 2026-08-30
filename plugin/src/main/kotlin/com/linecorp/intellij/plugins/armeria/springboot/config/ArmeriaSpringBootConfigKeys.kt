@@ -114,27 +114,27 @@ object ArmeriaSpringBootConfigKeys {
     val COMPLETION_SUGGESTIONS = DOCUMENTATION_MESSAGE_KEYS.keys.toList()
 
     fun isArmeriaRelatedKey(key: String): Boolean {
-        val normalized = ArmeriaSpringBootConfigSupport.normalizeIndexedKeyPath(key)
-        return normalized == ARMERIA_ROOT ||
-            normalized.startsWith(ARMERIA_PREFIX) ||
-            normalized in RELATED_ROOT_KEYS
+        val canonical = ArmeriaSpringBootConfigSupport.canonicalConfigKey(key)
+        return canonical == ARMERIA_ROOT ||
+            canonical.startsWith(ARMERIA_PREFIX) ||
+            canonical in RELATED_ROOT_KEYS
     }
 
     fun isRelevantCompletionPath(keyPath: String): Boolean {
         if (keyPath.isEmpty()) {
             return true
         }
-        val normalized = ArmeriaSpringBootConfigSupport.normalizeIndexedKeyPath(keyPath)
-        if (normalized == ARMERIA_ROOT || normalized.startsWith(ARMERIA_PREFIX)) {
+        val canonical = ArmeriaSpringBootConfigSupport.canonicalConfigKey(keyPath)
+        if (canonical == ARMERIA_ROOT || canonical.startsWith(ARMERIA_PREFIX)) {
             return true
         }
         return RELATED_ROOT_KEYS.any { related ->
-            related == normalized || related.startsWith("$normalized.") || normalized.startsWith("$related.")
+            related == canonical || related.startsWith("$canonical.") || canonical.startsWith("$related.")
         }
     }
 
     fun isIncludeValuePath(keyPath: String): Boolean =
-        ArmeriaSpringBootConfigSupport.normalizeIndexedKeyPath(keyPath) == INTERNAL_SERVICES_INCLUDE
+        ArmeriaSpringBootConfigSupport.canonicalConfigKey(keyPath) == INTERNAL_SERVICES_INCLUDE
 
     /**
      * Text to insert when completing a YAML key under [currentPath] for [suggestion].
