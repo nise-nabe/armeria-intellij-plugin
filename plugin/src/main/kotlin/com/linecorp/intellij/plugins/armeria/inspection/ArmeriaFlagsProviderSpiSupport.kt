@@ -26,7 +26,7 @@ internal object ArmeriaFlagsProviderSpiSupport {
     }
 
     private fun isInspectableImplementation(psiClass: PsiClass): Boolean {
-        if (!psiClass.isPhysical || psiClass.isInterface || psiClass.isAnnotationType || psiClass.isEnum) {
+        if (psiClass.isInterface || psiClass.isAnnotationType || psiClass.isEnum) {
             return false
         }
         if (psiClass.name == null || psiClass.qualifiedName == ArmeriaProductionChecklist.FLAGS_PROVIDER_CLASS) {

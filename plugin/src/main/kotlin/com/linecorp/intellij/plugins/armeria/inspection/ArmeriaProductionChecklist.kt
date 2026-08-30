@@ -4,13 +4,13 @@ import com.intellij.openapi.fileEditor.impl.LoadTextUtil
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.IndexNotReadyException
+import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.client.ArmeriaClientSupport
-import com.linecorp.intellij.plugins.armeria.test.ArmeriaJUnitServerExtensionSupport
 
 internal object ArmeriaProductionChecklist {
     const val CLIENT_FACTORY_CLASS = "com.linecorp.armeria.client.ClientFactory"
@@ -42,7 +42,10 @@ internal object ArmeriaProductionChecklist {
 
     val SCOPE_FUNCTION_NAMES = setOf("apply", "also", "run", "let", "with")
 
-    fun isTestSource(file: PsiFile?): Boolean = file != null && ArmeriaJUnitServerExtensionSupport.isInTestSourceContent(file)
+    fun isTestSource(file: PsiFile?): Boolean {
+        val virtualFile = file?.virtualFile ?: return false
+        return ProjectRootManager.getInstance(file.project).fileIndex.isInTestSourceContent(virtualFile)
+    }
 
     fun missingServerLimits(present: Set<String>): List<String> =
         SERVER_LIMIT_METHODS.filter { method ->

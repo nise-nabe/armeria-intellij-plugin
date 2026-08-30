@@ -1,37 +1,33 @@
 package com.linecorp.intellij.plugins.armeria.inspection
 
-import com.intellij.lang.annotation.HighlightSeverity
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.roots.ModuleRootManager
+import com.intellij.openapi.vfs.VfsUtil
+import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.testFramework.PsiTestUtil
-import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase5
+import com.linecorp.intellij.plugins.armeria.test.withTemporaryMainSourceRoot
+import org.jetbrains.kotlin.psi.KtCallExpression
+import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ArmeriaProductionChecklistKotlinInspectionTest : ArmeriaFixtureTestBase5() {
     override fun registerArmeriaStubs() {
         myFixture.registerProductionChecklistInspectionStubs()
     }
 
-    override fun onFixtureSetUp() {
-        super.onFixtureSetUp()
-        myFixture.enableInspections(
-            ArmeriaServerLimitsKotlinInspection(),
-            ArmeriaClientResilienceKotlinInspection(),
-            ArmeriaClientFactoryReuseKotlinInspection(),
-            ArmeriaEndpointGroupCloseKotlinInspection(),
-            ArmeriaFlagsProviderSpiKotlinInspection(),
-        )
-    }
-
     @Test
     fun highlightsServerBuilderWithoutLimits() {
-        configureKotlin(
-            """
-            Server.builder().http(8080).build()
-            """.trimIndent(),
+        configureKotlin("Server.builder().http(8080).build()")
+        val call = serverBuilderCall()
+        assertNotNull(ArmeriaServerLimitsKotlinSupport.highlight(call))
+        assertTrue(
+            ArmeriaServerLimitsKotlinSupport.missingLimits(call).containsAll(ArmeriaProductionChecklist.SERVER_LIMIT_METHODS),
         )
-        assertHighlights(allLimitsMessage(), 1)
     }
 
     @Test
@@ -45,40 +41,34 @@ class ArmeriaProductionChecklistKotlinInspectionTest : ArmeriaFixtureTestBase5()
             }.build()
             """.trimIndent(),
         )
-        assertHighlights(allLimitsMessage(), 0)
+        assertNull(ArmeriaServerLimitsKotlinSupport.highlight(serverBuilderCall()))
     }
 
     @Test
     fun highlightsWebClientBuilderWithoutResilience() {
-        configureKotlin(
-            """
-            WebClient.builder("https://example.com").build()
-            """.trimIndent(),
-        )
-        assertHighlights(message("inspection.production.client.resilience.problem"), 1)
+        configureKotlinInMain("""WebClient.builder("https://example.com").build()""") {
+            assertNotNull(ArmeriaClientResilienceKotlinSupport.highlight(webClientBuilderCall()))
+        }
     }
 
     @Test
     fun allowsWebClientBuilderWithCircuitBreaker() {
-        configureKotlin(
+        configureKotlinInMain(
             """
             WebClient.builder("https://example.com")
                 .decorator(CircuitBreakerClient.newDecorator())
                 .build()
             """.trimIndent(),
-        )
-        assertHighlights(message("inspection.production.client.resilience.problem"), 0)
+        ) {
+            assertNull(ArmeriaClientResilienceKotlinSupport.highlight(webClientBuilderCall()))
+        }
     }
 
     @Test
     fun skipsWebClientBuilderInTestSources() {
         markDefaultSourceRootAsTest()
-        configureKotlin(
-            """
-            WebClient.builder("https://example.com").build()
-            """.trimIndent(),
-        )
-        assertHighlights(message("inspection.production.client.resilience.problem"), 0)
+        configureKotlin("""WebClient.builder("https://example.com").build()""")
+        assertNull(ArmeriaClientResilienceKotlinSupport.highlight(webClientBuilderCall()))
     }
 
     @Test
@@ -89,7 +79,7 @@ class ArmeriaProductionChecklistKotlinInspectionTest : ArmeriaFixtureTestBase5()
             WebClient.builder("https://example.com").factory(factory).build()
             """.trimIndent(),
         )
-        assertHighlights(message("inspection.production.client.factory.problem"), 1)
+        assertNotNull(ArmeriaClientFactoryReuseKotlinSupport.highlight(clientFactoryBuilderCall()))
     }
 
     @Test
@@ -109,7 +99,7 @@ class ArmeriaProductionChecklistKotlinInspectionTest : ArmeriaFixtureTestBase5()
             }
             """.trimIndent(),
         )
-        assertHighlights(message("inspection.production.client.factory.problem"), 0)
+        assertNull(ArmeriaClientFactoryReuseKotlinSupport.highlight(clientFactoryBuilderCall()))
     }
 
     @Test
@@ -126,17 +116,13 @@ class ArmeriaProductionChecklistKotlinInspectionTest : ArmeriaFixtureTestBase5()
             }
             """.trimIndent(),
         )
-        assertHighlights(message("inspection.production.endpoint.group.close.problem"), 1)
+        assertNotNull(ArmeriaEndpointGroupCloseKotlinSupport.highlight(endpointGroupOfCall()))
     }
 
     @Test
     fun allowsEndpointGroupUse() {
-        configureKotlin(
-            """
-            DnsAddressEndpointGroup.of("example.com", 8080).use { }
-            """.trimIndent(),
-        )
-        assertHighlights(message("inspection.production.endpoint.group.close.problem"), 0)
+        configureKotlin("""DnsAddressEndpointGroup.of("example.com", 8080).use { }""")
+        assertNull(ArmeriaEndpointGroupCloseKotlinSupport.highlight(endpointGroupOfCall()))
     }
 
     @Test
@@ -151,7 +137,7 @@ class ArmeriaProductionChecklistKotlinInspectionTest : ArmeriaFixtureTestBase5()
             class MyFlagsProvider : FlagsProvider
             """.trimIndent(),
         )
-        assertHighlights(message("inspection.production.flags.provider.problem"), 1)
+        assertNotNull(ArmeriaFlagsProviderSpiKotlinSupport.highlight(flagsProviderDeclaration()))
     }
 
     @Test
@@ -170,28 +156,46 @@ class ArmeriaProductionChecklistKotlinInspectionTest : ArmeriaFixtureTestBase5()
             class MyFlagsProvider : FlagsProvider
             """.trimIndent(),
         )
-        assertHighlights(message("inspection.production.flags.provider.problem"), 0)
+        assertNull(ArmeriaFlagsProviderSpiKotlinSupport.highlight(flagsProviderDeclaration()))
+    }
+
+    private fun configureKotlinInMain(
+        body: String,
+        assertions: () -> Unit,
+    ) {
+        myFixture.withTemporaryMainSourceRoot { mainRoot ->
+            val content = kotlinSource(body)
+            val virtualFile =
+                ApplicationManager.getApplication().runWriteAction<com.intellij.openapi.vfs.VirtualFile> {
+                    val file = mainRoot.createChildData(this, "Main.kt")
+                    VfsUtil.saveText(file, content)
+                    file
+                }
+            PsiDocumentManager.getInstance(project).commitAllDocuments()
+            myFixture.configureFromExistingVirtualFile(virtualFile)
+            assertions()
+        }
     }
 
     private fun configureKotlin(body: String) {
-        myFixture.configureByText(
-            "Main.kt",
-            """
-            package example
-
-            import com.linecorp.armeria.client.ClientFactory
-            import com.linecorp.armeria.client.WebClient
-            import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient
-            import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup
-            import com.linecorp.armeria.client.retry.RetryingClient
-            import com.linecorp.armeria.server.Server
-
-            fun main() {
-                $body
-            }
-            """.trimIndent(),
-        )
+        myFixture.configureByText("Main.kt", kotlinSource(body))
     }
+
+    private fun kotlinSource(body: String): String =
+        """
+        package example
+
+        import com.linecorp.armeria.client.ClientFactory
+        import com.linecorp.armeria.client.WebClient
+        import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient
+        import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup
+        import com.linecorp.armeria.client.retry.RetryingClient
+        import com.linecorp.armeria.server.Server
+
+        fun main() {
+            $body
+        }
+        """.trimIndent()
 
     private fun markDefaultSourceRootAsTest() {
         val contentRoot = ModuleRootManager.getInstance(module).contentRoots.first()
@@ -199,18 +203,25 @@ class ArmeriaProductionChecklistKotlinInspectionTest : ArmeriaFixtureTestBase5()
         PsiTestUtil.addSourceRoot(module, contentRoot, true)
     }
 
-    private fun allLimitsMessage(): String =
-        message(
-            "inspection.production.server.limits.problem",
-            "maxNumConnections, requestTimeout, maxRequestLength",
-        )
+    private fun serverBuilderCall(): KtCallExpression = callNamed("builder", "Server")
 
-    private fun assertHighlights(
-        expected: String,
-        count: Int,
-    ) {
-        val highlights =
-            myFixture.doHighlighting(HighlightSeverity.INFORMATION).filter { it.description == expected }
-        assertEquals(count, highlights.size, highlights.joinToString { it.description.orEmpty() })
-    }
+    private fun webClientBuilderCall(): KtCallExpression = callNamed("builder", "WebClient")
+
+    private fun clientFactoryBuilderCall(): KtCallExpression = callNamed("builder", "ClientFactory")
+
+    private fun endpointGroupOfCall(): KtCallExpression = callNamed("of", "DnsAddressEndpointGroup")
+
+    private fun callNamed(
+        methodName: String,
+        qualifierSimpleName: String,
+    ): KtCallExpression =
+        PsiTreeUtil.findChildrenOfType(myFixture.file, KtCallExpression::class.java).first { call ->
+            ArmeriaKotlinInspectionCallChains.callName(call) == methodName &&
+                ArmeriaKotlinInspectionCallChains.qualifierSimpleName(call) == qualifierSimpleName
+        }
+
+    private fun flagsProviderDeclaration(): KtClassOrObject =
+        PsiTreeUtil.findChildrenOfType(myFixture.file, KtClassOrObject::class.java).first {
+            it.name == "MyFlagsProvider"
+        }
 }
