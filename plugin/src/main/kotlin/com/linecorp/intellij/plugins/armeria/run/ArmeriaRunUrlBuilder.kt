@@ -19,7 +19,6 @@ object ArmeriaRunUrlBuilder {
     private val SPRING_PORT_PATH = Regex("""^:(.+)$""")
     private val PLACEHOLDER_DEFAULT_PORT = Regex("""\$\{[^:}]+:(\d+)\}""")
     private val INTERNAL_SERVICE_PORT = Regex("""· :(\d+)""")
-    private val HTTP_PROTOCOLS = setOf("HTTP", "H1C", "H2C", "H1")
     private val DEFAULT_APPLICATION_FILES = setOf("application.properties", "application.yml", "application.yaml")
 
     fun baseUrl(listen: ArmeriaListenEndpoint): String {
@@ -76,7 +75,7 @@ object ArmeriaRunUrlBuilder {
             routes.mapNotNull { route ->
                 val port = parsePort(springPortPath(route.path) ?: return@mapNotNull null) ?: return@mapNotNull null
                 SpringPortCandidate(
-                    endpoint = ArmeriaListenEndpoint(port, https = isHttpsOnly(route.protocol)),
+                    endpoint = ArmeriaListenEndpoint(port, https = ArmeriaSessionProtocols.isHttpsOnly(route.protocol)),
                     defaultApplicationFile = isDefaultApplicationConfigName(route.pointer.containingFile?.name),
                 )
             }
@@ -111,20 +110,6 @@ object ArmeriaRunUrlBuilder {
     internal fun isDefaultApplicationConfigName(name: String?): Boolean = name != null && name in DEFAULT_APPLICATION_FILES
 
     private fun springPortPath(path: String): String? = SPRING_PORT_PATH.matchEntire(path)?.groupValues?.get(1)
-
-    private fun isHttpsOnly(protocol: String): Boolean {
-        val protocols =
-            protocol
-                .split(',')
-                .map { it.trim().uppercase() }
-                .filter { it.isNotEmpty() }
-        if (protocols.isEmpty()) {
-            return false
-        }
-        val hasHttp = protocols.any { it in HTTP_PROTOCOLS }
-        val hasHttps = protocols.any { it == "HTTPS" || it == "H2" }
-        return hasHttps && !hasHttp
-    }
 
     private fun isValidPort(port: Int): Boolean = port in 1..65535
 

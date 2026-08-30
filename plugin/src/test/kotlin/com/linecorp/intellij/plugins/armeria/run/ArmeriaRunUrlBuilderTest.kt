@@ -10,6 +10,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -94,6 +95,37 @@ class ArmeriaRunUrlBuilderTest {
             )
 
         assertEquals(ArmeriaListenEndpoint(8443, https = true), listen)
+    }
+
+    @Test
+    fun listenPortFromSpringRoutes_h1IsTls() {
+        val listen =
+            ArmeriaRunUrlBuilder.listenPortFromSpringRoutes(
+                listOf(route(path = ":8443", protocol = "H1", routeMatch = RouteMatch.NON_HTTP)),
+            )
+
+        assertEquals(ArmeriaListenEndpoint(8443, https = true), listen)
+    }
+
+    @Test
+    fun listenPortFromSpringRoutes_h1cIsCleartext() {
+        val listen =
+            ArmeriaRunUrlBuilder.listenPortFromSpringRoutes(
+                listOf(route(path = ":8080", protocol = "H1C", routeMatch = RouteMatch.NON_HTTP)),
+            )
+
+        assertEquals(ArmeriaListenEndpoint(8080, https = false), listen)
+    }
+
+    @Test
+    fun extraArgsSuggestHttps_classifiesArmeriaSessionProtocols() {
+        assertTrue(ArmeriaSessionProtocols.extraArgsSuggestHttps("SessionProtocol.H1"))
+        assertTrue(ArmeriaSessionProtocols.extraArgsSuggestHttps("SessionProtocol.H2"))
+        assertTrue(ArmeriaSessionProtocols.extraArgsSuggestHttps("SessionProtocol.HTTPS"))
+        assertFalse(ArmeriaSessionProtocols.extraArgsSuggestHttps("SessionProtocol.H1C"))
+        assertFalse(ArmeriaSessionProtocols.extraArgsSuggestHttps("SessionProtocol.H2C"))
+        assertFalse(ArmeriaSessionProtocols.extraArgsSuggestHttps("SessionProtocol.HTTP"))
+        assertFalse(ArmeriaSessionProtocols.extraArgsSuggestHttps("SessionProtocol.HTTP, SessionProtocol.H1"))
     }
 
     @Test

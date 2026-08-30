@@ -6,6 +6,7 @@ import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.Project
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiReferenceExpression
@@ -16,8 +17,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSuppor
 internal object ArmeriaServerListenPortSupport {
     private val KOTLIN_PLUGIN_ID = PluginId.getId("org.jetbrains.kotlin")
     private val LISTEN_METHODS = setOf("http", "https", "port")
-    private val HTTPS_TOKEN = Regex("""\bHTTPS\b""")
-    private val HTTP_TOKEN = Regex("""\bHTTP\b|\bH1C\b|\bH2C\b|\bH1\b""")
+    private val ARMERIA_SERVER_PACKAGE = "com.linecorp.armeria.server"
 
     fun extractFromMainClass(
         project: Project,
@@ -60,7 +60,12 @@ internal object ArmeriaServerListenPortSupport {
                 when (methodName) {
                     "https" -> true
                     "http" -> false
-                    else -> extraArgsSuggestHttps(call)
+                    else ->
+                        ArmeriaSessionProtocols.extraArgsSuggestHttps(
+                            call.argumentList.expressions
+                                .drop(1)
+                                .joinToString(" ") { it.text },
+                        )
                 }
             candidates +=
                 ListenCandidate(
@@ -90,16 +95,8 @@ internal object ArmeriaServerListenPortSupport {
         var hops = 0
         while (current != null && hops < 32) {
             val methodName = current.methodExpression.referenceName
-            if (methodName == "builder") {
-                val qualifier = current.methodExpression.qualifierExpression
-                val qualifierText = qualifier?.text.orEmpty()
-                if (qualifierText == "Server" || qualifierText.endsWith(".Server")) {
-                    return true
-                }
-                val resolved = (qualifier as? PsiReferenceExpression)?.resolve() as? PsiClass
-                if (resolved?.qualifiedName == ArmeriaRouteSupport.ARMERIA_SERVER_CLASS || resolved?.name == "Server") {
-                    return true
-                }
+            if (methodName == "builder" && isArmeriaServerQualifier(current.methodExpression.qualifierExpression)) {
+                return true
             }
             val containing =
                 current
@@ -116,16 +113,32 @@ internal object ArmeriaServerListenPortSupport {
             call.methodExpression.qualifierExpression
                 ?.type
                 ?.canonicalText
-        return qualifierType != null && ArmeriaRouteSupport.isServerBuilderType(qualifierType)
+        return qualifierType == ArmeriaRouteSupport.SERVER_BUILDER_CLASS ||
+            (
+                qualifierType == ArmeriaRouteSupport.SERVER_BUILDER_SIMPLE_NAME &&
+                    referencesArmeriaServer(call.containingFile)
+            )
     }
 
-    private fun extraArgsSuggestHttps(call: PsiMethodCallExpression): Boolean {
-        val extras = call.argumentList.expressions.drop(1)
-        if (extras.isEmpty()) {
+    private fun isArmeriaServerQualifier(qualifier: PsiExpression?): Boolean {
+        qualifier ?: return false
+        val resolved = (qualifier as? PsiReferenceExpression)?.resolve() as? PsiClass
+        if (resolved != null) {
+            return resolved.qualifiedName == ArmeriaRouteSupport.ARMERIA_SERVER_CLASS
+        }
+        val qualifierText = qualifier.text
+        if (qualifierText == ArmeriaRouteSupport.ARMERIA_SERVER_CLASS) {
+            return true
+        }
+        if (qualifierText != "Server" && !qualifierText.endsWith(".Server")) {
             return false
         }
-        val blob = extras.joinToString(" ") { it.text }
-        return HTTPS_TOKEN.containsMatchIn(blob) && !HTTP_TOKEN.containsMatchIn(blob)
+        return referencesArmeriaServer(qualifier.containingFile)
+    }
+
+    internal fun referencesArmeriaServer(file: PsiFile?): Boolean {
+        val text = file?.text ?: return false
+        return text.contains(ARMERIA_SERVER_PACKAGE)
     }
 
     private fun kindFor(methodName: String): ListenKind =

@@ -201,6 +201,129 @@ class ArmeriaServerListenPortSupportTest : ArmeriaFixtureTestBase() {
         assertNull(ArmeriaServerListenPortSupport.extractFromFile(myFixture.file))
     }
 
+    fun testExtractsHttpsFromPortWithH1() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.common.SessionProtocol;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder().port(8443, SessionProtocol.H1).build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertEquals(
+            ArmeriaListenEndpoint(8443, https = true),
+            ArmeriaServerListenPortSupport.extractFromFile(myFixture.file),
+        )
+    }
+
+    fun testIgnoresUnrelatedServerBuilder() {
+        myFixture.addClass(
+            """
+            package other;
+
+            public final class Server {
+                public static ServerBuilder builder() {
+                    return new ServerBuilder();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package other;
+
+            public final class ServerBuilder {
+                public ServerBuilder http(int port) {
+                    return this;
+                }
+
+                public Server build() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.docs.DocService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    other.Server.builder().http(8080).build();
+                    new DocService();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertNull(ArmeriaServerListenPortSupport.extractFromFile(myFixture.file))
+    }
+
+    fun testExtractsKotlinHttpsFromPortWithH1() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.common.SessionProtocol
+
+            fun main() {
+                Server.builder().port(8443, SessionProtocol.H1).build()
+            }
+            """.trimIndent(),
+        )
+
+        assertEquals(
+            ArmeriaListenEndpoint(8443, https = true),
+            ArmeriaServerListenPortSupport.extractFromFile(myFixture.file),
+        )
+    }
+
+    fun testIgnoresUnrelatedKotlinServerBuilder() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.docs.DocService
+
+            fun main() {
+                other.Server.builder().http(8080).build()
+                DocService()
+            }
+            """.trimIndent(),
+        )
+
+        assertNull(ArmeriaServerListenPortSupport.extractFromFile(myFixture.file))
+    }
+
+    fun testIgnoresKotlinServerBuilderWithoutArmeriaImport() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            fun main() {
+                Server.builder().http(8080).build()
+            }
+            """.trimIndent(),
+        )
+
+        assertNull(ArmeriaServerListenPortSupport.extractFromFile(myFixture.file))
+    }
+
     fun testLaunchInfoBuildsDocServiceUrlFromHttpAndServiceUnder() {
         myFixture.configureByText(
             "Main.java",

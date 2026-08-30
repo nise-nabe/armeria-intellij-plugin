@@ -17,12 +17,13 @@ import org.jetbrains.kotlin.psi.KtProperty
  */
 internal object ArmeriaKotlinServerListenPortSupport {
     private val LISTEN_METHODS = setOf("http", "https", "port")
-    private val HTTPS_TOKEN = Regex("""\bHTTPS\b""")
-    private val HTTP_TOKEN = Regex("""\bHTTP\b|\bH1C\b|\bH2C\b|\bH1\b""")
-    private val SERVER_BUILDER_CALL = Regex("""\bServer\.builder\(\)""")
+    private val SERVER_BUILDER_CALL = Regex("""(?<![.\w])(?:com\.linecorp\.armeria\.server\.)?Server\.builder\(\)""")
     private val SCOPE_METHODS = setOf("apply", "run", "also", "let")
 
     fun extractFromFile(file: PsiFile): ArmeriaListenEndpoint? {
+        if (!ArmeriaServerListenPortSupport.referencesArmeriaServer(file)) {
+            return null
+        }
         val calls = PsiTreeUtil.findChildrenOfType(file, KtCallExpression::class.java)
         val candidates = mutableListOf<ArmeriaServerListenPortSupport.ListenCandidate>()
         for (call in calls) {
@@ -38,7 +39,12 @@ internal object ArmeriaKotlinServerListenPortSupport {
                 when (methodName) {
                     "https" -> true
                     "http" -> false
-                    else -> extraArgsSuggestHttps(call)
+                    else ->
+                        ArmeriaSessionProtocols.extraArgsSuggestHttps(
+                            call.valueArguments
+                                .drop(1)
+                                .joinToString(" ") { it.getArgumentExpression()?.text.orEmpty() },
+                        )
                 }
             candidates +=
                 ArmeriaServerListenPortSupport.ListenCandidate(
@@ -120,15 +126,6 @@ internal object ArmeriaKotlinServerListenPortSupport {
         }
         val initializer = resolved.initializer ?: return false
         return SERVER_BUILDER_CALL.containsMatchIn(initializer.text)
-    }
-
-    private fun extraArgsSuggestHttps(call: KtCallExpression): Boolean {
-        val extras = call.valueArguments.drop(1)
-        if (extras.isEmpty()) {
-            return false
-        }
-        val blob = extras.joinToString(" ") { it.getArgumentExpression()?.text.orEmpty() }
-        return HTTPS_TOKEN.containsMatchIn(blob) && !HTTP_TOKEN.containsMatchIn(blob)
     }
 
     private fun extractPort(expression: KtExpression?): Int? {
