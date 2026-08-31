@@ -127,8 +127,17 @@ class ArmeriaRouteExplorerPanel(
             { path: javax.swing.tree.TreePath ->
                 val node = path.lastPathComponent
                 when (val userObject = (node as? javax.swing.tree.DefaultMutableTreeNode)?.userObject) {
-                    is ArmeriaRouteTreeBuilder.RouteNode -> userObject.route.speedSearchText
+                    is ArmeriaRouteTreeBuilder.RouteNode ->
+                        if (ArmeriaRouteTreeBuilder.isPortBinding(userObject.route)) {
+                            ArmeriaRouteTreeBuilder.portDisplayLabel(userObject.route)
+                        } else {
+                            userObject.route.speedSearchText
+                        }
                     is ArmeriaRouteTreeBuilder.ModuleNode -> userObject.name
+                    is ArmeriaRouteTreeBuilder.VirtualHostNode ->
+                        userObject.hostname.ifEmpty {
+                            message("route.explorer.tree.virtualHost.default", userObject.routeCount)
+                        }
                     else -> ""
                 }
             },

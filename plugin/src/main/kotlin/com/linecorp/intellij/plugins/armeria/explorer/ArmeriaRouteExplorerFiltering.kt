@@ -72,27 +72,10 @@ internal object ArmeriaRouteExplorerFiltering {
             if (module.name != route.moduleName) {
                 continue
             }
-            for (routeIndex in 0 until moduleNode.childCount) {
-                val routeNode = moduleNode.getChildAt(routeIndex) as DefaultMutableTreeNode
-                val visibleRoute = (routeNode.userObject as? ArmeriaRouteTreeBuilder.RouteNode)?.route ?: continue
-                if (routesMatch(visibleRoute, route)) {
-                    routeTree.selectionPath = TreePath(routeNode.path)
-                    return true
-                }
-            }
+            val match = ArmeriaRouteTreeBuilder.findNode(moduleNode, route) ?: continue
+            routeTree.selectionPath = TreePath(match.path)
+            return true
         }
         return false
     }
-
-    private fun routesMatch(
-        left: ArmeriaRoute,
-        right: ArmeriaRoute,
-    ): Boolean =
-        left.moduleName == right.moduleName &&
-            left.path == right.path &&
-            left.target == right.target &&
-            left.routeMatch == right.routeMatch &&
-            left.httpMethod == right.httpMethod &&
-            left.virtualHostName == right.virtualHostName &&
-            left.delegationMountPath == right.delegationMountPath
 }

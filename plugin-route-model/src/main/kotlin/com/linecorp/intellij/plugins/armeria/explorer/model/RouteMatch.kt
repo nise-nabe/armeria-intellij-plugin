@@ -8,6 +8,7 @@ enum class RouteMatch {
     FILE_SERVICE,
     HEALTH_CHECK,
     VIRTUAL_HOST,
+    LISTEN_PORT,
     ROUTE_DECORATOR,
     ROUTE_FLUENT,
     DECORATOR_UNDER,

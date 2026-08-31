@@ -28,6 +28,7 @@ class ArmeriaHttpMethodPillTest {
         assertEquals("FIL", ArmeriaHttpMethodPill.pillLabel(route(routeMatch = RouteMatch.FILE_SERVICE)))
         assertEquals("HLT", ArmeriaHttpMethodPill.pillLabel(route(routeMatch = RouteMatch.HEALTH_CHECK)))
         assertEquals("VHS", ArmeriaHttpMethodPill.pillLabel(route(routeMatch = RouteMatch.VIRTUAL_HOST)))
+        assertEquals("PORT", ArmeriaHttpMethodPill.pillLabel(route(routeMatch = RouteMatch.LISTEN_PORT)))
         assertEquals("DEC", ArmeriaHttpMethodPill.pillLabel(route(routeMatch = RouteMatch.ROUTE_DECORATOR)))
         assertEquals("UND", ArmeriaHttpMethodPill.pillLabel(route(routeMatch = RouteMatch.DECORATOR_UNDER)))
     }

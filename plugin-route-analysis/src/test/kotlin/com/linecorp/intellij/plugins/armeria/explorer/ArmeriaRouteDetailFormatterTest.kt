@@ -382,6 +382,25 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
             ),
         )
         assertEquals(
+            message("route.explorer.registration.listenPort", "8888", "HTTP+HTTPS"),
+            ArmeriaRouteDetailFormatter.registrationSummary(
+                ArmeriaRoute(
+                    protocol = "HTTP+HTTPS",
+                    httpMethod = "",
+                    path = ":8888",
+                    target = message("route.explorer.target.listenPort"),
+                    routeMatch = RouteMatch.LISTEN_PORT,
+                    moduleName = "app",
+                    targetUnresolved = false,
+                    isDocService = false,
+                    annotatedServiceHasPathPrefix = false,
+                    decorators = emptyList(),
+                    exceptionHandlers = emptyList(),
+                    pointer = TestPsiPointer,
+                ),
+            ),
+        )
+        assertEquals(
             message(
                 "route.explorer.registration.delegated",
                 "GET",

@@ -26,6 +26,7 @@ object ArmeriaKotlinExtendedRegistrationCollector {
             if (methodName == "build") {
                 ArmeriaKotlinExtendedRegistrationCollectorFluentRoute.tryCollectFluentRoute(call, routes, seenRegistrations)
             }
+            ArmeriaKotlinExtendedRegistrationCollectorListenPort.collect(call, routes, seenRegistrations)
             if (methodName !in ServiceRegistrationMethod.EXTENDED_METHOD_NAMES) {
                 return@forEachDescendant
             }

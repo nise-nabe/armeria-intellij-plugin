@@ -251,7 +251,7 @@ object ArmeriaRouteDuplicateIndex {
             // DELEGATED is intentionally outside CHECKED_MATCHES; keep arms unset until then.
             RouteMatch.ANNOTATED_HTTP, RouteMatch.NON_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG,
             RouteMatch.FILE_SERVICE, RouteMatch.HEALTH_CHECK, RouteMatch.DELEGATED,
-            RouteMatch.VIRTUAL_HOST, RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
+            RouteMatch.VIRTUAL_HOST, RouteMatch.LISTEN_PORT, RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
             -> false
         }
 

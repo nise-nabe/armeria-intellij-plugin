@@ -35,7 +35,7 @@ object ArmeriaHttpRequestGenerator {
             RouteMatch.RUNTIME, RouteMatch.CONFIG -> route.httpMethod.isNotBlank()
             RouteMatch.NON_HTTP -> isGrpcRoute(route) || isGraphqlRoute(route)
             RouteMatch.ANNOTATED_SERVICE, RouteMatch.FILE_SERVICE, RouteMatch.VIRTUAL_HOST,
-            RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
+            RouteMatch.LISTEN_PORT, RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
             -> false
         }
     }
@@ -53,7 +53,7 @@ object ArmeriaHttpRequestGenerator {
                 }
             }
             RouteMatch.ANNOTATED_SERVICE, RouteMatch.FILE_SERVICE, RouteMatch.VIRTUAL_HOST,
-            RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
+            RouteMatch.LISTEN_PORT, RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
             -> error("Unsupported route match: ${route.routeMatch}")
         }
 

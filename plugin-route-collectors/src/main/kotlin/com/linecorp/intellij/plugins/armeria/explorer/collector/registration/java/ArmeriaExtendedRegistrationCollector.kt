@@ -22,6 +22,7 @@ object ArmeriaExtendedRegistrationCollector {
             object : JavaRecursiveElementWalkingVisitor() {
                 override fun visitMethodCallExpression(expression: PsiMethodCallExpression) {
                     collectFromMethodCall(expression, routes, seenRegistrations)
+                    ArmeriaExtendedRegistrationCollectorListenPort.collect(expression, routes, seenRegistrations)
                     ArmeriaExtendedRegistrationCollectorFluentRoute.tryCollectFluentRoute(expression, routes, seenRegistrations)
                     super.visitMethodCallExpression(expression)
                 }
@@ -35,6 +36,7 @@ object ArmeriaExtendedRegistrationCollector {
         seenRegistrations: MutableSet<String>,
     ) {
         collectFromMethodCall(expression, routes, seenRegistrations)
+        ArmeriaExtendedRegistrationCollectorListenPort.collect(expression, routes, seenRegistrations)
         ArmeriaExtendedRegistrationCollectorFluentRoute.tryCollectFluentRoute(expression, routes, seenRegistrations)
     }
 

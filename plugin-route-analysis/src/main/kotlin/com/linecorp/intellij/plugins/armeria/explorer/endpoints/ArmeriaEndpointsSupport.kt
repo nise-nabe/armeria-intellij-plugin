@@ -30,6 +30,7 @@ internal object ArmeriaEndpointsSupport {
             RouteMatch.ANNOTATED_SERVICE,
             RouteMatch.FILE_SERVICE,
             RouteMatch.VIRTUAL_HOST,
+            RouteMatch.LISTEN_PORT,
             RouteMatch.ROUTE_DECORATOR,
             RouteMatch.DECORATOR_UNDER,
             -> false

@@ -98,6 +98,22 @@ fun JavaCodeInsightTestFixture.registerExtendedRegistrationCollectorStubs() {
                 return this;
             }
 
+            public ServerBuilder http(int port) {
+                return this;
+            }
+
+            public ServerBuilder https(int port) {
+                return this;
+            }
+
+            public ServerBuilder port(int port) {
+                return this;
+            }
+
+            public ServerBuilder port(int port, Object... protocols) {
+                return this;
+            }
+
             public com.linecorp.armeria.server.Server build() {
                 return null;
             }
@@ -165,6 +181,21 @@ fun JavaCodeInsightTestFixture.registerExtendedRegistrationCollectorStubs() {
     )
     this.addClass(
         """
+        package com.linecorp.armeria.common;
+
+        public final class SessionProtocol {
+            public static final SessionProtocol HTTP = new SessionProtocol();
+            public static final SessionProtocol HTTPS = new SessionProtocol();
+            public static final SessionProtocol PROXY = new SessionProtocol();
+            public static final SessionProtocol H1 = new SessionProtocol();
+            public static final SessionProtocol H2 = new SessionProtocol();
+            public static final SessionProtocol H1C = new SessionProtocol();
+            public static final SessionProtocol H2C = new SessionProtocol();
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
         package example;
 
         public final class OtherBuilder {
@@ -189,6 +220,10 @@ fun JavaCodeInsightTestFixture.registerExtendedRegistrationCollectorStubs() {
             }
 
             public OtherBuilder service(String path, Object handler) {
+                return this;
+            }
+
+            public OtherBuilder http(int port) {
                 return this;
             }
 
@@ -277,6 +312,22 @@ fun JavaCodeInsightTestFixture.registerKotlinExtendedRegistrationCollectorStubs(
                 return this;
             }
 
+            public ServerBuilder http(int port) {
+                return this;
+            }
+
+            public ServerBuilder https(int port) {
+                return this;
+            }
+
+            public ServerBuilder port(int port) {
+                return this;
+            }
+
+            public ServerBuilder port(int port, Object... protocols) {
+                return this;
+            }
+
             public com.linecorp.armeria.server.Server build() {
                 return null;
             }
@@ -340,6 +391,21 @@ fun JavaCodeInsightTestFixture.registerKotlinExtendedRegistrationCollectorStubs(
     )
     this.addClass(
         """
+        package com.linecorp.armeria.common;
+
+        public final class SessionProtocol {
+            public static final SessionProtocol HTTP = new SessionProtocol();
+            public static final SessionProtocol HTTPS = new SessionProtocol();
+            public static final SessionProtocol PROXY = new SessionProtocol();
+            public static final SessionProtocol H1 = new SessionProtocol();
+            public static final SessionProtocol H2 = new SessionProtocol();
+            public static final SessionProtocol H1C = new SessionProtocol();
+            public static final SessionProtocol H2C = new SessionProtocol();
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
         package example;
 
         public final class OtherBuilder {
@@ -360,6 +426,10 @@ fun JavaCodeInsightTestFixture.registerKotlinExtendedRegistrationCollectorStubs(
             }
 
             public OtherBuilder service(String path, Object handler) {
+                return this;
+            }
+
+            public OtherBuilder http(int port) {
                 return this;
             }
 

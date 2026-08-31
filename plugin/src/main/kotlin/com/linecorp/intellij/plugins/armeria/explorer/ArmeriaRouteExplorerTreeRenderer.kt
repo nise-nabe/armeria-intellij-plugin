@@ -29,7 +29,19 @@ internal class ArmeriaRouteExplorerTreeRenderer : ColoredTreeCellRenderer() {
                     SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES,
                 )
             }
-            is ArmeriaRouteTreeBuilder.RouteNode -> renderRoute(userObject.route)
+            is ArmeriaRouteTreeBuilder.VirtualHostNode -> {
+                append(
+                    ArmeriaRouteTreeBuilder.virtualHostDisplayLabel(userObject),
+                    SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES,
+                )
+            }
+            is ArmeriaRouteTreeBuilder.RouteNode -> {
+                if (ArmeriaRouteTreeBuilder.isPortBinding(userObject.route)) {
+                    renderPort(userObject.route)
+                } else {
+                    renderRoute(userObject.route)
+                }
+            }
         }
     }
 
@@ -62,5 +74,11 @@ internal class ArmeriaRouteExplorerTreeRenderer : ColoredTreeCellRenderer() {
         ArmeriaRouteDetailFormatter.secondaryDelegationText(route)?.let { secondary ->
             append(secondary, SimpleTextAttributes.GRAYED_ATTRIBUTES)
         }
+    }
+
+    private fun renderPort(route: ArmeriaRoute) {
+        val label = ArmeriaRouteTreeBuilder.portDisplayLabel(route)
+        toolTipText = label
+        append(label, SimpleTextAttributes.REGULAR_ATTRIBUTES)
     }
 }

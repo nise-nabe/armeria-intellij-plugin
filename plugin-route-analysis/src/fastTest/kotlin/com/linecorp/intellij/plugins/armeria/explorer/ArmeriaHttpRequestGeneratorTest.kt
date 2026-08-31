@@ -82,6 +82,7 @@ class ArmeriaHttpRequestGeneratorTest {
     fun supports_rejectsExtendedNonRequestRoutes() {
         assertFalse(ArmeriaHttpRequestGenerator.supports(route(routeMatch = RouteMatch.FILE_SERVICE)))
         assertFalse(ArmeriaHttpRequestGenerator.supports(route(routeMatch = RouteMatch.VIRTUAL_HOST)))
+        assertFalse(ArmeriaHttpRequestGenerator.supports(route(routeMatch = RouteMatch.LISTEN_PORT)))
         assertFalse(ArmeriaHttpRequestGenerator.supports(route(routeMatch = RouteMatch.ROUTE_DECORATOR)))
         assertFalse(ArmeriaHttpRequestGenerator.supports(route(routeMatch = RouteMatch.DECORATOR_UNDER)))
     }
