@@ -10,8 +10,8 @@ import com.intellij.psi.PsiElement
  * with the internal [ARMERIA_KOTLIN_UTIL] marker as a fallback (issue #406).
  */
 internal object ArmeriaKotlinClasspath {
-    const val COROUTINE_CONTEXT_SERVICE = "com.linecorp.armeria.server.kotlin.CoroutineContextService"
-    const val ARMERIA_KOTLIN_UTIL = "com.linecorp.armeria.internal.common.kotlin.ArmeriaKotlinUtil"
+    private const val COROUTINE_CONTEXT_SERVICE = "com.linecorp.armeria.server.kotlin.CoroutineContextService"
+    private const val ARMERIA_KOTLIN_UTIL = "com.linecorp.armeria.internal.common.kotlin.ArmeriaKotlinUtil"
 
     private val MARKER_CLASSES =
         listOf(
