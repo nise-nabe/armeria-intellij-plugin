@@ -4,11 +4,11 @@ import com.intellij.codeInsight.intention.PsiElementBaseIntentionAction
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
-import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.inspection.ArmeriaKotlinAnnotationSupport
+import com.linecorp.intellij.plugins.armeria.inspection.ArmeriaKotlinClasspath
 import com.linecorp.intellij.plugins.armeria.inspection.ArmeriaKotlinMethodRoute
 import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.lexer.KtTokens
@@ -63,7 +63,7 @@ open class ArmeriaGenerateRouteMethodKotlinIntention : PsiElementBaseIntentionAc
                 usedPathsForHttpMethod = usedKotlinRoutePaths(serviceClass, httpMethod),
             )
         val path = "/$methodName"
-        val suspend = shouldGenerateSuspend(project, serviceClass)
+        val suspend = shouldGenerateSuspend(serviceClass)
         val factory = KtPsiFactory(project)
         val function =
             factory.createFunction(
@@ -125,23 +125,11 @@ open class ArmeriaGenerateRouteMethodKotlinIntention : PsiElementBaseIntentionAc
         ) == null
     }
 
-    private fun shouldGenerateSuspend(
-        project: Project,
-        serviceClass: KtClassOrObject,
-    ): Boolean {
-        if (hasArmeriaKotlin(project, serviceClass)) {
+    private fun shouldGenerateSuspend(serviceClass: KtClassOrObject): Boolean {
+        if (ArmeriaKotlinClasspath.isPresent(serviceClass)) {
             return true
         }
         return hasSuspendRouteFunction(serviceClass)
-    }
-
-    private fun hasArmeriaKotlin(
-        project: Project,
-        serviceClass: KtClassOrObject,
-    ): Boolean {
-        val facade = JavaPsiFacade.getInstance(project)
-        val scope = serviceClass.resolveScope
-        return ARMERIA_KOTLIN_MARKER_CLASSES.any { facade.findClass(it, scope) != null }
     }
 
     private fun insertKotlinImport(
@@ -185,14 +173,6 @@ open class ArmeriaGenerateRouteMethodKotlinIntention : PsiElementBaseIntentionAc
         klass.declarations.filterIsInstance<KtNamedFunction>().any { function ->
             function.hasModifier(KtTokens.SUSPEND_KEYWORD) && ArmeriaKotlinMethodRoute.from(function) != null
         }
-
-    companion object {
-        private val ARMERIA_KOTLIN_MARKER_CLASSES =
-            listOf(
-                "com.linecorp.armeria.server.kotlin.CoroutineContextService",
-                "com.linecorp.armeria.internal.common.kotlin.ArmeriaKotlinUtil",
-            )
-    }
 }
 
 class ArmeriaGeneratePostJsonRouteMethodKotlinIntention : ArmeriaGenerateRouteMethodKotlinIntention() {
