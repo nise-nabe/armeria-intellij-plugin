@@ -4,6 +4,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaGrpcServiceOptionsSupport
 import com.linecorp.intellij.plugins.armeria.message
 
 object ArmeriaRouteDetailFormatter {
@@ -18,6 +19,12 @@ object ArmeriaRouteDetailFormatter {
                 }
                 if (route.routeMatch == RouteMatch.RUNTIME) {
                     add(message("route.explorer.badge.runtime"))
+                }
+                if (ArmeriaGrpcServiceOptionsSupport.hasUnframedHint(route.contentHints)) {
+                    add(message("route.explorer.badge.grpcUnframed"))
+                }
+                if (ArmeriaGrpcServiceOptionsSupport.hasReflectionHint(route.contentHints)) {
+                    add(message("route.explorer.badge.grpcReflection"))
                 }
                 route.delegationKind?.let { kind ->
                     add(delegationBadge(kind))

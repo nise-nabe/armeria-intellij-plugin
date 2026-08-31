@@ -10,7 +10,7 @@ import com.intellij.psi.PsiTypeCastExpression
 import com.intellij.psi.PsiVariable
 
 internal object ArmeriaRouteTargetExtractor {
-    private val BUILDER_CHAIN_METHODS = setOf("build", "addService", "addServices")
+    private val BUILDER_CHAIN_METHODS = setOf("build", "addService", "addServices", "enableUnframedRequests")
 
     fun extractKnownServiceType(expression: PsiExpression): String? = extractKnownServiceType(expression, mutableSetOf())
 

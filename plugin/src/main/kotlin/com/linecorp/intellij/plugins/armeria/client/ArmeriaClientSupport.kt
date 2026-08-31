@@ -8,6 +8,7 @@ internal enum class ClientProtocol(
 ) {
     HTTP("route.explorer.protocol.http"),
     GRPC("route.explorer.protocol.grpc"),
+    GRPC_KOTLIN("client.explorer.protocol.grpcKotlin"),
     THRIFT("route.explorer.protocol.thrift"),
     RETROFIT("client.explorer.protocol.retrofit"),
     REST("client.explorer.protocol.rest"),
@@ -19,7 +20,7 @@ internal enum class ClientProtocol(
     fun matchesRouteProtocol(routeProtocol: String): Boolean =
         when (this) {
             HTTP, RETROFIT, REST, BLOCKING -> isHttpCompatibleRouteProtocol(routeProtocol)
-            GRPC -> routeProtocol == GRPC.presentableName()
+            GRPC, GRPC_KOTLIN -> routeProtocol == GRPC.presentableName()
             THRIFT -> routeProtocol == THRIFT.presentableName()
         }
 
@@ -56,6 +57,25 @@ internal object ArmeriaClientSupport {
 
     val FACTORY_METHOD_NAMES = setOf("builder", "of", "newClient")
 
+    private const val BUILD_METHOD = "build"
+
+    fun isCoroutineStubClassName(name: String): Boolean {
+        val simpleName = name.substringAfterLast('.').substringAfterLast('$')
+        return simpleName.endsWith("CoroutineStub")
+    }
+
+    fun grpcProtocolForStubClass(className: String?): ClientProtocol =
+        if (className != null && isCoroutineStubClassName(className)) {
+            ClientProtocol.GRPC_KOTLIN
+        } else {
+            ClientProtocol.GRPC
+        }
+
+    fun isGrpcClientBuilderClass(qualifiedName: String?): Boolean =
+        qualifiedName == "com.linecorp.armeria.client.grpc.GrpcClientBuilder" ||
+            qualifiedName == "com.linecorp.armeria.client.grpc.GrpcClients" ||
+            qualifiedName?.endsWith(".GrpcClientBuilder") == true
+
     val CONVERSION_METHOD_NAMES = setOf("blocking", "asRestClient")
 
     val HTTP_METHOD_INVOCATION_NAMES = setOf("get", "post", "put", "delete", "patch")
@@ -81,6 +101,9 @@ internal object ArmeriaClientSupport {
     ): ClientProtocol? {
         if (methodName in CONVERSION_METHOD_NAMES) {
             return if (isWebClientClass(containingClass)) protocolForConversion(methodName) else null
+        }
+        if (methodName == BUILD_METHOD) {
+            return if (isGrpcClientBuilderClass(containingClass)) ClientProtocol.GRPC else null
         }
         if (methodName !in FACTORY_METHOD_NAMES) {
             return null

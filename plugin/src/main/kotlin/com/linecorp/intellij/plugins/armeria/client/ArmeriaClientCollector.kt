@@ -87,15 +87,20 @@ object ArmeriaClientCollector {
         if (isNestedInsideClientFactoryArgument(expression) || isQualifierOfClientConversion(expression)) {
             return
         }
+        if (ArmeriaGrpcClientStubSupport.isJavaQualifierOfGrpcStubBuild(expression)) {
+            return
+        }
         if (ArmeriaJavaClientInvocationCollector.collect(expression, endpoints, seenEndpoints)) {
             return
         }
         val methodName = expression.methodExpression.referenceName ?: return
         val resolvedClass = expression.resolveMethod()?.containingClass?.qualifiedName
-        val protocol = ArmeriaClientSupport.protocolForInvocation(methodName, resolvedClass) ?: return
+        val protocol = grpcProtocol(expression, methodName, resolvedClass) ?: return
         val metadata = extractClientMetadata(expression, methodName, protocol) ?: return
+        val stubClass = ArmeriaGrpcClientStubSupport.extractJavaStubClassName(expression)
         val target =
-            expression.methodExpression.qualifierExpression?.text
+            stubClass?.substringAfterLast('.')
+                ?: expression.methodExpression.qualifierExpression?.text
                 ?: resolvedClass?.substringAfterLast('.').orEmpty()
         addEndpoint(
             element = expression,
@@ -138,8 +143,31 @@ object ArmeriaClientCollector {
                     extractFactoryMetadata(arguments, protocol, decorators)
                 }
             }
+            "build" -> {
+                val uri = ArmeriaGrpcClientStubSupport.extractJavaBuilderUri(expression) ?: return null
+                ClientMetadata(uri = uri, decorators = decorators)
+            }
             else -> null
         }
+    }
+
+    private fun grpcProtocol(
+        expression: PsiMethodCallExpression,
+        methodName: String,
+        resolvedClass: String?,
+    ): ClientProtocol? {
+        if (ArmeriaGrpcClientStubSupport.isJavaGrpcStubBuild(expression)) {
+            return ArmeriaClientSupport.grpcProtocolForStubClass(
+                ArmeriaGrpcClientStubSupport.extractJavaStubClassName(expression),
+            )
+        }
+        val protocol = ArmeriaClientSupport.protocolForInvocation(methodName, resolvedClass) ?: return null
+        if (protocol != ClientProtocol.GRPC) {
+            return protocol
+        }
+        return ArmeriaClientSupport.grpcProtocolForStubClass(
+            ArmeriaGrpcClientStubSupport.extractJavaStubClassName(expression),
+        )
     }
 
     private fun extractFactoryMetadata(

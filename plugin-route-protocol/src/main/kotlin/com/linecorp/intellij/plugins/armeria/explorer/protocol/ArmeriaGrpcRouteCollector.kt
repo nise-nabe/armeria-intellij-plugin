@@ -11,6 +11,8 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRouteMetadata
 import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRoutePath
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaGrpcServiceOptionsSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaProtoRouteDiscoverySupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.message
@@ -29,11 +31,13 @@ object ArmeriaGrpcRouteCollector {
             return
         }
         val seenProtoRoutes = mutableSetOf<String>()
+        val protoStartIndex = routes.size
         for (virtualFile in FilenameIndex.getAllFilesByExt(project, "proto", scope)) {
             ArmeriaRouteCollectionMetrics.current()?.filesScanned?.incrementAndGet()
             val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: continue
             collectFromProtoFile(psiFile, routes, seenProtoRoutes)
         }
+        annotateUnframedProtoRoutes(routes, protoStartIndex)
     }
 
     private fun collectFromProtoFile(
@@ -72,9 +76,19 @@ object ArmeriaGrpcRouteCollector {
                 .orEmpty()
         for ((serviceName, body) in findServiceBodies(strippedText)) {
             val fqService = if (packageName.isBlank()) serviceName else "$packageName.$serviceName"
-            for (rpc in RPC_PATTERN.findAll(body)) {
+            val rpcMatches = RPC_PATTERN.findAll(body).toList()
+            for ((index, rpc) in rpcMatches.withIndex()) {
                 val methodName = rpc.groupValues[1]
-                addProtoRoute(element, fqService, methodName, routes, seenProtoRoutes)
+                val rpcEnd = rpcMatches.getOrNull(index + 1)?.range?.first ?: body.length
+                val rpcSource = body.substring(rpc.range.first, rpcEnd)
+                addProtoRoute(
+                    element,
+                    fqService,
+                    methodName,
+                    routes,
+                    seenProtoRoutes,
+                    ArmeriaGrpcHttpOptionSupport.contentHints(rpcSource),
+                )
             }
         }
     }
@@ -85,6 +99,7 @@ object ArmeriaGrpcRouteCollector {
         methodName: String,
         routes: MutableList<ArmeriaRoute>,
         seenProtoRoutes: MutableSet<String>,
+        contentHints: List<String> = emptyList(),
     ) {
         val path = GrpcRoutePath.path(fqService, methodName)
         val dedupeKey = "${ArmeriaRouteMetadata.moduleName(element)}:$path"
@@ -99,8 +114,39 @@ object ArmeriaGrpcRouteCollector {
                 path = path,
                 target = "$fqService.$methodName",
                 routeMatch = RouteMatch.NON_HTTP,
+                contentHints = contentHints,
             )
     }
+
+    private fun annotateUnframedProtoRoutes(
+        routes: MutableList<ArmeriaRoute>,
+        protoStartIndex: Int,
+    ) {
+        if (protoStartIndex >= routes.size) {
+            return
+        }
+        val unframedEnabled =
+            routes.any { route ->
+                route.protocol.equals(RouteProtocol.GRPC.presentableName(), ignoreCase = true) &&
+                    ArmeriaGrpcServiceOptionsSupport.hasUnframedHint(route.contentHints)
+            }
+        if (!unframedEnabled) {
+            return
+        }
+        val unframedHint = message("route.explorer.badge.grpcUnframed")
+        for (index in protoStartIndex until routes.size) {
+            val route = routes[index]
+            if (!isGrpcMethodRoute(route) || unframedHint in route.contentHints) {
+                continue
+            }
+            routes[index] = route.copy(contentHints = route.contentHints + unframedHint)
+        }
+    }
+
+    private fun isGrpcMethodRoute(route: ArmeriaRoute): Boolean =
+        route.routeMatch == RouteMatch.NON_HTTP &&
+            route.protocol.equals(RouteProtocol.GRPC.presentableName(), ignoreCase = true) &&
+            GrpcRoutePath.isMethodPath(route.path)
 
     fun isProtoRouteDiscoveryEnabled(): Boolean = ArmeriaProtoRouteDiscoverySupport.isEnabled()
 

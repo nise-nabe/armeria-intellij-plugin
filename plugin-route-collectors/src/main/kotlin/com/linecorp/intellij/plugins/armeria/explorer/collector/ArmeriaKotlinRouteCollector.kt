@@ -32,7 +32,7 @@ import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtValueArgument
 
 object ArmeriaKotlinRouteCollector {
-    private val BUILDER_CHAIN_METHODS = setOf("build", "addService", "addServices")
+    private val BUILDER_CHAIN_METHODS = setOf("build", "addService", "addServices", "enableUnframedRequests")
 
     fun referencesArmeriaKotlinContent(file: KtFile): Boolean {
         val hasArmeriaImports =
@@ -143,6 +143,7 @@ object ArmeriaKotlinRouteCollector {
             argumentCount = arguments.size,
             routes = routes,
             seenServiceRegistrations = seenServiceRegistrations,
+            serviceExpression = unwrappedImplementation,
         )
     }
 

@@ -408,6 +408,33 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
         )
     }
 
+    fun testStatusLine_includesGrpcUnframedAndReflectionBadges() {
+        val route =
+            ArmeriaRoute(
+                protocol = "gRPC",
+                httpMethod = "",
+                path = "/grpc",
+                target = "example.HelloGrpcService",
+                routeMatch = RouteMatch.NON_HTTP,
+                moduleName = "app",
+                targetUnresolved = false,
+                isDocService = false,
+                decorators = emptyList(),
+                exceptionHandlers = emptyList(),
+                contentHints =
+                    listOf(
+                        message("route.explorer.badge.grpcUnframed"),
+                        message("route.explorer.badge.grpcReflection"),
+                    ),
+                pointer = TestPsiPointer,
+            )
+
+        val status = ArmeriaRouteDetailFormatter.statusLine(route)
+
+        assertTrue(status.contains(message("route.explorer.badge.grpcUnframed")))
+        assertTrue(status.contains(message("route.explorer.badge.grpcReflection")))
+    }
+
     private object TestPsiPointer : SmartPsiElementPointer<PsiElement> {
         override fun getElement(): PsiElement? = null
 

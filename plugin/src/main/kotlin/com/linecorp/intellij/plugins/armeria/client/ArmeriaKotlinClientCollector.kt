@@ -16,6 +16,8 @@ import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
 import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtCallExpression
+import org.jetbrains.kotlin.psi.KtClassLiteralExpression
+import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
@@ -52,11 +54,13 @@ internal object ArmeriaKotlinClientCollector {
                 ?: ClientProtocol.HTTP
         }
         if (methodName !in ArmeriaClientSupport.FACTORY_METHOD_NAMES &&
-            methodName !in ArmeriaClientSupport.CONVERSION_METHOD_NAMES
+            methodName !in ArmeriaClientSupport.CONVERSION_METHOD_NAMES &&
+            methodName != "build"
         ) {
             return null
         }
-        return ArmeriaClientSupport.protocolForInvocation(methodName, resolveContainingClass(call))
+        return grpcProtocol(call, methodName, resolveContainingClass(call))
+            ?: ArmeriaClientSupport.protocolForInvocation(methodName, resolveContainingClass(call))
     }
 
     internal fun endpointForCall(element: PsiElement): ArmeriaClientEndpoint? {
@@ -74,14 +78,21 @@ internal object ArmeriaKotlinClientCollector {
         if (isNestedInsideClientFactoryArgument(call) || isQualifierOfClientConversion(call)) {
             return
         }
+        if (isQualifierOfGrpcStubBuild(call)) {
+            return
+        }
         if (ArmeriaKotlinClientInvocationCollector.collect(call, endpoints, seenEndpoints)) {
             return
         }
         val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return
         val resolvedClass = resolveContainingClass(call)
-        val protocol = ArmeriaClientSupport.protocolForInvocation(methodName, resolvedClass) ?: return
+        val protocol = grpcProtocol(call, methodName, resolvedClass) ?: return
         val metadata = extractClientMetadata(call, methodName, protocol) ?: return
-        val target = resolveTargetName(call) ?: resolvedClass?.substringAfterLast('.').orEmpty()
+        val stubClass = extractKotlinStubClassName(call)
+        val target =
+            stubClass?.substringAfterLast('.')
+                ?: resolveTargetName(call)
+                ?: resolvedClass?.substringAfterLast('.').orEmpty()
         ArmeriaClientCollector.addEndpoint(
             element = call,
             protocol = protocol,
@@ -123,8 +134,102 @@ internal object ArmeriaKotlinClientCollector {
                     extractFactoryMetadata(arguments, protocol, decorators)
                 }
             }
+            "build" -> {
+                val uri = extractKotlinBuilderUri(call) ?: return null
+                ClientMetadata(uri = uri, decorators = decorators)
+            }
             else -> null
         }
+    }
+
+    private fun grpcProtocol(
+        call: KtCallExpression,
+        methodName: String,
+        resolvedClass: String?,
+    ): ClientProtocol? {
+        if (isKotlinGrpcStubBuild(call)) {
+            return ArmeriaClientSupport.grpcProtocolForStubClass(extractKotlinStubClassName(call))
+        }
+        val protocol = ArmeriaClientSupport.protocolForInvocation(methodName, resolvedClass) ?: return null
+        if (protocol != ClientProtocol.GRPC) {
+            return protocol
+        }
+        return ArmeriaClientSupport.grpcProtocolForStubClass(extractKotlinStubClassName(call))
+    }
+
+    private fun isKotlinGrpcStubBuild(call: KtCallExpression): Boolean {
+        if (ArmeriaKotlinExpressionSupport.resolveCallName(call) != "build") {
+            return false
+        }
+        if (call.valueArguments.isEmpty()) {
+            return false
+        }
+        val resolvedClass = resolveContainingClass(call)
+        if (ArmeriaClientSupport.isGrpcClientBuilderClass(resolvedClass)) {
+            return true
+        }
+        val receiverText = qualifierReceiver(call)?.text.orEmpty()
+        return receiverText.contains("GrpcClients") || receiverText.contains("GrpcClientBuilder")
+    }
+
+    private fun isQualifierOfGrpcStubBuild(call: KtCallExpression): Boolean {
+        val next = findNextChainedCall(call) ?: return false
+        return isKotlinGrpcStubBuild(next)
+    }
+
+    private fun extractKotlinStubClassName(call: KtCallExpression): String? =
+        call.valueArguments.firstNotNullOfOrNull { argument ->
+            extractKotlinClassName(argument.getArgumentExpression())
+        }
+
+    private fun extractKotlinClassName(expression: KtExpression?): String? {
+        val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: return null
+        if (unwrapped is KtQualifiedExpression) {
+            val selector = unwrapped.selectorExpression as? KtNameReferenceExpression
+            if (selector?.getReferencedName() == "java") {
+                val receiver = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(unwrapped.receiverExpression)
+                if (receiver is KtClassLiteralExpression) {
+                    return resolveKotlinClassLiteral(receiver)
+                }
+            }
+        }
+        if (unwrapped is KtClassLiteralExpression) {
+            return resolveKotlinClassLiteral(unwrapped)
+        }
+        return null
+    }
+
+    private fun resolveKotlinClassLiteral(literal: KtClassLiteralExpression): String? {
+        val typeExpression = literal.receiverExpression ?: return null
+        val resolved = typeExpression.references.firstOrNull()?.resolve()
+        when (resolved) {
+            is PsiClass -> resolved.qualifiedName?.let { return it }
+            is KtClassOrObject -> resolved.fqName?.asString()?.let { return it }
+        }
+        return typeExpression.text.trim().takeIf { it.isNotEmpty() }
+    }
+
+    private fun extractKotlinBuilderUri(call: KtCallExpression): String? {
+        var current: KtExpression? = call
+        while (current != null) {
+            val factoryCall = callExpressionInChain(current)
+            if (factoryCall != null) {
+                val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(factoryCall)
+                if (methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES) {
+                    val uri =
+                        ArmeriaKotlinExpressionSupport.extractKotlinString(
+                            factoryCall.valueArguments.firstOrNull()?.getArgumentExpression(),
+                        )
+                    if (uri != null) {
+                        return uri
+                    }
+                }
+            }
+            current = qualifierReceiver(current)
+        }
+        return ArmeriaKotlinExpressionSupport.extractKotlinString(
+            call.valueArguments.firstOrNull()?.getArgumentExpression(),
+        )
     }
 
     private fun extractFactoryMetadata(

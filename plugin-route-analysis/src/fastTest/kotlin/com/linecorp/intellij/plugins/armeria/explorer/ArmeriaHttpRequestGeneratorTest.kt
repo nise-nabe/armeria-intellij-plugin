@@ -347,6 +347,49 @@ class ArmeriaHttpRequestGeneratorTest {
     }
 
     @Test
+    fun requestText_unframedGrpcProtoRouteUsesPostJson() {
+        val route =
+            route(
+                protocol = "gRPC",
+                path = "/grpc.hello.HelloService/Hello",
+                target = "grpc.hello.HelloService.Hello",
+                routeMatch = RouteMatch.NON_HTTP,
+                contentHints = listOf(message("route.explorer.badge.grpcUnframed")),
+            )
+
+        assertEquals(
+            """
+            ### gRPC grpc.hello.HelloService.Hello
+            POST http://localhost:8080/grpc.hello.HelloService/Hello
+            Content-Type: application/json
+            Accept: application/json
+
+            # Invoke via DocService: http://localhost:8080/docs/#/methods/grpc.hello.HelloService/Hello
+            # ${message("route.explorer.http.grpcProtobufAlternate")}
+            {}
+
+            """.trimIndent() + "\n",
+            ArmeriaHttpRequestGenerator.requestText(route),
+        )
+    }
+
+    @Test
+    fun requestText_framedGrpcProtoRouteKeepsGrpcPlaceholder() {
+        val route =
+            route(
+                protocol = "gRPC",
+                path = "/grpc.hello.HelloService/Hello",
+                target = "grpc.hello.HelloService.Hello",
+                routeMatch = RouteMatch.NON_HTTP,
+            )
+
+        val text = ArmeriaHttpRequestGenerator.requestText(route)
+
+        assertTrue(text.contains("GRPC http://localhost:8080/grpc.hello.HelloService/Hello"))
+        assertFalse(text.contains("POST http://localhost:8080/grpc.hello.HelloService/Hello"))
+    }
+
+    @Test
     fun requestText_usesConsumesProducesAndMatchesHeader() {
         val route =
             route(

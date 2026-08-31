@@ -670,4 +670,41 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         kotlinAssertNotNull(docRoute)
         assertEquals(RouteMatch.NON_HTTP, docRoute.routeMatch)
     }
+
+    fun testCollectGrpcServiceUnframedHintFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.grpc.GrpcService
+
+            fun main() {
+                Server.builder()
+                    .service(
+                        "/grpc",
+                        GrpcService.builder()
+                            .addService(HelloGrpcService())
+                            .enableUnframedRequests(true)
+                            .build(),
+                    )
+                    .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloGrpcService {
+            }
+            """.trimIndent(),
+        )
+
+        val grpcRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/grpc" }
+
+        assertEquals(RouteMatch.NON_HTTP, grpcRoute.routeMatch)
+        assertTrue(grpcRoute.contentHints.contains(message("route.explorer.badge.grpcUnframed")))
+    }
 }

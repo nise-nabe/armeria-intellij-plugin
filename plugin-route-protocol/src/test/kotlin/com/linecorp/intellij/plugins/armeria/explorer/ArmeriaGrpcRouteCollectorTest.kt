@@ -5,8 +5,10 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaGrpcRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaProtocolRouteContributor
+import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
@@ -18,6 +20,10 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
             package com.linecorp.armeria.server.grpc;
 
             public final class GrpcService {
+                public static GrpcServiceBuilder builder() {
+                    return null;
+                }
+
                 public static GrpcServiceBuilder builder(Object bindableService) {
                     return null;
                 }
@@ -29,6 +35,14 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
             package com.linecorp.armeria.server.grpc;
 
             public final class GrpcServiceBuilder {
+                public GrpcServiceBuilder addService(Object bindableService) {
+                    return this;
+                }
+
+                public GrpcServiceBuilder enableUnframedRequests(boolean enabled) {
+                    return this;
+                }
+
                 public com.linecorp.armeria.server.grpc.GrpcService build() {
                     return null;
                 }
@@ -345,5 +359,193 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
 
         kotlinAssertNotNull(routes.firstOrNull { it.path == "/grpc" })
         kotlinAssertNotNull(routes.firstOrNull { it.path == "/com.example.Greeter/SayHello" })
+    }
+
+    fun testHttpTranscodingPathAppearsAsContentHint() {
+        myFixture.configureByText(
+            "greeter.proto",
+            """
+            syntax = "proto3";
+            package com.example;
+
+            service Greeter {
+              rpc SayHello(HelloRequest) returns (HelloResponse) {
+                option (google.api.http) = {
+                  post: "/v1/hello"
+                  additional_bindings {
+                    get: "/v1/hello/{name}"
+                  }
+                };
+              }
+            }
+            """.trimIndent(),
+        )
+
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
+        val protoRoute = routes.single { it.path == "/com.example.Greeter/SayHello" }
+
+        assertEquals("com.example.Greeter.SayHello", protoRoute.target)
+        assertTrue(
+            protoRoute.contentHints.contains(message("route.explorer.hint.grpcHttpPath", "POST /v1/hello")),
+        )
+        assertTrue(
+            protoRoute.contentHints.contains(message("route.explorer.hint.grpcHttpPath", "GET /v1/hello/{name}")),
+        )
+    }
+
+    fun testUnframedGrpcServiceAnnotatesProtoRoutes() {
+        myFixture.configureByText(
+            "hello.proto",
+            """
+            syntax = "proto3";
+            package grpc.hello;
+
+            service HelloService {
+              rpc Hello(HelloRequest) returns (HelloResponse);
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.grpc.GrpcService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/grpc", GrpcService.builder()
+                            .addService(new HelloGrpcService())
+                            .enableUnframedRequests(true)
+                            .build())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloGrpcService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
+        val grpcService = routes.single { it.path == "/grpc" }
+        val hello = routes.single { it.path == "/grpc.hello.HelloService/Hello" }
+
+        assertTrue(grpcService.contentHints.contains(message("route.explorer.badge.grpcUnframed")))
+        assertTrue(hello.contentHints.contains(message("route.explorer.badge.grpcUnframed")))
+    }
+
+    fun testFramedGrpcServiceDoesNotAnnotateProtoRoutes() {
+        myFixture.configureByText(
+            "hello.proto",
+            """
+            syntax = "proto3";
+            package grpc.hello;
+
+            service HelloService {
+              rpc Hello(HelloRequest) returns (HelloResponse);
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.grpc.GrpcService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/grpc", GrpcService.builder(new HelloGrpcService()).build())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloGrpcService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
+        val hello = routes.single { it.path == "/grpc.hello.HelloService/Hello" }
+
+        assertTrue(hello.contentHints.none { it == message("route.explorer.badge.grpcUnframed") })
+    }
+
+    fun testProtoReflectionServiceBadgeOnGrpcServiceNode() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.grpc.GrpcService;
+            import io.grpc.protobuf.services.ProtoReflectionService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/grpc", GrpcService.builder()
+                            .addService(new HelloGrpcService())
+                            .addService(ProtoReflectionService.newInstance())
+                            .build())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloGrpcService {
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package io.grpc.protobuf.services;
+
+            public final class ProtoReflectionService {
+                public static Object newInstance() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val grpcService = routes.single { it.path == "/grpc" }
+
+        assertTrue(grpcService.contentHints.contains(message("route.explorer.badge.grpcReflection")))
     }
 }

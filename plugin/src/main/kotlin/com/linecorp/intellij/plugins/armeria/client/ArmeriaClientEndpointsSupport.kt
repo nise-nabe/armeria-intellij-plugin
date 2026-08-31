@@ -75,6 +75,7 @@ internal object ArmeriaClientEndpointsSupport {
         val protocol = ClientProtocol.fromPresentableName(endpoint.clientType) ?: return emptyList()
         return when (protocol) {
             ClientProtocol.GRPC,
+            ClientProtocol.GRPC_KOTLIN,
             ClientProtocol.THRIFT,
             -> listOf("POST")
             ClientProtocol.HTTP,
