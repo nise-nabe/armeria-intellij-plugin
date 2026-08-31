@@ -9,6 +9,7 @@ import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRouteMetadata
+import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRouteHint
 import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRoutePath
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
@@ -125,21 +126,25 @@ object ArmeriaGrpcRouteCollector {
         if (protoStartIndex >= routes.size) {
             return
         }
-        val unframedEnabled =
-            routes.any { route ->
+        val grpcServiceNodes =
+            routes.filter { route ->
                 route.protocol.equals(RouteProtocol.GRPC.presentableName(), ignoreCase = true) &&
-                    ArmeriaGrpcServiceOptionsSupport.hasUnframedHint(route.contentHints)
+                    !GrpcRoutePath.isMethodPath(route.path)
             }
+        if (grpcServiceNodes.isEmpty()) {
+            return
+        }
+        val unframedEnabled =
+            grpcServiceNodes.all { ArmeriaGrpcServiceOptionsSupport.hasUnframedHint(it.contentHints) }
         if (!unframedEnabled) {
             return
         }
-        val unframedHint = message("route.explorer.badge.grpcUnframed")
         for (index in protoStartIndex until routes.size) {
             val route = routes[index]
-            if (!isGrpcMethodRoute(route) || unframedHint in route.contentHints) {
+            if (!isGrpcMethodRoute(route) || GrpcRouteHint.UNFRAMED in route.contentHints) {
                 continue
             }
-            routes[index] = route.copy(contentHints = route.contentHints + unframedHint)
+            routes[index] = route.copy(contentHints = route.contentHints + GrpcRouteHint.UNFRAMED)
         }
     }
 

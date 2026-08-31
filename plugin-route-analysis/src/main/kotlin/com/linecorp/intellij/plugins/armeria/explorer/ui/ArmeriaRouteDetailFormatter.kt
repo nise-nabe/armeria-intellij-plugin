@@ -2,6 +2,7 @@ package com.linecorp.intellij.plugins.armeria.explorer.ui
 
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
+import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRouteHint
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaGrpcServiceOptionsSupport
@@ -58,7 +59,13 @@ object ArmeriaRouteDetailFormatter {
                     add(message("route.explorer.detail.virtualHost", route.virtualHostName))
                 }
                 if (route.contentHints.isNotEmpty()) {
-                    add(message("route.explorer.detail.content", route.contentHints.joinToString(" · ")))
+                    val displayHints =
+                        route.contentHints
+                            .filterNot(GrpcRouteHint::isBadge)
+                            .map(GrpcRouteHint::presentable)
+                    if (displayHints.isNotEmpty()) {
+                        add(message("route.explorer.detail.content", displayHints.joinToString(" · ")))
+                    }
                 }
                 if (route.exampleHeaders.isNotEmpty()) {
                     add(message("route.explorer.detail.exampleHeaders", route.exampleHeaders.joinToString("\n")))

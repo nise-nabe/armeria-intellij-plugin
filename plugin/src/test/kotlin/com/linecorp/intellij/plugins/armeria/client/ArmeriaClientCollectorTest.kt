@@ -120,6 +120,39 @@ class ArmeriaClientCollectorTest : ArmeriaClientFixtureTestBase() {
         assertEquals("FooCoroutineStub", endpoint.target)
     }
 
+    fun testCollectGrpcClientsCoroutineStubFromNewClient() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.grpc.GrpcClients;
+
+            public class Main {
+                public static void main(String[] args) {
+                    GrpcClients.newClient("https://grpc.example.com", FooCoroutineStub.class);
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class FooCoroutineStub {
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+
+        assertEquals(1, endpoints.size)
+        val endpoint = endpoints.single()
+        assertEquals("gRPC-Kotlin", endpoint.clientType)
+        assertEquals("https://grpc.example.com", endpoint.uri)
+        assertEquals("FooCoroutineStub", endpoint.target)
+    }
+
     fun testCollectThriftClientsNewClient() {
         myFixture.configureByText(
             "Main.java",

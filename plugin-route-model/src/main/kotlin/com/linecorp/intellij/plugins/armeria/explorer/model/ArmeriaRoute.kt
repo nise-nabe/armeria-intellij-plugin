@@ -78,7 +78,7 @@ data class ArmeriaRoute(
                 append(moduleName)
                 if (contentHints.isNotEmpty()) {
                     append(' ')
-                    append(contentHints.joinToString(" "))
+                    append(contentHints.joinToString(" ") { GrpcRouteHint.presentable(it) })
                 }
             }
 

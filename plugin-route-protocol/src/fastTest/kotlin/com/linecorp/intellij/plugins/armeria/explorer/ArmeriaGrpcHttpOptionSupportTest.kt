@@ -50,6 +50,47 @@ class ArmeriaGrpcHttpOptionSupportTest {
     }
 
     @Test
+    fun parseBindings_pairsEachCustomKindWithItsPath() {
+        val source =
+            """
+            option (google.api.http) = {
+              custom: {
+                kind: "HEAD"
+                path: "/v1/hello/head"
+              }
+              additional_bindings {
+                custom: {
+                  kind: "OPTIONS"
+                  path: "/v1/hello/options"
+                }
+              }
+            };
+            """.trimIndent()
+
+        assertEquals(
+            listOf("HEAD /v1/hello/head", "OPTIONS /v1/hello/options"),
+            ArmeriaGrpcHttpOptionSupport.parseBindings(source).map { it.display },
+        )
+    }
+
+    @Test
+    fun parseBindings_ignoresHttpPathsOutsideGoogleApiHttpOption() {
+        val source =
+            """
+            rpc SayHello(HelloRequest) returns (HelloResponse) {
+              option (other.api.option) = {
+                post: "/not-transcoding"
+              };
+              option (google.api.http) = {
+                get: "/v1/hello"
+              };
+            }
+            """.trimIndent()
+
+        assertEquals(listOf("GET /v1/hello"), ArmeriaGrpcHttpOptionSupport.parseBindings(source).map { it.display })
+    }
+
+    @Test
     fun parseBindings_ignoresBodyStar() {
         val source =
             """

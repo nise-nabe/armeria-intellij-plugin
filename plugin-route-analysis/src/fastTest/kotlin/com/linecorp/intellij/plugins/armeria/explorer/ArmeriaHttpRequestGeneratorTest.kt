@@ -7,6 +7,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.SmartPsiElementPointer
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRouteHint
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpRequestGenerator
@@ -354,7 +355,7 @@ class ArmeriaHttpRequestGeneratorTest {
                 path = "/grpc.hello.HelloService/Hello",
                 target = "grpc.hello.HelloService.Hello",
                 routeMatch = RouteMatch.NON_HTTP,
-                contentHints = listOf(message("route.explorer.badge.grpcUnframed")),
+                contentHints = listOf(GrpcRouteHint.UNFRAMED),
             )
 
         assertEquals(

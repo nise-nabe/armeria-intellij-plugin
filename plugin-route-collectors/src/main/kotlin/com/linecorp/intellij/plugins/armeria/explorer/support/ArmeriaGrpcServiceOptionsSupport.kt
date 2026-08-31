@@ -9,7 +9,7 @@ import com.intellij.psi.PsiParenthesizedExpression
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiTypeCastExpression
 import com.intellij.psi.PsiVariable
-import com.linecorp.intellij.plugins.armeria.message
+import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRouteHint
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
@@ -24,6 +24,7 @@ object ArmeriaGrpcServiceOptionsSupport {
     private const val ENABLE_UNFRAMED_REQUESTS = "enableUnframedRequests"
     private val ADD_SERVICE_METHODS = setOf("addService", "addServices")
     private val REFLECTION_SIMPLE_NAMES = setOf("ProtoReflectionService", "ProtoReflectionServiceV1")
+    private val NAME_TOKENS = Regex("[^A-Za-z0-9_]+")
 
     fun contentHints(
         serviceExpression: PsiElement?,
@@ -35,17 +36,17 @@ object ArmeriaGrpcServiceOptionsSupport {
         val options = collect(serviceExpression)
         return buildList {
             if (options.unframed) {
-                add(message("route.explorer.badge.grpcUnframed"))
+                add(GrpcRouteHint.UNFRAMED)
             }
             if (options.reflection) {
-                add(message("route.explorer.badge.grpcReflection"))
+                add(GrpcRouteHint.REFLECTION)
             }
         }
     }
 
-    fun hasUnframedHint(hints: List<String>): Boolean = message("route.explorer.badge.grpcUnframed") in hints
+    fun hasUnframedHint(hints: List<String>): Boolean = GrpcRouteHint.UNFRAMED in hints
 
-    fun hasReflectionHint(hints: List<String>): Boolean = message("route.explorer.badge.grpcReflection") in hints
+    fun hasReflectionHint(hints: List<String>): Boolean = GrpcRouteHint.REFLECTION in hints
 
     private fun collect(element: PsiElement?): GrpcServiceOptions {
         if (element == null) {
@@ -236,12 +237,7 @@ object ArmeriaGrpcServiceOptionsSupport {
         if (name.isNullOrBlank()) {
             return false
         }
-        return REFLECTION_SIMPLE_NAMES.any { simpleName ->
-            name == simpleName ||
-                name.endsWith(".$simpleName") ||
-                name.contains("$simpleName.") ||
-                name.contains("$simpleName(")
-        }
+        return name.split(NAME_TOKENS).any { token -> token in REFLECTION_SIMPLE_NAMES }
     }
 
     private data class GrpcServiceOptions(

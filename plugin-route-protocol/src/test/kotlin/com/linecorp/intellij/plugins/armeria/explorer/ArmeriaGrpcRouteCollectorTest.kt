@@ -2,6 +2,7 @@ package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRouteHint
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaGrpcRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaProtocolRouteContributor
@@ -448,8 +449,8 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
         val grpcService = routes.single { it.path == "/grpc" }
         val hello = routes.single { it.path == "/grpc.hello.HelloService/Hello" }
 
-        assertTrue(grpcService.contentHints.contains(message("route.explorer.badge.grpcUnframed")))
-        assertTrue(hello.contentHints.contains(message("route.explorer.badge.grpcUnframed")))
+        assertTrue(grpcService.contentHints.contains(GrpcRouteHint.UNFRAMED))
+        assertTrue(hello.contentHints.contains(GrpcRouteHint.UNFRAMED))
     }
 
     fun testFramedGrpcServiceDoesNotAnnotateProtoRoutes() {
@@ -498,7 +499,7 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
             )
         val hello = routes.single { it.path == "/grpc.hello.HelloService/Hello" }
 
-        assertTrue(hello.contentHints.none { it == message("route.explorer.badge.grpcUnframed") })
+        assertTrue(hello.contentHints.none { it == GrpcRouteHint.UNFRAMED })
     }
 
     fun testProtoReflectionServiceBadgeOnGrpcServiceNode() {
@@ -546,6 +547,80 @@ class ArmeriaGrpcRouteCollectorTest : ArmeriaFixtureTestBase() {
         val routes = ArmeriaRouteCollector.collect(project)
         val grpcService = routes.single { it.path == "/grpc" }
 
-        assertTrue(grpcService.contentHints.contains(message("route.explorer.badge.grpcReflection")))
+        assertTrue(grpcService.contentHints.contains(GrpcRouteHint.REFLECTION))
+    }
+
+    fun testMixedFramedAndUnframedGrpcServicesDoNotAnnotateProtoRoutes() {
+        myFixture.configureByText(
+            "hello.proto",
+            """
+            syntax = "proto3";
+            package grpc.hello;
+
+            service HelloService {
+              rpc Hello(HelloRequest) returns (HelloResponse);
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "other.proto",
+            """
+            syntax = "proto3";
+            package grpc.other;
+
+            service OtherService {
+              rpc Ping(PingRequest) returns (PingResponse);
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.grpc.GrpcService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/unframed", GrpcService.builder()
+                            .addService(new HelloGrpcService())
+                            .enableUnframedRequests(true)
+                            .build())
+                        .service("/framed", GrpcService.builder(new OtherGrpcService()).build())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloGrpcService {
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class OtherGrpcService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                includeProtoRoutes = true,
+                contributors = listOf(ArmeriaProtocolRouteContributor),
+            )
+        val hello = routes.single { it.path == "/grpc.hello.HelloService/Hello" }
+        val ping = routes.single { it.path == "/grpc.other.OtherService/Ping" }
+
+        assertTrue(hello.contentHints.none { it == GrpcRouteHint.UNFRAMED })
+        assertTrue(ping.contentHints.none { it == GrpcRouteHint.UNFRAMED })
     }
 }
