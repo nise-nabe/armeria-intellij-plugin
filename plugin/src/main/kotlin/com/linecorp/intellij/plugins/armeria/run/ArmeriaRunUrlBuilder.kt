@@ -21,6 +21,9 @@ object ArmeriaRunUrlBuilder {
     private val INTERNAL_SERVICE_PORT = Regex("""· :(\d+)""")
     private val DEFAULT_APPLICATION_FILES = setOf("application.properties", "application.yml", "application.yaml")
 
+    // Keep in sync with ArmeriaSpringConfigRouteCollector application*.{yml,yaml,properties}.
+    private val SPRING_APPLICATION_FILE = Regex("""^application(-[\w.-]+)?\.(yml|yaml|properties)$""")
+
     fun baseUrl(listen: ArmeriaListenEndpoint): String {
         val scheme = if (listen.https) "https" else "http"
         return "$scheme://$LOOPBACK_HOST:${listen.port}"
@@ -70,16 +73,26 @@ object ArmeriaRunUrlBuilder {
         )
     }
 
-    fun listenPortFromSpringRoutes(routes: List<ArmeriaRoute>): ArmeriaListenEndpoint? {
+    fun listenPortFromSpringRoutes(routes: List<ArmeriaRoute>): ArmeriaListenEndpoint? =
+        listenPortFromSpringRoutes(routes) { it.pointer.containingFile?.name }
+
+    internal fun listenPortFromSpringRoutes(
+        routes: List<ArmeriaRoute>,
+        configFileName: (ArmeriaRoute) -> String?,
+    ): ArmeriaListenEndpoint? {
         val candidates =
             routes.mapNotNull { route ->
                 if (route.routeMatch != RouteMatch.LISTEN_PORT) {
                     return@mapNotNull null
                 }
+                val fileName = configFileName(route)
+                if (!isSpringApplicationConfigName(fileName)) {
+                    return@mapNotNull null
+                }
                 val port = parsePort(springPortPath(route.path) ?: return@mapNotNull null) ?: return@mapNotNull null
                 SpringPortCandidate(
                     endpoint = ArmeriaListenEndpoint(port, https = ArmeriaSessionProtocols.isHttpsOnly(route.protocol)),
-                    defaultApplicationFile = isDefaultApplicationConfigName(route.pointer.containingFile?.name),
+                    defaultApplicationFile = isDefaultApplicationConfigName(fileName),
                 )
             }
         return candidates.firstOrNull { it.defaultApplicationFile }?.endpoint
@@ -111,6 +124,8 @@ object ArmeriaRunUrlBuilder {
     }
 
     internal fun isDefaultApplicationConfigName(name: String?): Boolean = name != null && name in DEFAULT_APPLICATION_FILES
+
+    internal fun isSpringApplicationConfigName(name: String?): Boolean = name != null && SPRING_APPLICATION_FILE.matches(name)
 
     private fun springPortPath(path: String): String? = SPRING_PORT_PATH.matchEntire(path)?.groupValues?.get(1)
 

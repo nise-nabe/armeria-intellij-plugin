@@ -68,11 +68,9 @@ class ArmeriaRunUrlBuilderTest {
     @Test
     fun listenPortFromSpringRoutes_usesFirstPortBinding() {
         val listen =
-            ArmeriaRunUrlBuilder.listenPortFromSpringRoutes(
-                listOf(
-                    route(path = ":8080", protocol = "HTTP", routeMatch = RouteMatch.LISTEN_PORT),
-                    route(path = ":8443", protocol = "HTTPS", routeMatch = RouteMatch.LISTEN_PORT),
-                ),
+            springListenPort(
+                route(path = ":8080", protocol = "HTTP", routeMatch = RouteMatch.LISTEN_PORT),
+                route(path = ":8443", protocol = "HTTPS", routeMatch = RouteMatch.LISTEN_PORT),
             )
 
         assertEquals(ArmeriaListenEndpoint(8080, https = false), listen)
@@ -85,14 +83,19 @@ class ArmeriaRunUrlBuilderTest {
         assertTrue(ArmeriaRunUrlBuilder.isDefaultApplicationConfigName("application.yaml"))
         assertEquals(false, ArmeriaRunUrlBuilder.isDefaultApplicationConfigName("application-prod.yml"))
         assertEquals(false, ArmeriaRunUrlBuilder.isDefaultApplicationConfigName(null))
+        assertTrue(ArmeriaRunUrlBuilder.isSpringApplicationConfigName("application.yml"))
+        assertTrue(ArmeriaRunUrlBuilder.isSpringApplicationConfigName("application-prod.yml"))
+        assertTrue(ArmeriaRunUrlBuilder.isSpringApplicationConfigName("application.yaml"))
+        assertTrue(ArmeriaRunUrlBuilder.isSpringApplicationConfigName("application.properties"))
+        assertEquals(false, ArmeriaRunUrlBuilder.isSpringApplicationConfigName("Main.java"))
+        assertEquals(false, ArmeriaRunUrlBuilder.isSpringApplicationConfigName("ServerConfig.kt"))
+        assertEquals(false, ArmeriaRunUrlBuilder.isSpringApplicationConfigName(null))
     }
 
     @Test
     fun listenPortFromSpringRoutes_httpsOnly() {
         val listen =
-            ArmeriaRunUrlBuilder.listenPortFromSpringRoutes(
-                listOf(route(path = ":8443", protocol = "HTTPS", routeMatch = RouteMatch.LISTEN_PORT)),
-            )
+            springListenPort(route(path = ":8443", protocol = "HTTPS", routeMatch = RouteMatch.LISTEN_PORT))
 
         assertEquals(ArmeriaListenEndpoint(8443, https = true), listen)
     }
@@ -100,9 +103,7 @@ class ArmeriaRunUrlBuilderTest {
     @Test
     fun listenPortFromSpringRoutes_h1IsTls() {
         val listen =
-            ArmeriaRunUrlBuilder.listenPortFromSpringRoutes(
-                listOf(route(path = ":8443", protocol = "H1", routeMatch = RouteMatch.LISTEN_PORT)),
-            )
+            springListenPort(route(path = ":8443", protocol = "H1", routeMatch = RouteMatch.LISTEN_PORT))
 
         assertEquals(ArmeriaListenEndpoint(8443, https = true), listen)
     }
@@ -110,11 +111,38 @@ class ArmeriaRunUrlBuilderTest {
     @Test
     fun listenPortFromSpringRoutes_h1cIsCleartext() {
         val listen =
-            ArmeriaRunUrlBuilder.listenPortFromSpringRoutes(
-                listOf(route(path = ":8080", protocol = "H1C", routeMatch = RouteMatch.LISTEN_PORT)),
-            )
+            springListenPort(route(path = ":8080", protocol = "H1C", routeMatch = RouteMatch.LISTEN_PORT))
 
         assertEquals(ArmeriaListenEndpoint(8080, https = false), listen)
+    }
+
+    @Test
+    fun listenPortFromSpringRoutes_ignoresProgrammaticListenPorts() {
+        val programmatic = route(path = ":8080", protocol = "HTTP", routeMatch = RouteMatch.LISTEN_PORT)
+        val spring = route(path = ":9090", protocol = "HTTP", routeMatch = RouteMatch.LISTEN_PORT)
+
+        assertNull(
+            ArmeriaRunUrlBuilder.listenPortFromSpringRoutes(listOf(programmatic)) { "Main.java" },
+        )
+        assertEquals(
+            ArmeriaListenEndpoint(9090, https = false),
+            ArmeriaRunUrlBuilder.listenPortFromSpringRoutes(listOf(programmatic, spring)) { route ->
+                if (route.path == ":9090") "application.yml" else "ServerConfig.java"
+            },
+        )
+    }
+
+    @Test
+    fun listenPortFromSpringRoutes_prefersDefaultApplicationFileOverProfile() {
+        val profiled = route(path = ":9090", protocol = "HTTP", routeMatch = RouteMatch.LISTEN_PORT)
+        val default = route(path = ":8080", protocol = "HTTP", routeMatch = RouteMatch.LISTEN_PORT)
+
+        assertEquals(
+            ArmeriaListenEndpoint(8080, https = false),
+            ArmeriaRunUrlBuilder.listenPortFromSpringRoutes(listOf(profiled, default)) { route ->
+                if (route.path == ":8080") "application.yml" else "application-prod.yml"
+            },
+        )
     }
 
     @Test
@@ -158,6 +186,9 @@ class ArmeriaRunUrlBuilderTest {
             ArmeriaRunUrlBuilder.serviceUrl(ArmeriaListenEndpoint(8443, https = true), "/docs", trailingSlash = true),
         )
     }
+
+    private fun springListenPort(vararg routes: ArmeriaRoute) =
+        ArmeriaRunUrlBuilder.listenPortFromSpringRoutes(routes.toList()) { "application.yml" }
 
     private fun docServiceRoute(path: String): ArmeriaRoute = route(path = path, isDocService = true)
 
