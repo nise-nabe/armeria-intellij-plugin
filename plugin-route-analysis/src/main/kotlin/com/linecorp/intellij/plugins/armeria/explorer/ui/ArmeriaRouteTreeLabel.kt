@@ -7,7 +7,8 @@ object ArmeriaRouteTreeLabel {
         val hints =
             route.contentHints.filter { hint ->
                 ArmeriaRouteContentHintSupport.isHint(hint, "route.explorer.hint.matchesHeader") ||
-                    ArmeriaRouteContentHintSupport.isHint(hint, "route.explorer.hint.matchesParam")
+                    ArmeriaRouteContentHintSupport.isHint(hint, "route.explorer.hint.matchesParam") ||
+                    ArmeriaRouteContentHintSupport.isHint(hint, "route.explorer.hint.grpcHttpPath")
             }
         if (hints.isEmpty()) {
             return null

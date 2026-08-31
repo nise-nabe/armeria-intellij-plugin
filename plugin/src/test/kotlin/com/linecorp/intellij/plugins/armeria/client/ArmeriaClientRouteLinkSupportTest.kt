@@ -77,6 +77,14 @@ class ArmeriaClientRouteLinkSupportTest : ArmeriaClientFixtureTestBase() {
         )
     }
 
+    fun testGrpcKotlinClientMatchesGrpcProtocol() {
+        val protocol = ClientProtocol.fromPresentableName("gRPC-Kotlin")
+
+        kotlin.test.assertNotNull(protocol)
+        assertTrue(protocol.matchesRouteProtocol(RouteProtocol.GRPC.presentableName()))
+        assertFalse(protocol.matchesRouteProtocol("HTTP"))
+    }
+
     fun testHttpClientMatchesSseHealthCheckAndWebSocketRoutes() {
         assertTrue(
             ArmeriaClientRouteLinkSupport.matches(

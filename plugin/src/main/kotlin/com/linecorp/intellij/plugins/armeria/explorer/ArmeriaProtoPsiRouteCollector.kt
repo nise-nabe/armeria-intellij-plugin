@@ -5,6 +5,7 @@ import com.intellij.protobuf.lang.psi.PbServiceDefinition
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaGrpcHttpOptionSupport
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaGrpcRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaProtoRouteCollector
 
@@ -32,6 +33,7 @@ class ArmeriaProtoPsiRouteCollector : ArmeriaProtoRouteCollector {
                     resolved.methodName,
                     routes,
                     seenProtoRoutes,
+                    ArmeriaGrpcHttpOptionSupport.contentHints(method.text),
                 )
             }
         }

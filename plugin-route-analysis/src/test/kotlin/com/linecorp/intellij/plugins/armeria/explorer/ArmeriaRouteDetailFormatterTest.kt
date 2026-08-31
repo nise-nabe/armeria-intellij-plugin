@@ -9,6 +9,7 @@ import com.intellij.psi.SmartPsiElementPointer
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
+import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRouteHint
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteDetailFormatter
@@ -406,6 +407,36 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
                 ),
             ),
         )
+    }
+
+    fun testStatusLine_includesGrpcUnframedAndReflectionBadges() {
+        val route =
+            ArmeriaRoute(
+                protocol = "gRPC",
+                httpMethod = "",
+                path = "/grpc",
+                target = "example.HelloGrpcService",
+                routeMatch = RouteMatch.NON_HTTP,
+                moduleName = "app",
+                targetUnresolved = false,
+                isDocService = false,
+                decorators = emptyList(),
+                exceptionHandlers = emptyList(),
+                contentHints =
+                    listOf(
+                        GrpcRouteHint.UNFRAMED,
+                        GrpcRouteHint.REFLECTION,
+                    ),
+                pointer = TestPsiPointer,
+            )
+
+        val status = ArmeriaRouteDetailFormatter.statusLine(route)
+        val attachments = ArmeriaRouteDetailFormatter.attachmentsLine(route)
+
+        assertTrue(status.contains(message("route.explorer.badge.grpcUnframed")))
+        assertTrue(status.contains(message("route.explorer.badge.grpcReflection")))
+        assertFalse(attachments.contains(message("route.explorer.badge.grpcUnframed")))
+        assertFalse(attachments.contains(message("route.explorer.badge.grpcReflection")))
     }
 
     private object TestPsiPointer : SmartPsiElementPointer<PsiElement> {

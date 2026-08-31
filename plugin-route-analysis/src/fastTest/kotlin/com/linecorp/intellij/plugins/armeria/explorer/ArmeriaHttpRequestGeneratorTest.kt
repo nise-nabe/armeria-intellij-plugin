@@ -7,6 +7,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.SmartPsiElementPointer
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRouteHint
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpRequestGenerator
@@ -344,6 +345,49 @@ class ArmeriaHttpRequestGeneratorTest {
             """.trimIndent() + "\n",
             ArmeriaHttpRequestGenerator.requestText(route, "http://localhost:8080/"),
         )
+    }
+
+    @Test
+    fun requestText_unframedGrpcProtoRouteUsesPostJson() {
+        val route =
+            route(
+                protocol = "gRPC",
+                path = "/grpc.hello.HelloService/Hello",
+                target = "grpc.hello.HelloService.Hello",
+                routeMatch = RouteMatch.NON_HTTP,
+                contentHints = listOf(GrpcRouteHint.UNFRAMED),
+            )
+
+        assertEquals(
+            """
+            ### gRPC grpc.hello.HelloService.Hello
+            POST http://localhost:8080/grpc.hello.HelloService/Hello
+            Content-Type: application/json
+            Accept: application/json
+
+            # Invoke via DocService: http://localhost:8080/docs/#/methods/grpc.hello.HelloService/Hello
+            # ${message("route.explorer.http.grpcProtobufAlternate")}
+            {}
+
+            """.trimIndent() + "\n",
+            ArmeriaHttpRequestGenerator.requestText(route),
+        )
+    }
+
+    @Test
+    fun requestText_framedGrpcProtoRouteKeepsGrpcPlaceholder() {
+        val route =
+            route(
+                protocol = "gRPC",
+                path = "/grpc.hello.HelloService/Hello",
+                target = "grpc.hello.HelloService.Hello",
+                routeMatch = RouteMatch.NON_HTTP,
+            )
+
+        val text = ArmeriaHttpRequestGenerator.requestText(route)
+
+        assertTrue(text.contains("GRPC http://localhost:8080/grpc.hello.HelloService/Hello"))
+        assertFalse(text.contains("POST http://localhost:8080/grpc.hello.HelloService/Hello"))
     }
 
     @Test

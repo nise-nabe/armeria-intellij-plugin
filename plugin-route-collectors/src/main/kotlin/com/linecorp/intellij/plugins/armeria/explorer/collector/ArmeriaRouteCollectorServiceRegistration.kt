@@ -22,6 +22,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaBuilderMetadataSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaDelegationSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaGrpcServiceOptionsSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKnownHttpServiceClassifier
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
@@ -140,6 +141,7 @@ object ArmeriaRouteCollectorServiceRegistration {
             argumentCount = arguments.size,
             routes = routes,
             seenServiceRegistrations = seenServiceRegistrations,
+            serviceExpression = implementationExpression,
         )
     }
 
@@ -156,6 +158,7 @@ object ArmeriaRouteCollectorServiceRegistration {
         seenServiceRegistrations: MutableSet<String>,
         decorators: List<String>? = null,
         sourceOffset: Int? = null,
+        serviceExpression: PsiElement? = null,
     ): Boolean {
         if (!seenServiceRegistrations.add(registrationKey)) {
             return false
@@ -190,7 +193,9 @@ object ArmeriaRouteCollectorServiceRegistration {
                 annotatedServiceHasPathPrefix = annotatedServiceHasPathPrefix,
                 decorators = programmaticDecorators,
                 timeoutHints = timeoutHints,
-                contentHints = sseContentHints(kind),
+                contentHints =
+                    sseContentHints(kind) +
+                        ArmeriaGrpcServiceOptionsSupport.contentHints(serviceExpression, kind),
                 delegationKind = delegationKind,
                 sourceOffset = sourceOffset,
             )

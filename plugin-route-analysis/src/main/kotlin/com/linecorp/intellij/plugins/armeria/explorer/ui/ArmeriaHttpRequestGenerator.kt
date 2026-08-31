@@ -3,9 +3,12 @@ package com.linecorp.intellij.plugins.armeria.explorer.ui
 import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceDebugFormUrl
 import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceMethodRef
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRoutePath
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaGrpcServiceOptionsSupport
+import com.linecorp.intellij.plugins.armeria.message
 import java.util.Locale
 
 object ArmeriaHttpRequestGenerator {
@@ -15,7 +18,6 @@ object ArmeriaHttpRequestGenerator {
     private val NON_SLUG_CHARACTERS = Regex("[^a-zA-Z0-9._-]")
     private val NEWLINE_CHARACTERS = Regex("[\\r\\n]+")
     private val COLON_PATH_VARIABLE = Regex(""":([A-Za-z_][A-Za-z0-9_]*)""")
-    private val GRPC_METHOD_PATH = Regex("""^/[^/]+/[^/]+$""")
     private val GRAPHQL_OPERATION_TARGET = Regex("""^(Query|Mutation|Subscription)\.[A-Za-z_][A-Za-z0-9_]*$""")
     // tchar minus a trailing '!' immediately before '=' so `name!=value` is not a header pair.
 
@@ -76,7 +78,11 @@ object ArmeriaHttpRequestGenerator {
             return graphqlRequestText(route, normalizedBaseUrl)
         }
         if (isGrpcRoute(route)) {
-            return grpcRequestText(route, normalizedBaseUrl)
+            return if (isUnframedGrpc(route)) {
+                unframedGrpcRequestText(route, normalizedBaseUrl)
+            } else {
+                grpcRequestText(route, normalizedBaseUrl)
+            }
         }
         val method = httpMethod(route)
         val resolvedPath = pathWithPlaceholders(route.path, route.pathType)
@@ -142,8 +148,10 @@ object ArmeriaHttpRequestGenerator {
         if (!route.protocol.equals(RouteProtocol.GRPC.presentableName(), ignoreCase = true)) {
             return false
         }
-        return GRPC_METHOD_PATH.matches(route.path)
+        return GrpcRoutePath.isMethodPath(route.path)
     }
+
+    private fun isUnframedGrpc(route: ArmeriaRoute): Boolean = ArmeriaGrpcServiceOptionsSupport.hasUnframedHint(route.contentHints)
 
     private fun isGraphqlRoute(route: ArmeriaRoute): Boolean {
         if (route.routeMatch != RouteMatch.NON_HTTP) {
@@ -179,6 +187,37 @@ object ArmeriaHttpRequestGenerator {
                 appendLine("# $header")
             }
             appendLine("# gRPC-JSON uses POST with a JSON body:")
+            appendLine(exampleBody)
+            appendLine()
+        }
+    }
+
+    private fun unframedGrpcRequestText(
+        route: ArmeriaRoute,
+        baseUrl: String,
+    ): String {
+        val grpcPath = "/" + route.path.trim('/')
+        val exampleBody =
+            route.exampleRequests
+                .firstOrNull()
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+                ?: "{}"
+        val debugFormUrl =
+            ArmeriaDocServiceMethodRef.from(route)?.let { ref ->
+                ArmeriaDocServiceDebugFormUrl.build("$baseUrl/docs", ref)
+            } ?: "$baseUrl/docs"
+        return buildString {
+            appendLine("### gRPC ${route.target}")
+            appendLine("POST $baseUrl$grpcPath")
+            appendLine("Content-Type: $JSON_MEDIA_TYPE")
+            appendLine("Accept: $JSON_MEDIA_TYPE")
+            appendLine()
+            appendLine("# Invoke via DocService: $debugFormUrl")
+            for (header in route.exampleHeaders) {
+                appendLine("# $header")
+            }
+            appendLine("# ${message("route.explorer.http.grpcProtobufAlternate")}")
             appendLine(exampleBody)
             appendLine()
         }

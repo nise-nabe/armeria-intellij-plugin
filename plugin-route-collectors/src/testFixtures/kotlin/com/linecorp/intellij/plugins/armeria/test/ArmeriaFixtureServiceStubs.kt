@@ -78,6 +78,14 @@ fun JavaCodeInsightTestFixture.registerKnownHttpServiceStubs() {
                 return this;
             }
 
+            public GrpcServiceBuilder enableUnframedRequests(boolean enabled) {
+                return this;
+            }
+
+            public GrpcServiceBuilder enableUnframedRequests(Object errorHandler) {
+                return this;
+            }
+
             public com.linecorp.armeria.server.grpc.GrpcService build() {
                 return null;
             }

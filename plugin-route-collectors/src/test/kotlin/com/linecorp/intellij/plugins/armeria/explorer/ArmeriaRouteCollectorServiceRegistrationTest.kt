@@ -2,6 +2,7 @@ package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
+import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRouteHint
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.message
@@ -666,5 +667,123 @@ class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
         val fileRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/files" }
         assertEquals(RouteMatch.SERVICE, fileRoute.routeMatch)
         assertFalse(fileRoute.excludeFromDuplicateIndex)
+    }
+
+    fun testCollectGrpcServiceUnframedAndReflectionHints() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.grpc.GrpcService;
+            import io.grpc.protobuf.services.ProtoReflectionService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/grpc", GrpcService.builder()
+                            .addService(new HelloGrpcService())
+                            .enableUnframedRequests(true)
+                            .addService(ProtoReflectionService.newInstance())
+                            .build())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloGrpcService {
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package io.grpc.protobuf.services;
+
+            public final class ProtoReflectionService {
+                public static Object newInstance() {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val grpcRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/grpc" }
+
+        assertEquals(RouteMatch.NON_HTTP, grpcRoute.routeMatch)
+        assertTrue(grpcRoute.contentHints.contains(GrpcRouteHint.UNFRAMED))
+        assertTrue(grpcRoute.contentHints.contains(GrpcRouteHint.REFLECTION))
+    }
+
+    fun testCollectGrpcServiceEnableUnframedRequestsFalseIsNotUnframed() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.grpc.GrpcService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/grpc", GrpcService.builder(new HelloGrpcService())
+                            .enableUnframedRequests(false)
+                            .build())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloGrpcService {
+            }
+            """.trimIndent(),
+        )
+
+        val grpcRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/grpc" }
+
+        assertTrue(grpcRoute.contentHints.none { it == GrpcRouteHint.UNFRAMED })
+    }
+
+    fun testCollectMyProtoReflectionServiceIsNotReflectionBadge() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.grpc.GrpcService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/grpc", GrpcService.builder()
+                            .addService(new MyProtoReflectionService())
+                            .build())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class MyProtoReflectionService {
+            }
+            """.trimIndent(),
+        )
+
+        val grpcRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/grpc" }
+
+        assertTrue(grpcRoute.contentHints.none { it == GrpcRouteHint.REFLECTION })
     }
 }

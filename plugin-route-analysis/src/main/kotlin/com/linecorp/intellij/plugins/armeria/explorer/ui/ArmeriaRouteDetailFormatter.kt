@@ -2,8 +2,10 @@ package com.linecorp.intellij.plugins.armeria.explorer.ui
 
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
+import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRouteHint
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaGrpcServiceOptionsSupport
 import com.linecorp.intellij.plugins.armeria.message
 
 object ArmeriaRouteDetailFormatter {
@@ -18,6 +20,12 @@ object ArmeriaRouteDetailFormatter {
                 }
                 if (route.routeMatch == RouteMatch.RUNTIME) {
                     add(message("route.explorer.badge.runtime"))
+                }
+                if (ArmeriaGrpcServiceOptionsSupport.hasUnframedHint(route.contentHints)) {
+                    add(message("route.explorer.badge.grpcUnframed"))
+                }
+                if (ArmeriaGrpcServiceOptionsSupport.hasReflectionHint(route.contentHints)) {
+                    add(message("route.explorer.badge.grpcReflection"))
                 }
                 route.delegationKind?.let { kind ->
                     add(delegationBadge(kind))
@@ -51,7 +59,13 @@ object ArmeriaRouteDetailFormatter {
                     add(message("route.explorer.detail.virtualHost", route.virtualHostName))
                 }
                 if (route.contentHints.isNotEmpty()) {
-                    add(message("route.explorer.detail.content", route.contentHints.joinToString(" · ")))
+                    val displayHints =
+                        route.contentHints
+                            .filterNot(GrpcRouteHint::isBadge)
+                            .map(GrpcRouteHint::presentable)
+                    if (displayHints.isNotEmpty()) {
+                        add(message("route.explorer.detail.content", displayHints.joinToString(" · ")))
+                    }
                 }
                 if (route.exampleHeaders.isNotEmpty()) {
                     add(message("route.explorer.detail.exampleHeaders", route.exampleHeaders.joinToString("\n")))

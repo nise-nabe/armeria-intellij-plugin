@@ -567,6 +567,9 @@ abstract class ArmeriaClientFixtureTestBase : ArmeriaLightJavaCodeInsightFixture
             package com.linecorp.armeria.client.grpc;
 
             public final class GrpcClientBuilder {
+                public <T> T build(Class<T> clientType) {
+                    return null;
+                }
             }
             """.trimIndent(),
         )

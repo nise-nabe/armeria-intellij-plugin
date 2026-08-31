@@ -58,6 +58,19 @@ class ArmeriaRouteTreeLabelTest {
         assertNull(ArmeriaRouteTreeLabel.matchSuffix(route))
     }
 
+    @Test
+    fun matchSuffix_includesGrpcHttpPath() {
+        val route =
+            testRoute(
+                contentHints = listOf(message("route.explorer.hint.grpcHttpPath", "POST /v1/hello")),
+            )
+
+        assertEquals(
+            message("route.explorer.hint.grpcHttpPath", "POST /v1/hello"),
+            ArmeriaRouteTreeLabel.matchSuffix(route),
+        )
+    }
+
     private fun testRoute(contentHints: List<String>): ArmeriaRoute =
         ArmeriaRoute(
             protocol = "HTTP",
