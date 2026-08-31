@@ -26,4 +26,18 @@
     <variable name="URI" expression="" defaultValue="http://localhost:8080" alwaysStopAt="true"/>
     <context><option name="KOTLIN_STATEMENT" value="true"/></context>
   </template>
+  <template name="armrcex-kotlin" key="live.template.restclient.execute.kotlin.description" resource-bundle="messages.ArmeriaBundle" value="val $CLIENT$ = com.linecorp.armeria.client.RestClient.of(&quot;$URI$&quot;)&#10;val $RESPONSE$ = $CLIENT$.get(&quot;$PATH$&quot;).execute&lt;$TYPE$&gt;()&#10;$END$" description="Armeria RestClient coroutine execute (Kotlin)" toReformat="true" toShortenFQNames="true">
+    <variable name="CLIENT" expression="" defaultValue="client" alwaysStopAt="true"/>
+    <variable name="URI" expression="" defaultValue="http://localhost:8080" alwaysStopAt="true"/>
+    <variable name="RESPONSE" expression="" defaultValue="response" alwaysStopAt="true"/>
+    <variable name="TYPE" expression="" defaultValue="String" alwaysStopAt="true"/>
+    <variable name="PATH" expression="" defaultValue="/" alwaysStopAt="true"/>
+    <context><option name="KOTLIN_STATEMENT" value="true"/></context>
+  </template>
+  <template name="armccs-kotlin" key="live.template.coroutine.context.service.kotlin.description" resource-bundle="messages.ArmeriaBundle" value="com.linecorp.armeria.server.Server.builder()&#10;    .http($PORT$)&#10;    .annotatedService()&#10;    .decorator(com.linecorp.armeria.server.kotlin.CoroutineContextService.newDecorator { ctx -&gt;&#10;        kotlinx.coroutines.CoroutineName(ctx.config().defaultServiceNaming().serviceName(ctx) ?: &quot;$NAME$&quot;)&#10;    })&#10;    .build($SERVICE$())" description="Armeria CoroutineContextService decorator (Kotlin)" toReformat="true" toShortenFQNames="true">
+    <variable name="PORT" expression="" defaultValue="8080" alwaysStopAt="true"/>
+    <variable name="NAME" expression="" defaultValue="name" alwaysStopAt="true"/>
+    <variable name="SERVICE" expression="completeSmart()" defaultValue="MyService" alwaysStopAt="true"/>
+    <context><option name="KOTLIN_STATEMENT" value="true"/></context>
+  </template>
 </templateSet>
