@@ -21,6 +21,7 @@ object ArmeriaHttpMethodPill {
             RouteMatch.FILE_SERVICE -> "FIL"
             RouteMatch.HEALTH_CHECK -> "HLT"
             RouteMatch.VIRTUAL_HOST -> "VHS"
+            RouteMatch.LISTEN_PORT -> "PORT"
             RouteMatch.ROUTE_DECORATOR -> "DEC"
             RouteMatch.ROUTE_FLUENT -> route.httpMethod.ifBlank { "ALL" }
             RouteMatch.DECORATOR_UNDER -> "UND"

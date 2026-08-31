@@ -381,6 +381,50 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
                 ),
             ),
         )
+        val listenPortSummary =
+            ArmeriaRouteDetailFormatter.registrationSummary(
+                ArmeriaRoute(
+                    protocol = "HTTP+HTTPS",
+                    httpMethod = "",
+                    path = ":8888",
+                    target = message("route.explorer.target.listenPort"),
+                    routeMatch = RouteMatch.LISTEN_PORT,
+                    moduleName = "app",
+                    targetUnresolved = false,
+                    isDocService = false,
+                    annotatedServiceHasPathPrefix = false,
+                    decorators = emptyList(),
+                    exceptionHandlers = emptyList(),
+                    pointer = TestPsiPointer,
+                ),
+            )
+        assertEquals(
+            message("route.explorer.registration.listenPort", "8888", "HTTP+HTTPS"),
+            listenPortSummary,
+        )
+        assertFalse(listenPortSummary.contains("Server.builder()"))
+        val springListenPortSummary =
+            ArmeriaRouteDetailFormatter.registrationSummary(
+                ArmeriaRoute(
+                    protocol = "HTTPS",
+                    httpMethod = "",
+                    path = ":8443",
+                    target = message("route.explorer.spring.port", "8443", "HTTPS"),
+                    routeMatch = RouteMatch.LISTEN_PORT,
+                    moduleName = "app",
+                    targetUnresolved = false,
+                    isDocService = false,
+                    annotatedServiceHasPathPrefix = false,
+                    decorators = emptyList(),
+                    exceptionHandlers = emptyList(),
+                    pointer = TestPsiPointer,
+                ),
+            )
+        assertEquals(
+            message("route.explorer.registration.listenPort", "8443", "HTTPS"),
+            springListenPortSummary,
+        )
+        assertFalse(springListenPortSummary.contains("Server.builder()"))
         assertEquals(
             message(
                 "route.explorer.registration.delegated",

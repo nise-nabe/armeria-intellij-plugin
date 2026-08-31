@@ -127,8 +127,10 @@ class ArmeriaRouteExplorerPanel(
             { path: javax.swing.tree.TreePath ->
                 val node = path.lastPathComponent
                 when (val userObject = (node as? javax.swing.tree.DefaultMutableTreeNode)?.userObject) {
-                    is ArmeriaRouteTreeBuilder.RouteNode -> userObject.route.speedSearchText
-                    is ArmeriaRouteTreeBuilder.ModuleNode -> userObject.name
+                    is ArmeriaRouteTreeBuilder.RouteNode,
+                    is ArmeriaRouteTreeBuilder.ModuleNode,
+                    is ArmeriaRouteTreeBuilder.VirtualHostNode,
+                    -> ArmeriaRouteTreeBuilder.speedSearchText(userObject)
                     else -> ""
                 }
             },

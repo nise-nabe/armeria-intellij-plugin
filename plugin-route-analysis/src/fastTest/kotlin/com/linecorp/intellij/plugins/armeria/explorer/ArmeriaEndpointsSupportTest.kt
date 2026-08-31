@@ -189,6 +189,7 @@ class ArmeriaEndpointsSupportTest {
         assertFalse(ArmeriaEndpointsSupport.isVisibleServerRoute(route(routeMatch = RouteMatch.ROUTE_DECORATOR)))
         assertFalse(ArmeriaEndpointsSupport.isVisibleServerRoute(route(routeMatch = RouteMatch.DECORATOR_UNDER)))
         assertFalse(ArmeriaEndpointsSupport.isVisibleServerRoute(route(routeMatch = RouteMatch.VIRTUAL_HOST)))
+        assertFalse(ArmeriaEndpointsSupport.isVisibleServerRoute(route(routeMatch = RouteMatch.LISTEN_PORT)))
         assertFalse(ArmeriaEndpointsSupport.isVisibleServerRoute(route(routeMatch = RouteMatch.FILE_SERVICE)))
         assertFalse(ArmeriaEndpointsSupport.isVisibleServerRoute(route(routeMatch = RouteMatch.RUNTIME)))
         assertFalse(

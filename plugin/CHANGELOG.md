@@ -4,6 +4,7 @@
 
 ### Added
 
+- Route Explorer groups services by virtual host (default host vs `virtualHost("foo.com")`) and lists listen ports from `Server.builder().http` / `.https` / `.port` and Spring `armeria.ports` (including HTTP+HTTPS and PROXY unification). Double-click a virtual-host group to jump to the `virtualHost(...)` call.
 - Kotlin live templates for coroutine `RestClient.get(path).execute<T>()` (the `armeria-kotlin` extension, for use in an existing coroutine scope) and `Server.builder().annotatedService().decorator(CoroutineContextService.newDecorator { … })`. A weak warning highlights `suspend` annotated service methods when `armeria-kotlin` is not on the module classpath (`CoroutineContextService`, with the internal `ArmeriaKotlinUtil` marker as a fallback).
 - Route Explorer shows gRPC `enableUnframedRequests` and `ProtoReflectionService` badges on `GrpcService` registrations, copies unframed onto discovered proto RPCs, and shows `google.api.http` transcoding paths next to the RPC name. Generate HTTP Request emits `POST /{package.Service}/{Method}` with `Content-Type: application/json` when unframed is enabled (otherwise the existing gRPC placeholder). Clients explorer labels `GrpcClients` factories that build a `*CoroutineStub` as gRPC-Kotlin.
 - Spring Boot `ArmeriaSettings` inspections warn when `application.yml` / `application.yaml` / `.properties` (including `application-*` profiles) would bind both Spring's embedded server and Armeria (`server.port` is a positive port, `armeria.ports` or `armeria.server-enabled: true`, and `spring.main.web-application-type` is not `none`). `server.port: -1` stays silent. A weak warning flags `internal-services.include` of `docs` / `health` / `metrics` without a matching `docs-path` / `health-check-path` / `metrics-path` or configurator bean (`DocServiceConfigurator` / `HealthCheckServiceConfigurator` / `MetricCollectingServiceConfigurator`). Duplicate keys and kebab/camel aliases use the last occurrence in the file. The Spring Boot Config explorer also lists `Consumer<ServerBuilder>` beans (applied after `ArmeriaServerConfigurator`) and `ArmeriaClientConfigurator` beans.
@@ -23,6 +24,7 @@
 
 ### Fixed
 
+- Route Explorer listen-port detail text uses `Listen port {0} ({1})` instead of attributing Spring `armeria.ports` to `Server.builder()`.
 - Kotlin Route Explorer gutter icons for `service()` / `serviceUnder()` / `annotatedService()` attach to the method-name identifier, matching Java and avoiding a platform warning when highlighting Kotlin server builders.
 - Missing-DocService inspection only treats DocService as present when it is mounted with `service` / `serviceUnder`, including local assignments such as `val docs = DocService.builder().build()`. Cyclic local assignments are not followed indefinitely.
 - GraphQL missing-blocking detection no longer treats unrelated fluent APIs named `runtimeWiring` / `graphql` as `GraphqlService` builders, and still follows an outer `GraphqlService` chain when a nested call uses the same method names.

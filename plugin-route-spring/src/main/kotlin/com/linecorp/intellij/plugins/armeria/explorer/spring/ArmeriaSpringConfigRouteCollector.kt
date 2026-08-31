@@ -7,6 +7,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
+import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaListenPortSupport
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRouteMetadata
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
@@ -262,7 +263,7 @@ object ArmeriaSpringConfigRouteCollector {
         seenConfigRoutes: MutableSet<String>,
     ) {
         for (binding in config.ports) {
-            val protocolLabel = binding.protocols.joinToString(", ").ifEmpty { "HTTP" }
+            val protocolLabel = ArmeriaListenPortSupport.displayProtocols(binding.protocols)
             // Synthetic path so the tree row (pill + path) shows the port; "/" collides with
             // real root mounts and hides the binding in the explorer list.
             addConfigRoute(
@@ -275,8 +276,9 @@ object ArmeriaSpringConfigRouteCollector {
                     ),
                 protocol = protocolLabel,
                 httpMethod = "",
-                routeMatch = RouteMatch.NON_HTTP,
+                routeMatch = RouteMatch.LISTEN_PORT,
                 isDocService = false,
+                excludeFromDuplicateIndex = true,
                 dedupeKey = profileAwareKey("port:${binding.port}:$protocolLabel", profile),
                 routes = routes,
                 seenConfigRoutes = seenConfigRoutes,
@@ -363,6 +365,7 @@ object ArmeriaSpringConfigRouteCollector {
         dedupeKey: String,
         routes: MutableList<ArmeriaRoute>,
         seenConfigRoutes: MutableSet<String>,
+        excludeFromDuplicateIndex: Boolean = false,
     ) {
         val moduleKey = "${ArmeriaRouteMetadata.moduleName(element)}:$dedupeKey"
         if (!seenConfigRoutes.add(moduleKey)) {
@@ -377,6 +380,7 @@ object ArmeriaSpringConfigRouteCollector {
                 target = target,
                 routeMatch = routeMatch,
                 isDocService = isDocService,
+                excludeFromDuplicateIndex = excludeFromDuplicateIndex,
             )
     }
 

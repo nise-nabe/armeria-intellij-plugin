@@ -54,6 +54,7 @@ data class ArmeriaRoute(
                 RouteMatch.FILE_SERVICE -> message("route.explorer.method.fileService")
                 RouteMatch.HEALTH_CHECK -> message("route.explorer.method.healthCheck")
                 RouteMatch.VIRTUAL_HOST -> message("route.explorer.method.virtualHost")
+                RouteMatch.LISTEN_PORT -> message("route.explorer.method.listenPort")
                 RouteMatch.ROUTE_DECORATOR -> message("route.explorer.method.routeDecorator")
                 RouteMatch.ROUTE_FLUENT -> httpMethod.ifBlank { message("route.explorer.method.allHttp") }
                 RouteMatch.DECORATOR_UNDER -> message("route.explorer.method.decoratorUnder")
@@ -76,6 +77,10 @@ data class ArmeriaRoute(
                 append(target)
                 append(' ')
                 append(moduleName)
+                if (virtualHostName.isNotEmpty()) {
+                    append(' ')
+                    append(virtualHostName)
+                }
                 if (contentHints.isNotEmpty()) {
                     append(' ')
                     append(contentHints.joinToString(" ") { GrpcRouteHint.presentable(it) })

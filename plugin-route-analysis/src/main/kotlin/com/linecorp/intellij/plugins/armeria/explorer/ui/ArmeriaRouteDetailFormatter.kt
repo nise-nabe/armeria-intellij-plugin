@@ -111,6 +111,12 @@ object ArmeriaRouteDetailFormatter {
                     "route.explorer.registration.virtualHost",
                     route.virtualHostName.ifBlank { route.target },
                 )
+            RouteMatch.LISTEN_PORT ->
+                message(
+                    "route.explorer.registration.listenPort",
+                    route.path.removePrefix(":"),
+                    route.protocol,
+                )
             RouteMatch.ROUTE_DECORATOR -> message("route.explorer.registration.routeDecorator", route.path)
             RouteMatch.ROUTE_FLUENT ->
                 message(

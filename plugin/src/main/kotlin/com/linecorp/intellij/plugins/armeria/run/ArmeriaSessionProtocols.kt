@@ -14,7 +14,7 @@ internal object ArmeriaSessionProtocols {
     fun isHttpsOnly(protocol: String): Boolean {
         val protocols =
             protocol
-                .split(',')
+                .split(',', '+')
                 .map { it.trim().uppercase() }
                 .filter { it.isNotEmpty() }
         if (protocols.isEmpty()) {
