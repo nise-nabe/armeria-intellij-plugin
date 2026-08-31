@@ -6,11 +6,13 @@ import kotlin.test.assertTrue
 
 class ArmeriaKotlinLiveTemplateTest {
     @Test
-    fun restClientExecuteTemplateUsesKotlinExtensionExecute() {
+    fun restClientExecuteTemplateUsesReceiverExecute() {
         val xml = liveTemplateXml()
         assertTrue(xml.contains("name=\"armrcex-kotlin\""), xml)
         assertTrue(xml.contains("RestClient.of"), xml)
-        assertTrue(xml.contains("com.linecorp.armeria.client.kotlin.execute"), xml)
+        assertTrue(xml.contains(".execute"), xml)
+        assertTrue(xml.contains("\$CLIENT\$.get"), xml)
+        assertFalse(xml.contains("kotlin.execute"), xml)
         assertFalse(xml.contains("runBlocking"), xml)
         assertTrue(xml.contains("live.template.restclient.execute.kotlin.description"), xml)
     }

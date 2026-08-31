@@ -26,7 +26,7 @@
     <variable name="URI" expression="" defaultValue="http://localhost:8080" alwaysStopAt="true"/>
     <context><option name="KOTLIN_STATEMENT" value="true"/></context>
   </template>
-  <template name="armrcex-kotlin" key="live.template.restclient.execute.kotlin.description" resource-bundle="messages.ArmeriaBundle" value="val $CLIENT$ = com.linecorp.armeria.client.RestClient.of(&quot;$URI$&quot;)&#10;val $RESPONSE$ = com.linecorp.armeria.client.kotlin.execute&lt;$TYPE$&gt;($CLIENT$.get(&quot;$PATH$&quot;))&#10;$END$" description="Armeria RestClient coroutine execute (Kotlin)" toReformat="true" toShortenFQNames="true">
+  <template name="armrcex-kotlin" key="live.template.restclient.execute.kotlin.description" resource-bundle="messages.ArmeriaBundle" value="val $CLIENT$ = com.linecorp.armeria.client.RestClient.of(&quot;$URI$&quot;)&#10;val $RESPONSE$ = $CLIENT$.get(&quot;$PATH$&quot;).execute&lt;$TYPE$&gt;()&#10;$END$" description="Armeria RestClient coroutine execute (Kotlin)" toReformat="true" toShortenFQNames="true">
     <variable name="CLIENT" expression="" defaultValue="client" alwaysStopAt="true"/>
     <variable name="URI" expression="" defaultValue="http://localhost:8080" alwaysStopAt="true"/>
     <variable name="RESPONSE" expression="" defaultValue="response" alwaysStopAt="true"/>
