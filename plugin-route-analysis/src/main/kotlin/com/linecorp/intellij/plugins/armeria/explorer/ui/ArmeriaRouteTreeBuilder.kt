@@ -6,8 +6,6 @@ import com.linecorp.intellij.plugins.armeria.message
 import javax.swing.tree.DefaultMutableTreeNode
 
 object ArmeriaRouteTreeBuilder {
-    private val PORT_PROTOCOL_SEPARATOR = Regex("""\s*,\s*""")
-
     fun buildRoot(routes: List<ArmeriaRoute>): DefaultMutableTreeNode {
         val root = DefaultMutableTreeNode(RootNode)
         if (routes.isEmpty()) {
@@ -69,15 +67,30 @@ object ArmeriaRouteTreeBuilder {
         return null
     }
 
-    fun isPortBinding(route: ArmeriaRoute): Boolean =
-        route.routeMatch == RouteMatch.LISTEN_PORT ||
-            (route.routeMatch == RouteMatch.NON_HTTP && route.path.startsWith(":") && route.path.length > 1)
+    fun isPortBinding(route: ArmeriaRoute): Boolean = route.routeMatch == RouteMatch.LISTEN_PORT
 
     fun portDisplayLabel(route: ArmeriaRoute): String {
         val port = route.path.removePrefix(":")
-        val protocols = PORT_PROTOCOL_SEPARATOR.replace(route.protocol, "+")
-        return "$port $protocols"
+        return "$port ${route.protocol}"
     }
+
+    fun speedSearchText(userObject: Any?): String =
+        when (userObject) {
+            is RouteNode ->
+                if (isPortBinding(userObject.route)) {
+                    "${portDisplayLabel(userObject.route)} ${userObject.route.speedSearchText}"
+                } else {
+                    userObject.route.speedSearchText
+                }
+            is ModuleNode -> userObject.name
+            is VirtualHostNode ->
+                if (userObject.hostname.isEmpty()) {
+                    message("route.explorer.tree.virtualHost.default.search")
+                } else {
+                    userObject.hostname
+                }
+            else -> ""
+        }
 
     fun virtualHostDisplayLabel(node: VirtualHostNode): String =
         if (node.hostname.isEmpty()) {
@@ -94,7 +107,7 @@ object ArmeriaRouteTreeBuilder {
             serviceRoutes
                 .filter { it.routeMatch == RouteMatch.VIRTUAL_HOST }
                 .groupBy { it.virtualHostName.ifBlank { it.target } }
-                .mapValues { (_, hosts) -> hosts.first() }
+                .mapValues { (_, hosts) -> hosts.minWith(virtualHostNavigationComparator) }
         val grouped =
             serviceRoutes
                 .filter { it.routeMatch != RouteMatch.VIRTUAL_HOST }
@@ -130,11 +143,25 @@ object ArmeriaRouteTreeBuilder {
             left.target == right.target &&
             left.routeMatch == right.routeMatch &&
             left.httpMethod == right.httpMethod &&
+            left.protocol == right.protocol &&
             left.virtualHostName == right.virtualHostName &&
             left.delegationMountPath == right.delegationMountPath
 
     private val portComparator: Comparator<ArmeriaRoute> =
         compareBy<ArmeriaRoute> { portNumber(it) }.thenBy { it.protocol }.thenBy { it.path }
+
+    private val virtualHostNavigationComparator: Comparator<ArmeriaRoute> =
+        compareBy<ArmeriaRoute>(::virtualHostNavigationFilePath)
+            .thenBy(::virtualHostNavigationOffset)
+
+    private fun virtualHostNavigationFilePath(route: ArmeriaRoute): String =
+        route.pointer.containingFile
+            ?.virtualFile
+            ?.path
+            .orEmpty()
+
+    private fun virtualHostNavigationOffset(route: ArmeriaRoute): Int =
+        route.sourceOffset ?: route.pointer.range?.startOffset ?: Int.MAX_VALUE
 
     private fun portNumber(route: ArmeriaRoute): Int = route.path.removePrefix(":").toIntOrNull() ?: Int.MAX_VALUE
 

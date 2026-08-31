@@ -4,8 +4,6 @@ import com.intellij.psi.PsiMethodCallExpression
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaBuilderCallHeuristics
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaListenPortSupport
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
-import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
-import com.linecorp.intellij.plugins.armeria.message
 
 internal object ArmeriaExtendedRegistrationCollectorListenPort {
     fun collect(
@@ -24,24 +22,15 @@ internal object ArmeriaExtendedRegistrationCollectorListenPort {
         if (!seenRegistrations.add(key)) {
             return
         }
-        val port = ArmeriaListenPortSupport.extractJavaPort(expression.argumentList.expressions.firstOrNull()) ?: return
+        val arguments = expression.argumentList.expressions
+        val port = ArmeriaListenPortSupport.extractJavaPort(arguments.firstOrNull()) ?: return
+        val extraArgs = arguments.drop(1)
         val protocolLabel =
             ArmeriaListenPortSupport.protocolLabel(
-                methodName,
-                expression.argumentList.expressions
-                    .drop(1)
-                    .map { it.text },
-            )
-        val path = ArmeriaListenPortSupport.displayPath(port)
-        routes +=
-            ArmeriaRoute.create(
-                element = expression,
-                protocol = protocolLabel,
-                httpMethod = "",
-                path = path,
-                target = message("route.explorer.target.listenPort"),
-                routeMatch = RouteMatch.LISTEN_PORT,
-                excludeFromDuplicateIndex = true,
-            )
+                methodName = methodName,
+                extraArgsPresent = extraArgs.isNotEmpty(),
+                resolvedProtocolNames = extraArgs.mapNotNull(ArmeriaListenPortSupport::resolveJavaSessionProtocol),
+            ) ?: return
+        routes += ArmeriaListenPortSupport.listenPortRoute(expression, port, protocolLabel)
     }
 }

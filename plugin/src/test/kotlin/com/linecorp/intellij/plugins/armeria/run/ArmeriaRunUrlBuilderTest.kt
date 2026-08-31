@@ -70,8 +70,8 @@ class ArmeriaRunUrlBuilderTest {
         val listen =
             ArmeriaRunUrlBuilder.listenPortFromSpringRoutes(
                 listOf(
-                    route(path = ":8080", protocol = "HTTP", routeMatch = RouteMatch.NON_HTTP),
-                    route(path = ":8443", protocol = "HTTPS", routeMatch = RouteMatch.NON_HTTP),
+                    route(path = ":8080", protocol = "HTTP", routeMatch = RouteMatch.LISTEN_PORT),
+                    route(path = ":8443", protocol = "HTTPS", routeMatch = RouteMatch.LISTEN_PORT),
                 ),
             )
 
@@ -91,7 +91,7 @@ class ArmeriaRunUrlBuilderTest {
     fun listenPortFromSpringRoutes_httpsOnly() {
         val listen =
             ArmeriaRunUrlBuilder.listenPortFromSpringRoutes(
-                listOf(route(path = ":8443", protocol = "HTTPS", routeMatch = RouteMatch.NON_HTTP)),
+                listOf(route(path = ":8443", protocol = "HTTPS", routeMatch = RouteMatch.LISTEN_PORT)),
             )
 
         assertEquals(ArmeriaListenEndpoint(8443, https = true), listen)
@@ -101,7 +101,7 @@ class ArmeriaRunUrlBuilderTest {
     fun listenPortFromSpringRoutes_h1IsTls() {
         val listen =
             ArmeriaRunUrlBuilder.listenPortFromSpringRoutes(
-                listOf(route(path = ":8443", protocol = "H1", routeMatch = RouteMatch.NON_HTTP)),
+                listOf(route(path = ":8443", protocol = "H1", routeMatch = RouteMatch.LISTEN_PORT)),
             )
 
         assertEquals(ArmeriaListenEndpoint(8443, https = true), listen)
@@ -111,7 +111,7 @@ class ArmeriaRunUrlBuilderTest {
     fun listenPortFromSpringRoutes_h1cIsCleartext() {
         val listen =
             ArmeriaRunUrlBuilder.listenPortFromSpringRoutes(
-                listOf(route(path = ":8080", protocol = "H1C", routeMatch = RouteMatch.NON_HTTP)),
+                listOf(route(path = ":8080", protocol = "H1C", routeMatch = RouteMatch.LISTEN_PORT)),
             )
 
         assertEquals(ArmeriaListenEndpoint(8080, https = false), listen)
@@ -126,6 +126,9 @@ class ArmeriaRunUrlBuilderTest {
         assertFalse(ArmeriaSessionProtocols.extraArgsSuggestHttps("SessionProtocol.H2C"))
         assertFalse(ArmeriaSessionProtocols.extraArgsSuggestHttps("SessionProtocol.HTTP"))
         assertFalse(ArmeriaSessionProtocols.extraArgsSuggestHttps("SessionProtocol.HTTP, SessionProtocol.H1"))
+        assertFalse(ArmeriaSessionProtocols.isHttpsOnly("HTTP+HTTPS"))
+        assertTrue(ArmeriaSessionProtocols.isHttpsOnly("HTTPS"))
+        assertTrue(ArmeriaSessionProtocols.isHttpsOnly("H1"))
     }
 
     @Test

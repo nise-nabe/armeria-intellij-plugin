@@ -1,56 +1,145 @@
 package com.linecorp.intellij.plugins.armeria.explorer.collector.registration
 
 import com.intellij.psi.JavaPsiFacade
+import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiExpression
+import com.intellij.psi.PsiField
 import com.intellij.psi.PsiLiteralExpression
+import com.intellij.psi.PsiParenthesizedExpression
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiVariable
+import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.message
 
-internal object ArmeriaListenPortSupport {
-    const val HTTP_METHOD = "http"
-    const val HTTPS_METHOD = "https"
-    const val PORT_METHOD = "port"
+object ArmeriaListenPortSupport {
+    internal const val HTTP_METHOD = "http"
+    internal const val HTTPS_METHOD = "https"
+    internal const val PORT_METHOD = "port"
+    internal const val SESSION_PROTOCOL_CLASS = "com.linecorp.armeria.common.SessionProtocol"
+    internal const val SESSION_PROTOCOL_SIMPLE_NAME = "SessionProtocol"
 
-    val METHOD_NAMES: Set<String> = setOf(HTTP_METHOD, HTTPS_METHOD, PORT_METHOD)
+    internal val METHOD_NAMES: Set<String> = setOf(HTTP_METHOD, HTTPS_METHOD, PORT_METHOD)
 
+    private const val MAX_INITIALIZER_HOPS = 8
     private val HTTP_TOKENS = setOf("HTTP", "H1C", "H2C", "H1C_OR_H2C")
     private val HTTPS_TOKENS = setOf("HTTPS", "H1", "H2", "H1_OR_H2")
-    private val TOKEN_CLEANUP = Regex("""[^A-Za-z0-9_]+""")
 
-    fun protocolLabel(
+    internal fun protocolLabel(
         methodName: String,
-        extraArgTexts: List<String>,
-    ): String = protocolLabels(methodName, extraArgTexts).joinToString("+")
-
-    fun protocolLabels(
-        methodName: String,
-        extraArgTexts: List<String>,
-    ): List<String> {
-        val canonical =
-            when (methodName) {
-                HTTPS_METHOD -> listOf(canonicalHttps())
-                HTTP_METHOD -> listOf(canonicalHttp())
-                else -> collapseSessionProtocols(extraArgTexts).ifEmpty { listOf(canonicalHttp()) }
+        extraArgsPresent: Boolean,
+        resolvedProtocolNames: List<String>,
+    ): String? =
+        when (methodName) {
+            HTTPS_METHOD -> canonicalHttps()
+            HTTP_METHOD -> canonicalHttp()
+            PORT_METHOD -> {
+                if (!extraArgsPresent) {
+                    canonicalHttp()
+                } else {
+                    val collapsed = collapseSessionProtocolNames(resolvedProtocolNames)
+                    if (collapsed.isEmpty()) {
+                        null
+                    } else {
+                        collapsed.joinToString("+")
+                    }
+                }
             }
-        return canonical
-    }
+            else -> null
+        }
 
-    fun displayPath(port: Int): String = ":$port"
+    fun displayProtocols(protocolNames: List<String>): String =
+        collapseSessionProtocolNames(protocolNames).ifEmpty { listOf(canonicalHttp()) }.joinToString("+")
 
-    fun extractJavaPort(expression: PsiExpression?): Int? {
-        val number = extractJavaNumber(expression, hops = 0) ?: return null
+    private fun displayPath(port: Int): String = ":$port"
+
+    internal fun listenPortRoute(
+        element: PsiElement,
+        port: Int,
+        protocolLabel: String,
+    ): ArmeriaRoute =
+        ArmeriaRoute.create(
+            element = element,
+            protocol = protocolLabel,
+            httpMethod = "",
+            path = displayPath(port),
+            target = message("route.explorer.target.listenPort"),
+            routeMatch = RouteMatch.LISTEN_PORT,
+            excludeFromDuplicateIndex = true,
+        )
+
+    internal fun extractJavaPort(expression: PsiExpression?): Int? {
+        val number = extractJavaNumber(expression, hops = 0, visited = mutableSetOf()) ?: return null
         return number.toInt().takeIf(::isValidPort)
     }
 
-    fun isValidPort(port: Int): Boolean = port in 1..65535
+    internal fun isValidPort(port: Int): Boolean = port in 1..65535
 
-    private fun collapseSessionProtocols(extraArgTexts: List<String>): List<String> {
+    internal fun parseIntLiteral(text: String): Int? {
+        var cleaned = text.replace("_", "").trim()
+        cleaned = cleaned.trimEnd { it == 'u' || it == 'U' || it == 'l' || it == 'L' }
+        if (cleaned.isEmpty()) {
+            return null
+        }
+        return when {
+            cleaned.startsWith("0x", ignoreCase = true) -> cleaned.substring(2).toIntOrNull(16)
+            cleaned.startsWith("0b", ignoreCase = true) -> cleaned.substring(2).toIntOrNull(2)
+            else -> cleaned.toIntOrNull()
+        }
+    }
+
+    internal fun resolveJavaSessionProtocol(expression: PsiExpression): String? {
+        val unwrapped = unwrapJavaExpression(expression) ?: return null
+        when (unwrapped) {
+            is PsiLiteralExpression -> {
+                val literal = unwrapped.value as? String ?: return null
+                return literal.uppercase()
+            }
+            is PsiReferenceExpression -> {
+                val resolved = unwrapped.resolve()
+                if (resolved is PsiField && isSessionProtocolClass(resolved.containingClass)) {
+                    return resolved.name
+                }
+                val name = unwrapped.referenceName ?: return null
+                if (qualifierIsSessionProtocol(unwrapped.qualifierExpression)) {
+                    return name
+                }
+                return null
+            }
+            else -> return null
+        }
+    }
+
+    internal fun isSessionProtocolClass(psiClass: PsiClass?): Boolean {
+        psiClass ?: return false
+        return psiClass.qualifiedName == SESSION_PROTOCOL_CLASS ||
+            psiClass.name == SESSION_PROTOCOL_SIMPLE_NAME
+    }
+
+    private fun qualifierIsSessionProtocol(qualifier: PsiExpression?): Boolean {
+        val unwrapped = unwrapJavaExpression(qualifier) ?: return false
+        if (unwrapped is PsiReferenceExpression) {
+            val resolved = unwrapped.resolve()
+            if (resolved is PsiClass && isSessionProtocolClass(resolved)) {
+                return true
+            }
+            if (unwrapped.referenceName == SESSION_PROTOCOL_SIMPLE_NAME) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun collapseSessionProtocolNames(protocolNames: List<String>): List<String> {
         var hasProxy = false
         var hasHttp = false
         var hasHttps = false
-        for (text in extraArgTexts) {
-            val token = sessionProtocolToken(text) ?: continue
+        for (raw in protocolNames) {
+            val token = raw.substringAfterLast('.').uppercase()
+            if (token.isEmpty()) {
+                continue
+            }
             when {
                 token.startsWith("PROXY") -> {
                     hasProxy = true
@@ -77,47 +166,54 @@ internal object ArmeriaListenPortSupport {
         }
     }
 
-    private fun sessionProtocolToken(text: String): String? {
-        val raw = text.substringAfterLast('.').uppercase()
-        val cleaned = TOKEN_CLEANUP.replace(raw, "")
-        return cleaned.takeIf { it.isNotEmpty() && it != "SESSIONPROTOCOL" }
-    }
-
     private fun canonicalHttp(): String = message("route.explorer.listenPort.http")
 
     private fun canonicalHttps(): String = message("route.explorer.listenPort.https")
 
     private fun canonicalProxy(): String = message("route.explorer.listenPort.proxy")
 
+    private fun unwrapJavaExpression(expression: PsiExpression?): PsiExpression? {
+        var current = expression ?: return null
+        var hops = 0
+        while (current is PsiParenthesizedExpression && hops < MAX_INITIALIZER_HOPS) {
+            current = current.expression ?: return null
+            hops++
+        }
+        return current
+    }
+
     private fun extractJavaNumber(
         expression: PsiExpression?,
         hops: Int,
+        visited: MutableSet<PsiElement>,
     ): Number? {
-        if (expression == null || hops > 8) {
+        if (expression == null || hops > MAX_INITIALIZER_HOPS) {
             return null
         }
-        when (expression) {
-            is PsiLiteralExpression -> (expression.value as? Number)?.let { return it }
+        val unwrapped = unwrapJavaExpression(expression) ?: return null
+        when (unwrapped) {
+            is PsiLiteralExpression -> (unwrapped.value as? Number)?.let { return it }
             is PsiReferenceExpression -> {
-                val resolved = expression.resolve() as? PsiVariable
-                when (val value = resolved?.computeConstantValue()) {
+                val resolved = unwrapped.resolve() as? PsiVariable ?: return null
+                if (!visited.add(resolved)) {
+                    return null
+                }
+                when (val value = resolved.computeConstantValue()) {
                     is Number -> return value
                 }
-                resolved?.initializer?.let { initializer ->
-                    extractJavaNumber(initializer, hops + 1)?.let { return it }
-                }
+                return extractJavaNumber(resolved.initializer, hops + 1, visited)
             }
             else -> {
                 val constant =
                     JavaPsiFacade
-                        .getInstance(expression.project)
+                        .getInstance(unwrapped.project)
                         .constantEvaluationHelper
-                        .computeConstantExpression(expression)
+                        .computeConstantExpression(unwrapped)
                 if (constant is Number) {
                     return constant
                 }
             }
         }
-        return expression.text.toIntOrNull()
+        return null
     }
 }

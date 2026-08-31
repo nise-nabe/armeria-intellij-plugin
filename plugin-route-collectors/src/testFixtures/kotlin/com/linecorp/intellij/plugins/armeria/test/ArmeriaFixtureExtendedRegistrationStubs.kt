@@ -191,6 +191,10 @@ fun JavaCodeInsightTestFixture.registerExtendedRegistrationCollectorStubs() {
             public static final SessionProtocol H2 = new SessionProtocol();
             public static final SessionProtocol H1C = new SessionProtocol();
             public static final SessionProtocol H2C = new SessionProtocol();
+
+            public static SessionProtocol of(String uriText) {
+                return HTTP;
+            }
         }
         """.trimIndent(),
     )
@@ -401,6 +405,10 @@ fun JavaCodeInsightTestFixture.registerKotlinExtendedRegistrationCollectorStubs(
             public static final SessionProtocol H2 = new SessionProtocol();
             public static final SessionProtocol H1C = new SessionProtocol();
             public static final SessionProtocol H2C = new SessionProtocol();
+
+            public static SessionProtocol of(String uriText) {
+                return HTTP;
+            }
         }
         """.trimIndent(),
     )

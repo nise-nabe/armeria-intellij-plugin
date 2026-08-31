@@ -137,6 +137,69 @@ class ArmeriaRouteTreeBuilderTest {
         assertEquals(hosted, ArmeriaRouteTreeBuilder.selectedRoute(routeNode))
     }
 
+    @Test
+    fun isPortBinding_isListenPortOnly() {
+        assertTrue(ArmeriaRouteTreeBuilder.isPortBinding(listenPortRoute(moduleName = "app", port = 8080, protocol = "HTTP")))
+        assertTrue(
+            !ArmeriaRouteTreeBuilder.isPortBinding(
+                testRoute(
+                    moduleName = "app",
+                    path = ":8080",
+                    routeMatch = RouteMatch.NON_HTTP,
+                    protocol = "HTTP",
+                    httpMethod = "",
+                    target = "Spring Boot port 8080 (HTTP)",
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun findNode_distinguishesListenPortsByProtocol() {
+        val http = listenPortRoute(moduleName = "app", port = 8080, protocol = "HTTP")
+        val https = listenPortRoute(moduleName = "app", port = 8080, protocol = "HTTPS")
+        val root = ArmeriaRouteTreeBuilder.buildRoot(listOf(http, https))
+
+        val httpNode = ArmeriaRouteTreeBuilder.findNode(root, http)
+        val httpsNode = ArmeriaRouteTreeBuilder.findNode(root, https)
+        assertEquals(http, ArmeriaRouteTreeBuilder.selectedRoute(httpNode))
+        assertEquals(https, ArmeriaRouteTreeBuilder.selectedRoute(httpsNode))
+        assertTrue(httpNode !== httpsNode)
+    }
+
+    @Test
+    fun buildRoot_picksStableVirtualHostNavigation() {
+        val later = virtualHostRoute(moduleName = "app", hostname = "a.example.com", sourceOffset = 80)
+        val earlier = virtualHostRoute(moduleName = "app", hostname = "a.example.com", sourceOffset = 10)
+        val hosted = testRoute(moduleName = "app", path = "/a", virtualHostName = "a.example.com")
+        val root = ArmeriaRouteTreeBuilder.buildRoot(listOf(later, earlier, hosted))
+        val module = root.getChildAt(0) as DefaultMutableTreeNode
+        val hostNode = module.getChildAt(0) as DefaultMutableTreeNode
+        val node = hostNode.userObject as ArmeriaRouteTreeBuilder.VirtualHostNode
+        assertEquals(earlier, node.navigationRoute)
+    }
+
+    @Test
+    fun speedSearchText_includesPortLabelAndStableDefaultHost() {
+        val port = listenPortRoute(moduleName = "app", port = 8080, protocol = "HTTP")
+        val hosted = testRoute(moduleName = "app", path = "/a", virtualHostName = "a.example.com")
+        val host = virtualHostRoute(moduleName = "app", hostname = "a.example.com")
+        val defaultRoute = testRoute(moduleName = "app", path = "/default")
+        val root = ArmeriaRouteTreeBuilder.buildRoot(listOf(port, hosted, host, defaultRoute))
+        val module = root.getChildAt(0) as DefaultMutableTreeNode
+        val portNode = (module.getChildAt(0) as DefaultMutableTreeNode).userObject
+        val defaultHost = (module.getChildAt(1) as DefaultMutableTreeNode).userObject
+        val namedHost = (module.getChildAt(2) as DefaultMutableTreeNode).userObject
+        val portSearch = ArmeriaRouteTreeBuilder.speedSearchText(portNode)
+        assertTrue(portSearch.contains("8080 HTTP"))
+        assertTrue(portSearch.contains(port.speedSearchText))
+        assertEquals(
+            message("route.explorer.tree.virtualHost.default.search"),
+            ArmeriaRouteTreeBuilder.speedSearchText(defaultHost),
+        )
+        assertEquals("a.example.com", ArmeriaRouteTreeBuilder.speedSearchText(namedHost))
+    }
+
     private fun testRoute(
         moduleName: String,
         path: String,
@@ -145,6 +208,7 @@ class ArmeriaRouteTreeBuilderTest {
         protocol: String = "HTTP",
         httpMethod: String = "GET",
         target: String = "Handler",
+        sourceOffset: Int? = null,
     ): ArmeriaRoute =
         ArmeriaRoute(
             protocol = protocol,
@@ -159,11 +223,13 @@ class ArmeriaRouteTreeBuilderTest {
             decorators = emptyList(),
             exceptionHandlers = emptyList(),
             pointer = TestPsiPointer,
+            sourceOffset = sourceOffset,
         )
 
     private fun virtualHostRoute(
         moduleName: String,
         hostname: String,
+        sourceOffset: Int? = null,
     ): ArmeriaRoute =
         testRoute(
             moduleName = moduleName,
@@ -172,6 +238,7 @@ class ArmeriaRouteTreeBuilderTest {
             routeMatch = RouteMatch.VIRTUAL_HOST,
             httpMethod = "",
             target = hostname,
+            sourceOffset = sourceOffset,
         )
 
     private fun listenPortRoute(

@@ -246,7 +246,7 @@ class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixture
         val portRoute = routes.single { it.target.contains("8443") }
         assertEquals("HTTPS", portRoute.protocol)
         assertEquals(":8443", portRoute.path)
-        assertEquals(RouteMatch.NON_HTTP, portRoute.routeMatch)
+        assertEquals(RouteMatch.LISTEN_PORT, portRoute.routeMatch)
         assertEquals(message("route.explorer.spring.port", "8443", "HTTPS"), portRoute.target)
     }
 
@@ -268,10 +268,10 @@ class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixture
         ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
 
         val portRoute = routes.single { it.target.contains("8080") }
-        assertEquals("HTTP, HTTPS", portRoute.protocol)
-        assertEquals("HTTP, HTTPS", portRoute.methodLabel)
+        assertEquals("HTTP+HTTPS", portRoute.protocol)
+        assertEquals(message("route.explorer.method.listenPort"), portRoute.methodLabel)
         assertEquals(":8080", portRoute.path)
-        assertEquals(RouteMatch.NON_HTTP, portRoute.routeMatch)
+        assertEquals(RouteMatch.LISTEN_PORT, portRoute.routeMatch)
     }
 
     fun testConfigInternalServicesDoNotDuplicateWithServiceUnderRoot() {
@@ -579,7 +579,7 @@ class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixture
         val routes = mutableListOf<ArmeriaRoute>()
         ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
 
-        assertEquals("HTTP, HTTPS", routes.single { it.path == ":8080" }.protocol)
+        assertEquals("HTTP+HTTPS", routes.single { it.path == ":8080" }.protocol)
         assertEquals("HTTP", routes.single { it.path == ":8081" }.protocol)
     }
 

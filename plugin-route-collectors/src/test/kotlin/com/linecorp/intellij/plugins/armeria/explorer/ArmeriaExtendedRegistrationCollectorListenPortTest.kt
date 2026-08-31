@@ -185,4 +185,97 @@ class ArmeriaExtendedRegistrationCollectorListenPortTest : ArmeriaFixtureTestBas
         val routes = ArmeriaRouteCollector.collect(project)
         assertTrue(routes.none { it.routeMatch == RouteMatch.LISTEN_PORT })
     }
+
+    fun testCollectPortWithoutProtocolsDefaultsToHttp() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .port(8080)
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val port = routes.firstOrNull { it.routeMatch == RouteMatch.LISTEN_PORT }
+        kotlinAssertNotNull(port)
+        assertEquals(":8080", port.path)
+        assertEquals("HTTP", port.protocol)
+    }
+
+    fun testOmitUnresolvedProtocolArguments() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .port(8080, UNKNOWN)
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        assertTrue(routes.none { it.routeMatch == RouteMatch.LISTEN_PORT })
+    }
+
+    fun testOmitSessionProtocolOfCall() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.common.SessionProtocol;
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .port(8080, SessionProtocol.of("http"))
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        assertTrue(routes.none { it.routeMatch == RouteMatch.LISTEN_PORT })
+    }
+
+    fun testOmitUnresolvedPortArgument() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    int unknown = Integer.parseInt(args[0]);
+                    Server.builder()
+                        .http(unknown)
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        assertTrue(routes.none { it.routeMatch == RouteMatch.LISTEN_PORT })
+    }
 }

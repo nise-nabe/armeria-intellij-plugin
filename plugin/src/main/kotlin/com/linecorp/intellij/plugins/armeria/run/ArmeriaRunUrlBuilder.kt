@@ -73,6 +73,9 @@ object ArmeriaRunUrlBuilder {
     fun listenPortFromSpringRoutes(routes: List<ArmeriaRoute>): ArmeriaListenEndpoint? {
         val candidates =
             routes.mapNotNull { route ->
+                if (route.routeMatch != RouteMatch.LISTEN_PORT) {
+                    return@mapNotNull null
+                }
                 val port = parsePort(springPortPath(route.path) ?: return@mapNotNull null) ?: return@mapNotNull null
                 SpringPortCandidate(
                     endpoint = ArmeriaListenEndpoint(port, https = ArmeriaSessionProtocols.isHttpsOnly(route.protocol)),
