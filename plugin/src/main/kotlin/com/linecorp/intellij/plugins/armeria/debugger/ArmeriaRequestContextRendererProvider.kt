@@ -7,6 +7,7 @@ import com.intellij.debugger.ui.tree.render.ChildrenRenderer
 import com.intellij.debugger.ui.tree.render.CompoundRendererProvider
 import com.intellij.debugger.ui.tree.render.LabelRenderer
 import com.intellij.debugger.ui.tree.render.ValueLabelRenderer
+import com.intellij.ide.highlighter.JavaFileType
 
 /**
  * Shared debugger-renderer helpers for Armeria request-context types.
@@ -24,6 +25,8 @@ abstract class ArmeriaRequestContextRendererProvider : CompoundRendererProvider(
                 TextWithImportsImpl(
                     CodeFragmentKind.EXPRESSION,
                     LABEL_EXPRESSION,
+                    "",
+                    JavaFileType.INSTANCE,
                 ),
             )
         }

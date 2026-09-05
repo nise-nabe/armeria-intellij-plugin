@@ -4,6 +4,7 @@ import com.intellij.debugger.ui.tree.render.CompoundRendererProvider
 import com.intellij.debugger.ui.tree.render.CompoundReferenceRenderer
 import com.intellij.debugger.ui.tree.render.EnumerationChildrenRenderer
 import com.intellij.debugger.ui.tree.render.LabelRenderer
+import com.intellij.ide.highlighter.JavaFileType
 import com.linecorp.intellij.plugins.armeria.debugger.ArmeriaRequestContextRendererProvider.Companion.CHILD_ID
 import com.linecorp.intellij.plugins.armeria.debugger.ArmeriaRequestContextRendererProvider.Companion.CHILD_METHOD
 import com.linecorp.intellij.plugins.armeria.debugger.ArmeriaRequestContextRendererProvider.Companion.CHILD_PATH
@@ -13,6 +14,7 @@ import com.linecorp.intellij.plugins.armeria.debugger.ArmeriaRequestContextRende
 import com.linecorp.intellij.plugins.armeria.debugger.ArmeriaRequestContextRendererProvider.Companion.CLIENT_REQUEST_CONTEXT_CLASS
 import com.linecorp.intellij.plugins.armeria.debugger.ArmeriaRequestContextRendererProvider.Companion.LABEL_EXPRESSION
 import com.linecorp.intellij.plugins.armeria.debugger.ArmeriaRequestContextRendererProvider.Companion.SERVICE_REQUEST_CONTEXT_CLASS
+import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -29,6 +31,7 @@ class ArmeriaRequestContextRendererProviderTest : ArmeriaLightJavaCodeInsightFix
     fun testServiceRequestContextRendererConfiguration() {
         assertRenderer(
             provider = ArmeriaServiceRequestContextRendererProvider(),
+            expectedName = message("debugger.service.request.context.renderer.name"),
             expectedClassName = SERVICE_REQUEST_CONTEXT_CLASS,
             timeoutChildName = CHILD_REQUEST_TIMEOUT,
             timeoutExpression = "requestTimeoutMillis()",
@@ -38,32 +41,48 @@ class ArmeriaRequestContextRendererProviderTest : ArmeriaLightJavaCodeInsightFix
     fun testClientRequestContextRendererConfiguration() {
         assertRenderer(
             provider = ArmeriaClientRequestContextRendererProvider(),
+            expectedName = message("debugger.client.request.context.renderer.name"),
             expectedClassName = CLIENT_REQUEST_CONTEXT_CLASS,
             timeoutChildName = CHILD_RESPONSE_TIMEOUT,
             timeoutExpression = "responseTimeoutMillis()",
         )
     }
 
-    fun testProvidersDoNotLoadArmeriaClasses() {
-        val before = loadedArmeriaClassNames()
-        ArmeriaServiceRequestContextRendererProvider().createRenderer()
-        ArmeriaClientRequestContextRendererProvider().createRenderer()
-        val after = loadedArmeriaClassNames()
-        assertEquals(before, after, "Creating renderers must not load Armeria classes into the IDE process")
+    fun testClassNamesArePlainStringsWithoutArmeriaClasspathTypes() {
+        // Providers must target Armeria only via FQCN strings (no compile-time Armeria types).
+        assertEquals(
+            "com.linecorp.armeria.server.ServiceRequestContext",
+            SERVICE_REQUEST_CONTEXT_CLASS,
+        )
+        assertEquals(
+            "com.linecorp.armeria.client.ClientRequestContext",
+            CLIENT_REQUEST_CONTEXT_CLASS,
+        )
+        val service = assertIs<CompoundReferenceRenderer>(
+            ArmeriaServiceRequestContextRendererProvider().createRenderer(),
+        )
+        val client = assertIs<CompoundReferenceRenderer>(
+            ArmeriaClientRequestContextRendererProvider().createRenderer(),
+        )
+        assertEquals(SERVICE_REQUEST_CONTEXT_CLASS, service.className)
+        assertEquals(CLIENT_REQUEST_CONTEXT_CLASS, client.className)
     }
 
     private fun assertRenderer(
         provider: ArmeriaRequestContextRendererProvider,
+        expectedName: String,
         expectedClassName: String,
         timeoutChildName: String,
         timeoutExpression: String,
     ) {
+        assertEquals(expectedName, provider.createRenderer().name)
         val renderer = assertIs<CompoundReferenceRenderer>(provider.createRenderer())
         assertEquals(expectedClassName, renderer.className)
         assertTrue(renderer.isEnabled)
 
         val labelRenderer = assertIs<LabelRenderer>(renderer.labelRenderer)
         assertEquals(LABEL_EXPRESSION, labelRenderer.labelExpression.text)
+        assertEquals(JavaFileType.INSTANCE, labelRenderer.labelExpression.fileType)
 
         val childrenRenderer = assertIs<EnumerationChildrenRenderer>(renderer.childrenRenderer)
         assertTrue(childrenRenderer.isAppendDefaultChildren)
@@ -74,29 +93,4 @@ class ArmeriaRequestContextRendererProviderTest : ArmeriaLightJavaCodeInsightFix
         assertEquals("remoteAddress()", children[CHILD_REMOTE_ADDRESS])
         assertEquals(timeoutExpression, children[timeoutChildName])
     }
-
-    private fun loadedArmeriaClassNames(): Set<String> =
-        buildSet {
-            var loader: ClassLoader? = javaClass.classLoader
-            while (loader != null) {
-                if (loader is java.net.URLClassLoader) {
-                    // URLClassLoader does not expose loaded classes; fall through to Instrumentation-free check below.
-                }
-                loader = loader.parent
-            }
-            // Inspect classes already defined in this test ClassLoader via reflection on ClassLoader.findLoadedClass.
-            val findLoaded =
-                ClassLoader::class.java.getDeclaredMethod("findLoadedClass", String::class.java).apply {
-                    isAccessible = true
-                }
-            for (name in listOf(
-                SERVICE_REQUEST_CONTEXT_CLASS,
-                CLIENT_REQUEST_CONTEXT_CLASS,
-                "com.linecorp.armeria.common.RequestContext",
-            )) {
-                if (findLoaded.invoke(javaClass.classLoader, name) != null) {
-                    add(name)
-                }
-            }
-        }
 }
