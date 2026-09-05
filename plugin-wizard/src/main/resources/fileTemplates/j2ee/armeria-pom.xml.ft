@@ -140,7 +140,7 @@
             <artifactId>armeria-kafka</artifactId>
         </dependency>
 #end
-#if ($context.hasLibrary("armeria-kotlin"))
+#if ($context.hasLanguage("kotlin") || $context.hasLibrary("armeria-kotlin"))
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria-kotlin</artifactId>

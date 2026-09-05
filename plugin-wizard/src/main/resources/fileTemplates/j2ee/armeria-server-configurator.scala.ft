@@ -1,6 +1,7 @@
 package ${context.rootPackage}
 
 import com.linecorp.armeria.server.ServerBuilder
+import com.linecorp.armeria.server.docs.DocService
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator
 #if ($context.hasLibrary("armeria-grpc"))
 import com.linecorp.armeria.server.grpc.GrpcService
@@ -15,6 +16,7 @@ class ArmeriaConfiguration {
     new ArmeriaServerConfigurator {
       override def configure(sb: ServerBuilder): Unit = {
         sb.annotatedService(blogService)
+        sb.serviceUnder("/docs", new DocService())
 #if ($context.hasLibrary("armeria-grpc"))
         sb.service(GrpcService.builder()
           .addService(new HelloServiceImpl())

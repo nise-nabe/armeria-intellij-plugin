@@ -31,7 +31,7 @@ class BlogService {
     @Post("/blogs")
     @ConsumesJson
     @ProducesJson
-    fun create(request: BlogPost): BlogPost {
+    suspend fun create(request: BlogPost): BlogPost {
         val created = BlogPost().apply {
             id = idGenerator.incrementAndGet()
             title = request.title
@@ -42,19 +42,19 @@ class BlogService {
     }
 
     @Get("/blogs/:id")
-    fun get(@Param id: Int): HttpResponse {
+    suspend fun get(@Param id: Int): HttpResponse {
         val post = posts[id] ?: return HttpResponse.of(HttpStatus.NOT_FOUND)
         return HttpResponse.ofJson(post)
     }
 
     @Get("/blogs")
     @ProducesJson
-    fun list(): Collection<BlogPost> = posts.values
+    suspend fun list(): Collection<BlogPost> = posts.values
 
     @Put("/blogs/:id")
     @ConsumesJson
     @ProducesJson
-    fun update(@Param id: Int, request: BlogPost): HttpResponse {
+    suspend fun update(@Param id: Int, request: BlogPost): HttpResponse {
         val existing = posts[id] ?: return HttpResponse.of(HttpStatus.NOT_FOUND)
         existing.title = request.title
         existing.content = request.content
@@ -62,7 +62,7 @@ class BlogService {
     }
 
     @Delete("/blogs/:id")
-    fun delete(@Param id: Int): HttpResponse {
+    suspend fun delete(@Param id: Int): HttpResponse {
         if (posts.remove(id) == null) {
             return HttpResponse.of(HttpStatus.NOT_FOUND)
         }
