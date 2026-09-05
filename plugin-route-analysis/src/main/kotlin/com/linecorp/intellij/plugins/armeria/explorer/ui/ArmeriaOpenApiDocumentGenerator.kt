@@ -18,13 +18,9 @@ object ArmeriaOpenApiDocumentGenerator {
     private val OPENAPI_METHODS =
         listOf("get", "put", "post", "delete", "options", "head", "patch", "trace")
     private val OPENAPI_METHOD_SET = OPENAPI_METHODS.toSet()
-    private val METHODS_WITH_BODY = setOf("post", "put", "patch")
     private val SIMPLE_IDENTIFIER = Regex("^[A-Za-z_][A-Za-z0-9_]*$")
     private val STATUS_CODE = Regex("""^\d{3}$""")
-    private val COLON_PATH_VARIABLE = Regex(""":([A-Za-z_][A-Za-z0-9_]*)""")
-    private val SIMPLE_EQUALITY_MATCH = Regex("""^([A-Za-z0-9_!#\$%&'*+.^`|~-]+)(?<!!)=([^=].*)$""")
     private val OPERATION_ID_INVALID = Regex("[^A-Za-z0-9_.-]+")
-    private val NEWLINE_CHARACTERS = Regex("[\\r\\n]+")
 
     fun exportable(route: ArmeriaRoute): Boolean {
         if (isUnframedGrpcMethod(route)) {
@@ -160,7 +156,7 @@ object ArmeriaOpenApiDocumentGenerator {
             for (mediaType in mediaTypes) {
                 appendMap(indent + 1, mediaType) {
                     appendMap(indent + 2, "schema") {
-                        if (isJsonMediaType(mediaType)) {
+                        if (ArmeriaRouteContentHintSupport.isJsonMediaType(mediaType)) {
                             appendKeyValue(indent + 3, "type", "object")
                         } else {
                             appendKeyValue(indent + 3, "type", "string")
@@ -200,12 +196,15 @@ object ArmeriaOpenApiDocumentGenerator {
                 .distinct()
                 .map { OpenApiParameter(it, "path", required = true) }
         val headerParameters =
-            equalityMatchFields(route.contentHints, "route.explorer.hint.matchesHeader")
+            ArmeriaRouteContentHintSupport
+                .equalityMatchFields(route.contentHints, "route.explorer.hint.matchesHeader")
                 .map { (name, _) -> OpenApiParameter(name, "header", required = true) }
         val queryParameters =
-            equalityMatchFields(route.contentHints, "route.explorer.hint.matchesParam")
+            ArmeriaRouteContentHintSupport
+                .equalityMatchFields(route.contentHints, "route.explorer.hint.matchesParam")
                 .map { (name, _) -> OpenApiParameter(name, "query", required = true) }
-        val requestContent = if (method in METHODS_WITH_BODY) consumes.distinct() else emptyList()
+        val requestContent =
+            if (ArmeriaRouteContentHintSupport.hasRequestBody(method)) consumes.distinct() else emptyList()
         return OpenApiOperation(
             operationId = uniqueOperationId(route, usedOperationIds),
             summary = firstDescription(route.contentHints),
@@ -237,7 +236,7 @@ object ArmeriaOpenApiDocumentGenerator {
     private fun firstDescription(contentHints: List<String>): String? =
         ArmeriaRouteContentHintSupport
             .payloads(contentHints, "route.explorer.hint.description")
-            .map { it.replace(NEWLINE_CHARACTERS, " ").trim() }
+            .map(ArmeriaRouteContentHintSupport::collapseNewlines)
             .firstOrNull { it.isNotEmpty() }
 
     private fun statusCode(contentHints: List<String>): String {
@@ -248,17 +247,6 @@ object ArmeriaOpenApiDocumentGenerator {
                 ?.trim()
         return if (payload != null && STATUS_CODE.matches(payload)) payload else "200"
     }
-
-    private fun equalityMatchFields(
-        contentHints: List<String>,
-        messageKey: String,
-    ): List<Pair<String, String>> =
-        ArmeriaRouteContentHintSupport
-            .payloads(contentHints, messageKey)
-            .mapNotNull { condition ->
-                val match = SIMPLE_EQUALITY_MATCH.matchEntire(condition.trim()) ?: return@mapNotNull null
-                match.groupValues[1] to match.groupValues[2]
-            }
 
     private fun httpMethod(route: ArmeriaRoute): String =
         if (isUnframedGrpcMethod(route)) {
@@ -286,8 +274,7 @@ object ArmeriaOpenApiDocumentGenerator {
     }
 
     private fun toOpenApiPath(rawPath: String): String {
-        val withBraces = replaceBracePathVariables(rawPath.trim())
-        val converted = replaceColonPathVariables(withBraces)
+        val converted = ArmeriaPathVariableSupport.pathWithPlaceholders(rawPath.trim(), PathType.EXACT)
         return ensureLeadingSlash(converted)
     }
 
@@ -298,88 +285,6 @@ object ArmeriaOpenApiDocumentGenerator {
         return if (path.startsWith("/")) path else "/$path"
     }
 
-    private fun replaceColonPathVariables(path: String): String {
-        val result = StringBuilder()
-        var index = 0
-        while (index < path.length) {
-            if (path[index] == ':' && (index == 0 || path[index - 1] == '/')) {
-                val match = COLON_PATH_VARIABLE.matchAt(path, index)
-                if (match != null) {
-                    result.append('{').append(match.groupValues[1]).append('}')
-                    index = match.range.last + 1
-                    continue
-                }
-            }
-            result.append(path[index])
-            index++
-        }
-        return result.toString()
-    }
-
-    private fun replaceBracePathVariables(path: String): String {
-        val result = StringBuilder()
-        var index = 0
-        while (index < path.length) {
-            if (path[index] == '{') {
-                val end = findMatchingBrace(path, index)
-                if (end < 0) {
-                    result.append(path[index])
-                    index++
-                    continue
-                }
-                val capture = path.substring(index + 1, end)
-                val name = braceVariableName(capture)
-                if (name != null) {
-                    result.append('{').append(name).append('}')
-                } else {
-                    result.append(path, index, end + 1)
-                }
-                index = end + 1
-            } else {
-                result.append(path[index])
-                index++
-            }
-        }
-        return result.toString()
-    }
-
-    private fun findMatchingBrace(
-        path: String,
-        start: Int,
-    ): Int {
-        if (start >= path.length || path[start] != '{') {
-            return -1
-        }
-        var depth = 0
-        for (index in start until path.length) {
-            when (path[index]) {
-                '{' -> depth++
-                '}' -> {
-                    depth--
-                    if (depth == 0) {
-                        return index
-                    }
-                }
-            }
-        }
-        return -1
-    }
-
-    private fun braceVariableName(capture: String): String? {
-        val trimmed = capture.trim().removePrefix("*").trim()
-        if (trimmed.isEmpty()) {
-            return null
-        }
-        val colonIndex = trimmed.indexOf(':')
-        val name = if (colonIndex < 0) trimmed else trimmed.substring(0, colonIndex).trim()
-        return name.takeIf { it.isNotEmpty() }
-    }
-
-    private fun isJsonMediaType(mediaType: String): Boolean {
-        val normalized = mediaType.substringBefore(';').trim().lowercase(Locale.ROOT)
-        return normalized == ArmeriaHttpRequestGenerator.JSON_MEDIA_TYPE || normalized.endsWith("+json")
-    }
-
     private fun isBinaryMediaType(mediaType: String): Boolean {
         val normalized = mediaType.substringBefore(';').trim().lowercase(Locale.ROOT)
         return normalized == "application/binary" ||
@@ -388,7 +293,7 @@ object ArmeriaOpenApiDocumentGenerator {
     }
 
     private fun StringBuilder.appendComment(text: String) {
-        text.split(NEWLINE_CHARACTERS).forEach { line ->
+        text.lineSequence().forEach { line ->
             append("# ").append(line).append('\n')
         }
     }

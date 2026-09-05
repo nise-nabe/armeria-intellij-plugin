@@ -163,4 +163,28 @@ class ArmeriaPathVariableSupportTest {
         )
         assertEquals(listOf("id"), ArmeriaPathVariableSupport.extractPathVariables("/users/{id}"))
     }
+
+    @Test
+    fun pathWithPlaceholdersRewritesBraceAndColonVariables() {
+        assertEquals(
+            "/users/{id}/hello/{name}",
+            ArmeriaPathVariableSupport.pathWithPlaceholders("/users/{id}/hello/:name", PathType.EXACT),
+        )
+        assertEquals(
+            "/years/{year}",
+            ArmeriaPathVariableSupport.pathWithPlaceholders("/years/{year:[0-9]{4}}", PathType.EXACT),
+        )
+        assertEquals(
+            "/files/{path}",
+            ArmeriaPathVariableSupport.pathWithPlaceholders("/files/{*path}", PathType.EXACT),
+        )
+        assertEquals(
+            "regex:^/users/(?<id>\\d+)$",
+            ArmeriaPathVariableSupport.pathWithPlaceholders("regex:^/users/(?<id>\\d+)$", PathType.REGEX),
+        )
+        assertEquals(
+            "/users/**",
+            ArmeriaPathVariableSupport.pathWithPlaceholders("/users/**", PathType.GLOB),
+        )
+    }
 }
