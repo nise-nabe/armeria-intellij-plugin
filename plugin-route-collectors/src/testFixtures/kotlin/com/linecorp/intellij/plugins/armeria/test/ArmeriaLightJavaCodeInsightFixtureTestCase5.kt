@@ -45,4 +45,10 @@ abstract class ArmeriaLightJavaCodeInsightFixtureTestCase5(
     fun armeriaFixtureTearDown() {
         clearArmeriaRouteCollectionMetricsForTests()
     }
+
+    companion object {
+        init {
+            suppressUltimatePostStartupConstructorErrors()
+        }
+    }
 }

@@ -22,6 +22,7 @@ abstract class ArmeriaLightJavaCodeInsightFixtureTestCase : LightJavaCodeInsight
         myFixture.configureArmeriaFixture(relativePath) { resolveModuleTestDataPath() }
 
     override fun setUp() {
+        suppressUltimatePostStartupConstructorErrors()
         super.setUp()
         allowArmeriaTestSandboxRoots(testRootDisposable)
     }
@@ -31,6 +32,12 @@ abstract class ArmeriaLightJavaCodeInsightFixtureTestCase : LightJavaCodeInsight
             clearArmeriaRouteCollectionMetricsForTests()
         } finally {
             super.tearDown()
+        }
+    }
+
+    companion object {
+        init {
+            suppressUltimatePostStartupConstructorErrors()
         }
     }
 }
