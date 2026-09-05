@@ -52,6 +52,7 @@ class ArmeriaWizardTemplateRenderingTest {
         val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-pom.xml.ft", context)
 
         assertTrue(rendered.contains("<artifactId>armeria-tomcat8</artifactId>"))
+        assertTrue(rendered.contains("<artifactId>armeria-kotlin</artifactId>"))
         assertTrue(rendered.contains("kotlin-maven-plugin"))
         assertFalse(rendered.contains("<artifactId>armeria-tomcat9</artifactId>"))
     }
@@ -67,6 +68,7 @@ class ArmeriaWizardTemplateRenderingTest {
         val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-build.gradle.kts.ft", context)
 
         assertTrue(rendered.contains("armeria-spring-boot3-starter"))
+        assertTrue(rendered.contains("armeria-kotlin"))
         assertTrue(rendered.contains("org.springframework.boot"))
         assertTrue(rendered.contains("kotlin(\"plugin.spring\")"))
     }
@@ -299,6 +301,22 @@ class ArmeriaWizardTemplateRenderingTest {
     }
 
     @Test
+    fun kotlinLanguageAddsArmeriaKotlinInGroovyGradleWithoutLibraryCheckbox() {
+        val context = ArmeriaWizardTemplateTestContext(language = "kotlin", libraries = emptySet())
+        val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-build.gradle.ft", context)
+
+        assertTrue(rendered.contains("armeria-kotlin"))
+    }
+
+    @Test
+    fun kotlinLanguageAddsArmeriaKotlinInMavenWithoutLibraryCheckbox() {
+        val context = ArmeriaWizardTemplateTestContext(language = "kotlin", libraries = emptySet())
+        val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-pom.xml.ft", context)
+
+        assertTrue(rendered.contains("<artifactId>armeria-kotlin</artifactId>"))
+    }
+
+    @Test
     fun javaLanguageOmitsArmeriaKotlinUnlessLibrarySelected() {
         val without =
             renderBuildTemplate(
@@ -341,6 +359,36 @@ class ArmeriaWizardTemplateRenderingTest {
         assertTrue(rendered.contains("DocService"))
         assertTrue(rendered.contains("serviceUnder(\"/docs\""))
         assertTrue(rendered.contains("new BlogService()"))
+    }
+
+    @Test
+    fun javaServerConfiguratorMountsDocService() {
+        val rendered =
+            renderBuildTemplate(
+                "fileTemplates/j2ee/armeria-server-configurator.java.ft",
+                ArmeriaWizardTemplateTestContext(
+                    language = "java",
+                    libraries = setOf("armeria-spring-boot3-starter"),
+                ),
+            )
+
+        assertTrue(rendered.contains("DocService"))
+        assertTrue(rendered.contains("serviceUnder(\"/docs\""))
+    }
+
+    @Test
+    fun scalaServerConfiguratorMountsDocService() {
+        val rendered =
+            renderBuildTemplate(
+                "fileTemplates/j2ee/armeria-server-configurator.scala.ft",
+                ArmeriaWizardTemplateTestContext(
+                    language = "scala",
+                    libraries = setOf("armeria-spring-boot3-starter"),
+                ),
+            )
+
+        assertTrue(rendered.contains("DocService"))
+        assertTrue(rendered.contains("serviceUnder(\"/docs\""))
     }
 
     private fun renderBuildTemplate(

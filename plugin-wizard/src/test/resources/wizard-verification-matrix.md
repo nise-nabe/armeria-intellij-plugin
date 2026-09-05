@@ -11,8 +11,8 @@ Automated coverage lives in:
 |---|-------|----------|-----------|----------------------------------|
 | 1 | Gradle (Kotlin DSL) | Kotlin | `armeria-grpc`, JUnit 5 | `kotlin("jvm")`, `armeria-grpc`, `armeria-kotlin`, `armeria-junit5`, `useJUnitJupiter()` |
 | 2 | Gradle (Groovy) | Scala | `armeria-scala_2.13` | `id 'scala'`, `armeria-scala_2.13`, `scala-library:2.13.8` |
-| 3 | Maven | Kotlin | `armeria-tomcat8` | `<artifactId>armeria-tomcat8</artifactId>`, `kotlin-maven-plugin` |
-| 4 | Gradle (Kotlin DSL) | Kotlin | `armeria-spring-boot3-starter` | `armeria-spring-boot3-starter`, `application.yml`, `ArmeriaConfiguration` |
+| 3 | Maven | Kotlin | `armeria-tomcat8` | `<artifactId>armeria-tomcat8</artifactId>`, `armeria-kotlin`, `kotlin-maven-plugin` |
+| 4 | Gradle (Kotlin DSL) | Kotlin | `armeria-spring-boot3-starter` | `armeria-spring-boot3-starter`, `armeria-kotlin`, `application.yml`, `ArmeriaConfiguration` |
 | 5 | Gradle (Kotlin DSL) | Java | `armeria-grpc` | `armeria-grpc`, `src/main/proto/hello.proto`, `HelloServiceImpl` |
 | 6 | Gradle (Groovy) | Scala | core Armeria | `Main.scala` and `BlogService.scala` (compilable-looking sample; JUnit test is not generated) |
 
