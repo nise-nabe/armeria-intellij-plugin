@@ -6,6 +6,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.SmartPsiElementPointer
+import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceSupport
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRouteHint
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
@@ -605,7 +606,7 @@ class ArmeriaHttpRequestGeneratorTest {
     }
 
     @Test
-    fun requestText_grpcPrefersLastSyncedDocServiceBaseUrl() {
+    fun requestText_grpcUsesInjectedDocsBaseUrlWithTrailingSlash() {
         val route =
             route(
                 protocol = "gRPC",
@@ -626,6 +627,71 @@ class ArmeriaHttpRequestGeneratorTest {
             ),
         )
         assertFalse(text.contains("http://localhost:8080/docs/"))
+    }
+
+    @Test
+    fun requestText_grpcResolvesDocsBaseLikeHttpRequestFileWriter_staticMount() {
+        val grpc =
+            route(
+                protocol = "gRPC",
+                path = "/example.EchoService/Echo",
+                target = "example.EchoService.Echo",
+                routeMatch = RouteMatch.NON_HTTP,
+            )
+        val docs =
+            route(
+                path = "/internal/docs",
+                protocol = "DocService",
+                isDocService = true,
+            )
+        val docsBaseUrl =
+            ArmeriaDocServiceSupport.docsBaseUrl(
+                routes = listOf(grpc, docs),
+                defaultBaseUrl = ArmeriaHttpRequestGenerator.DEFAULT_BASE_URL,
+            )
+
+        val text = ArmeriaHttpRequestGenerator.requestText(grpc, docsBaseUrl = docsBaseUrl)
+
+        assertEquals("http://localhost:8080/internal/docs", docsBaseUrl)
+        assertTrue(
+            text.contains(
+                "# Invoke via DocService: http://localhost:8080/internal/docs/#/methods/example.EchoService/Echo",
+            ),
+        )
+        assertFalse(text.contains("http://localhost:8080/docs/#"))
+    }
+
+    @Test
+    fun requestText_grpcResolvesDocsBaseLikeHttpRequestFileWriter_prefersLastSynced() {
+        val grpc =
+            route(
+                protocol = "gRPC",
+                path = "/example.EchoService/Echo",
+                target = "example.EchoService.Echo",
+                routeMatch = RouteMatch.NON_HTTP,
+            )
+        val docs =
+            route(
+                path = "/docs",
+                protocol = "DocService",
+                isDocService = true,
+            )
+        val docsBaseUrl =
+            ArmeriaDocServiceSupport.docsBaseUrl(
+                routes = listOf(grpc, docs),
+                lastSyncedBaseUrl = "http://127.0.0.1:9090/internal/docs/",
+                defaultBaseUrl = ArmeriaHttpRequestGenerator.DEFAULT_BASE_URL,
+            )
+
+        val text = ArmeriaHttpRequestGenerator.requestText(grpc, docsBaseUrl = docsBaseUrl)
+
+        assertEquals("http://127.0.0.1:9090/internal/docs", docsBaseUrl)
+        assertTrue(
+            text.contains(
+                "# Invoke via DocService: http://127.0.0.1:9090/internal/docs/#/methods/example.EchoService/Echo",
+            ),
+        )
+        assertFalse(text.contains("http://localhost:8080/docs"))
     }
 
     @Test
@@ -662,6 +728,7 @@ class ArmeriaHttpRequestGeneratorTest {
         contentHints: List<String> = emptyList(),
         exampleRequests: List<String> = emptyList(),
         exampleHeaders: List<String> = emptyList(),
+        isDocService: Boolean = false,
     ): ArmeriaRoute =
         ArmeriaRoute(
             protocol = protocol,
@@ -671,7 +738,7 @@ class ArmeriaHttpRequestGeneratorTest {
             routeMatch = routeMatch,
             moduleName = "app",
             targetUnresolved = false,
-            isDocService = false,
+            isDocService = isDocService,
             pathType = pathType,
             decorators = emptyList(),
             exceptionHandlers = emptyList(),
