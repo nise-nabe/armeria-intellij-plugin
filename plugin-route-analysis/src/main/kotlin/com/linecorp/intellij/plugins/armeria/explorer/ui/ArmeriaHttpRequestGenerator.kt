@@ -4,10 +4,10 @@ import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServi
 import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceMethodRef
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRoutePath
-import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaGrpcServiceOptionsSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaPathVariableSupport
 import com.linecorp.intellij.plugins.armeria.message
 import java.util.Locale
 
@@ -16,13 +16,7 @@ object ArmeriaHttpRequestGenerator {
     const val JSON_MEDIA_TYPE = "application/json"
 
     private val NON_SLUG_CHARACTERS = Regex("[^a-zA-Z0-9._-]")
-    private val NEWLINE_CHARACTERS = Regex("[\\r\\n]+")
-    private val COLON_PATH_VARIABLE = Regex(""":([A-Za-z_][A-Za-z0-9_]*)""")
     private val GRAPHQL_OPERATION_TARGET = Regex("""^(Query|Mutation|Subscription)\.[A-Za-z_][A-Za-z0-9_]*$""")
-    // tchar minus a trailing '!' immediately before '=' so `name!=value` is not a header pair.
-
-    private val SIMPLE_HEADER_MATCH = Regex("""^([A-Za-z0-9_!#\$%&'*+.^`|~-]+)(?<!!)=([^=].*)$""")
-    private val METHODS_WITH_BODY = setOf("POST", "PUT", "PATCH")
 
     fun supports(route: ArmeriaRoute): Boolean {
         if (isWebSocketRoute(route)) {
@@ -85,7 +79,7 @@ object ArmeriaHttpRequestGenerator {
             }
         }
         val method = httpMethod(route)
-        val resolvedPath = pathWithPlaceholders(route.path, route.pathType)
+        val resolvedPath = ArmeriaPathVariableSupport.pathWithPlaceholders(route.path, route.pathType)
         val pathWithQuery = appendQuery(resolvedPath, matchQueryString(route.contentHints))
         val consumes = ArmeriaRouteContentHintSupport.mediaTypes(route.contentHints, "route.explorer.hint.consumes")
         val produces = ArmeriaRouteContentHintSupport.mediaTypes(route.contentHints, "route.explorer.hint.produces")
@@ -101,8 +95,8 @@ object ArmeriaHttpRequestGenerator {
             for (comment in descriptionComments(route.contentHints)) {
                 appendLine("# $comment")
             }
-            if (exampleBody != null && method.uppercase(Locale.ROOT) !in METHODS_WITH_BODY) {
-                appendLine("# Example request: ${exampleBody.replace(NEWLINE_CHARACTERS, " ").trim()}")
+            if (exampleBody != null && !ArmeriaRouteContentHintSupport.hasRequestBody(method)) {
+                appendLine("# Example request: ${ArmeriaRouteContentHintSupport.collapseNewlines(exampleBody)}")
             }
             appendLine("$method $normalizedBaseUrl$pathWithQuery")
             val emittedHeaderNames = linkedSetOf<String>()
@@ -120,7 +114,7 @@ object ArmeriaHttpRequestGenerator {
             }
             val resolvedContentType =
                 contentType
-                    ?: exampleBody?.takeIf { method.uppercase(Locale.ROOT) in METHODS_WITH_BODY }?.let { JSON_MEDIA_TYPE }
+                    ?: exampleBody?.takeIf { ArmeriaRouteContentHintSupport.hasRequestBody(method) }?.let { JSON_MEDIA_TYPE }
             if (resolvedContentType != null && "content-type" !in emittedHeaderNames) {
                 appendLine("Content-Type: $resolvedContentType")
             }
@@ -128,9 +122,9 @@ object ArmeriaHttpRequestGenerator {
                 appendLine("Accept: $accept")
             }
             appendLine()
-            if (method.uppercase(Locale.ROOT) in METHODS_WITH_BODY) {
+            if (ArmeriaRouteContentHintSupport.hasRequestBody(method)) {
                 when {
-                    resolvedContentType != null && isJsonMediaType(resolvedContentType) ->
+                    resolvedContentType != null && ArmeriaRouteContentHintSupport.isJsonMediaType(resolvedContentType) ->
                         appendLine(exampleBody ?: "{}")
                     exampleBody != null -> appendLine(exampleBody)
                 }
@@ -268,88 +262,21 @@ object ArmeriaHttpRequestGenerator {
 
     private fun normalizeBaseUrl(baseUrl: String): String = baseUrl.trimEnd('/')
 
-    private fun pathWithPlaceholders(
-        path: String,
-        pathType: PathType,
-    ): String {
-        if (pathType == PathType.REGEX || pathType == PathType.GLOB) {
-            return path
-        }
-        var resolved = replaceBracePathVariables(path)
-        resolved = COLON_PATH_VARIABLE.replace(resolved) { match -> "{${match.groupValues[1]}}" }
-        return resolved
-    }
-
-    private fun replaceBracePathVariables(path: String): String {
-        val result = StringBuilder()
-        var index = 0
-        while (index < path.length) {
-            if (path[index] == '{') {
-                val end = findMatchingBrace(path, index)
-                if (end < 0) {
-                    result.append(path[index])
-                    index++
-                    continue
-                }
-                val capture = path.substring(index + 1, end)
-                result.append('{').append(braceVariableName(capture)).append('}')
-                index = end + 1
-            } else {
-                result.append(path[index])
-                index++
-            }
-        }
-        return result.toString()
-    }
-
-    private fun findMatchingBrace(
-        path: String,
-        start: Int,
-    ): Int {
-        if (start >= path.length || path[start] != '{') {
-            return -1
-        }
-        var depth = 0
-        for (index in start until path.length) {
-            when (path[index]) {
-                '{' -> depth++
-                '}' -> {
-                    depth--
-                    if (depth == 0) {
-                        return index
-                    }
-                }
-            }
-        }
-        return -1
-    }
-
-    private fun braceVariableName(capture: String): String {
-        val trimmed = capture.trim()
-        val colonIndex = trimmed.indexOf(':')
-        return if (colonIndex < 0) trimmed else trimmed.substring(0, colonIndex).trim()
-    }
-
     private fun contentTypeForMethod(
         method: String,
         consumes: List<String>,
     ): String? {
-        if (method.uppercase(Locale.ROOT) !in METHODS_WITH_BODY || consumes.isEmpty()) {
+        if (!ArmeriaRouteContentHintSupport.hasRequestBody(method) || consumes.isEmpty()) {
             return null
         }
-        return consumes.firstOrNull(::isJsonMediaType) ?: consumes.first()
-    }
-
-    private fun isJsonMediaType(mediaType: String): Boolean {
-        val normalized = mediaType.substringBefore(';').trim().lowercase(Locale.ROOT)
-        return normalized == JSON_MEDIA_TYPE || normalized.endsWith("+json")
+        return consumes.firstOrNull(ArmeriaRouteContentHintSupport::isJsonMediaType) ?: consumes.first()
     }
 
     private fun matchHeaderFields(contentHints: List<String>): List<Pair<String, String>> =
-        equalityMatchFields(contentHints, "route.explorer.hint.matchesHeader")
+        ArmeriaRouteContentHintSupport.equalityMatchFields(contentHints, "route.explorer.hint.matchesHeader")
 
     private fun matchQueryString(contentHints: List<String>): String {
-        val fields = equalityMatchFields(contentHints, "route.explorer.hint.matchesParam")
+        val fields = ArmeriaRouteContentHintSupport.equalityMatchFields(contentHints, "route.explorer.hint.matchesParam")
         if (fields.isEmpty()) {
             return ""
         }
@@ -370,19 +297,8 @@ object ArmeriaHttpRequestGenerator {
     private fun descriptionComments(contentHints: List<String>): List<String> =
         ArmeriaRouteContentHintSupport
             .payloads(contentHints, "route.explorer.hint.description")
-            .map { text -> text.replace(NEWLINE_CHARACTERS, " ").trim() }
+            .map(ArmeriaRouteContentHintSupport::collapseNewlines)
             .filter { it.isNotEmpty() }
-
-    private fun equalityMatchFields(
-        contentHints: List<String>,
-        messageKey: String,
-    ): List<Pair<String, String>> =
-        ArmeriaRouteContentHintSupport
-            .payloads(contentHints, messageKey)
-            .mapNotNull { condition ->
-                val match = SIMPLE_HEADER_MATCH.matchEntire(condition.trim()) ?: return@mapNotNull null
-                match.groupValues[1] to match.groupValues[2]
-            }
 
     private fun pathSlug(path: String): String {
         val trimmed = path.trim('/')

@@ -4,6 +4,8 @@
 
 ### Added
 
+- Route Explorer can export an OpenAPI 3 document (`Export OpenAPI`) from annotated HTTP routes and unframed gRPC JSON to `.idea/armeria-openapi.yaml`, mapping path variables, `@Consumes` / `@Produces`, and `@StatusCode`. Thrift and framed gRPC are omitted with a comment. DocService remains the first-class UI.
+
 ### Changed
 
 ### Deprecated

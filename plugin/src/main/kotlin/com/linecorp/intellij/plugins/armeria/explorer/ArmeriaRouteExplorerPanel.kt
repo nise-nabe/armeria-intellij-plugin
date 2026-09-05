@@ -91,6 +91,7 @@ class ArmeriaRouteExplorerPanel(
                     },
                 )
                 add(ArmeriaGenerateHttpRequestAction { selectedRouteFromTree() })
+                add(ArmeriaExportOpenApiAction { filterRoutes(allRoutes()) })
                 add(ArmeriaGenerateTestMethodAction { selectedRouteFromTree() })
                 add(
                     ArmeriaGotoMatchingClientAction(

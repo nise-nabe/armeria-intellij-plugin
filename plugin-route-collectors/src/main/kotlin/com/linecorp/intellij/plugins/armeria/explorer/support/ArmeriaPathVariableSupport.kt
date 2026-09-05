@@ -58,6 +58,20 @@ object ArmeriaPathVariableSupport {
             pathVariableOccurrences(rawPath).any { it.name == name && !it.renameable }
         }
 
+    /**
+     * Rewrites brace captures (`{id:regex}`, `{*path}`) to `{name}` and colon parameters
+     * (`:name` after `/`) to `{name}`. Regex and glob paths are returned unchanged.
+     */
+    fun pathWithPlaceholders(
+        path: String,
+        pathType: PathType,
+    ): String {
+        if (pathType == PathType.REGEX || pathType == PathType.GLOB) {
+            return path
+        }
+        return replaceColonPathParameters(replaceBraceCapturesWithNames(path))
+    }
+
     fun pathVariableOccurrences(path: String): List<PathVariableOccurrence> {
         val typed = typedPath(path)
         if (!typed.bindVariables) {
@@ -203,6 +217,51 @@ object ArmeriaPathVariableSupport {
         }
         replaced.append(gap, cursor, gap.length)
         return replaced.toString()
+    }
+
+    private fun replaceBraceCapturesWithNames(path: String): String {
+        val result = StringBuilder()
+        var index = 0
+        while (index < path.length) {
+            if (path[index] == '{') {
+                val end = findMatchingBrace(path, index)
+                if (end < 0) {
+                    result.append(path[index])
+                    index++
+                    continue
+                }
+                val capture = path.substring(index + 1, end)
+                val name = braceVariableName(capture)
+                if (name != null) {
+                    result.append('{').append(name).append('}')
+                } else {
+                    result.append(path, index, end + 1)
+                }
+                index = end + 1
+            } else {
+                result.append(path[index])
+                index++
+            }
+        }
+        return result.toString()
+    }
+
+    private fun replaceColonPathParameters(path: String): String {
+        val result = StringBuilder()
+        var index = 0
+        while (index < path.length) {
+            if (path[index] == ':' && isColonPathParameter(path, index)) {
+                val match = COLON_PATH_VARIABLE_PATTERN.matchAt(path, index)
+                if (match != null) {
+                    result.append('{').append(match.groupValues[1]).append('}')
+                    index = match.range.last + 1
+                    continue
+                }
+            }
+            result.append(path[index])
+            index++
+        }
+        return result.toString()
     }
 
     private fun isColonPathParameter(
