@@ -45,7 +45,7 @@ internal object ArmeriaServerDecoratorSupport {
                         entry.kind == ArmeriaServerDecoratorKind.AUTH ||
                             entry.kind == ArmeriaServerDecoratorKind.LOGGING
                     ) &&
-                        decoratorPathsOverlap(entry.pathPattern, visitedEntry.pathPattern)
+                        decoratorPathsOverlap(entry, visitedEntry)
                 }
             addAuthAfterLogging(
                 visited = call,
@@ -396,11 +396,6 @@ internal object ArmeriaServerDecoratorSupport {
         return current
     }
 
-    private fun isGlobalBuilderDecoratorCall(call: PsiMethodCallExpression): Boolean =
-        isBuilderDecoratorCall(call) &&
-            call.methodExpression.referenceName == "decorator" &&
-            call.argumentList.expressionCount == 1
-
     private fun decoratorApplicationOffset(call: PsiMethodCallExpression): Int =
         call.methodExpression.referenceNameElement?.textOffset ?: call.textOffset
 
@@ -517,6 +512,7 @@ internal object ArmeriaServerDecoratorSupport {
         val call: PsiMethodCallExpression,
         val kind: ArmeriaServerDecoratorKind?,
         val pathPattern: String?,
+        val decoratorUnder: Boolean,
         val decoratorExpression: PsiExpression,
     )
 
@@ -528,8 +524,9 @@ internal object ArmeriaServerDecoratorSupport {
         val arguments = call.argumentList.expressions
         val pathExpression: PsiExpression?
         val decoratorExpression: PsiExpression
+        val decoratorUnder = methodName == "decoratorUnder"
         when {
-            methodName == "decoratorUnder" -> {
+            decoratorUnder -> {
                 pathExpression = arguments.getOrNull(0)
                 decoratorExpression = arguments.getOrNull(1) ?: return null
             }
@@ -553,19 +550,47 @@ internal object ArmeriaServerDecoratorSupport {
             call = call,
             kind = decoratorKindFromExpression(decoratorExpression),
             pathPattern = pathPattern,
+            decoratorUnder = decoratorUnder,
             decoratorExpression = decoratorExpression,
         )
     }
 
     private fun decoratorPathsOverlap(
-        left: String?,
-        right: String?,
+        left: BuilderDecoratorEntry,
+        right: BuilderDecoratorEntry,
     ): Boolean {
-        if (left.isNullOrBlank() || right.isNullOrBlank()) {
+        val leftPath = left.pathPattern
+        val rightPath = right.pathPattern
+        if (leftPath.isNullOrBlank() || rightPath.isNullOrBlank()) {
             return true
         }
-        return ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(left, right) ||
-            ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(right, left)
+        return when {
+            left.decoratorUnder && right.decoratorUnder ->
+                prefixPathCovers(leftPath, rightPath) || prefixPathCovers(rightPath, leftPath)
+            left.decoratorUnder ->
+                prefixPathCovers(leftPath, rightPath) ||
+                    ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(rightPath, leftPath)
+            right.decoratorUnder ->
+                prefixPathCovers(rightPath, leftPath) ||
+                    ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(leftPath, rightPath)
+            else ->
+                ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(leftPath, rightPath) ||
+                    ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(rightPath, leftPath)
+        }
+    }
+
+    private fun prefixPathCovers(
+        prefix: String,
+        path: String,
+    ): Boolean {
+        val normalizedPrefix = normalizeDecoratorPath(prefix)
+        val normalizedPath = normalizeDecoratorPath(path)
+        return normalizedPath == normalizedPrefix || normalizedPath.startsWith("$normalizedPrefix/")
+    }
+
+    private fun normalizeDecoratorPath(path: String): String {
+        val trimmed = path.trim().trim('"').trimEnd('/')
+        return if (trimmed.isEmpty()) "/" else trimmed
     }
 
     private fun decoratorKindFromExpression(expression: PsiExpression): ArmeriaServerDecoratorKind? =

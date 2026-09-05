@@ -337,6 +337,48 @@ class ArmeriaServerDecoratorInspectionTest : ArmeriaFixtureTestBase5() {
         assertHighlights(message("inspection.server.decorator.auth.after.logging"), 1)
     }
 
+    @Test
+    fun highlightsAuthAfterLoggingOnNestedDecoratorUnder() {
+        configureServer(
+            """
+            Server.builder()
+                  .decoratorUnder("/api", LoggingService.newDecorator())
+                  .decoratorUnder("/api/v1", AuthService.newDecorator())
+                  .service("/api/v1", (HttpService) null)
+                  .build();
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.auth.after.logging"), 1)
+    }
+
+    @Test
+    fun allowsAuthAfterLoggingOnSiblingDecoratorUnder() {
+        configureServer(
+            """
+            Server.builder()
+                  .decoratorUnder("/api", LoggingService.newDecorator())
+                  .decoratorUnder("/other", AuthService.newDecorator())
+                  .service("/api", (HttpService) null)
+                  .build();
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.auth.after.logging"), 0)
+    }
+
+    @Test
+    fun highlightsAuthAfterLoggingWhenGlobalLoggingThenPathAuth() {
+        configureServer(
+            """
+            Server.builder()
+                  .decorator(LoggingService.newDecorator())
+                  .decorator("/api", AuthService.newDecorator())
+                  .service("/api", (HttpService) null)
+                  .build();
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.auth.after.logging"), 1)
+    }
+
     private fun configureServer(body: String) {
         myFixture.configureByText(
             "Main.java",

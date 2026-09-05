@@ -48,7 +48,7 @@ internal object ArmeriaServerDecoratorKotlinSupport {
                         entry.kind == ArmeriaServerDecoratorKind.AUTH ||
                             entry.kind == ArmeriaServerDecoratorKind.LOGGING
                     ) &&
-                        decoratorPathsOverlap(entry.pathPattern, visitedEntry.pathPattern)
+                        decoratorPathsOverlap(entry, visitedEntry)
                 }
             addAuthAfterLogging(
                 visited = call,
@@ -435,11 +435,6 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         return current
     }
 
-    private fun isGlobalBuilderDecoratorCall(call: KtCallExpression): Boolean =
-        isBuilderDecoratorCall(call) &&
-            ArmeriaKotlinExpressionSupport.resolveCallName(call) == "decorator" &&
-            call.valueArguments.size == 1
-
     private fun decoratorApplicationOffset(call: KtCallExpression): Int {
         val callee = call.calleeExpression ?: return call.textOffset
         val selector = (callee as? KtDotQualifiedExpression)?.selectorExpression
@@ -561,6 +556,7 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         val call: KtCallExpression,
         val kind: ArmeriaServerDecoratorKind?,
         val pathPattern: String?,
+        val decoratorUnder: Boolean,
         val decoratorExpression: KtExpression,
     )
 
@@ -572,8 +568,9 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         val arguments = call.valueArguments.mapNotNull { it.getArgumentExpression() }
         val pathExpression: KtExpression?
         val decoratorExpression: KtExpression
+        val decoratorUnder = methodName == "decoratorUnder"
         when {
-            methodName == "decoratorUnder" -> {
+            decoratorUnder -> {
                 pathExpression = arguments.getOrNull(0)
                 decoratorExpression = arguments.getOrNull(1) ?: return null
             }
@@ -597,19 +594,47 @@ internal object ArmeriaServerDecoratorKotlinSupport {
             call = call,
             kind = decoratorKindFromExpression(decoratorExpression),
             pathPattern = pathPattern,
+            decoratorUnder = decoratorUnder,
             decoratorExpression = decoratorExpression,
         )
     }
 
     private fun decoratorPathsOverlap(
-        left: String?,
-        right: String?,
+        left: BuilderDecoratorEntry,
+        right: BuilderDecoratorEntry,
     ): Boolean {
-        if (left.isNullOrBlank() || right.isNullOrBlank()) {
+        val leftPath = left.pathPattern
+        val rightPath = right.pathPattern
+        if (leftPath.isNullOrBlank() || rightPath.isNullOrBlank()) {
             return true
         }
-        return ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(left, right) ||
-            ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(right, left)
+        return when {
+            left.decoratorUnder && right.decoratorUnder ->
+                prefixPathCovers(leftPath, rightPath) || prefixPathCovers(rightPath, leftPath)
+            left.decoratorUnder ->
+                prefixPathCovers(leftPath, rightPath) ||
+                    ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(rightPath, leftPath)
+            right.decoratorUnder ->
+                prefixPathCovers(rightPath, leftPath) ||
+                    ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(leftPath, rightPath)
+            else ->
+                ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(leftPath, rightPath) ||
+                    ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(rightPath, leftPath)
+        }
+    }
+
+    private fun prefixPathCovers(
+        prefix: String,
+        path: String,
+    ): Boolean {
+        val normalizedPrefix = normalizeDecoratorPath(prefix)
+        val normalizedPath = normalizeDecoratorPath(path)
+        return normalizedPath == normalizedPrefix || normalizedPath.startsWith("$normalizedPrefix/")
+    }
+
+    private fun normalizeDecoratorPath(path: String): String {
+        val trimmed = path.trim().trim('"').trimEnd('/')
+        return if (trimmed.isEmpty()) "/" else trimmed
     }
 
     private fun decoratorKindFromExpression(expression: KtExpression): ArmeriaServerDecoratorKind? =
