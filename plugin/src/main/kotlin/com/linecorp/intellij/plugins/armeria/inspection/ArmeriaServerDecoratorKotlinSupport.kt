@@ -36,14 +36,23 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         call: KtCallExpression,
         findings: MutableList<ArmeriaServerDecoratorFinding>,
     ) {
-        if (isGlobalBuilderDecoratorCall(call)) {
+        if (isBuilderDecoratorCall(call)) {
+            val entries =
+                collectBuilderDecoratorCalls(call)
+                    .mapNotNull(::parseBuilderDecoratorEntry)
+                    .sortedBy { decoratorApplicationOffset(it.call) }
+            val visitedEntry = entries.firstOrNull { it.call == call } ?: return
+            val overlapping =
+                entries.filter { entry ->
+                    (
+                        entry.kind == ArmeriaServerDecoratorKind.AUTH ||
+                            entry.kind == ArmeriaServerDecoratorKind.LOGGING
+                    ) &&
+                        decoratorPathsOverlap(entry, visitedEntry)
+                }
             addAuthAfterLogging(
                 visited = call,
-                kinds =
-                    collectBuilderDecoratorCalls(call)
-                        .filter(::isGlobalBuilderDecoratorCall)
-                        .sortedBy(::decoratorApplicationOffset)
-                        .map { it to decoratorKind(it) },
+                kinds = overlapping.map { it.call to it.kind },
                 findings = findings,
             )
             return
@@ -426,11 +435,6 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         return current
     }
 
-    private fun isGlobalBuilderDecoratorCall(call: KtCallExpression): Boolean =
-        isBuilderDecoratorCall(call) &&
-            ArmeriaKotlinExpressionSupport.resolveCallName(call) == "decorator" &&
-            call.valueArguments.size == 1
-
     private fun decoratorApplicationOffset(call: KtCallExpression): Int {
         val callee = call.calleeExpression ?: return call.textOffset
         val selector = (callee as? KtDotQualifiedExpression)?.selectorExpression
@@ -541,9 +545,96 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         return null
     }
 
-    private fun decoratorKind(call: KtCallExpression): ArmeriaServerDecoratorKind? {
-        val argument = call.valueArguments.firstOrNull()?.getArgumentExpression() ?: return null
-        return decoratorKindFromExpression(argument)
+    private fun decoratorKind(call: KtCallExpression): ArmeriaServerDecoratorKind? =
+        parseBuilderDecoratorEntry(call)?.kind
+            ?: call.valueArguments
+                .firstOrNull()
+                ?.getArgumentExpression()
+                ?.let(::decoratorKindFromExpression)
+
+    private data class BuilderDecoratorEntry(
+        val call: KtCallExpression,
+        val kind: ArmeriaServerDecoratorKind?,
+        val pathPattern: String?,
+        val decoratorUnder: Boolean,
+        val decoratorExpression: KtExpression,
+    )
+
+    private fun parseBuilderDecoratorEntry(call: KtCallExpression): BuilderDecoratorEntry? {
+        if (!isBuilderDecoratorCall(call)) {
+            return null
+        }
+        val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return null
+        val arguments = call.valueArguments.mapNotNull { it.getArgumentExpression() }
+        val pathExpression: KtExpression?
+        val decoratorExpression: KtExpression
+        val decoratorUnder = methodName == "decoratorUnder"
+        when {
+            decoratorUnder -> {
+                pathExpression = arguments.getOrNull(0)
+                decoratorExpression = arguments.getOrNull(1) ?: return null
+            }
+            arguments.size >= 2 -> {
+                pathExpression = arguments[0]
+                decoratorExpression = arguments[1]
+            }
+            arguments.isNotEmpty() -> {
+                pathExpression = null
+                decoratorExpression = arguments[0]
+            }
+            else -> return null
+        }
+        val pathPattern =
+            if (pathExpression == null) {
+                null
+            } else {
+                stringValue(pathExpression) ?: return null
+            }
+        return BuilderDecoratorEntry(
+            call = call,
+            kind = decoratorKindFromExpression(decoratorExpression),
+            pathPattern = pathPattern,
+            decoratorUnder = decoratorUnder,
+            decoratorExpression = decoratorExpression,
+        )
+    }
+
+    private fun decoratorPathsOverlap(
+        left: BuilderDecoratorEntry,
+        right: BuilderDecoratorEntry,
+    ): Boolean {
+        val leftPath = left.pathPattern
+        val rightPath = right.pathPattern
+        if (leftPath.isNullOrBlank() || rightPath.isNullOrBlank()) {
+            return true
+        }
+        return when {
+            left.decoratorUnder && right.decoratorUnder ->
+                prefixPathCovers(leftPath, rightPath) || prefixPathCovers(rightPath, leftPath)
+            left.decoratorUnder ->
+                prefixPathCovers(leftPath, rightPath) ||
+                    ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(rightPath, leftPath)
+            right.decoratorUnder ->
+                prefixPathCovers(rightPath, leftPath) ||
+                    ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(leftPath, rightPath)
+            else ->
+                ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(leftPath, rightPath) ||
+                    ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(rightPath, leftPath)
+        }
+    }
+
+    private fun prefixPathCovers(
+        prefix: String,
+        path: String,
+    ): Boolean {
+        val normalizedPrefix = normalizeDecoratorPath(prefix)
+        val normalizedPath = normalizeDecoratorPath(path)
+        return normalizedPath == normalizedPrefix || normalizedPath.startsWith("$normalizedPrefix/")
+    }
+
+    private fun normalizeDecoratorPath(path: String): String {
+        val trimmed = path.trim().trim('"').trimEnd('/')
+        return if (trimmed.isEmpty()) "/" else trimmed
     }
 
     private fun decoratorKindFromExpression(expression: KtExpression): ArmeriaServerDecoratorKind? =
@@ -622,12 +713,17 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         return (unwrapped as? KtNameReferenceExpression) ?: unwrapped
     }
 
-    private fun highlightDecoratorArgument(call: KtCallExpression): PsiElement =
-        call.valueArguments
+    private fun highlightDecoratorArgument(call: KtCallExpression): PsiElement {
+        val parsed = parseBuilderDecoratorEntry(call)
+        if (parsed != null) {
+            return parsed.decoratorExpression
+        }
+        return call.valueArguments
             .firstOrNull()
             ?.getArgumentExpression()
             ?: call.calleeExpression
             ?: call
+    }
 
     private fun resolvedMethodClass(call: KtCallExpression): PsiClass? {
         val references =
