@@ -66,16 +66,18 @@ object ArmeriaHttpRequestGenerator {
     fun requestText(
         route: ArmeriaRoute,
         baseUrl: String = DEFAULT_BASE_URL,
+        docsBaseUrl: String? = null,
     ): String {
         val normalizedBaseUrl = normalizeBaseUrl(baseUrl)
+        val normalizedDocsBaseUrl = docsBaseUrl?.let(::normalizeBaseUrl)
         if (isGraphqlRoute(route)) {
             return graphqlRequestText(route, normalizedBaseUrl)
         }
         if (isGrpcRoute(route)) {
             return if (isUnframedGrpc(route)) {
-                unframedGrpcRequestText(route, normalizedBaseUrl)
+                unframedGrpcRequestText(route, normalizedBaseUrl, normalizedDocsBaseUrl)
             } else {
-                grpcRequestText(route, normalizedBaseUrl)
+                grpcRequestText(route, normalizedBaseUrl, normalizedDocsBaseUrl)
             }
         }
         val method = httpMethod(route)
@@ -160,6 +162,7 @@ object ArmeriaHttpRequestGenerator {
     private fun grpcRequestText(
         route: ArmeriaRoute,
         baseUrl: String,
+        docsBaseUrl: String?,
     ): String {
         val grpcPath = route.path.trim('/')
         val exampleBody =
@@ -168,10 +171,7 @@ object ArmeriaHttpRequestGenerator {
                 ?.trim()
                 ?.takeIf { it.isNotEmpty() }
                 ?: "{}"
-        val debugFormUrl =
-            ArmeriaDocServiceMethodRef.from(route)?.let { ref ->
-                ArmeriaDocServiceDebugFormUrl.build("$baseUrl/docs", ref)
-            } ?: "$baseUrl/docs"
+        val debugFormUrl = grpcDebugFormUrl(route, baseUrl, docsBaseUrl)
         return buildString {
             appendLine("### gRPC ${route.target}")
             appendLine("GRPC $baseUrl/$grpcPath")
@@ -189,6 +189,7 @@ object ArmeriaHttpRequestGenerator {
     private fun unframedGrpcRequestText(
         route: ArmeriaRoute,
         baseUrl: String,
+        docsBaseUrl: String?,
     ): String {
         val grpcPath = "/" + route.path.trim('/')
         val exampleBody =
@@ -197,10 +198,7 @@ object ArmeriaHttpRequestGenerator {
                 ?.trim()
                 ?.takeIf { it.isNotEmpty() }
                 ?: "{}"
-        val debugFormUrl =
-            ArmeriaDocServiceMethodRef.from(route)?.let { ref ->
-                ArmeriaDocServiceDebugFormUrl.build("$baseUrl/docs", ref)
-            } ?: "$baseUrl/docs"
+        val debugFormUrl = grpcDebugFormUrl(route, baseUrl, docsBaseUrl)
         return buildString {
             appendLine("### gRPC ${route.target}")
             appendLine("POST $baseUrl$grpcPath")
@@ -215,6 +213,17 @@ object ArmeriaHttpRequestGenerator {
             appendLine(exampleBody)
             appendLine()
         }
+    }
+
+    private fun grpcDebugFormUrl(
+        route: ArmeriaRoute,
+        baseUrl: String,
+        docsBaseUrl: String?,
+    ): String {
+        val docsBase = docsBaseUrl ?: "$baseUrl/docs"
+        return ArmeriaDocServiceMethodRef.from(route)?.let { ref ->
+            ArmeriaDocServiceDebugFormUrl.build(docsBase, ref)
+        } ?: docsBase
     }
 
     private fun graphqlRequestText(

@@ -17,6 +17,8 @@
 
 ### Fixed
 
+- Generate HTTP Request for gRPC methods uses the same DocService base as Open DocService debug form (static mount such as `/internal/docs`, or the last synced runtime docs URL) instead of always commenting `# Invoke via DocService: …/docs/#/methods/…`.
+
 ### Security
 
 ## [0.5.0] - 2026-09-05

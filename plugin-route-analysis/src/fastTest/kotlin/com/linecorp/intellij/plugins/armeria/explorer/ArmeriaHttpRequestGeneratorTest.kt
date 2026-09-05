@@ -577,6 +577,81 @@ class ArmeriaHttpRequestGeneratorTest {
         assertTrue(text.contains("""{"message":"hi"}"""))
     }
 
+    @Test
+    fun requestText_grpcUsesCustomDocServiceMount() {
+        val route =
+            route(
+                protocol = "gRPC",
+                path = "/example.EchoService/Echo",
+                target = "example.EchoService.Echo",
+                routeMatch = RouteMatch.NON_HTTP,
+            )
+
+        assertEquals(
+            """
+            ### gRPC example.EchoService.Echo
+            GRPC http://localhost:8080/example.EchoService/Echo
+
+            # Invoke via DocService: http://localhost:8080/internal/docs/#/methods/example.EchoService/Echo
+            # gRPC-JSON uses POST with a JSON body:
+            {}
+
+            """.trimIndent() + "\n",
+            ArmeriaHttpRequestGenerator.requestText(
+                route,
+                docsBaseUrl = "http://localhost:8080/internal/docs",
+            ),
+        )
+    }
+
+    @Test
+    fun requestText_grpcPrefersLastSyncedDocServiceBaseUrl() {
+        val route =
+            route(
+                protocol = "gRPC",
+                path = "/example.EchoService/Echo",
+                target = "example.EchoService.Echo",
+                routeMatch = RouteMatch.NON_HTTP,
+            )
+
+        val text =
+            ArmeriaHttpRequestGenerator.requestText(
+                route,
+                docsBaseUrl = "http://127.0.0.1:9090/internal/docs/",
+            )
+
+        assertTrue(
+            text.contains(
+                "# Invoke via DocService: http://127.0.0.1:9090/internal/docs/#/methods/example.EchoService/Echo",
+            ),
+        )
+        assertFalse(text.contains("http://localhost:8080/docs/"))
+    }
+
+    @Test
+    fun requestText_unframedGrpcUsesCustomDocServiceMount() {
+        val route =
+            route(
+                protocol = "gRPC",
+                path = "/grpc.hello.HelloService/Hello",
+                target = "grpc.hello.HelloService.Hello",
+                routeMatch = RouteMatch.NON_HTTP,
+                contentHints = listOf(GrpcRouteHint.UNFRAMED),
+            )
+
+        val text =
+            ArmeriaHttpRequestGenerator.requestText(
+                route,
+                docsBaseUrl = "http://localhost:8080/internal/docs",
+            )
+
+        assertTrue(
+            text.contains(
+                "# Invoke via DocService: http://localhost:8080/internal/docs/#/methods/grpc.hello.HelloService/Hello",
+            ),
+        )
+    }
+
     private fun route(
         httpMethod: String = "GET",
         path: String = "/api",

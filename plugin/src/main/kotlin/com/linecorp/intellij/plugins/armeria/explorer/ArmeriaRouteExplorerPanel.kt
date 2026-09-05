@@ -90,7 +90,13 @@ class ArmeriaRouteExplorerPanel(
                         }
                     },
                 )
-                add(ArmeriaGenerateHttpRequestAction { selectedRouteFromTree() })
+                add(
+                    ArmeriaGenerateHttpRequestAction(
+                        selectedRouteProvider = { selectedRouteFromTree() },
+                        routesProvider = { filterRoutes(allRoutes()) },
+                        lastSyncedDocsBaseUrlProvider = { routeState.lastDocServiceBaseUrl },
+                    ),
+                )
                 add(ArmeriaExportOpenApiAction { filterRoutes(allRoutes()) })
                 add(ArmeriaGenerateTestMethodAction { selectedRouteFromTree() })
                 add(

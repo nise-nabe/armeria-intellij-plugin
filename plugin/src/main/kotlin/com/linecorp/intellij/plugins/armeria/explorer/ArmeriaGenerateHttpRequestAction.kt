@@ -9,6 +9,8 @@ import com.linecorp.intellij.plugins.armeria.message
 
 internal class ArmeriaGenerateHttpRequestAction(
     private val selectedRouteProvider: () -> ArmeriaRoute?,
+    private val routesProvider: () -> List<ArmeriaRoute> = { emptyList() },
+    private val lastSyncedDocsBaseUrlProvider: () -> String? = { null },
 ) : DumbAwareAction(
         message("route.explorer.action.generateHttpRequest"),
     ) {
@@ -30,6 +32,11 @@ internal class ArmeriaGenerateHttpRequestAction(
         if (!ArmeriaHttpRequestGenerator.supports(route)) {
             return
         }
-        ArmeriaHttpRequestFileWriter.createOrUpdate(project, route)
+        ArmeriaHttpRequestFileWriter.createOrUpdate(
+            project = project,
+            route = route,
+            routes = routesProvider(),
+            lastSyncedDocsBaseUrl = lastSyncedDocsBaseUrlProvider(),
+        )
     }
 }

@@ -6,6 +6,7 @@ import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
+import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceSupport
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpRequestGenerator
 import com.linecorp.intellij.plugins.armeria.message
@@ -20,8 +21,17 @@ internal object ArmeriaHttpRequestFileWriter {
         project: Project,
         route: ArmeriaRoute,
         baseUrl: String = ArmeriaHttpRequestGenerator.DEFAULT_BASE_URL,
+        routes: List<ArmeriaRoute> = emptyList(),
+        lastSyncedDocsBaseUrl: String? = null,
     ) {
-        val content = ArmeriaHttpRequestGenerator.requestText(route, resolveBaseUrl(project, baseUrl))
+        val resolvedBaseUrl = resolveBaseUrl(project, baseUrl)
+        val docsBaseUrl =
+            ArmeriaDocServiceSupport.docsBaseUrl(
+                routes = routes,
+                lastSyncedBaseUrl = lastSyncedDocsBaseUrl,
+                defaultBaseUrl = resolvedBaseUrl,
+            )
+        val content = ArmeriaHttpRequestGenerator.requestText(route, resolvedBaseUrl, docsBaseUrl)
         val fileName = ArmeriaHttpRequestGenerator.fileName(route)
         val baseDir = project.basePath ?: return
         val filePath = Path.of(baseDir, ".idea", "httpRequests", fileName)
