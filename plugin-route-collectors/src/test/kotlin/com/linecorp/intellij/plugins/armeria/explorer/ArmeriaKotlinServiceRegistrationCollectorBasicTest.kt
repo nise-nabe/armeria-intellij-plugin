@@ -846,4 +846,33 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         assertTrue(routes.all { it.routeMatch == RouteMatch.SERVICE })
         assertTrue(routes.all { it.excludeFromDuplicateIndex })
     }
+
+    fun testCollectSamlServiceRegistrationFromLocalVariableWithoutPathEmitsDefaultCallbackPaths() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.saml.SamlServiceProvider
+
+            fun main() {
+                val ssp = SamlServiceProvider.builder().build()
+                val saml = ssp.newSamlService()
+                Server.builder()
+                    .service(saml)
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val routes =
+            ArmeriaRouteCollector.collect(project).filter { it.protocol == RouteProtocol.SAML.presentableName() }
+        assertEquals(
+            ArmeriaKnownHttpServiceClassifier.SAML_DEFAULT_PATHS.toSet(),
+            routes.map { it.path }.toSet(),
+        )
+        assertTrue(routes.all { it.routeMatch == RouteMatch.SERVICE })
+        assertTrue(routes.all { it.excludeFromDuplicateIndex })
+    }
 }
