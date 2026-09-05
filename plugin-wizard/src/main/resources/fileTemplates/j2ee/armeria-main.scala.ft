@@ -14,6 +14,7 @@ object Main {
 }
 #else
 import com.linecorp.armeria.server.Server
+import com.linecorp.armeria.server.docs.DocService
 #if ($context.hasLibrary("armeria-grpc"))
 import com.linecorp.armeria.server.grpc.GrpcService
 #end
@@ -23,6 +24,7 @@ object Main {
     val sb = Server.builder()
       .http(8080)
       .annotatedService(new BlogService())
+      .serviceUnder("/docs", new DocService())
 #if ($context.hasLibrary("armeria-grpc"))
     sb.service(GrpcService.builder()
       .addService(new HelloServiceImpl())
