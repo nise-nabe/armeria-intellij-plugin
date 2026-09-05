@@ -52,6 +52,7 @@ class ArmeriaMissingBlockingKotlinInspection : LocalInspectionTool() {
                     ArmeriaMissingBlockingKotlinSupport.highlight(expression),
                     message("inspection.missing.blocking.graphql.executor"),
                     ProblemHighlightType.WEAK_WARNING,
+                    ArmeriaAddUseBlockingTaskExecutorKotlinQuickFix(expression),
                 )
             }
 
