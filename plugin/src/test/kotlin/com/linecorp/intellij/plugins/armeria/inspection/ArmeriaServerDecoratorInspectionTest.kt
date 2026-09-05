@@ -29,6 +29,19 @@ class ArmeriaServerDecoratorInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun highlightsDecorateThenPathlessSamlService() {
+        configureServer(
+            """
+            SamlServiceProvider ssp = SamlServiceProvider.builder().build();
+            Server.builder()
+                  .service(ssp.newSamlService().decorate(LoggingService.newDecorator()))
+                  .build();
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.service.with.routes"), 1)
+    }
+
+    @Test
     fun allowsServiceWithDecoratorExtraArgs() {
         configureServer(
             """
@@ -296,6 +309,7 @@ class ArmeriaServerDecoratorInspectionTest : ArmeriaFixtureTestBase5() {
             import com.linecorp.armeria.server.file.FileService;
             import com.linecorp.armeria.server.grpc.GrpcService;
             import com.linecorp.armeria.server.logging.LoggingService;
+            import com.linecorp.armeria.server.saml.SamlServiceProvider;
 
             public class Main {
                 public static void main(String[] args) {

@@ -29,6 +29,19 @@ class ArmeriaServerDecoratorKotlinInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun highlightsDecorateThenPathlessSamlService() {
+        configureServer(
+            """
+            val ssp = SamlServiceProvider.builder().build()
+            Server.builder()
+                .service(ssp.newSamlService().decorate(LoggingService.newDecorator()))
+                .build()
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.service.with.routes"), 1)
+    }
+
+    @Test
     fun allowsServiceWithDecoratorExtraArgs() {
         configureServer(
             """
@@ -337,6 +350,7 @@ class ArmeriaServerDecoratorKotlinInspectionTest : ArmeriaFixtureTestBase5() {
             import com.linecorp.armeria.server.cors.CorsService
             import com.linecorp.armeria.server.grpc.GrpcService
             import com.linecorp.armeria.server.logging.LoggingService
+            import com.linecorp.armeria.server.saml.SamlServiceProvider
 
             fun main() {
                 $body

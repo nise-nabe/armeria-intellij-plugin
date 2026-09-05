@@ -82,12 +82,15 @@ object ArmeriaKotlinExpressionSupport {
      * String literal or resolvable compile-time constant.
      * Unresolved names and non-string initializers return null — never PSI `.text`.
      */
-    fun extractKotlinStringConstant(expression: KtExpression?): String? {
+    fun extractKotlinStringConstant(
+        expression: KtExpression?,
+        visitedProperties: MutableSet<KtProperty> = mutableSetOf(),
+    ): String? {
         val unwrapped = unwrapKotlinExpression(expression) ?: return null
         return when (unwrapped) {
             is KtStringTemplateExpression -> kotlinStringTemplateWithoutInterpolation(unwrapped)
-            is KtDotQualifiedExpression -> extractKotlinStringConstantFromReference(unwrapped)
-            is KtNameReferenceExpression -> extractKotlinStringConstantFromReference(unwrapped)
+            is KtDotQualifiedExpression -> extractKotlinStringConstantFromReference(unwrapped, visitedProperties)
+            is KtNameReferenceExpression -> extractKotlinStringConstantFromReference(unwrapped, visitedProperties)
             else -> null
         }
     }
@@ -103,10 +106,18 @@ object ArmeriaKotlinExpressionSupport {
         }
     }
 
-    private fun extractKotlinStringConstantFromReference(expression: KtExpression): String? {
+    private fun extractKotlinStringConstantFromReference(
+        expression: KtExpression,
+        visitedProperties: MutableSet<KtProperty>,
+    ): String? {
         val resolved = expression.references.firstOrNull()?.resolve()
         when (resolved) {
-            is KtProperty -> extractKotlinStringConstant(resolved.initializer)?.let { return it }
+            is KtProperty -> {
+                if (!visitedProperties.add(resolved)) {
+                    return null
+                }
+                extractKotlinStringConstant(resolved.initializer, visitedProperties)?.let { return it }
+            }
             is PsiVariable -> ArmeriaRouteSupport.evaluateJavaStringConstant(resolved)?.let { return it }
         }
         if (expression is KtDotQualifiedExpression) {

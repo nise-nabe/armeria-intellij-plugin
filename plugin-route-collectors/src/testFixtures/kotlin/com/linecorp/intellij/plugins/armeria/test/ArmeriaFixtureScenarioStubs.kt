@@ -197,6 +197,10 @@ fun JavaCodeInsightTestFixture.registerRouteCollectorStubs() {
                 return this;
             }
 
+            public ServerBuilder service(Object service, Object decorator) {
+                return this;
+            }
+
             public ServerBuilder serviceUnder(String prefix, Object service) {
                 return this;
             }
@@ -291,6 +295,10 @@ fun JavaCodeInsightTestFixture.registerKotlinRouteCollectorStubs() {
             }
 
             public ServerBuilder service(Object service) {
+                return this;
+            }
+
+            public ServerBuilder service(Object service, Object decorator) {
                 return this;
             }
 

@@ -296,7 +296,7 @@ object ArmeriaRouteCollectorServiceRegistration {
         registrationMethod: CoreServiceRegistrationMethod,
         arguments: Array<PsiExpression>,
     ): Boolean {
-        if (registrationMethod != CoreServiceRegistrationMethod.SERVICE || arguments.size != 1) {
+        if (registrationMethod != CoreServiceRegistrationMethod.SERVICE || arguments.isEmpty()) {
             return false
         }
         return extractConstantString(arguments[0]) == null

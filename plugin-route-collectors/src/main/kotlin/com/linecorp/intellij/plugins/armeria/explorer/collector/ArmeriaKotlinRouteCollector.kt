@@ -177,7 +177,7 @@ object ArmeriaKotlinRouteCollector {
         registrationMethod: CoreServiceRegistrationMethod,
         arguments: List<KtValueArgument>,
     ): Boolean {
-        if (registrationMethod != CoreServiceRegistrationMethod.SERVICE || arguments.size != 1) {
+        if (registrationMethod != CoreServiceRegistrationMethod.SERVICE || arguments.isEmpty()) {
             return false
         }
         val pathExpression = ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "path", 0)

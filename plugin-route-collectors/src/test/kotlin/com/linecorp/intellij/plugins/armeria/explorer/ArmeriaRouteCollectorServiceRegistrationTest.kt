@@ -875,4 +875,34 @@ class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
         assertTrue(routes.all { it.routeMatch == RouteMatch.SERVICE })
         assertTrue(routes.all { it.excludeFromDuplicateIndex })
     }
+
+    fun testCollectSamlServiceRegistrationWithDecoratorArgsEmitsDefaultCallbackPaths() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.saml.SamlServiceProvider;
+
+            public class Main {
+                public static void main(String[] args) {
+                    SamlServiceProvider ssp = SamlServiceProvider.builder().build();
+                    Object decorator = null;
+                    Server.builder()
+                        .service(ssp.newSamlService(), decorator)
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project).filter { it.protocol == RouteProtocol.SAML.presentableName() }
+        assertEquals(
+            ArmeriaKnownHttpServiceClassifier.SAML_DEFAULT_PATHS.toSet(),
+            routes.map { it.path }.toSet(),
+        )
+        assertTrue(routes.all { it.routeMatch == RouteMatch.SERVICE })
+        assertTrue(routes.none { it.path.contains("newSamlService") })
+    }
 }
