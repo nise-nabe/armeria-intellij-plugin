@@ -191,9 +191,16 @@
         <microservices.endpointsProvider
                 implementation="com.linecorp.intellij.plugins.armeria.client.ArmeriaClientEndpointsProvider"/>
 
+        <!-- Debugger renderers (string FQCNs only; Armeria types load in the debuggee) -->
+        <debugger.compoundRendererProvider
+                implementation="com.linecorp.intellij.plugins.armeria.debugger.ArmeriaServiceRequestContextRendererProvider"/>
+        <debugger.compoundRendererProvider
+                implementation="com.linecorp.intellij.plugins.armeria.debugger.ArmeriaClientRequestContextRendererProvider"/>
+
         <!-- Run configuration -->
         <configurationType implementation="com.linecorp.intellij.plugins.armeria.run.ArmeriaRunConfigurationType" />
         <runConfigurationProducer implementation="com.linecorp.intellij.plugins.armeria.run.ArmeriaRunConfigurationProducer" />
+
 
         <defaultLiveTemplates file="liveTemplates/Armeria.xml"/>
         <intentionAction>
