@@ -12,6 +12,7 @@ enum class RouteProtocol(
     WEBSOCKET("route.explorer.protocol.websocket"),
     SSE("route.explorer.protocol.sse"),
     HEALTH_CHECK("route.explorer.protocol.healthCheck"),
+    SAML("route.explorer.protocol.saml"),
     ;
 
     fun presentableName(): String = message(messageKey)

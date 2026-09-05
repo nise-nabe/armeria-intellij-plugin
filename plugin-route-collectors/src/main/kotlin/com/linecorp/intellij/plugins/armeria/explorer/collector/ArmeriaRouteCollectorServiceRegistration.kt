@@ -119,30 +119,91 @@ object ArmeriaRouteCollectorServiceRegistration {
     ): Boolean {
         val registrationKey = serviceRegistrationKey(expression) ?: return false
         val methodName = expression.methodExpression.referenceName ?: return false
+        val registrationMethod = CoreServiceRegistrationMethod.fromMethodName(methodName) ?: return false
         val arguments = expression.argumentList.expressions
-        val path = extractRegistrationPath(methodName, arguments) ?: return false
+        val pathlessSaml = isPathlessSamlServiceCall(registrationMethod, arguments)
         val implementationExpression =
-            when (CoreServiceRegistrationMethod.fromMethodName(methodName)) {
-                CoreServiceRegistrationMethod.ANNOTATED_SERVICE -> arguments.getOrNull(1) ?: arguments.getOrNull(0)
-                CoreServiceRegistrationMethod.SERVICE, CoreServiceRegistrationMethod.SERVICE_UNDER -> arguments.getOrNull(1)
-                null -> null
+            if (pathlessSaml) {
+                arguments.getOrNull(0)
+            } else {
+                when (registrationMethod) {
+                    CoreServiceRegistrationMethod.ANNOTATED_SERVICE ->
+                        arguments.getOrNull(1) ?: arguments.getOrNull(0)
+                    CoreServiceRegistrationMethod.SERVICE, CoreServiceRegistrationMethod.SERVICE_UNDER ->
+                        arguments.getOrNull(1)
+                }
             } ?: return false
         val target = ArmeriaRouteTargetExtractor.extractTarget(implementationExpression)
         val serviceTypeHint =
             ArmeriaRouteTargetExtractor.extractKnownServiceType(implementationExpression).orEmpty()
+        val targetUnresolved = ArmeriaRouteTargetExtractor.isUnresolvedTarget(implementationExpression, target)
+        if (pathlessSaml) {
+            val kind = ArmeriaKnownHttpServiceClassifier.classify(serviceTypeHint)
+            if (!ArmeriaKnownHttpServiceClassifier.isSaml(kind)) {
+                return false
+            }
+            return addSamlDefaultPathRoutes(
+                element = expression,
+                registrationKey = registrationKey,
+                methodName = methodName,
+                target = target,
+                targetUnresolved = targetUnresolved,
+                serviceTypeHint = serviceTypeHint,
+                argumentCount = arguments.size,
+                routes = routes,
+                seenServiceRegistrations = seenServiceRegistrations,
+                serviceExpression = implementationExpression,
+            )
+        }
+        val path = extractRegistrationPath(methodName, arguments) ?: return false
         return addServiceRegistrationRoute(
             element = expression,
             registrationKey = registrationKey,
             methodName = methodName,
             path = path,
             target = target,
-            targetUnresolved = ArmeriaRouteTargetExtractor.isUnresolvedTarget(implementationExpression, target),
+            targetUnresolved = targetUnresolved,
             serviceTypeHint = serviceTypeHint,
             argumentCount = arguments.size,
             routes = routes,
             seenServiceRegistrations = seenServiceRegistrations,
             serviceExpression = implementationExpression,
         )
+    }
+
+    fun addSamlDefaultPathRoutes(
+        element: PsiElement,
+        registrationKey: String,
+        methodName: String,
+        target: String,
+        targetUnresolved: Boolean,
+        serviceTypeHint: String,
+        argumentCount: Int,
+        routes: MutableList<ArmeriaRoute>,
+        seenServiceRegistrations: MutableSet<String>,
+        serviceExpression: PsiElement? = null,
+    ): Boolean {
+        var added = false
+        for (path in ArmeriaKnownHttpServiceClassifier.SAML_DEFAULT_PATHS) {
+            val emitted =
+                addServiceRegistrationRoute(
+                    element = element,
+                    registrationKey = "$registrationKey:$path",
+                    methodName = methodName,
+                    path = path,
+                    target = target,
+                    targetUnresolved = targetUnresolved,
+                    serviceTypeHint = serviceTypeHint,
+                    argumentCount = argumentCount,
+                    routes = routes,
+                    seenServiceRegistrations = seenServiceRegistrations,
+                    serviceExpression = serviceExpression,
+                )
+            if (emitted) {
+                added = true
+            }
+        }
+        return added
     }
 
     fun addServiceRegistrationRoute(
@@ -230,6 +291,31 @@ object ArmeriaRouteCollectorServiceRegistration {
                 if (arguments.size > 1) extractString(arguments.getOrNull(0)) else "/"
             null -> null
         }
+
+    private fun isPathlessSamlServiceCall(
+        registrationMethod: CoreServiceRegistrationMethod,
+        arguments: Array<PsiExpression>,
+    ): Boolean {
+        if (registrationMethod != CoreServiceRegistrationMethod.SERVICE || arguments.isEmpty()) {
+            return false
+        }
+        val serviceExpression = arguments[0]
+        if (extractConstantString(serviceExpression) != null) {
+            return false
+        }
+        val hint = ArmeriaRouteTargetExtractor.extractKnownServiceType(serviceExpression).orEmpty()
+        return ArmeriaKnownHttpServiceClassifier.isSaml(ArmeriaKnownHttpServiceClassifier.classify(hint))
+    }
+
+    private fun extractConstantString(expression: PsiExpression): String? {
+        if (expression is PsiLiteralExpression) {
+            (expression.value as? String)?.let { return it }
+        }
+        return JavaPsiFacade
+            .getInstance(expression.project)
+            .constantEvaluationHelper
+            .computeConstantExpression(expression) as? String
+    }
 
     private fun extractString(expression: PsiExpression?): String? =
         when (expression) {

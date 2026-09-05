@@ -14,6 +14,7 @@ enum class KnownHttpServiceKind {
     WEBSOCKET,
     SSE,
     HEALTH_CHECK,
+    SAML,
     HTTP,
 }
 
@@ -39,6 +40,17 @@ object ArmeriaKnownHttpServiceClassifier {
             "WebSocketService" to KnownHttpServiceKind.WEBSOCKET,
             "ServerSentEvents" to KnownHttpServiceKind.SSE,
             "HealthCheckService" to KnownHttpServiceKind.HEALTH_CHECK,
+            "SamlService" to KnownHttpServiceKind.SAML,
+            "SamlServiceProvider" to KnownHttpServiceKind.SAML,
+        )
+
+    val SAML_DEFAULT_PATHS =
+        listOf(
+            "/saml/acs/post",
+            "/saml/acs/redirect",
+            "/saml/slo/post",
+            "/saml/slo/redirect",
+            "/saml/metadata",
         )
 
     fun classify(typeName: String): KnownHttpServiceKind {
@@ -100,6 +112,7 @@ object ArmeriaKnownHttpServiceClassifier {
             KnownHttpServiceKind.WEBSOCKET -> RouteProtocol.WEBSOCKET
             KnownHttpServiceKind.SSE -> RouteProtocol.SSE
             KnownHttpServiceKind.HEALTH_CHECK -> RouteProtocol.HEALTH_CHECK
+            KnownHttpServiceKind.SAML -> RouteProtocol.SAML
             KnownHttpServiceKind.METRICS,
             KnownHttpServiceKind.FILE,
             KnownHttpServiceKind.HTTP,
@@ -138,10 +151,13 @@ object ArmeriaKnownHttpServiceClassifier {
 
     fun isDocService(kind: KnownHttpServiceKind): Boolean = kind == KnownHttpServiceKind.DOC_SERVICE
 
+    fun isSaml(kind: KnownHttpServiceKind): Boolean = kind == KnownHttpServiceKind.SAML
+
     fun excludeFromDuplicateIndex(kind: KnownHttpServiceKind): Boolean =
         kind == KnownHttpServiceKind.METRICS ||
             kind == KnownHttpServiceKind.DOC_SERVICE ||
-            kind == KnownHttpServiceKind.FILE
+            kind == KnownHttpServiceKind.FILE ||
+            kind == KnownHttpServiceKind.SAML
 
     fun excludeFromDuplicateIndex(target: String): Boolean = excludeFromDuplicateIndex(classify(target))
 

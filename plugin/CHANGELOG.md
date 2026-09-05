@@ -5,6 +5,7 @@
 ### Added
 
 - Route Explorer can export an OpenAPI 3 document (`Export OpenAPI`) from annotated HTTP routes and unframed gRPC JSON to `.idea/armeria-openapi.yaml`, mapping path variables, `@Consumes` / `@Produces`, and `@StatusCode`. Thrift and framed gRPC are omitted with a comment. DocService remains the first-class UI.
+- Route Explorer classifies Armeria SAML registrations (`SamlService` / `SamlServiceProvider.newSamlService()`). Path-less `Server.builder().service(ssp.newSamlService())` shows the default ACS, SLO, and metadata paths. Spring Boot Config warns when `armeria.athenz.*` is set without `zts-uri`, lists `ZtsBaseClient` and `AthenzServiceDecoratorFactory` beans, and shows a Dropwizard detected row with a docs link when `armeria-dropwizard2` is on the classpath (Dropwizard YAML is not parsed).
 
 ### Changed
 

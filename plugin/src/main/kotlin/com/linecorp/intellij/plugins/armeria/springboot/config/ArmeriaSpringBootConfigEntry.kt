@@ -8,6 +8,7 @@ data class ArmeriaSpringBootConfigEntry(
     val value: String,
     val navigationPointer: SmartPsiElementPointer<PsiElement>? = null,
     val configuratorFqn: String? = null,
+    val externalUrl: String? = null,
 )
 
 data class ArmeriaSpringBootConfigFile(
@@ -15,4 +16,5 @@ data class ArmeriaSpringBootConfigFile(
     val filePath: String,
     val entries: List<ArmeriaSpringBootConfigEntry>,
     val synthetic: Boolean = false,
+    val dropwizard: Boolean = false,
 )

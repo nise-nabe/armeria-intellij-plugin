@@ -12,6 +12,7 @@ class ArmeriaSpringBootConfiguratorBeanCollectorTest : ArmeriaFixtureTestBase5()
         registerArmeriaServerStubs()
         registerSpringAnnotationStubs()
         registerArmeriaSpringStubs()
+        registerAthenzStubs()
     }
 
     @Test
@@ -192,5 +193,44 @@ class ArmeriaSpringBootConfiguratorBeanCollectorTest : ArmeriaFixtureTestBase5()
         assertEquals("ArmeriaClientConfigurator", beans.single().value)
         assertEquals(ArmeriaRouteSupport.ARMERIA_CLIENT_CONFIGURATOR_CLASS, beans.single().configuratorFqn)
         assertNotNull(beans.single().navigationPointer?.element)
+    }
+
+    @Test
+    fun collectsAthenzBeans() {
+        myFixture.configureByText(
+            "AthenzConfiguration.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.athenz.ZtsBaseClient;
+            import com.linecorp.armeria.server.athenz.AthenzServiceDecoratorFactory;
+            import org.springframework.context.annotation.Bean;
+            import org.springframework.context.annotation.Configuration;
+
+            @Configuration
+            public class AthenzConfiguration {
+                @Bean
+                public ZtsBaseClient ztsBaseClient() {
+                    return new ZtsBaseClient();
+                }
+
+                @Bean
+                public AthenzServiceDecoratorFactory athenzServiceDecoratorFactory() {
+                    return new AthenzServiceDecoratorFactory();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val beans =
+            ArmeriaSpringBootConfiguratorBeanCollector
+                .collect(project)
+                .single()
+                .entries
+        val byFqn = beans.associateBy { it.configuratorFqn }
+        assertEquals(2, beans.size, beans.map { it.key }.toString())
+        assertNotNull(byFqn[ArmeriaRouteSupport.ATHENZ_ZTS_BASE_CLIENT_CLASS])
+        assertNotNull(byFqn[ArmeriaRouteSupport.ATHENZ_SERVICE_DECORATOR_FACTORY_CLASS])
+        assertTrue(beans.all { it.navigationPointer?.element != null })
     }
 }

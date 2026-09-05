@@ -152,4 +152,41 @@ fun JavaCodeInsightTestFixture.registerServerDecoratorInspectionStubs() {
         }
         """.trimIndent(),
     )
+    addClass(
+        """
+        package com.linecorp.armeria.server.saml;
+
+        public final class SamlService implements com.linecorp.armeria.server.HttpService {
+            public com.linecorp.armeria.server.HttpService decorate(Object decorator) {
+                return this;
+            }
+        }
+        """.trimIndent(),
+    )
+    addClass(
+        """
+        package com.linecorp.armeria.server.saml;
+
+        public final class SamlServiceProvider {
+            public static SamlServiceProviderBuilder builder() {
+                return null;
+            }
+
+            public com.linecorp.armeria.server.saml.SamlService newSamlService() {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
+    addClass(
+        """
+        package com.linecorp.armeria.server.saml;
+
+        public final class SamlServiceProviderBuilder {
+            public com.linecorp.armeria.server.saml.SamlServiceProvider build() {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
 }

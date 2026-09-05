@@ -64,6 +64,20 @@ class ArmeriaKnownHttpServiceClassifierTest {
             ),
         )
         assertEquals(
+            KnownHttpServiceKind.SAML,
+            ArmeriaKnownHttpServiceClassifier.classify(
+                "com.linecorp.armeria.server.saml.SamlService",
+            ),
+        )
+        assertEquals(
+            KnownHttpServiceKind.SAML,
+            ArmeriaKnownHttpServiceClassifier.classify("SamlServiceProviderBuilder"),
+        )
+        assertEquals(
+            KnownHttpServiceKind.SAML,
+            ArmeriaKnownHttpServiceClassifier.classify("SamlService"),
+        )
+        assertEquals(
             KnownHttpServiceKind.SSE,
             ArmeriaKnownHttpServiceClassifier.classify(
                 "com.linecorp.armeria.server.streaming.ServerSentEvents",
@@ -115,6 +129,14 @@ class ArmeriaKnownHttpServiceClassifierTest {
         )
         assertEquals(
             KnownHttpServiceKind.HTTP,
+            ArmeriaKnownHttpServiceClassifier.classify("example.SamlService"),
+        )
+        assertEquals(
+            KnownHttpServiceKind.HTTP,
+            ArmeriaKnownHttpServiceClassifier.classify("example.SamlServiceProvider"),
+        )
+        assertEquals(
+            KnownHttpServiceKind.HTTP,
             ArmeriaKnownHttpServiceClassifier.classify("com.linecorp.armeriafoo.DocService"),
         )
         assertEquals(
@@ -150,6 +172,14 @@ class ArmeriaKnownHttpServiceClassifierTest {
         assertEquals(
             KnownHttpServiceKind.HEALTH_CHECK,
             ArmeriaKnownHttpServiceClassifier.classify("HealthCheckService.builder().build()"),
+        )
+        assertEquals(
+            KnownHttpServiceKind.SAML,
+            ArmeriaKnownHttpServiceClassifier.classify("SamlServiceProvider.builder().build()"),
+        )
+        assertEquals(
+            KnownHttpServiceKind.SAML,
+            ArmeriaKnownHttpServiceClassifier.classify("SamlServiceProvider.newSamlService()"),
         )
     }
 
@@ -244,6 +274,26 @@ class ArmeriaKnownHttpServiceClassifierTest {
         )
         assertEquals("GET", ArmeriaKnownHttpServiceClassifier.defaultHttpMethod(health))
         assertFalse(ArmeriaKnownHttpServiceClassifier.excludeFromDuplicateIndex(health))
+
+        val saml = KnownHttpServiceKind.SAML
+        assertEquals(RouteProtocol.SAML, ArmeriaKnownHttpServiceClassifier.protocol(saml))
+        assertEquals(
+            RouteMatch.SERVICE,
+            ArmeriaKnownHttpServiceClassifier.routeMatch(saml, CoreServiceRegistrationMethod.SERVICE),
+        )
+        assertEquals("", ArmeriaKnownHttpServiceClassifier.defaultHttpMethod(saml))
+        assertTrue(ArmeriaKnownHttpServiceClassifier.isSaml(saml))
+        assertTrue(ArmeriaKnownHttpServiceClassifier.excludeFromDuplicateIndex(saml))
+        assertEquals(
+            listOf(
+                "/saml/acs/post",
+                "/saml/acs/redirect",
+                "/saml/slo/post",
+                "/saml/slo/redirect",
+                "/saml/metadata",
+            ),
+            ArmeriaKnownHttpServiceClassifier.SAML_DEFAULT_PATHS,
+        )
     }
 
     @Test

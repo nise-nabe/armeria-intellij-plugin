@@ -5,6 +5,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRouteHint
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKnownHttpServiceClassifier
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 import kotlin.test.assertEquals
@@ -785,5 +786,123 @@ class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
         val grpcRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/grpc" }
 
         assertTrue(grpcRoute.contentHints.none { it == GrpcRouteHint.REFLECTION })
+    }
+
+    fun testCollectSamlServiceRegistrationWithExplicitPath() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.saml.SamlServiceProvider;
+
+            public class Main {
+                public static void main(String[] args) {
+                    SamlServiceProvider ssp = SamlServiceProvider.builder().build();
+                    Server.builder()
+                        .service("/saml", ssp.newSamlService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        val saml = routes.single { it.path == "/saml" }
+        assertEquals(RouteProtocol.SAML.presentableName(), saml.protocol)
+        assertEquals(RouteMatch.SERVICE, saml.routeMatch)
+        assertTrue(saml.excludeFromDuplicateIndex)
+        assertTrue(saml.target.contains("SamlService"))
+    }
+
+    fun testCollectSamlServiceRegistrationWithoutPathEmitsDefaultCallbackPaths() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.saml.SamlServiceProvider;
+
+            public class Main {
+                public static void main(String[] args) {
+                    SamlServiceProvider ssp = SamlServiceProvider.builder().build();
+                    Server.builder()
+                        .service(ssp.newSamlService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project).filter { it.protocol == RouteProtocol.SAML.presentableName() }
+        assertEquals(
+            ArmeriaKnownHttpServiceClassifier.SAML_DEFAULT_PATHS.toSet(),
+            routes.map { it.path }.toSet(),
+        )
+        assertTrue(routes.all { it.routeMatch == RouteMatch.SERVICE })
+        assertTrue(routes.all { it.excludeFromDuplicateIndex })
+    }
+
+    fun testCollectSamlServiceRegistrationFromLocalVariableWithoutPathEmitsDefaultCallbackPaths() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.saml.SamlServiceProvider;
+            import com.linecorp.armeria.server.saml.SamlService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    SamlServiceProvider ssp = SamlServiceProvider.builder().build();
+                    SamlService saml = ssp.newSamlService();
+                    Server.builder()
+                        .service(saml)
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project).filter { it.protocol == RouteProtocol.SAML.presentableName() }
+        assertEquals(
+            ArmeriaKnownHttpServiceClassifier.SAML_DEFAULT_PATHS.toSet(),
+            routes.map { it.path }.toSet(),
+        )
+        assertTrue(routes.all { it.routeMatch == RouteMatch.SERVICE })
+        assertTrue(routes.all { it.excludeFromDuplicateIndex })
+    }
+
+    fun testCollectSamlServiceRegistrationWithDecoratorArgsEmitsDefaultCallbackPaths() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.saml.SamlServiceProvider;
+
+            public class Main {
+                public static void main(String[] args) {
+                    SamlServiceProvider ssp = SamlServiceProvider.builder().build();
+                    Object decorator = null;
+                    Server.builder()
+                        .service(ssp.newSamlService(), decorator)
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project).filter { it.protocol == RouteProtocol.SAML.presentableName() }
+        assertEquals(
+            ArmeriaKnownHttpServiceClassifier.SAML_DEFAULT_PATHS.toSet(),
+            routes.map { it.path }.toSet(),
+        )
+        assertTrue(routes.all { it.routeMatch == RouteMatch.SERVICE })
+        assertTrue(routes.none { it.path.contains("newSamlService") })
     }
 }

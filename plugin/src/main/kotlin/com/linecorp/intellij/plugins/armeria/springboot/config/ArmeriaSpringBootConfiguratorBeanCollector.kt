@@ -33,6 +33,8 @@ object ArmeriaSpringBootConfiguratorBeanCollector {
             ArmeriaRouteSupport.METRIC_COLLECTING_SERVICE_CONFIGURATOR_CLASS,
             ArmeriaRouteSupport.ARMERIA_SERVER_CONFIGURATOR_CLASS,
             ArmeriaRouteSupport.ARMERIA_CLIENT_CONFIGURATOR_CLASS,
+            ArmeriaRouteSupport.ATHENZ_ZTS_BASE_CLIENT_CLASS,
+            ArmeriaRouteSupport.ATHENZ_SERVICE_DECORATOR_FACTORY_CLASS,
         )
 
     private val INSPECTION_EXTRA_TYPES =

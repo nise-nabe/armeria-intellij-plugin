@@ -47,6 +47,10 @@ abstract class ArmeriaFixtureTestBase : ArmeriaLightJavaCodeInsightFixtureTestCa
 
     protected fun registerArmeriaSpringStubs() = myFixture.registerArmeriaSpringStubs()
 
+    protected fun registerAthenzStubs() = myFixture.registerAthenzStubs()
+
+    protected fun registerDropwizardStubs() = myFixture.registerDropwizardStubs()
+
     protected fun registerServletServiceStubs() = myFixture.registerServletServiceStubs()
 
     protected fun registerSpringWebMvcStubs() = myFixture.registerSpringWebMvcStubs()

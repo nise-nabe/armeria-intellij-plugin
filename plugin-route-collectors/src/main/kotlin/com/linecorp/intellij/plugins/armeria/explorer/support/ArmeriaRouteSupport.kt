@@ -17,6 +17,9 @@ object ArmeriaRouteSupport {
     const val ARMERIA_SERVER_CLASS = "com.linecorp.armeria.server.Server"
     const val ARMERIA_SERVER_CONFIGURATOR_CLASS = "$ARMERIA_SPRING_PACKAGE_PREFIX.ArmeriaServerConfigurator"
     const val ARMERIA_CLIENT_CONFIGURATOR_CLASS = "$ARMERIA_SPRING_PACKAGE_PREFIX.ArmeriaClientConfigurator"
+    const val ATHENZ_ZTS_BASE_CLIENT_CLASS = "com.linecorp.armeria.client.athenz.ZtsBaseClient"
+    const val ATHENZ_SERVICE_DECORATOR_FACTORY_CLASS =
+        "com.linecorp.armeria.server.athenz.AthenzServiceDecoratorFactory"
     const val DOC_SERVICE_CONFIGURATOR_CLASS = "$ARMERIA_SPRING_PACKAGE_PREFIX.DocServiceConfigurator"
     const val HEALTH_CHECK_SERVICE_CONFIGURATOR_CLASS =
         "$ARMERIA_SPRING_PACKAGE_PREFIX.HealthCheckServiceConfigurator"

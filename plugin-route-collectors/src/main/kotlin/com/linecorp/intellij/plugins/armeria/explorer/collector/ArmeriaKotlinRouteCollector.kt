@@ -125,13 +125,39 @@ object ArmeriaKotlinRouteCollector {
                 methodName,
             )
         val arguments = call.valueArguments
-        val path = extractRegistrationPath(methodName, arguments) ?: return
-        val implementationExpression = resolveServiceExpression(methodName, arguments) ?: return
+        val registrationMethod = CoreServiceRegistrationMethod.fromMethodName(methodName) ?: return
+        val pathlessSaml = isPathlessSamlServiceCall(registrationMethod, arguments)
+        val implementationExpression =
+            if (pathlessSaml) {
+                ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 0)
+            } else {
+                resolveServiceExpression(methodName, arguments)
+            } ?: return
         val unwrappedImplementation = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(implementationExpression) ?: return
         val targetExpression = extractKotlinTargetExpression(unwrappedImplementation)
         val target = renderKotlinTarget(targetExpression)
         val targetUnresolved = isUnresolvedKotlinTarget(targetExpression, target)
         val serviceTypeHint = extractKotlinKnownServiceType(unwrappedImplementation).orEmpty()
+        if (pathlessSaml) {
+            val kind = ArmeriaKnownHttpServiceClassifier.classify(serviceTypeHint)
+            if (!ArmeriaKnownHttpServiceClassifier.isSaml(kind)) {
+                return
+            }
+            ArmeriaRouteCollectorServiceRegistration.addSamlDefaultPathRoutes(
+                element = call,
+                registrationKey = registrationKey,
+                methodName = methodName,
+                target = target,
+                targetUnresolved = targetUnresolved,
+                serviceTypeHint = serviceTypeHint,
+                argumentCount = arguments.size,
+                routes = routes,
+                seenServiceRegistrations = seenServiceRegistrations,
+                serviceExpression = unwrappedImplementation,
+            )
+            return
+        }
+        val path = extractRegistrationPath(methodName, arguments) ?: return
         ArmeriaRouteCollectorServiceRegistration.addServiceRegistrationRoute(
             element = call,
             registrationKey = registrationKey,
@@ -145,6 +171,25 @@ object ArmeriaKotlinRouteCollector {
             seenServiceRegistrations = seenServiceRegistrations,
             serviceExpression = unwrappedImplementation,
         )
+    }
+
+    private fun isPathlessSamlServiceCall(
+        registrationMethod: CoreServiceRegistrationMethod,
+        arguments: List<KtValueArgument>,
+    ): Boolean {
+        if (registrationMethod != CoreServiceRegistrationMethod.SERVICE || arguments.isEmpty()) {
+            return false
+        }
+        if (arguments.any { it.getArgumentName()?.asName?.identifier == "path" }) {
+            return false
+        }
+        val serviceExpression =
+            ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 0) ?: return false
+        if (ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(serviceExpression) != null) {
+            return false
+        }
+        val hint = extractKotlinKnownServiceType(serviceExpression).orEmpty()
+        return ArmeriaKnownHttpServiceClassifier.isSaml(ArmeriaKnownHttpServiceClassifier.classify(hint))
     }
 
     private fun resolveServiceExpression(
