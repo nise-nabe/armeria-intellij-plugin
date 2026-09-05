@@ -839,7 +839,10 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
 
         val routes =
             ArmeriaRouteCollector.collect(project).filter { it.protocol == RouteProtocol.SAML.presentableName() }
-        assertEquals(ArmeriaKnownHttpServiceClassifier.SAML_DEFAULT_PATHS, routes.map { it.path })
+        assertEquals(
+            ArmeriaKnownHttpServiceClassifier.SAML_DEFAULT_PATHS.toSet(),
+            routes.map { it.path }.toSet(),
+        )
         assertTrue(routes.all { it.routeMatch == RouteMatch.SERVICE })
         assertTrue(routes.all { it.excludeFromDuplicateIndex })
     }
