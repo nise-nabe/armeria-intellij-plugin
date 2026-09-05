@@ -18,6 +18,8 @@
 
 ### Changed
 
+- Target IntelliJ IDEA Ultimate 2026.2.2.
+
 ### Deprecated
 
 ### Removed
