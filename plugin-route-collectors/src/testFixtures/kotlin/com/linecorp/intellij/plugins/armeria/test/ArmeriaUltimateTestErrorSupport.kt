@@ -50,9 +50,5 @@ fun isUltimatePostStartupConstructorError(
             }
         }
     return "com.intellij.modules.ultimate" in combined &&
-        (
-            "Cannot find suitable constructor" in combined ||
-                "Cannot create extension" in combined ||
-                "Cannot create class" in combined
-        )
+        "Cannot find suitable constructor" in combined
 }

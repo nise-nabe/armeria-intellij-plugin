@@ -20,8 +20,8 @@ class ArmeriaUltimateTestErrorSupportTest : TestCase() {
         assertTrue(isUltimatePostStartupConstructorError(exception.message, exception))
     }
 
-    fun testDetectsUltimateExtensionMessageWithoutCause() {
-        assertTrue(
+    fun testIgnoresUltimateExtensionMessageWithoutConstructorFailure() {
+        assertFalse(
             isUltimatePostStartupConstructorError(
                 "Cannot create extension (class=B.B.B.B.s) [Plugin: com.intellij.modules.ultimate]",
                 null,
