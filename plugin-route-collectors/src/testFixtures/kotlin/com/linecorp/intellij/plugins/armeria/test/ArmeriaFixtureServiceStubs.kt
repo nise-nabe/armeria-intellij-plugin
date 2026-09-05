@@ -249,6 +249,44 @@ fun JavaCodeInsightTestFixture.registerKnownHttpServiceStubs() {
         }
         """.trimIndent(),
     )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.saml;
+
+        public final class SamlService implements com.linecorp.armeria.server.HttpService {
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.saml;
+
+        public final class SamlServiceProvider {
+            public static SamlServiceProviderBuilder builder() {
+                return null;
+            }
+
+            public com.linecorp.armeria.server.saml.SamlService newSamlService() {
+                return null;
+            }
+
+            public Object newSamlDecorator() {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.saml;
+
+        public final class SamlServiceProviderBuilder {
+            public com.linecorp.armeria.server.saml.SamlServiceProvider build() {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
 }
 
 fun JavaCodeInsightTestFixture.registerArmeriaIdlStubs() {
@@ -337,6 +375,36 @@ fun JavaCodeInsightTestFixture.registerArmeriaSpringStubs() {
         @FunctionalInterface
         public interface ArmeriaClientConfigurator {
             void configure(Object builder);
+        }
+        """.trimIndent(),
+    )
+}
+
+fun JavaCodeInsightTestFixture.registerAthenzStubs() {
+    this.addClass(
+        """
+        package com.linecorp.armeria.client.athenz;
+
+        public final class ZtsBaseClient {
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.athenz;
+
+        public final class AthenzServiceDecoratorFactory {
+        }
+        """.trimIndent(),
+    )
+}
+
+fun JavaCodeInsightTestFixture.registerDropwizardStubs() {
+    this.addClass(
+        """
+        package com.linecorp.armeria.dropwizard;
+
+        public final class ArmeriaBundle {
         }
         """.trimIndent(),
     )

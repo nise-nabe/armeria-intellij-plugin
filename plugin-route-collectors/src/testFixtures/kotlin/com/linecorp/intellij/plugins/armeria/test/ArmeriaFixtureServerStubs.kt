@@ -52,6 +52,10 @@ fun JavaCodeInsightTestFixture.registerArmeriaServerStubs() {
                 return this;
             }
 
+            public ServerBuilder service(Object service) {
+                return this;
+            }
+
             public ServerBuilder serviceUnder(String pathPrefix, Object service) {
                 return this;
             }

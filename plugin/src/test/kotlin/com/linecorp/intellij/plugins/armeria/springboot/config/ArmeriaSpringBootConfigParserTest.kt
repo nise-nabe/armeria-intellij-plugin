@@ -273,5 +273,74 @@ class ArmeriaSpringBootConfigParserTest {
         )
     }
 
+    @Test
+    fun summaryText_warnsWhenAthenzIsEnabledWithoutZtsUri() {
+        val athenz =
+            ArmeriaSpringBootConfigFile(
+                fileName = "application.yml",
+                filePath = "/app/application.yml",
+                entries =
+                    listOf(
+                        ArmeriaSpringBootConfigEntry("armeria.athenz.domains", "my-domain"),
+                    ),
+            )
+        val withZts =
+            ArmeriaSpringBootConfigFile(
+                fileName = "application.yml",
+                filePath = "/app/application.yml",
+                entries =
+                    listOf(
+                        ArmeriaSpringBootConfigEntry("armeria.athenz.domains", "my-domain"),
+                        ArmeriaSpringBootConfigEntry("armeria.athenz.zts-uri", "https://zts.example/zts/v1"),
+                    ),
+            )
+        val camelZts =
+            ArmeriaSpringBootConfigFile(
+                fileName = "application.yml",
+                filePath = "/app/application.yml",
+                entries =
+                    listOf(
+                        ArmeriaSpringBootConfigEntry("armeria.athenz.ztsUri", "https://zts.example/zts/v1"),
+                    ),
+            )
+
+        assertTrue(
+            ArmeriaSpringBootConfigSupport.summaryText(listOf(athenz)).contains(
+                message("springboot.config.summary.athenzMissingZtsUri"),
+            ),
+        )
+        assertFalse(
+            ArmeriaSpringBootConfigSupport.summaryText(listOf(withZts)).contains(
+                message("springboot.config.summary.athenzMissingZtsUri"),
+            ),
+        )
+        assertFalse(
+            ArmeriaSpringBootConfigSupport.summaryText(listOf(camelZts)).contains(
+                message("springboot.config.summary.athenzMissingZtsUri"),
+            ),
+        )
+    }
+
+    @Test
+    fun summaryText_mentionsDropwizardWithoutCountingItAsConfigFilesOrBeans() {
+        val dropwizard = ArmeriaDropwizardConfigCollector.detectedFile()
+        val config =
+            ArmeriaSpringBootConfigFile(
+                fileName = "application.yml",
+                filePath = "/app/application.yml",
+                entries = listOf(ArmeriaSpringBootConfigEntry("armeria.docs-path", "/docs")),
+            )
+
+        assertEquals(
+            message("springboot.config.summary.dropwizardDetected"),
+            ArmeriaSpringBootConfigSupport.summaryText(listOf(dropwizard)),
+        )
+        assertEquals(
+            "${message("springboot.config.summary.entries", 1, 1)} · ${message("springboot.config.summary.dropwizardDetected")}",
+            ArmeriaSpringBootConfigSupport.summaryText(listOf(config, dropwizard)),
+        )
+        assertEquals(ArmeriaDropwizardConfigCollector.DOCS_URL, dropwizard.entries.single().externalUrl)
+    }
+
     private fun fixture(path: String) = javaClass.classLoader.getResource(path)!!.readText()
 }

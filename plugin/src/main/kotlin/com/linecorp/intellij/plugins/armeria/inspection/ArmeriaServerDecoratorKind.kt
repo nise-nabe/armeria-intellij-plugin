@@ -43,6 +43,7 @@ internal object ArmeriaServerDecoratorTypes {
             KnownHttpServiceKind.THRIFT,
             KnownHttpServiceKind.DOC_SERVICE,
             KnownHttpServiceKind.FILE,
+            KnownHttpServiceKind.SAML,
         )
 
     fun isServiceWithRoutesKind(kind: KnownHttpServiceKind): Boolean = kind in SERVICE_WITH_ROUTES_KINDS

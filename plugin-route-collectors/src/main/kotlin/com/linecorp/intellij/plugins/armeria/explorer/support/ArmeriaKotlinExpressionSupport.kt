@@ -78,6 +78,25 @@ object ArmeriaKotlinExpressionSupport {
         }
     }
 
+    /** String literal or resolvable constant; does not fall back to PSI `.text`. */
+    fun extractKotlinStringConstant(expression: KtExpression?): String? {
+        val unwrapped = unwrapKotlinExpression(expression) ?: return null
+        return when (unwrapped) {
+            is KtStringTemplateExpression -> {
+                if (unwrapped.hasInterpolation()) {
+                    null
+                } else if (unwrapped.entries.size == 1) {
+                    unwrapped.entries[0].text.trim('"')
+                } else {
+                    unwrapped.text.trim('"').takeIf { it.isNotEmpty() }
+                }
+            }
+            is KtDotQualifiedExpression -> extractKotlinStringFromReference(unwrapped)
+            is KtNameReferenceExpression -> extractKotlinStringFromReference(unwrapped)
+            else -> null
+        }
+    }
+
     private fun extractKotlinStringFromReference(expression: KtExpression): String? {
         val resolved = expression.references.firstOrNull()?.resolve()
         when (resolved) {

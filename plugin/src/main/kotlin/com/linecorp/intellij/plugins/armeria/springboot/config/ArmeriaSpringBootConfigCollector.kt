@@ -18,6 +18,8 @@ object ArmeriaSpringBootConfigSupport {
     private val INDEXED_KEY_PATH = Regex("""\[\d+]""")
     private val CAMEL_BOUNDARY = Regex("([a-z0-9])([A-Z])")
     private val INLINE_COMMENT = Regex("""\s+[#!].*$""")
+    const val ATHENZ_PREFIX = "armeria.athenz"
+    const val ATHENZ_ZTS_URI = "armeria.athenz.zts-uri"
 
     fun isApplicationConfigFileName(fileName: String): Boolean =
         fileName in APPLICATION_CONFIG_NAMES ||
@@ -47,7 +49,7 @@ object ArmeriaSpringBootConfigSupport {
             return message("springboot.config.summary.empty")
         }
         val configFiles = files.filterNot { it.synthetic }
-        val beanCount = files.filter { it.synthetic }.sumOf { it.entries.size }
+        val beanCount = files.filter { it.synthetic && !it.dropwizard }.sumOf { it.entries.size }
         val parts = mutableListOf<String>()
         if (configFiles.isNotEmpty()) {
             parts +=
@@ -60,7 +62,26 @@ object ArmeriaSpringBootConfigSupport {
         if (beanCount > 0) {
             parts += message("springboot.config.summary.beans", beanCount)
         }
+        if (athenzEnabledWithoutZtsUri(configFiles)) {
+            parts += message("springboot.config.summary.athenzMissingZtsUri")
+        }
+        if (files.any { it.dropwizard }) {
+            parts += message("springboot.config.summary.dropwizardDetected")
+        }
         return parts.joinToString(" · ").ifEmpty { message("springboot.config.summary.empty") }
+    }
+
+    fun athenzEnabledWithoutZtsUri(files: List<ArmeriaSpringBootConfigFile>): Boolean {
+        val entries = files.filterNot { it.synthetic }.flatMap { it.entries }
+        if (entries.none { isAthenzKey(it.key) }) {
+            return false
+        }
+        return entries.none { canonicalConfigKey(it.key) == ATHENZ_ZTS_URI && it.value.isNotBlank() }
+    }
+
+    private fun isAthenzKey(key: String): Boolean {
+        val canonical = canonicalConfigKey(key)
+        return canonical == ATHENZ_PREFIX || canonical.startsWith("$ATHENZ_PREFIX.")
     }
 
     /**
@@ -83,21 +104,25 @@ object ArmeriaSpringBootConfigCollector {
             }
             true
         }, scope, null)
-        return files.values.sortedBy { it.path }.mapNotNull { vf ->
-            val text =
-                try {
-                    LoadTextUtil.loadText(vf).toString()
-                } catch (exception: ProcessCanceledException) {
-                    throw exception
-                } catch (_: Exception) {
-                    return@mapNotNull null
+        val applicationFiles =
+            files.values.sortedBy { it.path }.mapNotNull { vf ->
+                val text =
+                    try {
+                        LoadTextUtil.loadText(vf).toString()
+                    } catch (exception: ProcessCanceledException) {
+                        throw exception
+                    } catch (_: Exception) {
+                        return@mapNotNull null
+                    }
+                val entries = ArmeriaSpringBootConfigParser.parseFile(vf.name, text)
+                if (entries.isEmpty()) {
+                    null
+                } else {
+                    ArmeriaSpringBootConfigFile(vf.name, vf.path, entries)
                 }
-            val entries = ArmeriaSpringBootConfigParser.parseFile(vf.name, text)
-            if (entries.isEmpty()) {
-                null
-            } else {
-                ArmeriaSpringBootConfigFile(vf.name, vf.path, entries)
             }
-        } + ArmeriaSpringBootConfiguratorBeanCollector.collect(project)
+        return applicationFiles +
+            ArmeriaSpringBootConfiguratorBeanCollector.collect(project) +
+            ArmeriaDropwizardConfigCollector.collect(project)
     }
 }

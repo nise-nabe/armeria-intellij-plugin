@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.springboot.config
 
+import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -11,15 +12,16 @@ import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
-import com.linecorp.intellij.plugins.armeria.expireWithPluginUnload
 import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaRouteNavigation
 import com.linecorp.intellij.plugins.armeria.message
+import com.linecorp.intellij.plugins.armeria.pluginUnloadDisposable
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Font
@@ -98,6 +100,7 @@ class ArmeriaSpringBootConfigPanel(
 
     fun refresh() {
         val generation = ++refreshGeneration
+        val pluginUnload = pluginUnloadDisposable()
         statusLabel.text = message("springboot.config.summary.refreshing")
         ReadAction
             .nonBlocking<Result<List<ArmeriaSpringBootConfigFile>>> {
@@ -110,7 +113,7 @@ class ArmeriaSpringBootConfigPanel(
                 }
             }.inSmartMode(project)
             .expireWith(this)
-            .expireWithPluginUnload()
+            .expireWhen { Disposer.isDisposed(pluginUnload) }
             .coalesceBy(this)
             .finishOnUiThread(ModalityState.any()) { result ->
                 if (generation != refreshGeneration) {
@@ -141,6 +144,10 @@ class ArmeriaSpringBootConfigPanel(
         val row = tableModel.rowAt(configTable.convertRowIndexToModel(viewRow)) ?: return
         row.entry.navigationPointer?.let { pointer ->
             ArmeriaRouteNavigation.navigateToPointer(project, pointer, parentDisposable = this)
+            return
+        }
+        row.entry.externalUrl?.let { url ->
+            BrowserUtil.browse(url)
             return
         }
         if (row.filePath.isEmpty()) {
@@ -201,7 +208,9 @@ class ArmeriaSpringBootConfigPanel(
             toolTipText =
                 tableModel.rowAt(modelRow)?.let { row ->
                     when (c) {
-                        0 -> ArmeriaSpringBootConfigKeys.documentationFor(row.entry.key)
+                        0 ->
+                            ArmeriaSpringBootConfigKeys.documentationFor(row.entry.key)
+                                ?: row.entry.externalUrl
                         2 -> row.filePath
                         else -> null
                     }
