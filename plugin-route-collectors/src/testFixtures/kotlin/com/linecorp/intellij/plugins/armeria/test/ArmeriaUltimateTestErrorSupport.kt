@@ -4,10 +4,15 @@ import com.intellij.openapi.application.AccessToken
 import com.intellij.testFramework.LoggedErrorProcessor
 
 /**
- * IDEA Ultimate 2026.2.2 ships `com.intellij.modules.ultimate` with a ZKM-obfuscated
- * [com.intellij.openapi.startup.ProjectActivity] (`B.B.B.B.s`) whose constructor is not
- * injectable in headless fixture tests. The platform logs a [com.intellij.diagnostic.PluginException]
- * during project open, and [com.intellij.testFramework.TestLoggerFactory] fails the test.
+ * IDEA Ultimate 2026.2.2 re-obfuscates `com.intellij.modules.ultimate`'s
+ * [com.intellij.openapi.startup.ProjectActivity] to `B.B.B.B.s`. That FQCN
+ * collides with `interface B.B.B.B.s` in boot-classpath `product-backend.jar`.
+ * Fixture tests load both JARs through the same [com.intellij.util.lang.PathClassLoader],
+ * so the platform instantiates the interface (no constructors) on project open and
+ * [com.intellij.testFramework.TestLoggerFactory] fails the test.
+ *
+ * 2026.2 used `k.k.k.k.a`, which did not collide; the same package-private no-arg
+ * constructor is accepted there. This is not an Armeria API-usage bug.
  */
 private object UltimatePostStartupLoggedErrorProcessor : LoggedErrorProcessor() {
     override fun processError(
