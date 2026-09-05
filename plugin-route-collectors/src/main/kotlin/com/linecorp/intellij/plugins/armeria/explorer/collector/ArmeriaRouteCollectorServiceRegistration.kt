@@ -299,18 +299,23 @@ object ArmeriaRouteCollectorServiceRegistration {
         if (registrationMethod != CoreServiceRegistrationMethod.SERVICE || arguments.isEmpty()) {
             return false
         }
-        return extractConstantString(arguments[0]) == null
+        val serviceExpression = arguments[0]
+        if (extractConstantString(serviceExpression) != null) {
+            return false
+        }
+        val hint = ArmeriaRouteTargetExtractor.extractKnownServiceType(serviceExpression).orEmpty()
+        return ArmeriaKnownHttpServiceClassifier.isSaml(ArmeriaKnownHttpServiceClassifier.classify(hint))
     }
 
-    private fun extractConstantString(expression: PsiExpression): String? =
-        when (expression) {
-            is PsiLiteralExpression -> expression.value as? String
-            else ->
-                JavaPsiFacade
-                    .getInstance(expression.project)
-                    .constantEvaluationHelper
-                    .computeConstantExpression(expression) as? String
+    private fun extractConstantString(expression: PsiExpression): String? {
+        if (expression is PsiLiteralExpression) {
+            (expression.value as? String)?.let { return it }
         }
+        return JavaPsiFacade
+            .getInstance(expression.project)
+            .constantEvaluationHelper
+            .computeConstantExpression(expression) as? String
+    }
 
     private fun extractString(expression: PsiExpression?): String? =
         when (expression) {

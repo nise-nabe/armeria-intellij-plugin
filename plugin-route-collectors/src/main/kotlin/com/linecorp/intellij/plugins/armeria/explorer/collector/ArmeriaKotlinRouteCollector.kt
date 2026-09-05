@@ -180,8 +180,16 @@ object ArmeriaKotlinRouteCollector {
         if (registrationMethod != CoreServiceRegistrationMethod.SERVICE || arguments.isEmpty()) {
             return false
         }
-        val pathExpression = ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "path", 0)
-        return ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(pathExpression) == null
+        if (arguments.any { it.getArgumentName()?.asName?.identifier == "path" }) {
+            return false
+        }
+        val serviceExpression =
+            ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 0) ?: return false
+        if (ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(serviceExpression) != null) {
+            return false
+        }
+        val hint = extractKotlinKnownServiceType(serviceExpression).orEmpty()
+        return ArmeriaKnownHttpServiceClassifier.isSaml(ArmeriaKnownHttpServiceClassifier.classify(hint))
     }
 
     private fun resolveServiceExpression(
