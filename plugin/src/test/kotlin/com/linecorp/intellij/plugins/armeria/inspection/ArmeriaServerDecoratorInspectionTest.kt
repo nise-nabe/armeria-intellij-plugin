@@ -295,6 +295,48 @@ class ArmeriaServerDecoratorInspectionTest : ArmeriaFixtureTestBase5() {
         assertHighlights(message("inspection.server.decorator.auth.after.logging"), 1)
     }
 
+    @Test
+    fun highlightsAuthAfterLoggingOnPathScopedDecorator() {
+        configureServer(
+            """
+            Server.builder()
+                  .decorator("/api", LoggingService.newDecorator())
+                  .decorator("/api", AuthService.newDecorator())
+                  .service("/api", (HttpService) null)
+                  .build();
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.auth.after.logging"), 1)
+    }
+
+    @Test
+    fun allowsAuthAfterLoggingOnDifferentPathScopedDecorators() {
+        configureServer(
+            """
+            Server.builder()
+                  .decorator("/api", LoggingService.newDecorator())
+                  .decorator("/other", AuthService.newDecorator())
+                  .service("/api", (HttpService) null)
+                  .build();
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.auth.after.logging"), 0)
+    }
+
+    @Test
+    fun highlightsAuthAfterLoggingOnDecoratorUnder() {
+        configureServer(
+            """
+            Server.builder()
+                  .decoratorUnder("/api", LoggingService.newDecorator())
+                  .decoratorUnder("/api", AuthService.newDecorator())
+                  .service("/api", (HttpService) null)
+                  .build();
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.auth.after.logging"), 1)
+    }
+
     private fun configureServer(body: String) {
         myFixture.configureByText(
             "Main.java",
