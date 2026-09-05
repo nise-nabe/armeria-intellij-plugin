@@ -91,7 +91,7 @@ class ArmeriaWizardTemplateRenderingTest {
         assertTrue(configurator.contains("armeriaServerConfigurator(blogService: BlogService)"))
         assertTrue(configurator.contains("annotatedService(blogService)"))
         assertTrue(configurator.contains("DocService"))
-        assertTrue(configurator.contains('serviceUnder("/docs"'))
+        assertTrue(configurator.contains("serviceUnder(\"/docs\""))
         assertTrue(main.contains("SpringApplication.run"))
         assertFalse(main.contains("Server.builder()"))
     }
@@ -175,7 +175,7 @@ class ArmeriaWizardTemplateRenderingTest {
         assertTrue(rendered.contains("new BlogService()"))
         assertTrue(rendered.contains("Server.builder()"))
         assertTrue(rendered.contains("DocService"))
-        assertTrue(rendered.contains('serviceUnder("/docs"'))
+        assertTrue(rendered.contains("serviceUnder(\"/docs\""))
     }
 
     @Test
@@ -198,7 +198,7 @@ class ArmeriaWizardTemplateRenderingTest {
         assertTrue(rendered.contains("BlogService()"))
         assertTrue(rendered.contains("Server.builder()"))
         assertTrue(rendered.contains("DocService"))
-        assertTrue(rendered.contains('serviceUnder("/docs"'))
+        assertTrue(rendered.contains("serviceUnder(\"/docs\""))
         assertFalse(rendered.contains("SpringApplication"))
     }
 
@@ -339,7 +339,7 @@ class ArmeriaWizardTemplateRenderingTest {
             )
 
         assertTrue(rendered.contains("DocService"))
-        assertTrue(rendered.contains('serviceUnder("/docs"'))
+        assertTrue(rendered.contains("serviceUnder(\"/docs\""))
         assertTrue(rendered.contains("new BlogService()"))
     }
 
