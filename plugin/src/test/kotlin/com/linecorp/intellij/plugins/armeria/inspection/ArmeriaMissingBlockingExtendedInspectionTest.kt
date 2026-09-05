@@ -361,6 +361,41 @@ class ArmeriaMissingBlockingExtendedInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun addUseBlockingTaskExecutorQuickFixRemovesHighlight() {
+        myFixture.configureByText(
+            "UserFetcher.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.graphql.GraphqlService;
+            import graphql.schema.DataFetcher;
+            import graphql.schema.idl.TypeRuntimeWiring;
+            import java.util.concurrent.CompletableFuture;
+
+            public class Server {
+                public Object graphql() {
+                    return GraphqlService.<caret>builder()
+                            .runtimeWiring(c -> new TypeRuntimeWiring().dataFetcher("user", new UserFetcher()))
+                            .build();
+                }
+            }
+
+            class UserFetcher implements DataFetcher<String> {
+                public String get(Object env) {
+                    return CompletableFuture.completedFuture("ok").join();
+                }
+            }
+            """.trimIndent(),
+        )
+        assertExecutorHighlights(1)
+        assertGraphqlHighlights(1, "join")
+        applyQuickFix(message("inspection.missing.blocking.quickfix.executor"))
+        assertTrue(myFixture.file.text.contains("useBlockingTaskExecutor(true)"))
+        assertExecutorHighlights(0)
+        assertGraphqlHighlights(0, "join")
+    }
+
+    @Test
     fun addBlockingQuickFixRemovesHighlight() {
         myFixture.configureByText(
             "SlowService.java",

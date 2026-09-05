@@ -67,6 +67,7 @@ class ArmeriaMissingBlockingInspection : AbstractBaseJavaLocalInspectionTool() {
                     expression.methodExpression.referenceNameElement ?: expression,
                     message("inspection.missing.blocking.graphql.executor"),
                     ProblemHighlightType.WEAK_WARNING,
+                    ArmeriaAddUseBlockingTaskExecutorQuickFix(expression),
                 )
             }
         }
