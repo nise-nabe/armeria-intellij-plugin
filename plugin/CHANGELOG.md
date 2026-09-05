@@ -4,6 +4,20 @@
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [0.5.0] - 2026-09-05
+
+### Added
+
 - Route Explorer groups services by virtual host (default host vs `virtualHost("foo.com")`) and lists listen ports from `Server.builder().http` / `.https` / `.port` and Spring `armeria.ports` (including HTTP+HTTPS and PROXY unification). Double-click a virtual-host group to jump to the `virtualHost(...)` call.
 - Kotlin live templates for coroutine `RestClient.get(path).execute<T>()` (the `armeria-kotlin` extension, for use in an existing coroutine scope) and `Server.builder().annotatedService().decorator(CoroutineContextService.newDecorator { … })`. A weak warning highlights `suspend` annotated service methods when `armeria-kotlin` is not on the module classpath (`CoroutineContextService`, with the internal `ArmeriaKotlinUtil` marker as a fallback).
 - Route Explorer shows gRPC `enableUnframedRequests` and `ProtoReflectionService` badges on `GrpcService` registrations, copies unframed onto discovered proto RPCs, and shows `google.api.http` transcoding paths next to the RPC name. Generate HTTP Request emits `POST /{package.Service}/{Method}` with `Content-Type: application/json` when unframed is enabled (otherwise the existing gRPC placeholder). Clients explorer labels `GrpcClients` factories that build a `*CoroutineStub` as gRPC-Kotlin.
@@ -20,10 +34,6 @@
 
 - Target IntelliJ IDEA Ultimate 2026.2.2.
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Route Explorer listen-port detail text uses `Listen port {0} ({1})` instead of attributing Spring `armeria.ports` to `Server.builder()`.
@@ -37,8 +47,6 @@
 - `.properties` completion treats leading whitespace as part of the key, matching `Properties.load`.
 - Built-in HTTP service classification requires an Armeria package boundary, so types under `com.linecorp.armeriafoo` are not treated as Armeria services.
 - Scala client conversion (`.blocking()` / `.asRestClient()`) applies only to `WebClient` factories.
-
-### Security
 
 ## [0.4.0] - 2026-08-17
 
