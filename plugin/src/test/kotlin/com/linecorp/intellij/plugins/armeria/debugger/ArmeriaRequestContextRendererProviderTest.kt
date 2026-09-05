@@ -1,7 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.debugger
 
-import com.intellij.debugger.ui.tree.render.CompoundRendererProvider
 import com.intellij.debugger.ui.tree.render.CompoundReferenceRenderer
+import com.intellij.debugger.ui.tree.render.CompoundRendererProvider
 import com.intellij.debugger.ui.tree.render.EnumerationChildrenRenderer
 import com.intellij.debugger.ui.tree.render.LabelRenderer
 import com.intellij.ide.highlighter.JavaFileType
@@ -58,12 +58,14 @@ class ArmeriaRequestContextRendererProviderTest : ArmeriaLightJavaCodeInsightFix
             "com.linecorp.armeria.client.ClientRequestContext",
             CLIENT_REQUEST_CONTEXT_CLASS,
         )
-        val service = assertIs<CompoundReferenceRenderer>(
-            ArmeriaServiceRequestContextRendererProvider().createRenderer(),
-        )
-        val client = assertIs<CompoundReferenceRenderer>(
-            ArmeriaClientRequestContextRendererProvider().createRenderer(),
-        )
+        val service =
+            assertIs<CompoundReferenceRenderer>(
+                ArmeriaServiceRequestContextRendererProvider().createRenderer(),
+            )
+        val client =
+            assertIs<CompoundReferenceRenderer>(
+                ArmeriaClientRequestContextRendererProvider().createRenderer(),
+            )
         assertEquals(SERVICE_REQUEST_CONTEXT_CLASS, service.className)
         assertEquals(CLIENT_REQUEST_CONTEXT_CLASS, client.className)
     }

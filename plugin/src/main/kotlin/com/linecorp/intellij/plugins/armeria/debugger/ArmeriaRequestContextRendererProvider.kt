@@ -32,17 +32,18 @@ abstract class ArmeriaRequestContextRendererProvider : CompoundRendererProvider(
         }
 
     final override fun getChildrenRenderer(): ChildrenRenderer =
-        NodeRendererSettings.createEnumerationChildrenRenderer(
-            arrayOf(
-                arrayOf(CHILD_METHOD, "method()"),
-                arrayOf(CHILD_PATH, "path()"),
-                arrayOf(CHILD_ID, "id()"),
-                arrayOf(CHILD_REMOTE_ADDRESS, "remoteAddress()"),
-                arrayOf(timeoutChildName, timeoutExpression),
-            ),
-        ).apply {
-            isAppendDefaultChildren = true
-        }
+        NodeRendererSettings
+            .createEnumerationChildrenRenderer(
+                arrayOf(
+                    arrayOf(CHILD_METHOD, "method()"),
+                    arrayOf(CHILD_PATH, "path()"),
+                    arrayOf(CHILD_ID, "id()"),
+                    arrayOf(CHILD_REMOTE_ADDRESS, "remoteAddress()"),
+                    arrayOf(timeoutChildName, timeoutExpression),
+                ),
+            ).apply {
+                isAppendDefaultChildren = true
+            }
 
     final override fun isEnabled(): Boolean = true
 
