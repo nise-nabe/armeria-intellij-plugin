@@ -33,7 +33,7 @@ object ArmeriaOpenApiDocumentGenerator {
         if (route.routeMatch != RouteMatch.ANNOTATED_HTTP) {
             return false
         }
-        if (route.pathType == PathType.REGEX || route.pathType == PathType.GLOB) {
+        if (route.pathType != PathType.EXACT) {
             return false
         }
         return openApiMethod(route.httpMethod) != null
@@ -130,7 +130,7 @@ object ArmeriaOpenApiDocumentGenerator {
                     appendKeyValue(
                         indent + 3,
                         "description",
-                        message("route.explorer.openapi.response.description"),
+                        message("route.explorer.openapi.response.description", operation.statusCode),
                     )
                     if (operation.responseContent.isNotEmpty()) {
                         writeContent(indent + 3, operation.responseContent)
@@ -209,7 +209,7 @@ object ArmeriaOpenApiDocumentGenerator {
         return OpenApiOperation(
             operationId = uniqueOperationId(route, usedOperationIds),
             summary = firstDescription(route.contentHints),
-            parameters = pathParameters + headerParameters + queryParameters,
+            parameters = (pathParameters + headerParameters + queryParameters).distinctBy { it.name to it.location },
             requestContent = requestContent,
             responseContent = produces.distinct(),
             statusCode = statusCode(route.contentHints),

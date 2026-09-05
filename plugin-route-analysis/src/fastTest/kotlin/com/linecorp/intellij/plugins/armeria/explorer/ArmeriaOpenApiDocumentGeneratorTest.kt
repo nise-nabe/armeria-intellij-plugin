@@ -30,7 +30,12 @@ class ArmeriaOpenApiDocumentGeneratorTest {
     }
 
     @Test
-    fun exportable_rejectsRegexAndGlob() {
+    fun exportable_rejectsPrefixRegexAndGlob() {
+        assertFalse(
+            ArmeriaOpenApiDocumentGenerator.exportable(
+                route(path = "/hello", pathType = PathType.PREFIX),
+            ),
+        )
         assertFalse(
             ArmeriaOpenApiDocumentGenerator.exportable(
                 route(path = "/users/.*/id", pathType = PathType.REGEX),
@@ -154,6 +159,7 @@ class ArmeriaOpenApiDocumentGeneratorTest {
             )
 
         assertTrue(yaml.contains("\"201\":"), yaml)
+        assertTrue(yaml.contains("description: \"HTTP 201\""), yaml)
         assertTrue(yaml.contains("summary: \"Creates an item\""), yaml)
         assertFalse(yaml.contains("requestBody:"), yaml)
     }
@@ -183,6 +189,7 @@ class ArmeriaOpenApiDocumentGeneratorTest {
                         contentHints =
                             listOf(
                                 message("route.explorer.hint.matchesHeader", "authorization=bearer"),
+                                message("route.explorer.hint.matchesHeader", "authorization=basic"),
                                 message("route.explorer.hint.matchesParam", "verbose=true"),
                             ),
                     ),
@@ -193,6 +200,7 @@ class ArmeriaOpenApiDocumentGeneratorTest {
         assertTrue(yaml.contains("in: \"header\""), yaml)
         assertTrue(yaml.contains("name: \"verbose\""), yaml)
         assertTrue(yaml.contains("in: \"query\""), yaml)
+        assertEquals(1, yaml.lines().count { it.contains("name: \"authorization\"") }, yaml)
     }
 
     @Test
