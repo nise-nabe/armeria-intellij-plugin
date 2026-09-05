@@ -180,6 +180,14 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         return chainCalls(builder, outermostChainCall(builder)).any(::isUseBlockingTaskExecutorTrue)
     }
 
+    /** First `useBlockingTaskExecutor(...)` in the GraphqlService builder chain, if any. */
+    fun findUseBlockingTaskExecutorCall(element: PsiElement): KtCallExpression? {
+        val builder = graphqlBuilderCall(element) ?: return null
+        return chainCalls(builder, outermostChainCall(builder)).firstOrNull {
+            ArmeriaKotlinExpressionSupport.resolveCallName(it) == USE_BLOCKING_TASK_EXECUTOR
+        }
+    }
+
     fun hasBlockingDataFetcher(builderCall: KtCallExpression): Boolean {
         val root = chainRoot(outermostChainCall(builderCall))
         var found = false

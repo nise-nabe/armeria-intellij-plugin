@@ -28,11 +28,37 @@ internal class ArmeriaAddUseBlockingTaskExecutorKotlinQuickFix(
         if (ArmeriaMissingBlockingKotlinSupport.hasBlockingTaskExecutor(call)) {
             return
         }
-        val anchor = expressionToExtend(call)
         val factory = KtPsiFactory(project)
-        val replacement = factory.createExpression("${anchor.text}.useBlockingTaskExecutor(true)")
-        val replaced = anchor.replace(replacement)
+        val existing = ArmeriaMissingBlockingKotlinSupport.findUseBlockingTaskExecutorCall(call)
+        val replaced =
+            if (existing != null) {
+                rewriteExisting(existing, factory)
+            } else {
+                insertAfterBuilder(call, factory)
+            } ?: return
         CodeStyleManager.getInstance(project).reformat(replaced)
+    }
+
+    private fun rewriteExisting(
+        existing: KtCallExpression,
+        factory: KtPsiFactory,
+    ): PsiElement? {
+        val argumentList = existing.valueArgumentList ?: return null
+        val trueExpression = factory.createExpression("true")
+        val arguments = argumentList.arguments
+        if (arguments.isEmpty()) {
+            return argumentList.addArgument(factory.createArgument(trueExpression))
+        }
+        val expression = arguments[0].getArgumentExpression() ?: return arguments[0].replace(factory.createArgument(trueExpression))
+        return expression.replace(trueExpression)
+    }
+
+    private fun insertAfterBuilder(
+        call: KtCallExpression,
+        factory: KtPsiFactory,
+    ): PsiElement {
+        val anchor = expressionToExtend(call)
+        return anchor.replace(factory.createExpression("${anchor.text}.useBlockingTaskExecutor(true)"))
     }
 
     /**

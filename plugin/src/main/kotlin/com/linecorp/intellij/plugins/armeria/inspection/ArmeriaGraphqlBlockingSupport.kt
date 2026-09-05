@@ -61,6 +61,12 @@ internal object ArmeriaGraphqlBlockingSupport {
         return chain.any(::isUseBlockingTaskExecutorTrue)
     }
 
+    /** First `useBlockingTaskExecutor(...)` in the GraphqlService builder chain, if any. */
+    fun findUseBlockingTaskExecutorCall(element: PsiElement): PsiMethodCallExpression? {
+        val chain = graphqlChainCalls(element) ?: return null
+        return chain.firstOrNull { it.methodExpression.referenceName == USE_BLOCKING_TASK_EXECUTOR }
+    }
+
     fun hasBlockingDataFetcher(builderCall: PsiMethodCallExpression): Boolean {
         val outermost = outermostChainCall(builderCall)
         var found = false
