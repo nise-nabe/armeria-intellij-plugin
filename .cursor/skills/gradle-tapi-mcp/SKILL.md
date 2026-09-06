@@ -8,7 +8,7 @@ description: >-
 
 # Gradle Tooling API MCP
 
-This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.7.0 in `.cursor/mcp.json` (Cursor) and `.github/mcp.json` (Copilot). The JAR is installed by `.cursor/install.sh` or `.github/scripts/install-gradle-tapi-mcp.sh` to `~/.local/share/gradle-tapi-mcp-server/gradle-tapi-mcp-server.jar`. At MCP server launch, `GRADLE_PROJECT_DIR` is set to the workspace/git root.
+This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.8.0 in `.cursor/mcp.json` (Cursor) and `.github/mcp.json` (Copilot). The JAR is installed by `.cursor/install.sh` or `.github/scripts/install-gradle-tapi-mcp.sh` to `~/.local/share/gradle-tapi-mcp-server/gradle-tapi-mcp-server.jar`. At MCP server launch, `GRADLE_PROJECT_DIR` is set to the workspace/git root.
 
 The MCP server may report `loading` for a few seconds on first use; call `gradle_connection_status` before other tools.
 
@@ -67,6 +67,11 @@ While `status: running`, use `waitUntilComplete: true` on `gradle_get_build_stat
 | `gradle_get_project_publications` | Published artifacts |
 | `gradle_list_builds` | Recent MCP builds (recovery when a call times out; no TAPI required) |
 | `gradle_cancel_build` | Cancel a background build; poll until status is no longer `running` |
+| `gradle_index_dependency_sources` | Index dependency sources (Idea keep-set by default, or `artifacts[]` / `sourcePaths[]`). `tokenMode`: `all` (default; includes comments/strings) or `idents` |
+| `gradle_search_dependency_sources` | Exact simple-name locate against a prior index (does not reindex). Optional `limit` (omit = unlimited; `0` = empty) |
+| `gradle_search_dependency_sources_multi` | Multi-name OR locate with dedup and `matchedQueries`; optional `limit` / `perQueryLimit` (`per_query_limit` alias) |
+
+Dependency source locate: call `gradle_index_dependency_sources` first, then `gradle_search_dependency_sources` or `gradle_search_dependency_sources_multi`. Indexes persist under `.gradle/mcp-dependency-sources/<tokenMode>/` (`formatVersion` stamped). A `tokenMode` mismatch does not implicitly reindex — pass the matching mode or reindex. Prefer scoped `artifacts[]` / `sourcePaths[]` on large graphs; Idea keep-set indexing can take about a minute on this repo and needs local `*-sources.jar`s for `artifacts[]`.
 
 `gradle_connect`, model/overview inquiry tools, and `gradle_get_build_cache_status` are rejected while an MCP build is running for the same `projectDirectory`. `gradle_disconnect` cancels active builds before closing the connection.
 
@@ -318,6 +323,6 @@ Then rerun `:plugin:test` or `build` via shell or MCP (`background: true`, `queu
 
 Full tool reference and advanced workflows live in the upstream repository:
 
-- [README (v0.7.0)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/v0.7.0/README.md)
-- [gradle-tapi-mcp skill](https://github.com/nise-nabe/gradle-tapi-mcp-server/tree/main/skills/gradle-tapi-mcp)
-- [Tool reference (reference.md)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/main/skills/gradle-tapi-mcp/reference.md)
+- [README (v0.8.0)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/v0.8.0/README.md)
+- [gradle-tapi-mcp skill](https://github.com/nise-nabe/gradle-tapi-mcp-server/tree/main/plugins/gradle-tapi-mcp/skills/gradle-tapi-mcp)
+- [Tool reference (reference.md)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/main/plugins/gradle-tapi-mcp/skills/gradle-tapi-mcp/reference.md)

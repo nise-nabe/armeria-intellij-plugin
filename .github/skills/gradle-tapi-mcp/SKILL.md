@@ -8,7 +8,7 @@ description: >-
 
 # Gradle Tooling API MCP (Copilot / GitHub Agents)
 
-This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.7.0:
+This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.8.0:
 
 | Environment | Config | Install |
 |-------------|--------|---------|
@@ -70,5 +70,13 @@ When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-em
 5. Before opening a PR, run `gradle_run_tasks` with `["build"]`, `background: true`, and `queueIfBusy: true`, poll to completion.
 
 If MCP is unresponsive: `gradle_list_builds` or poll `gradle_get_build_status` with the `buildId` (reconciles disk records automatically), then shell fallback. Do not shell `./gradlew` to read errors from a completed MCP failure.
+
+## Dependency source locate (v0.8.0+)
+
+1. `gradle_index_dependency_sources` (optional `tokenMode`: `all` default or `idents`; optional `artifacts[]` / `sourcePaths[]`)
+2. `gradle_search_dependency_sources` with `query` (exact simple name) or `gradle_search_dependency_sources_multi` with `queries`
+3. Indexes live under `.gradle/mcp-dependency-sources/<tokenMode>/`; matching `tokenMode` is required (no implicit reindex)
+
+Prefer scoped `artifacts[]` when looking up a known library. Idea keep-set indexing on this repo is ~1 minute cold; `artifacts[]` needs local `*-sources.jar`s.
 
 Full reference: `.cursor/skills/gradle-tapi-mcp/SKILL.md`

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-readonly GRADLE_TAPI_MCP_VERSION="0.7.0"
-readonly GRADLE_TAPI_MCP_SHA256="a38dcf4573aa401f940f668875faaa74b4ec2d5f25c183303fff01b23ea9724d"
+readonly GRADLE_TAPI_MCP_VERSION="0.8.0"
+readonly GRADLE_TAPI_MCP_SHA256="b2ebd6071ca5847ea91daf5fe6cadeb9413a478723f082a5bcc2453ed96f9a63"
 readonly INSTALL_DIR="${HOME}/.local/share/gradle-tapi-mcp-server"
 readonly VERSIONED_JAR_NAME="gradle-tapi-mcp-server-${GRADLE_TAPI_MCP_VERSION}.jar"
 readonly VERSIONED_JAR_PATH="${INSTALL_DIR}/${VERSIONED_JAR_NAME}"
