@@ -66,13 +66,13 @@ Wait for `gradle_connection_status` (`connectedAny: true`).
 |------|-----|
 | Compile affected module(s) | `gradle_run_tasks` e.g. `[":plugin:compileKotlin", ":plugin:compileTestKotlin"]` |
 | Tests (route modules) | **One** `gradle_run_tests` batch — affected class(es) only (`Grep` for callers) |
-| Tests (`:plugin`) | `gradle_run_tasks` `[":plugin:test"]` with `arguments: ["--tests", "FQCN"]` — not `gradle_run_tests` |
-| Lint (when `*.kt` staged) | `gradle_run_tasks` `["ktlintCheck"]` — after tests, before commit (`background: true`, `queueIfBusy: true`) |
+| Tests (`:plugin`) | `gradle_run_tests` with `taskPath: ":plugin:test"` + `testClasses` / `testMethods` |
+| Lint (when `*.kt` staged) | `gradle_run_tasks` `["ktlintCheck"]` — after tests, before commit (`background: true`) |
 
 Skip Gradle when the change is docs-only (`.cursor/`, `AGENTS.md`, scripts with no Kotlin).
 Do not run full `build` for small fixes. Poll without `includeOutput` while `status: running`.
-On `status: failed`, re-poll the same `buildId` with `includeProblems: true` (compile/task
-failures) or `includeTestDetails: true` (test failures) before fixing — do **not** shell
+On `status: failed`, read default `problems` on `GRADLE_TASK` failure (re-poll `includeProblems: true`
+only if missing) or `includeTestDetails: true` for tests before fixing — do **not** shell
 `./gradlew` to read errors (see `gradle-mcp.mdc` and `gradle-tapi-mcp` **Failure diagnosis**).
 
 ## 6 — Thermo self-verification (mandatory)

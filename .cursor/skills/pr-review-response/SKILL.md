@@ -159,7 +159,7 @@ For optional Kotlin plugin issues, follow the **`ArmeriaClientCollector` / `Arme
 3. Add/adjust tests only when the comment is about missing coverage or you fixed a bug.
 4. For test fixtures: **reuse `setUp()` stubs** — do not duplicate Java FQCN annotations as Kotlin `annotation class` in the same fixture.
 
-When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-empty, run `gradle_run_tasks` with `["ktlintCheck"]` (`background: true`, `queueIfBusy: true` + poll) before committing (see `AGENTS.md` **Commit workflow (coding agents)**). Wait for any in-flight MCP build to finish or cancel it (`gradle_cancel_build`) first. Re-stage the same `<paths>` after `ktlintFormat` — `ktlintFormat` is project-wide, so do not use a broad `git add -u -- '*.kt'` pathspec, which can pick up unrelated Kotlin edits. If `ktlintCheck` still fails after format, apply manual fixes, `git add` those files, and re-run until clean. Commit once before verification:
+When `git diff --cached --name-only -- '*.kt' '*.kts' '.editorconfig'` is non-empty, run `gradle_run_tasks` with `["ktlintCheck"]` (`background: true` + poll; `queueIfBusy` defaults true) before committing (see `AGENTS.md` **Commit workflow (coding agents)**). Wait for any in-flight MCP build to finish or cancel it (`gradle_cancel_build`) first. Re-stage the same `<paths>` after `ktlintFormat` — `ktlintFormat` is project-wide, so do not use a broad `git add -u -- '*.kt'` pathspec, which can pick up unrelated Kotlin edits. If `ktlintCheck` still fails after format, apply manual fixes, `git add` those files, and re-run until clean. Commit once before verification:
 
 ```bash
 set -e
@@ -182,9 +182,9 @@ git commit -m "fix: address PR <N> review comments"
 Follow **`gradle-tapi-mcp`** constraints:
 
 1. `gradle_connection_status` — stop if not connected.
-2. **One** `gradle_run_tasks` batching `compileKotlin` plus the test source-set compile task for the suite you will run (`compileTestKotlin` for `:test`; `compileFastTestKotlin` or `fastTestClasses` for `:fastTest` — `src/fastTest` is not covered by `compileTestKotlin`), `background: true` and `queueIfBusy: true` on cold start.
-3. Poll `gradle_get_build_status` until terminal — omit `includeOutput` while `status: running` unless you need live logs (use `sinceStdoutOffset` / `sinceStderrOffset` for incremental deltas). On failure, re-poll same `buildId` with `includeProblems: true` (compile/task) or `includeTestDetails: true` (tests) before `includeOutput: true` — do **not** shell `./gradlew` for logs.
-4. **One** test run: `gradle_run_tests` with selectors for route modules; for `:plugin` use `gradle_run_tasks` `{ "tasks": [":plugin:test"], "arguments": ["--tests", "FQCN"] }` (`background: true`, `queueIfBusy: true`). Do not call `gradle_run_tests` without selectors or with `taskPath: ":plugin:test"`.
+2. **One** `gradle_run_tasks` batching `compileKotlin` plus the test source-set compile task for the suite you will run (`compileTestKotlin` for `:test`; `compileFastTestKotlin` or `fastTestClasses` for `:fastTest` — `src/fastTest` is not covered by `compileTestKotlin`), `background: true` on cold start (`queueIfBusy` defaults true).
+3. Poll `gradle_get_build_status` until terminal — omit `includeOutput` while `status: running` unless you need live logs (use `sinceStdoutOffset` / `sinceStderrOffset` for incremental deltas). On failure, read default `problems` on `GRADLE_TASK` (re-poll `includeProblems: true` only if missing) or `includeTestDetails: true` for tests before `includeOutput: true` — do **not** shell `./gradlew` for logs.
+4. **One** test run: `gradle_run_tests` with `taskPath` + selectors (route modules or `:plugin:test`), `background: true`. Do not call `gradle_run_tests` without selectors (whole suites use `gradle_run_tasks`).
 5. On failure, rerun **only** the failing method(s) — not the full class suite.
 
 | Changed code in | Compile | Tests |
@@ -230,7 +230,7 @@ Report in the user’s language:
 - [ ] ≤ 1 branch checkout
 - [ ] Files read with offset/limit or Grep, not full-file unless refactoring
 - [ ] Gradle: ≤ 1 compile + ≤ 2 test MCP calls (full batch + optional single-method retry)
-- [ ] No `sleep` polling loops longer than needed — use `waitUntilComplete: true` on `gradle_get_build_status`; on failure re-poll with `includeProblems` / `includeTestDetails` before `includeOutput`
+- [ ] No `sleep` polling loops longer than needed — use `waitUntilComplete: true` on `gradle_get_build_status`; on failure read default `problems` / re-poll with `includeProblems` / `includeTestDetails` before `includeOutput`
 - [ ] `resolve_comment` batched in one agent turn (parallel tool calls)
 - [ ] Did not re-read `gradle-tapi-mcp` or `AGENTS.md` in full
 
@@ -241,7 +241,7 @@ Report in the user’s language:
 | REST `/pulls/comments` with `diff_hunk` | ~12k tok | GraphQL without hunks |
 | 45+ tool rounds (fix → test → fix → test) | ~30k tok cumulative | Batch fixes, one verify |
 | Full file Write after Read | ~6k tok per file | StrReplace hunks |
-| Re-running `./gradlew <task>` after MCP failure to read compile/test errors | Re-poll same `buildId` with `includeProblems` / `includeTestDetails` / `includeOutput` |
+| Re-running `./gradlew <task>` after MCP failure to read compile/test errors | Read default `problems`; re-poll same `buildId` with `includeProblems` / `includeTestDetails` / `includeOutput` if needed |
 | `gradle_get_build_status` + `includeOutput: true` every 30s while running | Growing stdout each poll | Omit output while running, or use `sinceStdoutOffset` / `sinceStderrOffset` deltas |
 | Reading 16 KB gradle skill for a compile+test | ~4k tok | Use table above |
 | Six sequential `resolve_comment` turns | 6 round-trips | Parallel in one message |
