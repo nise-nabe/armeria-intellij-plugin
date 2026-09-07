@@ -8,7 +8,7 @@ description: >-
 
 # Gradle Tooling API MCP
 
-This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.8.0 in `.cursor/mcp.json` (Cursor) and `.github/mcp.json` (Copilot). The JAR is installed by `.cursor/install.sh` or `.github/scripts/install-gradle-tapi-mcp.sh` to `~/.local/share/gradle-tapi-mcp-server/gradle-tapi-mcp-server.jar`. At MCP server launch, `GRADLE_PROJECT_DIR` is set to the workspace/git root.
+This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.11.0 in `.cursor/mcp.json` (Cursor) and `.github/mcp.json` (Copilot). The JAR is installed by `.cursor/install.sh` or `.github/scripts/install-gradle-tapi-mcp.sh` to `~/.local/share/gradle-tapi-mcp-server/gradle-tapi-mcp-server.jar`. At MCP server launch, `GRADLE_PROJECT_DIR` is set to the workspace/git root.
 
 The MCP server may report `loading` for a few seconds on first use; call `gradle_connection_status` before other tools.
 
@@ -313,8 +313,8 @@ Then rerun `:plugin:test` or `build` via shell or MCP (`background: true` + poll
 
 Full tool reference and advanced workflows live in the upstream repository:
 
-- [README (v0.8.0)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/v0.8.0/README.md)
+- [README (v0.11.0)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/v0.11.0/README.md)
 - [gradle-tapi-mcp skill](https://github.com/nise-nabe/gradle-tapi-mcp-server/tree/main/skills/gradle-tapi-mcp)
 - [Tool reference (reference.md)](https://github.com/nise-nabe/gradle-tapi-mcp-server/blob/main/skills/gradle-tapi-mcp/reference.md)
 
-v0.8.0 also adds dependency-source tools (`gradle_index_dependency_sources`, `gradle_search_dependency_sources`, `gradle_search_dependency_sources_multi`) — see the upstream README; not required for routine compile/test verification in this repo.
+v0.11.0 dependency tooling (optional for this repo’s compile/test workflows; see upstream README): `gradle_get_dependency_resolution`, `gradle_index_dependency_sources` (background index + optional `downloadSources`), `gradle_get_dependency_sources_index_status`, `gradle_search_dependency_sources` / `_multi`, and `gradle_read_dependency_source`.
