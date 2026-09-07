@@ -114,7 +114,7 @@ final pass before requesting review.
 - [ ] Invoke new shell scripts via `bash path/to/script.sh`, not relying on executable bit
 - [ ] Installer scripts preflight required tools (`unzip`, `curl`) with clear errors
 - [ ] Gradle MCP docs match the pinned server version in `install-gradle-tapi-mcp.sh`
-- [ ] Gradle MCP failures: re-poll the **same** `buildId` with `includeProblems` / `includeTestDetails` (read default `problems` first); selected `:plugin` tests use `gradle_run_tests` with `taskPath` + selectors (v0.8.0)
+- [ ] Gradle MCP failures: re-poll the **same** `buildId` with `includeProblems` / `includeTestDetails` (read default `problems` first); selected `:plugin` tests use `gradle_run_tests` with `taskPath` + selectors (v0.11.0)
 - [ ] Avoid environment-specific assertions (`DISPLAY=:1`) in durable docs — phrase as sandbox-relative
 - [ ] MCP config uses `stdio` transport; repo root derived from script path, not fragile `pwd`
 - [ ] When editing a skill that also lives under `.github/skills/`, update **both** copies (GitHub Copilot agents load `.github/skills/…`)
