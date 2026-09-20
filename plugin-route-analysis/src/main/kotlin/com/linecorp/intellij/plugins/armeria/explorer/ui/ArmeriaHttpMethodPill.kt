@@ -28,6 +28,7 @@ object ArmeriaHttpMethodPill {
             // Kind lives on the delegation badge; blank methods match methodLabel ("ALL").
             RouteMatch.DELEGATED -> route.httpMethod.ifBlank { "ALL" }
             RouteMatch.NON_HTTP -> route.protocol.uppercase()
+            RouteMatch.DISCOVERY -> route.protocol.uppercase()
             RouteMatch.RUNTIME, RouteMatch.CONFIG -> route.httpMethod
         }
 

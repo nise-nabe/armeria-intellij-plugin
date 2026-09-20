@@ -66,6 +66,7 @@ data class ArmeriaRoute(
                 RouteMatch.DELEGATED ->
                     httpMethod.ifBlank { message("route.explorer.method.allHttp") }
                 RouteMatch.NON_HTTP -> protocol
+                RouteMatch.DISCOVERY -> protocol
                 RouteMatch.RUNTIME, RouteMatch.CONFIG -> httpMethod
             }
 

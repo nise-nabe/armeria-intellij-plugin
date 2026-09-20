@@ -122,6 +122,10 @@ fun JavaCodeInsightTestFixture.registerExtendedRegistrationCollectorStubs() {
                 return this;
             }
 
+            public ServerBuilder serverListener(Object listener) {
+                return this;
+            }
+
             public com.linecorp.armeria.server.Server build() {
                 return null;
             }
@@ -348,6 +352,10 @@ fun JavaCodeInsightTestFixture.registerKotlinExtendedRegistrationCollectorStubs(
                 return this;
             }
 
+            public ServerBuilder serverListener(Object listener) {
+                return this;
+            }
+
             public com.linecorp.armeria.server.Server build() {
                 return null;
             }
@@ -458,6 +466,137 @@ fun JavaCodeInsightTestFixture.registerKotlinExtendedRegistrationCollectorStubs(
             }
 
             public Object build() {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
+}
+
+/**
+ * Optional-integration stubs for server-side discovery registration
+ * (`serverListener(...)` + `*UpdatingListener`). Tests that verify the classpath gate
+ * must NOT call this — the listener classes stay absent from the fixture.
+ */
+fun JavaCodeInsightTestFixture.registerDiscoveryRegistrationStubs() {
+    this.addClass(
+        """
+        package com.linecorp.armeria.server;
+
+        public interface ServerListener {
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.zookeeper;
+
+        import com.linecorp.armeria.server.ServerListener;
+
+        public final class ZooKeeperUpdatingListener implements ServerListener {
+            public static ZooKeeperUpdatingListenerBuilder builder(String zkConnectionString, String znodePath, ZooKeeperRegistrationSpec spec) {
+                return null;
+            }
+
+            public static ZooKeeperUpdatingListener of(String zkConnectionString, String znodePath, ZooKeeperRegistrationSpec spec) {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.zookeeper;
+
+        public final class ZooKeeperUpdatingListenerBuilder {
+            public ZooKeeperUpdatingListenerBuilder sessionTimeoutMillis(long timeout) {
+                return this;
+            }
+
+            public ZooKeeperUpdatingListener build() {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.zookeeper;
+
+        public final class ZooKeeperRegistrationSpec {
+            public static ZooKeeperRegistrationSpec curator(String serviceName) {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.eureka;
+
+        import com.linecorp.armeria.server.ServerListener;
+
+        public final class EurekaUpdatingListener implements ServerListener {
+            public static EurekaUpdatingListenerBuilder builder(String eurekaUri) {
+                return null;
+            }
+
+            public static EurekaUpdatingListenerBuilder builder(String eurekaUri, String appName) {
+                return null;
+            }
+
+            public static EurekaUpdatingListener of(String eurekaUri, String appName) {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.eureka;
+
+        public final class EurekaUpdatingListenerBuilder {
+            public EurekaUpdatingListenerBuilder appName(String appName) {
+                return this;
+            }
+
+            public EurekaUpdatingListenerBuilder instanceId(String instanceId) {
+                return this;
+            }
+
+            public EurekaUpdatingListener build() {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.consul;
+
+        import com.linecorp.armeria.server.ServerListener;
+
+        public final class ConsulUpdatingListener implements ServerListener {
+            public static ConsulUpdatingListenerBuilder builder(String consulUri, String serviceName) {
+                return null;
+            }
+
+            public static ConsulUpdatingListener of(String consulUri, String serviceName) {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.consul;
+
+        public final class ConsulUpdatingListenerBuilder {
+            public ConsulUpdatingListenerBuilder serviceName(String serviceName) {
+                return this;
+            }
+
+            public ConsulUpdatingListener build() {
                 return null;
             }
         }

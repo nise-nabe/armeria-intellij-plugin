@@ -13,6 +13,9 @@ enum class RouteProtocol(
     SSE("route.explorer.protocol.sse"),
     HEALTH_CHECK("route.explorer.protocol.healthCheck"),
     SAML("route.explorer.protocol.saml"),
+    ZOOKEEPER("route.explorer.protocol.zookeeper"),
+    EUREKA("route.explorer.protocol.eureka"),
+    CONSUL("route.explorer.protocol.consul"),
     ;
 
     fun presentableName(): String = message(messageKey)
