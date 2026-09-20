@@ -16,6 +16,7 @@
     <depends optional="true" config-file="proto-integration.xml">idea.plugin.protoeditor</depends>
     <depends optional="true" config-file="yaml-integration.xml">org.jetbrains.plugins.yaml</depends>
     <depends optional="true" config-file="properties-integration.xml">com.intellij.properties</depends>
+    <depends optional="true" config-file="scala-integration.xml">org.intellij.scala</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <moduleBuilder builderClass="com.linecorp.intellij.plugins.armeria.module.ArmeriaModuleBuilder" />

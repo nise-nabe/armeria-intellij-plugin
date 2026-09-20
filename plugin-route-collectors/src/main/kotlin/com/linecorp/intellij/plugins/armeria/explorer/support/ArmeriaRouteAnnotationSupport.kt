@@ -3,6 +3,7 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiAnnotationMemberValue
 import com.intellij.psi.PsiArrayInitializerMemberValue
+import com.intellij.psi.PsiLiteral
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethod
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
@@ -101,6 +102,7 @@ internal object ArmeriaRouteAnnotationSupport {
         when (value) {
             null -> emptyList()
             is PsiLiteralExpression -> listOfNotNull(value.value as? String)
+            is PsiLiteral -> listOfNotNull(value.value as? String)
             is PsiArrayInitializerMemberValue -> value.initializers.flatMap(::extractStrings)
             else -> evaluateConstant(value)?.let { listOf(it) } ?: emptyList()
         }

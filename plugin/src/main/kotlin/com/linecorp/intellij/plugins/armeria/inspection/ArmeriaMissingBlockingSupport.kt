@@ -157,7 +157,7 @@ internal object ArmeriaMissingBlockingSupport {
         return inspectable.all { findings(it).isNotEmpty() }
     }
 
-    private fun isEventLoopDataFetcher(method: PsiMethod): Boolean {
+    fun isEventLoopDataFetcher(method: PsiMethod): Boolean {
         if (!isDataFetcherGet(method)) {
             return false
         }
@@ -170,7 +170,7 @@ internal object ArmeriaMissingBlockingSupport {
         }
     }
 
-    private fun isHttpServiceOverride(method: PsiMethod): Boolean {
+    fun isHttpServiceOverride(method: PsiMethod): Boolean {
         if (method.name !in HTTP_SERVICE_HANDLER_METHODS) {
             return false
         }
@@ -215,7 +215,7 @@ internal object ArmeriaMissingBlockingSupport {
 
     fun hasNonBlocking(psiClass: PsiClass): Boolean = psiClass.hasAnnotation(ArmeriaRouteSupport.NON_BLOCKING_ANNOTATION)
 
-    private fun isGrpcServiceOverride(method: PsiMethod): Boolean {
+    fun isGrpcServiceOverride(method: PsiMethod): Boolean {
         if (method.findSuperMethods().isEmpty()) {
             return false
         }
