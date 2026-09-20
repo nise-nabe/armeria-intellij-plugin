@@ -675,4 +675,81 @@ class ArmeriaKotlinClientCollectorTest : ArmeriaClientFixtureTestBase() {
 
         assertEquals("XdsEndpointGroup (my-listener)", endpoint.endpointGroup)
     }
+
+    fun testCollectXdsHttpPreprocessorWithBootstrapNameFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+            import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor
+
+            fun main() {
+                WebClient.of(XdsHttpPreprocessor.ofListener("my-bootstrap", "my-listener"))
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("xDS (my-listener)", endpoint.endpointGroup)
+        assertEquals("my-listener", endpoint.uri)
+    }
+
+    fun testCollectXdsHttpPreprocessorViaKotlinProperty() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+            import com.linecorp.armeria.xds.XdsBootstrap
+            import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor
+
+            fun main() {
+                val bootstrap: XdsBootstrap? = null
+                val preprocessor = XdsHttpPreprocessor.ofListener("my-listener", bootstrap)
+                WebClient.of(preprocessor)
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("xDS (my-listener)", endpoint.endpointGroup)
+        assertEquals("my-listener", endpoint.uri)
+        assertTrue(!ArmeriaClientEndpointsSupport.isVisible(endpoint))
+    }
+
+    fun testDoesNotLabelUserDefinedXdsHttpPreprocessorAsXdsFromKotlin() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+            import example.other.XdsHttpPreprocessor
+
+            fun main() {
+                WebClient.of(XdsHttpPreprocessor.ofListener("my-listener"))
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example.other;
+
+            public final class XdsHttpPreprocessor {
+                public static XdsHttpPreprocessor ofListener(String listenerName) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+
+        assertTrue(endpoints.none { it.endpointGroup?.startsWith("xDS") == true })
+    }
 }

@@ -830,4 +830,64 @@ class ArmeriaClientCollectorTest : ArmeriaClientFixtureTestBase() {
 
         assertEquals("XdsEndpointGroup (my-listener)", endpoint.endpointGroup)
     }
+
+    fun testCollectXdsHttpPreprocessorViaVariable() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+            import com.linecorp.armeria.xds.XdsBootstrap;
+            import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
+
+            public class Main {
+                public static void main(String[] args) {
+                    XdsBootstrap bootstrap = null;
+                    XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", bootstrap);
+                    WebClient.of(preprocessor);
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("xDS (my-listener)", endpoint.endpointGroup)
+        assertEquals("my-listener", endpoint.uri)
+        assertTrue(!ArmeriaClientEndpointsSupport.isVisible(endpoint))
+    }
+
+    fun testDoesNotLabelUserDefinedXdsHttpPreprocessorAsXds() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+            import example.other.XdsHttpPreprocessor;
+
+            public class Main {
+                public static void main(String[] args) {
+                    WebClient.of(XdsHttpPreprocessor.ofListener("my-listener"));
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example.other;
+
+            public final class XdsHttpPreprocessor {
+                public static XdsHttpPreprocessor ofListener(String listenerName) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertNull(endpoint.endpointGroup)
+    }
 }

@@ -1,9 +1,11 @@
 package com.linecorp.intellij.plugins.armeria.client
 
 import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
+import com.intellij.psi.PsiParenthesizedExpression
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiVariable
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
@@ -27,12 +29,13 @@ internal object ArmeriaClientXdsSupport {
 
     private const val LISTENER_NAME_PARAMETER = "listenerName"
 
+    private const val XDS_PACKAGE_PREFIX = "com.linecorp.armeria.xds."
+
     fun xdsKind(): String = message("client.explorer.endpointGroup.xds")
 
     fun isArmeriaXdsClass(qualifiedName: String?): Boolean =
         qualifiedName != null &&
-            qualifiedName.startsWith("com.linecorp.armeria.") &&
-            "xds" in qualifiedName &&
+            qualifiedName.startsWith(XDS_PACKAGE_PREFIX) &&
             qualifiedName.substringAfterLast('.') in XDS_FACTORY_SIMPLE_NAMES
 
     /** Receiver class FQN of a static xDS factory call, when resolvable. */
@@ -46,7 +49,12 @@ internal object ArmeriaClientXdsSupport {
             ?.references
             ?.firstNotNullOfOrNull { it.resolve() as? PsiMethod }
 
-    fun labelJavaXdsFactory(expression: PsiExpression?): String? =
+    fun labelJavaXdsFactory(expression: PsiExpression?): String? = labelJavaXdsFactory(expression, mutableSetOf())
+
+    internal fun labelJavaXdsFactory(
+        expression: PsiExpression?,
+        visited: MutableSet<PsiElement>,
+    ): String? =
         when (expression) {
             null -> null
             is PsiMethodCallExpression -> {
@@ -67,11 +75,7 @@ internal object ArmeriaClientXdsSupport {
                     return null
                 }
                 val fallback =
-                    receiverClass
-                        .findMethodsByName(methodName, false)
-                        .firstOrNull { candidate ->
-                            candidate.parameterList.parameters.any { it.name == LISTENER_NAME_PARAMETER }
-                        }
+                    listenerNameMethod(receiverClass, methodName, expression.argumentList.expressions.size)
                 xdsLabel(
                     fallback?.let { extractJavaListenerName(expression, it) }
                         ?: expression.argumentList.expressions.reversed().firstNotNullOfOrNull {
@@ -79,27 +83,49 @@ internal object ArmeriaClientXdsSupport {
                         },
                 )
             }
+            is PsiParenthesizedExpression -> labelJavaXdsFactory(expression.expression, visited)
             is PsiReferenceExpression -> {
                 val resolved = expression.resolve() as? PsiVariable ?: return null
-                labelJavaXdsFactory(resolved.initializer)
+                if (!visited.add(resolved)) {
+                    return null
+                }
+                labelJavaXdsFactory(resolved.initializer, visited)
             }
             else -> null
         }
 
-    fun labelKotlinXdsFactory(expression: KtExpression?): String? {
+    fun labelKotlinXdsFactory(expression: KtExpression?): String? = labelKotlinXdsFactory(expression, mutableSetOf())
+
+    internal fun labelKotlinXdsFactory(
+        expression: KtExpression?,
+        visited: MutableSet<PsiElement>,
+    ): String? {
         val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: return null
         val call = ArmeriaKotlinClientCollector.callExpressionInChain(unwrapped)
         if (call != null) {
             return labelKotlinXdsCall(call)
         }
-        if (unwrapped is KtNameReferenceExpression) {
-            return when (val resolved = unwrapped.references.firstOrNull()?.resolve()) {
-                is KtProperty -> labelKotlinXdsFactory(resolved.initializer)
-                is PsiVariable -> labelJavaXdsFactory(resolved.initializer)
+        val reference =
+            when (unwrapped) {
+                is KtNameReferenceExpression -> unwrapped
+                is KtQualifiedExpression -> unwrapped.selectorExpression as? KtNameReferenceExpression
                 else -> null
-            }
+            } ?: return null
+        return when (val resolved = reference.references.firstOrNull()?.resolve()) {
+            is KtProperty ->
+                if (visited.add(resolved)) {
+                    labelKotlinXdsFactory(resolved.initializer, visited)
+                } else {
+                    null
+                }
+            is PsiVariable ->
+                if (visited.add(resolved)) {
+                    labelJavaXdsFactory(resolved.initializer, visited)
+                } else {
+                    null
+                }
+            else -> null
         }
-        return null
     }
 
     private fun labelKotlinXdsCall(call: KtCallExpression): String? {
@@ -125,18 +151,30 @@ internal object ArmeriaClientXdsSupport {
         if (!isArmeriaXdsClass(qualifiedName)) {
             return null
         }
-        val fallback =
-            (resolved as? PsiClass)
-                ?.findMethodsByName(methodName, false)
-                ?.firstOrNull { candidate ->
-                    candidate.parameterList.parameters.any { it.name == LISTENER_NAME_PARAMETER }
-                }
+        val fallback = (resolved as? PsiClass)?.let { listenerNameMethod(it, methodName, call.valueArguments.size) }
         return xdsLabel(
             fallback?.let { extractKotlinListenerName(call, it) }
                 ?: call.valueArguments.asReversed().firstNotNullOfOrNull { argument ->
                     ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(argument.getArgumentExpression())
                 },
         )
+    }
+
+    /** Prefer an overload whose arity matches the call so listenerName binds the right argument. */
+    private fun listenerNameMethod(
+        containingClass: PsiClass,
+        methodName: String?,
+        argumentCount: Int,
+    ): PsiMethod? {
+        methodName ?: return null
+        val candidates = containingClass.findMethodsByName(methodName, false).toList()
+        val arityMatched = candidates.filter { it.parameterList.parametersCount == argumentCount }
+        return (arityMatched.ifEmpty { candidates })
+            .filter { candidate ->
+                candidate.parameterList.parameters.any { it.name == LISTENER_NAME_PARAMETER }
+            }.maxByOrNull { candidate ->
+                candidate.parameterList.parameters.indexOfLast { it.name == LISTENER_NAME_PARAMETER }
+            }
     }
 
     private fun extractJavaListenerName(

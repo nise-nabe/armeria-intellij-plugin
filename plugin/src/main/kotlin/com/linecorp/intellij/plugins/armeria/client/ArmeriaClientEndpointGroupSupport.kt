@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.client
 
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiReferenceExpression
@@ -19,7 +20,6 @@ internal object ArmeriaClientEndpointGroupSupport {
             "EurekaEndpointGroup",
             "ConsulEndpointGroup",
             "PropertiesEndpointGroup",
-            "XdsEndpointGroup",
         )
 
     private val ENDPOINT_GROUP_KIND_BUNDLE_KEYS =
@@ -35,7 +35,12 @@ internal object ArmeriaClientEndpointGroupSupport {
             "StaticEndpointGroup" to "client.explorer.endpointGroup.static",
         )
 
-    fun labelJavaEndpointGroup(expression: PsiExpression?): String? {
+    fun labelJavaEndpointGroup(expression: PsiExpression?): String? = labelJavaEndpointGroup(expression, mutableSetOf())
+
+    internal fun labelJavaEndpointGroup(
+        expression: PsiExpression?,
+        visited: MutableSet<PsiElement>,
+    ): String? {
         expression ?: return null
         val call = expression as? PsiMethodCallExpression
         if (call != null) {
@@ -43,12 +48,18 @@ internal object ArmeriaClientEndpointGroupSupport {
                 call.methodExpression.qualifierExpression?.text,
                 call.argumentList.expressions.toList(),
                 ArmeriaClientXdsSupport.resolveJavaFactoryClass(call),
+                visited,
             )
         }
         val reference = expression as? PsiReferenceExpression ?: return null
         val resolved = reference.resolve()
         return when (resolved) {
-            is PsiVariable -> labelJavaEndpointGroup(resolved.initializer)
+            is PsiVariable ->
+                if (visited.add(resolved)) {
+                    labelJavaEndpointGroup(resolved.initializer, visited)
+                } else {
+                    null
+                }
             else -> reference.text.takeIf { looksLikeEndpointGroupText(it) }
         }
     }
@@ -107,9 +118,10 @@ internal object ArmeriaClientEndpointGroupSupport {
         receiver: String?,
         arguments: List<PsiExpression>,
         resolvedClassName: String?,
+        visited: MutableSet<PsiElement>,
     ): String? {
         val simpleName = receiver?.substringAfterLast('.')?.takeIf { looksLikeEndpointGroupText(it) } ?: return null
-        val nested = arguments.firstNotNullOfOrNull { labelJavaEndpointGroup(it) }
+        val nested = arguments.firstNotNullOfOrNull { labelJavaEndpointGroup(it, visited) }
         val detail = nested ?: arguments.firstNotNullOfOrNull { ArmeriaClientCollector.extractString(it) }
         val kind = kindLabel(simpleName, resolvedClassName)
         return if (detail != null) "$kind ($detail)" else kind
