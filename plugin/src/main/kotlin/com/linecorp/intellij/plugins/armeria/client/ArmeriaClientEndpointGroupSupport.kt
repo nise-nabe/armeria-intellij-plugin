@@ -19,6 +19,7 @@ internal object ArmeriaClientEndpointGroupSupport {
             "EurekaEndpointGroup",
             "ConsulEndpointGroup",
             "PropertiesEndpointGroup",
+            "XdsEndpointGroup",
         )
 
     private val ENDPOINT_GROUP_KIND_BUNDLE_KEYS =
@@ -41,6 +42,7 @@ internal object ArmeriaClientEndpointGroupSupport {
             return labelJavaEndpointGroupCall(
                 call.methodExpression.qualifierExpression?.text,
                 call.argumentList.expressions.toList(),
+                ArmeriaClientXdsSupport.resolveJavaFactoryClass(call),
             )
         }
         val reference = expression as? PsiReferenceExpression ?: return null
@@ -83,7 +85,17 @@ internal object ArmeriaClientEndpointGroupSupport {
         }
     }
 
-    internal fun kindLabel(simpleName: String): String {
+    internal fun kindLabel(
+        simpleName: String,
+        resolvedClassName: String? = null,
+    ): String {
+        if (simpleName == "XdsEndpointGroup") {
+            return if (ArmeriaClientXdsSupport.isArmeriaXdsClass(resolvedClassName)) {
+                ArmeriaClientXdsSupport.xdsKind()
+            } else {
+                simpleName
+            }
+        }
         ENDPOINT_GROUP_KIND_BUNDLE_KEYS[simpleName]?.let { return message(it) }
         if (simpleName.startsWith("Dns") && simpleName.endsWith("EndpointGroup")) {
             return message("client.explorer.endpointGroup.dns")
@@ -94,11 +106,12 @@ internal object ArmeriaClientEndpointGroupSupport {
     private fun labelJavaEndpointGroupCall(
         receiver: String?,
         arguments: List<PsiExpression>,
+        resolvedClassName: String?,
     ): String? {
         val simpleName = receiver?.substringAfterLast('.')?.takeIf { looksLikeEndpointGroupText(it) } ?: return null
         val nested = arguments.firstNotNullOfOrNull { labelJavaEndpointGroup(it) }
         val detail = nested ?: arguments.firstNotNullOfOrNull { ArmeriaClientCollector.extractString(it) }
-        val kind = kindLabel(simpleName)
+        val kind = kindLabel(simpleName, resolvedClassName)
         return if (detail != null) "$kind ($detail)" else kind
     }
 }

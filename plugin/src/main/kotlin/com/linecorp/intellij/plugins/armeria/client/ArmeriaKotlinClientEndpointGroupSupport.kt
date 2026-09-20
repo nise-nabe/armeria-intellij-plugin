@@ -25,7 +25,7 @@ internal object ArmeriaKotlinClientEndpointGroupSupport {
                     else -> (call.parent as? KtDotQualifiedExpression)?.receiverExpression?.text
                 }
             val arguments = call.valueArguments.mapNotNull { it.getArgumentExpression() }
-            return labelKotlinEndpointGroupCall(receiver, arguments)
+            return labelKotlinEndpointGroupCall(receiver, arguments, ArmeriaClientXdsSupport.resolveKotlinFactoryClass(call))
         }
         if (expression is KtNameReferenceExpression) {
             val resolved = expression.references.firstOrNull()?.resolve()
@@ -44,6 +44,7 @@ internal object ArmeriaKotlinClientEndpointGroupSupport {
     private fun labelKotlinEndpointGroupCall(
         receiver: String?,
         arguments: List<KtExpression>,
+        resolvedClassName: String?,
     ): String? {
         val simpleName =
             receiver
@@ -52,7 +53,7 @@ internal object ArmeriaKotlinClientEndpointGroupSupport {
                 ?: return null
         val nested = arguments.firstNotNullOfOrNull { labelKotlinEndpointGroup(it) }
         val detail = nested ?: arguments.firstNotNullOfOrNull { extractKotlinDetail(it) }
-        val kind = ArmeriaClientEndpointGroupSupport.kindLabel(simpleName)
+        val kind = ArmeriaClientEndpointGroupSupport.kindLabel(simpleName, resolvedClassName)
         return if (detail != null) "$kind ($detail)" else kind
     }
 

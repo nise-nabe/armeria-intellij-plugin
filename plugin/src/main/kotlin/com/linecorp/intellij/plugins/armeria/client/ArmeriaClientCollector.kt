@@ -193,6 +193,14 @@ object ArmeriaClientCollector {
                 endpointGroup = endpointGroup,
             )
         }
+        val xdsGroup = ArmeriaClientXdsSupport.labelJavaXdsFactory(arguments.firstOrNull())
+        if (xdsGroup != null) {
+            return ClientMetadata(
+                uri = ArmeriaClientEndpointGroupSupport.extractUriFromLabel(xdsGroup),
+                decorators = decorators,
+                endpointGroup = xdsGroup,
+            )
+        }
         val uri = extractString(arguments.firstOrNull()) ?: return null
         return ClientMetadata(uri = uri, decorators = decorators)
     }
@@ -238,6 +246,14 @@ object ArmeriaClientCollector {
                         ArmeriaClientEndpointGroupSupport.extractJavaEndpointGroupUri(arguments[1])
                             ?: endpointGroup
                     return WebClientTransportInfo(uri = uri, decorators = decorators, endpointGroup = endpointGroup)
+                }
+                val xdsGroup = ArmeriaClientXdsSupport.labelJavaXdsFactory(arguments.firstOrNull())
+                if (xdsGroup != null) {
+                    return WebClientTransportInfo(
+                        uri = ArmeriaClientEndpointGroupSupport.extractUriFromLabel(xdsGroup),
+                        decorators = decorators,
+                        endpointGroup = xdsGroup,
+                    )
                 }
                 val uri = extractString(arguments.firstOrNull()) ?: return null
                 return WebClientTransportInfo(uri = uri, decorators = decorators)
