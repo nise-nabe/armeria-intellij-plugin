@@ -10,6 +10,7 @@ import com.intellij.psi.PsiParenthesizedExpression
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiTypeCastExpression
 import com.intellij.psi.PsiVariable
+import com.intellij.psi.util.PsiUtil
 import com.linecorp.intellij.plugins.armeria.explorer.model.FileServiceRoot
 import com.linecorp.intellij.plugins.armeria.explorer.model.FileServiceRootKind
 
@@ -29,18 +30,12 @@ internal object ArmeriaFileServiceRootSupport {
     private val PATH_FACTORY_QUALIFIERS = setOf(JAVA_NIO_PATHS, JAVA_NIO_PATH, "Paths", "Path")
 
     /**
-     * `fileService(path, root)` / `fileService(path, anchor, rootPath)` registrations —
-     * [arguments] includes the mount path at index 0.
+     * `fileService(path, root)` registrations — [arguments] includes the mount path at index 0.
      */
     fun extractFromFileServiceCall(arguments: Array<PsiExpression>): FileServiceRoot? {
         val rootExpression = arguments.getOrNull(1) ?: return null
         extractFromServiceExpression(rootExpression)?.let { return it }
-        fileSystemRootFromExpression(rootExpression, mutableSetOf())?.let { return it }
-        if (arguments.size < 3 || !isClassPathAnchorExpression(rootExpression)) {
-            return null
-        }
-        val path = ArmeriaRouteSupport.extractJavaStringConstant(arguments[2]) ?: return null
-        return FileServiceRoot(FileServiceRootKind.CLASS_PATH, path, anchorClassName(rootExpression))
+        return fileSystemRootFromExpression(rootExpression, mutableSetOf())
     }
 
     /**
@@ -48,14 +43,23 @@ internal object ArmeriaFileServiceRootSupport {
      * `fileService(path, FileService.builder(...).build())`: walks qualifier chains and
      * variable initializers until a `FileService` `of`/`builder` factory call is found.
      */
-    fun extractFromServiceExpression(expression: PsiExpression?): FileServiceRoot? {
+    fun extractFromServiceExpression(expression: PsiExpression?): FileServiceRoot? =
+        extractFromServiceExpression(expression, mutableSetOf())
+
+    private fun extractFromServiceExpression(
+        expression: PsiExpression?,
+        visitedVariables: MutableSet<PsiVariable>,
+    ): FileServiceRoot? {
         val unwrapped = unwrap(expression) ?: return null
         val call =
             when (unwrapped) {
                 is PsiMethodCallExpression -> unwrapped
                 is PsiReferenceExpression -> {
                     val variable = unwrapped.resolve() as? PsiVariable ?: return null
-                    return extractFromServiceExpression(variable.initializer)
+                    if (!visitedVariables.add(variable)) {
+                        return null
+                    }
+                    return extractFromServiceExpression(variable.initializer, visitedVariables)
                 }
                 else -> return null
             }
@@ -65,8 +69,17 @@ internal object ArmeriaFileServiceRootSupport {
                 return extractFactoryArguments(current)
             }
             current =
-                current.methodExpression.qualifierExpression as? PsiMethodCallExpression
-                    ?: return null
+                when (val qualifier = current.methodExpression.qualifierExpression) {
+                    is PsiMethodCallExpression -> qualifier
+                    is PsiReferenceExpression -> {
+                        val variable = qualifier.resolve() as? PsiVariable ?: return null
+                        if (!visitedVariables.add(variable)) {
+                            return null
+                        }
+                        unwrap(variable.initializer) as? PsiMethodCallExpression ?: return null
+                    }
+                    else -> return null
+                }
         }
     }
 
@@ -89,7 +102,12 @@ internal object ArmeriaFileServiceRootSupport {
             1 -> fileSystemRootFromExpression(arguments[0], mutableSetOf())
             2 -> {
                 val path = ArmeriaRouteSupport.extractJavaStringConstant(arguments[1]) ?: return null
-                FileServiceRoot(FileServiceRootKind.CLASS_PATH, path, anchorClassName(arguments[0]))
+                FileServiceRoot(
+                    FileServiceRootKind.CLASS_PATH,
+                    path,
+                    anchorClassName(arguments[0]),
+                    anchorPackageName(arguments[0]),
+                )
             }
             else -> null
         }
@@ -181,23 +199,18 @@ internal object ArmeriaFileServiceRootSupport {
         return parts.joinToString("/")
     }
 
-    private fun isClassPathAnchorExpression(expression: PsiExpression): Boolean {
-        val unwrapped = unwrap(expression) ?: return false
-        if (unwrapped is PsiClassObjectAccessExpression) {
-            return true
-        }
-        val typeText = unwrapped.type?.canonicalText ?: return false
-        return typeText == "java.lang.ClassLoader" || typeText.startsWith("java.lang.Class")
+    private fun anchorClass(expression: PsiExpression): PsiClass? {
+        val unwrapped = unwrap(expression) as? PsiClassObjectAccessExpression ?: return null
+        return (unwrapped.operand.type as? PsiClassType)?.resolve()
     }
 
     private fun anchorClassName(expression: PsiExpression): String {
-        val unwrapped = unwrap(expression) ?: return ""
-        if (unwrapped !is PsiClassObjectAccessExpression) {
-            return ""
-        }
+        val unwrapped = unwrap(expression) as? PsiClassObjectAccessExpression ?: return ""
         val type = unwrapped.operand.type as? PsiClassType ?: return ""
         return type.resolve()?.qualifiedName ?: type.canonicalText.substringBefore('<')
     }
+
+    private fun anchorPackageName(expression: PsiExpression): String = anchorClass(expression)?.let(PsiUtil::getPackageName) ?: ""
 
     private fun unwrap(expression: PsiExpression?): PsiExpression? {
         var current = expression ?: return null

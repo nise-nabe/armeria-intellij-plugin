@@ -2,17 +2,21 @@ package com.linecorp.intellij.plugins.armeria.explorer.navigation
 import com.intellij.ide.projectView.ProjectView
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.application.NonBlockingReadAction
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.wm.ToolWindowId
+import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.pom.Navigatable
 import com.intellij.psi.PsiElement
 import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.util.concurrency.AppExecutorUtil
-import com.linecorp.intellij.plugins.armeria.expireWithPluginUnload
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.pluginUnloadDisposable
 
 object ArmeriaRouteNavigation {
     fun navigateToRoute(
@@ -38,11 +42,8 @@ object ArmeriaRouteNavigation {
             .nonBlocking<VirtualFile?> {
                 ArmeriaFileServiceRootResolver.resolve(project, root)
             }.inSmartMode(project)
-            .expireWith(project)
-            .expireWithPluginUnload()
-            .let { coordinator ->
-                if (parentDisposable != null) coordinator.expireWith(parentDisposable) else coordinator
-            }.finishOnUiThread(ModalityState.any()) { target ->
+            .expireWithLifecycle(project, parentDisposable)
+            .finishOnUiThread(ModalityState.any()) { target ->
                 if (target == null) {
                     navigateToPointer(project, route.pointer, route.sourceOffset, parentDisposable)
                     return@finishOnUiThread
@@ -62,7 +63,13 @@ object ArmeriaRouteNavigation {
                 target
             }
         val toReveal = fileToOpen ?: target
-        ProjectView.getInstance(project).select(toReveal, toReveal, false)
+        val selectInProjectView = { ProjectView.getInstance(project).select(toReveal, toReveal, false) }
+        val projectViewToolWindow = ToolWindowManager.getInstance(project).getToolWindow(ToolWindowId.PROJECT_VIEW)
+        if (projectViewToolWindow != null) {
+            projectViewToolWindow.activate(selectInProjectView)
+        } else {
+            selectInProjectView()
+        }
         fileToOpen?.let { OpenFileDescriptor(project, it).navigate(true) }
     }
 
@@ -76,14 +83,19 @@ object ArmeriaRouteNavigation {
             .nonBlocking<Navigatable?> {
                 resolveNavigatable(pointer, sourceOffset)
             }.inSmartMode(project)
-            .expireWith(project)
-            .expireWithPluginUnload()
-            .let { coordinator ->
-                if (parentDisposable != null) coordinator.expireWith(parentDisposable) else coordinator
-            }.finishOnUiThread(ModalityState.any()) { navigatable ->
+            .expireWithLifecycle(project, parentDisposable)
+            .finishOnUiThread(ModalityState.any()) { navigatable ->
                 navigatable?.navigate(true)
             }.submit(AppExecutorUtil.getAppExecutorService())
     }
+
+    private fun <T> NonBlockingReadAction<T>.expireWithLifecycle(
+        project: Project,
+        parentDisposable: Disposable?,
+    ): NonBlockingReadAction<T> =
+        expireWith(parentDisposable ?: project)
+            .expireWhen { project.isDisposed }
+            .expireWhen { Disposer.isDisposed(pluginUnloadDisposable()) }
 
     private fun resolveNavigatable(
         pointer: SmartPsiElementPointer<PsiElement>,

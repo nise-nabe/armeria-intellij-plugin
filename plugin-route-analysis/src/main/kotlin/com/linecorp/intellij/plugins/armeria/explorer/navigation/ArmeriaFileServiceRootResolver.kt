@@ -31,7 +31,10 @@ object ArmeriaFileServiceRootResolver {
         }
 
     /** A sample index file served by the directory, if present. */
-    fun indexFileFor(directory: VirtualFile): VirtualFile? = INDEX_FILE_NAMES.firstNotNullOfOrNull(directory::findChild)
+    fun indexFileFor(directory: VirtualFile): VirtualFile? =
+        INDEX_FILE_NAMES.firstNotNullOfOrNull { name ->
+            directory.children?.firstOrNull { it.name.equals(name, ignoreCase = true) }
+        }
 
     private fun resolveFileSystemRoot(
         project: Project,
@@ -42,7 +45,8 @@ object ArmeriaFileServiceRootResolver {
             return null
         }
         if (File(path).isAbsolute || path.startsWith("/")) {
-            return LocalFileSystem.getInstance().refreshAndFindFileByPath(path)
+            val localFileSystem = LocalFileSystem.getInstance()
+            return localFileSystem.findFileByPath(path) ?: localFileSystem.refreshAndFindFileByPath(path)
         }
         val relative = path.trimStart('/')
         for (base in projectBaseCandidates(project)) {
@@ -62,7 +66,11 @@ object ArmeriaFileServiceRootResolver {
         val anchored = !root.path.trimStart().startsWith("/") && root.anchorClassName.isNotEmpty()
         val relative =
             if (anchored) {
-                val packagePath = root.anchorClassName.substringBeforeLast('.', "").replace('.', '/')
+                val packageName =
+                    root.anchorPackageName.ifEmpty {
+                        root.anchorClassName.substringBeforeLast('.', "")
+                    }
+                val packagePath = packageName.replace('.', '/')
                 if (packagePath.isEmpty()) declared else "$packagePath/$declared"
             } else {
                 declared
@@ -94,7 +102,9 @@ object ArmeriaFileServiceRootResolver {
                         rootManager.getSourceRoots(JavaResourceRootType.TEST_RESOURCE)
                 ).sortedBy { it.path }
         }
-        candidates += ProjectRootManager.getInstance(project).contentRoots.sortedBy { it.path }
+        if (candidates.isEmpty()) {
+            candidates += ProjectRootManager.getInstance(project).contentRoots.sortedBy { it.path }
+        }
         return candidates.toList()
     }
 }

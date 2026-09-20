@@ -14,11 +14,13 @@ enum class FileServiceRootKind {
  *
  * [path] is the declared path as written: a file-system path (relative to the project or absolute)
  * or a class-path resource path. [anchorClassName] holds the qualified anchor class for
- * `FileService.of(Class, path)` registrations; a relative [path] resolves against that class's
- * package while a leading `/` means an absolute class-path lookup.
+ * `FileService.of(Class, path)` registrations; a relative [path] resolves against
+ * [anchorPackageName] (the anchor's declaring package, kept separate so nested classes do not
+ * leak into it) while a leading `/` means an absolute class-path lookup.
  */
 data class FileServiceRoot(
     val kind: FileServiceRootKind,
     val path: String,
     val anchorClassName: String = "",
+    val anchorPackageName: String = "",
 )

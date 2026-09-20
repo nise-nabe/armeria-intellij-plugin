@@ -4,18 +4,19 @@ import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.application.WriteIntentReadAction
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
-import com.linecorp.intellij.plugins.armeria.expireWithPluginUnload
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaFileServiceRootResolver
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteDetailFormatter
 import com.linecorp.intellij.plugins.armeria.message
+import com.linecorp.intellij.plugins.armeria.pluginUnloadDisposable
 import java.awt.BorderLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -131,7 +132,7 @@ class ArmeriaRouteDetailPanel(
                 ArmeriaFileServiceRootResolver.resolve(project, root) != null
             }.inSmartMode(project)
             .expireWith(project)
-            .expireWithPluginUnload()
+            .expireWhen { Disposer.isDisposed(pluginUnloadDisposable()) }
             .finishOnUiThread(ModalityState.any()) { resolved ->
                 if (generation != routeGeneration || resolved) {
                     return@finishOnUiThread
