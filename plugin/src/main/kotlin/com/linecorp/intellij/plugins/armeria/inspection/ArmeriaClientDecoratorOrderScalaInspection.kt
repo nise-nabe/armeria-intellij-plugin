@@ -13,6 +13,7 @@ import org.jetbrains.plugins.scala.lang.psi.api.ScalaElementVisitor
 import org.jetbrains.plugins.scala.lang.psi.api.base.patterns.ScBindingPattern
 import org.jetbrains.plugins.scala.lang.psi.api.expr.ScExpression
 import org.jetbrains.plugins.scala.lang.psi.api.expr.ScMethodCall
+import org.jetbrains.plugins.scala.lang.psi.api.expr.ScParenthesisedExpr
 import org.jetbrains.plugins.scala.lang.psi.api.expr.ScReferenceExpression
 import org.jetbrains.plugins.scala.lang.psi.api.statements.ScValueOrVariableDefinition
 
@@ -143,6 +144,9 @@ class ArmeriaClientDecoratorOrderScalaInspection : LocalInspectionTool() {
                     }
                     current = invokedQualifier(current)
                 }
+                is ScParenthesisedExpr -> {
+                    current = current.innerElement().orNull()
+                }
                 is ScReferenceExpression -> {
                     current = resolvedInitializer(current)
                 }
@@ -169,14 +173,22 @@ class ArmeriaClientDecoratorOrderScalaInspection : LocalInspectionTool() {
         if (resolved is ScBindingPattern) {
             resolved = PsiTreeUtil.getParentOfType(resolved, ScValueOrVariableDefinition::class.java)
         }
-        return (resolved as? ScValueOrVariableDefinition)?.expr()?.orNull()
+        return unwrap((resolved as? ScValueOrVariableDefinition)?.expr()?.orNull())
+    }
+
+    private fun unwrap(expression: ScExpression?): ScExpression? {
+        var current = expression
+        while (current is ScParenthesisedExpr) {
+            current = current.innerElement().orNull()
+        }
+        return current
     }
 
     private fun enclosingQualifierCall(expression: ScMethodCall): ScMethodCall? {
         var element: PsiElement? = expression.parent
         while (element != null) {
             if (element is ScMethodCall) {
-                if (invokedQualifier(element) == expression) {
+                if (unwrap(invokedQualifier(element)) == expression) {
                     return element
                 }
             }

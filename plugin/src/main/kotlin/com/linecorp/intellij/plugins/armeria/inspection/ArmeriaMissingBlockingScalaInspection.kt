@@ -16,13 +16,15 @@ import org.jetbrains.plugins.scala.lang.psi.api.expr.MethodInvocation
 import org.jetbrains.plugins.scala.lang.psi.api.expr.ScExpression
 import org.jetbrains.plugins.scala.lang.psi.api.expr.ScFunctionExpr
 import org.jetbrains.plugins.scala.lang.psi.api.expr.ScReferenceExpression
+import org.jetbrains.plugins.scala.lang.psi.api.expr.ScUnderscoreSection
 import org.jetbrains.plugins.scala.lang.psi.api.statements.ScFunction
 import org.jetbrains.plugins.scala.lang.psi.api.statements.ScFunctionDefinition
+import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.ScTemplateDefinition
 
 class ArmeriaMissingBlockingScalaInspection : LocalInspectionTool() {
     override fun getDisplayName(): String = message("inspection.missing.blocking.scala.display.name")
 
-    override fun getStaticDescription(): String = message("inspection.missing.blocking.description")
+    override fun getStaticDescription(): String = message("inspection.missing.blocking.scala.description")
 
     override fun buildVisitor(
         holder: ProblemsHolder,
@@ -57,24 +59,64 @@ class ArmeriaMissingBlockingScalaInspection : LocalInspectionTool() {
         }
         val honorsBlocking =
             ArmeriaScalaInspectionSupport.routeAnnotation(function) != null ||
-                ArmeriaMissingBlockingSupport.isGrpcServiceOverride(function)
+                isGrpcServiceOverride(function)
         if (honorsBlocking) {
             return !hasAnnotation(function, ArmeriaRouteSupport.BLOCKING_ANNOTATION) &&
                 !hasAnnotation(function.containingClass, ArmeriaRouteSupport.BLOCKING_ANNOTATION)
         }
-        return ArmeriaMissingBlockingSupport.isHttpServiceOverride(function) ||
-            ArmeriaMissingBlockingSupport.isEventLoopDataFetcher(function)
+        // GraphQL DataFetcher coverage relies on Java PSI (PsiMethodCallExpression et al.) and
+        // never matches Scala trees, so only the HttpService override path applies here.
+        return isHttpServiceOverride(function)
     }
 
     private fun problemMessageKey(function: ScFunction): String =
         when {
             ArmeriaScalaInspectionSupport.routeAnnotation(function) != null ||
-                ArmeriaMissingBlockingSupport.isGrpcServiceOverride(function) ->
+                isGrpcServiceOverride(function) ->
                 "inspection.missing.blocking.problem"
-            ArmeriaMissingBlockingSupport.isDataFetcherGet(function) ->
-                "inspection.missing.blocking.problem.graphql"
             else -> "inspection.missing.blocking.problem.httpservice"
         }
+
+    // PsiMethod.findSuperMethods and PsiClass.getSupers are not wired for Scala PSI in a
+    // reliable way, so overrides are detected from the syntactic template parents.
+    private fun hasSuperMethod(function: ScFunction): Boolean =
+        ArmeriaScalaInspectionSupport
+            .directSupers(function.containingClass ?: return false)
+            .any { declaresMethod(it, function.name) }
+
+    private fun declaresMethod(
+        psiClass: PsiClass,
+        name: String,
+    ): Boolean {
+        if (psiClass is ScTemplateDefinition) {
+            val functions = psiClass.functions().iterator()
+            while (functions.hasNext()) {
+                if (functions.next().name == name) {
+                    return true
+                }
+            }
+        }
+        return psiClass.findMethodsByName(name, true).isNotEmpty()
+    }
+
+    private fun isHttpServiceOverride(function: ScFunction): Boolean {
+        if (function.name !in ArmeriaMissingBlockingSupport.HTTP_SERVICE_HANDLER_METHODS ||
+            !hasSuperMethod(function)
+        ) {
+            return false
+        }
+        return ArmeriaScalaInspectionSupport.hierarchyContains(
+            function.containingClass,
+            ArmeriaMissingBlockingSupport::isHttpServiceType,
+        )
+    }
+
+    private fun isGrpcServiceOverride(function: ScFunction): Boolean =
+        hasSuperMethod(function) &&
+            ArmeriaScalaInspectionSupport.hierarchyContains(
+                function.containingClass,
+                ArmeriaMissingBlockingSupport::isGrpcServiceType,
+            )
 
     private fun hasAnnotation(
         owner: PsiModifierListOwner?,
@@ -115,6 +157,7 @@ class ArmeriaMissingBlockingScalaInspection : LocalInspectionTool() {
                 element.takeIf {
                     it.parent !is MethodInvocation &&
                         it.parent !is ScReferenceExpression &&
+                        it.parent !is ScUnderscoreSection &&
                         it.resolve() is PsiMethod
                 }
             else -> null

@@ -19,7 +19,7 @@ internal object ArmeriaMissingBlockingSupport {
     const val HTTP_SERVICE_CLASS = "com.linecorp.armeria.server.HttpService"
     const val ABSTRACT_HTTP_SERVICE_CLASS = "com.linecorp.armeria.server.AbstractHttpService"
 
-    private val HTTP_SERVICE_HANDLER_METHODS =
+    val HTTP_SERVICE_HANDLER_METHODS =
         setOf(
             "serve",
             "doGet",
@@ -157,7 +157,7 @@ internal object ArmeriaMissingBlockingSupport {
         return inspectable.all { findings(it).isNotEmpty() }
     }
 
-    fun isEventLoopDataFetcher(method: PsiMethod): Boolean {
+    private fun isEventLoopDataFetcher(method: PsiMethod): Boolean {
         if (!isDataFetcherGet(method)) {
             return false
         }
@@ -170,7 +170,7 @@ internal object ArmeriaMissingBlockingSupport {
         }
     }
 
-    fun isHttpServiceOverride(method: PsiMethod): Boolean {
+    private fun isHttpServiceOverride(method: PsiMethod): Boolean {
         if (method.name !in HTTP_SERVICE_HANDLER_METHODS) {
             return false
         }
@@ -215,7 +215,7 @@ internal object ArmeriaMissingBlockingSupport {
 
     fun hasNonBlocking(psiClass: PsiClass): Boolean = psiClass.hasAnnotation(ArmeriaRouteSupport.NON_BLOCKING_ANNOTATION)
 
-    fun isGrpcServiceOverride(method: PsiMethod): Boolean {
+    private fun isGrpcServiceOverride(method: PsiMethod): Boolean {
         if (method.findSuperMethods().isEmpty()) {
             return false
         }

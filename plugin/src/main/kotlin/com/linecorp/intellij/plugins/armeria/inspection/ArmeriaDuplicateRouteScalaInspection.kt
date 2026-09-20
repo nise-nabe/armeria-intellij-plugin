@@ -36,8 +36,15 @@ class ArmeriaDuplicateRouteScalaInspection : LocalInspectionTool() {
                     }
                 }
                 for (function in duplicateFunctions) {
+                    // Methods pulled in from Java/Kotlin superclasses live in other files and
+                    // cannot anchor a problem in the inspected file.
+                    if (function.containingFile != definition.containingFile) {
+                        continue
+                    }
                     holder.registerProblem(
-                        (function as? ScNamedElement)?.nameId() ?: function,
+                        (function as? ScNamedElement)?.nameId()
+                            ?: function.nameIdentifier
+                            ?: function,
                         message("inspection.duplicate.route.problem"),
                     )
                 }
@@ -64,7 +71,7 @@ class ArmeriaDuplicateRouteScalaInspection : LocalInspectionTool() {
             } else {
                 functions += current.methods.asList()
             }
-            current.supers.forEach(queue::add)
+            ArmeriaScalaInspectionSupport.directSupers(current).forEach(queue::add)
         }
         return functions.toList()
     }
