@@ -1,0 +1,31 @@
+<idea-plugin>
+    <extensions defaultExtensionNs="com.intellij">
+        <localInspection language="Scala"
+                         bundle="messages.ArmeriaBundle"
+                         key="inspection.duplicate.route.scala.display.name"
+                         groupBundle="messages.ArmeriaBundle"
+                         groupKey="inspection.group.armeria"
+                         shortName="ArmeriaDuplicateRouteScala"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaDuplicateRouteScalaInspection" />
+        <localInspection language="Scala"
+                         bundle="messages.ArmeriaBundle"
+                         key="inspection.missing.blocking.scala.display.name"
+                         groupBundle="messages.ArmeriaBundle"
+                         groupKey="inspection.group.armeria"
+                         shortName="ArmeriaMissingBlockingScala"
+                         enabledByDefault="true"
+                         level="WEAK WARNING"
+                         implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaMissingBlockingScalaInspection" />
+        <localInspection language="Scala"
+                         bundle="messages.ArmeriaBundle"
+                         key="inspection.decorator.order.scala.display.name"
+                         groupBundle="messages.ArmeriaBundle"
+                         groupKey="inspection.group.armeria"
+                         shortName="ArmeriaClientDecoratorOrderScala"
+                         enabledByDefault="true"
+                         level="WEAK WARNING"
+                         implementationClass="com.linecorp.intellij.plugins.armeria.inspection.ArmeriaClientDecoratorOrderScalaInspection" />
+    </extensions>
+</idea-plugin>

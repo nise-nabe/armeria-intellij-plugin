@@ -32,6 +32,11 @@ dependencies {
         bundledPlugin("org.jetbrains.plugins.yaml")
         bundledPlugin("com.intellij.properties")
         bundledPlugin("idea.plugin.protoeditor")
+        plugin(
+            "org.intellij.scala",
+            libs.versions.scala.plugin
+                .get(),
+        )
         testFramework(TestFrameworkType.Plugin.Java)
         testFramework(TestFrameworkType.Plugin.Java, configurationName = "testFixturesImplementation")
         testFramework(TestFrameworkType.JUnit5)

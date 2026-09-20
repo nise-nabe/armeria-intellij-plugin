@@ -19,7 +19,7 @@ internal object ArmeriaMissingBlockingSupport {
     const val HTTP_SERVICE_CLASS = "com.linecorp.armeria.server.HttpService"
     const val ABSTRACT_HTTP_SERVICE_CLASS = "com.linecorp.armeria.server.AbstractHttpService"
 
-    private val HTTP_SERVICE_HANDLER_METHODS =
+    val HTTP_SERVICE_HANDLER_METHODS =
         setOf(
             "serve",
             "doGet",
