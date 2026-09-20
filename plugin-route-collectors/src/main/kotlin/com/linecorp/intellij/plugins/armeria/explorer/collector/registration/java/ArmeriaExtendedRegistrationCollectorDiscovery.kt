@@ -80,6 +80,7 @@ internal object ArmeriaExtendedRegistrationCollectorDiscovery {
                         ?.expressions
                         ?.toList()
                         .orEmpty(),
+                    parameterNames(expression),
                 )
             }
             is PsiParenthesizedExpression -> extractRegistration(expression.expression, hops + 1)
@@ -94,23 +95,40 @@ internal object ArmeriaExtendedRegistrationCollectorDiscovery {
     /**
      * Walks a listener-builder call chain backwards (e.g. `X.builder(...).sessionTimeout(...).build()`)
      * until the `X.builder(...)` / `X.of(...)` factory call on a known updating-listener class.
+     * When the innermost qualifier is a variable (e.g. `lb.build()` where `lb` was assigned a builder
+     * chain), hops into that variable's initializer.
      */
     private fun findListenerFactoryCall(start: PsiMethodCallExpression): PsiMethodCallExpression? {
         var current: PsiMethodCallExpression? = start
-        while (current != null) {
+        var variableHops = 0
+        while (current != null && variableHops <= MAX_INITIALIZER_HOPS) {
             if (current.methodExpression.referenceName in ArmeriaServerRegistrationSupport.LISTENER_FACTORY_METHODS &&
                 listenerRegistry(current) != null
             ) {
                 return current
             }
-            current = ArmeriaJavaRegistrationChainSupport.previousMethodCallInChain(current)
+            val previous = ArmeriaJavaRegistrationChainSupport.previousMethodCallInChain(current)
+            if (previous != null) {
+                current = previous
+            } else {
+                current = qualifierVariableInitializer(current)?.also { variableHops++ }
+            }
         }
         return null
     }
 
+    private fun qualifierVariableInitializer(call: PsiMethodCallExpression): PsiMethodCallExpression? {
+        val qualifier = call.methodExpression.qualifierExpression as? PsiReferenceExpression ?: return null
+        return (qualifier.resolve() as? PsiVariable)?.initializer as? PsiMethodCallExpression
+    }
+
     private fun listenerRegistry(factoryCall: PsiMethodCallExpression): DiscoveryRegistry? {
         val resolvedClass = factoryCall.resolveMethod()?.containingClass?.qualifiedName
-        DiscoveryRegistry.fromQualifiedName(resolvedClass)?.let { return it }
+        if (resolvedClass != null) {
+            // A resolved method on a non-registry class (e.g. a user's own
+            // `example.ZooKeeperUpdatingListener`) is a negative — do not fall back to text matching.
+            return DiscoveryRegistry.fromQualifiedName(resolvedClass)
+        }
         val qualifierText = factoryCall.methodExpression.qualifierExpression?.text ?: return null
         return registryFromClassName(qualifierText)
     }
@@ -122,45 +140,81 @@ internal object ArmeriaExtendedRegistrationCollectorDiscovery {
 
     private fun registrationFromFactoryCall(call: PsiMethodCallExpression): DiscoveryRegistration? {
         val registry = listenerRegistry(call) ?: return null
-        val arguments = call.argumentList.expressions.toList()
-        val registryUri = extractTextLike(arguments.getOrNull(0)).orEmpty()
-        var serviceName = extractTextLike(arguments.getOrNull(1)).orEmpty()
+        val registration =
+            registrationFromArguments(registry, call.argumentList.expressions.toList(), parameterNames(call))
         // Builder-chain setters such as EurekaUpdatingListenerBuilder.appName("...").
-        chainedServiceName(call)?.let { serviceName = it }
-        // ZooKeeperRegistrationSpec.curator("name") overrides the znode path as the service name.
-        extractTextLike(arguments.getOrNull(2))?.let { specName ->
-            if (registry == DiscoveryRegistry.ZOOKEEPER) {
-                serviceName = specName
-            }
-        }
-        return DiscoveryRegistration(registry = registry, serviceName = serviceName, registryUri = registryUri)
+        chainedServiceName(call)?.let { return registration.copy(serviceName = it) }
+        return registration
     }
 
+    /**
+     * Maps arguments to roles via the resolved factory's parameter names
+     * (`zkConnectionStr` / `eurekaUri` / `consulUri` → registry URI, `znodePath` /
+     * `appName` / `serviceName` → service name, `spec` → registration spec). Falls back
+     * to the positional convention (0 = URI, 1 = service name, 2 = spec) only when the
+     * factory cannot be resolved — so non-URI overloads such as
+     * `of(SessionProtocol, EndpointGroup)` never surface a misleading URI or name.
+     */
     private fun registrationFromArguments(
         registry: DiscoveryRegistry,
         arguments: List<PsiExpression>,
+        parameterNames: List<String>?,
     ): DiscoveryRegistration {
-        val registryUri = extractTextLike(arguments.getOrNull(0)).orEmpty()
-        var serviceName = extractTextLike(arguments.getOrNull(1)).orEmpty()
-        // ZooKeeperRegistrationSpec.curator("name") overrides the znode path as the service name.
-        extractTextLike(arguments.getOrNull(2))?.let { specName ->
-            if (registry == DiscoveryRegistry.ZOOKEEPER) {
-                serviceName = specName
+        var registryUri = ""
+        var serviceName = ""
+        var specName: String? = null
+        arguments.forEachIndexed { index, argument ->
+            val parameterName = parameterNames?.getOrNull(index)
+            when {
+                parameterName != null ->
+                    when (parameterName) {
+                        in ArmeriaServerRegistrationSupport.REGISTRY_URI_PARAMETER_NAMES ->
+                            registryUri = extractTextLike(argument).orEmpty()
+                        in ArmeriaServerRegistrationSupport.SERVICE_NAME_PARAMETER_NAMES ->
+                            serviceName = extractTextLike(argument).orEmpty()
+                        in ArmeriaServerRegistrationSupport.SPEC_PARAMETER_NAMES ->
+                            specName = extractTextLike(argument)
+                    }
+                parameterNames == null ->
+                    when (index) {
+                        0 -> registryUri = extractTextLike(argument).orEmpty()
+                        1 -> serviceName = extractTextLike(argument).orEmpty()
+                        2 -> specName = extractTextLike(argument)
+                    }
             }
+        }
+        // ZooKeeperRegistrationSpec.curator("name") overrides the znode path as the service name.
+        if (registry == DiscoveryRegistry.ZOOKEEPER && specName != null) {
+            serviceName = specName
         }
         return DiscoveryRegistration(registry = registry, serviceName = serviceName, registryUri = registryUri)
     }
 
+    private fun parameterNames(call: PsiMethodCallExpression): List<String>? =
+        call
+            .resolveMethod()
+            ?.parameterList
+            ?.parameters
+            ?.map { it.name }
+
+    private fun parameterNames(expression: PsiNewExpression): List<String>? =
+        expression
+            .resolveMethod()
+            ?.parameterList
+            ?.parameters
+            ?.map { it.name }
+
     private fun chainedServiceName(factoryCall: PsiMethodCallExpression): String? {
+        var serviceName: String? = null
         var current: PsiMethodCallExpression? =
             ArmeriaJavaRegistrationChainSupport.findImmediateNextChainedCall(factoryCall)
         while (current != null) {
             if (current.methodExpression.referenceName in ArmeriaServerRegistrationSupport.SERVICE_NAME_BUILDER_METHODS) {
-                return extractTextLike(current.argumentList.expressions.firstOrNull())
+                serviceName = extractTextLike(current.argumentList.expressions.firstOrNull())
             }
             current = ArmeriaJavaRegistrationChainSupport.findImmediateNextChainedCall(current)
         }
-        return null
+        return serviceName
     }
 
     /**

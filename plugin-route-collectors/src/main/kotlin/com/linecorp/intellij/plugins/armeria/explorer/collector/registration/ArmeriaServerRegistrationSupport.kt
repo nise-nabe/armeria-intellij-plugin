@@ -12,6 +12,19 @@ object ArmeriaServerRegistrationSupport {
     internal val LISTENER_FACTORY_METHODS: Set<String> = setOf("builder", "of")
     internal val SERVICE_NAME_BUILDER_METHODS: Set<String> = setOf("serviceName", "appName", "name")
 
+    /**
+     * Parameter names of listener factories that carry the registry endpoint
+     * (`zkConnectionStr`, `eurekaUri`, `consulUri` across the real Armeria overloads).
+     */
+    internal val REGISTRY_URI_PARAMETER_NAMES: Set<String> =
+        setOf("zkConnectionStr", "zkConnectionString", "eurekaUri", "consulUri", "uri", "connectionString")
+
+    /** Parameter names carrying the registered service name (`znodePath` is the ZooKeeper analogue). */
+    internal val SERVICE_NAME_PARAMETER_NAMES: Set<String> = setOf("znodePath", "appName", "serviceName", "name")
+
+    /** Parameter names carrying a `ZooKeeperRegistrationSpec` (service name lives inside `spec.curator(...)`). */
+    internal val SPEC_PARAMETER_NAMES: Set<String> = setOf("spec", "registrationSpec")
+
     enum class DiscoveryRegistry(
         val listenerSimpleName: String,
         val listenerQualifiedName: String,

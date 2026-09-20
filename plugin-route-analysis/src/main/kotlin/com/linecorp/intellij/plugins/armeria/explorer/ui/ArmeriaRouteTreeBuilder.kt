@@ -156,7 +156,12 @@ object ArmeriaRouteTreeBuilder {
             left.httpMethod == right.httpMethod &&
             left.protocol == right.protocol &&
             left.virtualHostName == right.virtualHostName &&
-            left.delegationMountPath == right.delegationMountPath
+            left.delegationMountPath == right.delegationMountPath &&
+            // Identical `serverListener(...)` registrations share every field above —
+            // disambiguate by call-site offset so navigation targets the right one.
+            (left.routeMatch != RouteMatch.DISCOVERY || sourceOffset(left) == sourceOffset(right))
+
+    private fun sourceOffset(route: ArmeriaRoute): Int? = route.sourceOffset ?: route.pointer.range?.startOffset
 
     private val portComparator: Comparator<ArmeriaRoute> =
         compareBy<ArmeriaRoute> { portNumber(it) }.thenBy { it.protocol }.thenBy { it.path }

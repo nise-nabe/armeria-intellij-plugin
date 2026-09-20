@@ -489,16 +489,43 @@ fun JavaCodeInsightTestFixture.registerDiscoveryRegistrationStubs() {
     )
     this.addClass(
         """
+        package com.linecorp.armeria.client;
+
+        public interface EndpointGroup {
+            public static EndpointGroup of(String... endpoints) {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package org.apache.curator.framework;
+
+        public interface CuratorFramework {
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
         package com.linecorp.armeria.server.zookeeper;
 
         import com.linecorp.armeria.server.ServerListener;
 
         public final class ZooKeeperUpdatingListener implements ServerListener {
-            public static ZooKeeperUpdatingListenerBuilder builder(String zkConnectionString, String znodePath, ZooKeeperRegistrationSpec spec) {
+            public static ZooKeeperUpdatingListenerBuilder builder(String zkConnectionStr, String znodePath, ZooKeeperRegistrationSpec spec) {
                 return null;
             }
 
-            public static ZooKeeperUpdatingListener of(String zkConnectionString, String znodePath, ZooKeeperRegistrationSpec spec) {
+            public static ZooKeeperUpdatingListenerBuilder builder(org.apache.curator.framework.CuratorFramework client, String znodePath, ZooKeeperRegistrationSpec spec) {
+                return null;
+            }
+
+            public static ZooKeeperUpdatingListener of(String zkConnectionStr, String znodePath, ZooKeeperRegistrationSpec spec) {
+                return null;
+            }
+
+            public static ZooKeeperUpdatingListener of(org.apache.curator.framework.CuratorFramework client, String znodePath, ZooKeeperRegistrationSpec spec) {
                 return null;
             }
         }
@@ -541,11 +568,31 @@ fun JavaCodeInsightTestFixture.registerDiscoveryRegistrationStubs() {
                 return null;
             }
 
-            public static EurekaUpdatingListenerBuilder builder(String eurekaUri, String appName) {
+            public static EurekaUpdatingListenerBuilder builder(java.net.URI eurekaUri) {
                 return null;
             }
 
-            public static EurekaUpdatingListener of(String eurekaUri, String appName) {
+            public static EurekaUpdatingListenerBuilder builder(com.linecorp.armeria.common.SessionProtocol sessionProtocol, com.linecorp.armeria.client.EndpointGroup endpointGroup) {
+                return null;
+            }
+
+            public static EurekaUpdatingListenerBuilder builder(com.linecorp.armeria.common.SessionProtocol sessionProtocol, com.linecorp.armeria.client.EndpointGroup endpointGroup, String path) {
+                return null;
+            }
+
+            public static EurekaUpdatingListener of(String eurekaUri) {
+                return null;
+            }
+
+            public static EurekaUpdatingListener of(java.net.URI eurekaUri) {
+                return null;
+            }
+
+            public static EurekaUpdatingListener of(com.linecorp.armeria.common.SessionProtocol sessionProtocol, com.linecorp.armeria.client.EndpointGroup endpointGroup) {
+                return null;
+            }
+
+            public static EurekaUpdatingListener of(com.linecorp.armeria.common.SessionProtocol sessionProtocol, com.linecorp.armeria.client.EndpointGroup endpointGroup, String path) {
                 return null;
             }
         }
@@ -577,11 +624,7 @@ fun JavaCodeInsightTestFixture.registerDiscoveryRegistrationStubs() {
         import com.linecorp.armeria.server.ServerListener;
 
         public final class ConsulUpdatingListener implements ServerListener {
-            public static ConsulUpdatingListenerBuilder builder(String consulUri, String serviceName) {
-                return null;
-            }
-
-            public static ConsulUpdatingListener of(String consulUri, String serviceName) {
+            public static ConsulUpdatingListenerBuilder builder(java.net.URI consulUri, String serviceName) {
                 return null;
             }
         }

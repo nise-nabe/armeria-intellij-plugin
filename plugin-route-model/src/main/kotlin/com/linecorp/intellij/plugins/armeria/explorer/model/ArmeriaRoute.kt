@@ -97,6 +97,7 @@ data class ArmeriaRoute(
         get() =
             when {
                 routeMatch == RouteMatch.RUNTIME -> message("route.explorer.detail.service")
+                routeMatch == RouteMatch.DISCOVERY -> message("route.explorer.detail.registry")
                 targetUnresolved -> message("route.explorer.label.unresolvedExpression")
                 else -> message("route.explorer.detail.handler")
             }

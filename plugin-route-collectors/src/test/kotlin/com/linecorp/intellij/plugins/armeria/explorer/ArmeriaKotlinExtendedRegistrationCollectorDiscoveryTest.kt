@@ -72,6 +72,68 @@ class ArmeriaKotlinExtendedRegistrationCollectorDiscoveryTest : ArmeriaFixtureTe
         assertEquals("builder-service", discovery.path)
     }
 
+    fun testCollectZooKeeperRegistrationViaBuilderVariable() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.zookeeper.ZooKeeperRegistrationSpec
+            import com.linecorp.armeria.server.zookeeper.ZooKeeperUpdatingListener
+
+            fun main() {
+                val listenerBuilder =
+                    ZooKeeperUpdatingListener.builder(
+                        "zk://zk.example.com:2181",
+                        "/armeria/services",
+                        ZooKeeperRegistrationSpec.curator("via-builder-var"))
+                Server.builder()
+                    .serverListener(listenerBuilder.sessionTimeoutMillis(5000).build())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val discovery = collectDiscovery()
+        kotlinAssertNotNull(discovery)
+        assertEquals("via-builder-var", discovery.path)
+        assertEquals("zk://zk.example.com:2181", discovery.target)
+    }
+
+    fun testCollectRegistrationViaQualifiedProperty() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.ServerListener
+            import com.linecorp.armeria.server.eureka.EurekaUpdatingListener
+
+            object Holder {
+                val listener: ServerListener =
+                    EurekaUpdatingListener
+                        .builder("https://eureka.example.com/eureka/v2")
+                        .appName("held-app")
+                        .build()
+            }
+
+            fun main() {
+                Server.builder()
+                    .serverListener(Holder.listener)
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val discovery = collectDiscovery()
+        kotlinAssertNotNull(discovery)
+        assertEquals("Eureka", discovery.protocol)
+        assertEquals("held-app", discovery.path)
+        assertEquals("https://eureka.example.com/eureka/v2", discovery.target)
+    }
+
     fun testCollectEurekaRegistrationViaBuilderAppName() {
         myFixture.configureByText(
             "Main.kt",
@@ -102,6 +164,35 @@ class ArmeriaKotlinExtendedRegistrationCollectorDiscoveryTest : ArmeriaFixtureTe
         assertNoHttpRouteFor(discovery)
     }
 
+    fun testCollectEurekaRegistrationViaEndpointGroupIsUnresolved() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.EndpointGroup
+            import com.linecorp.armeria.common.SessionProtocol
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.eureka.EurekaUpdatingListener
+
+            fun main() {
+                Server.builder()
+                    .serverListener(
+                        EurekaUpdatingListener.of(
+                            SessionProtocol.HTTPS,
+                            EndpointGroup.of("eureka-1.example.com")))
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val discovery = collectDiscovery()
+        kotlinAssertNotNull(discovery)
+        assertEquals("Eureka", discovery.protocol)
+        assertEquals("(unnamed service)", discovery.path)
+        assertTrue(discovery.targetUnresolved)
+    }
+
     fun testCollectConsulRegistration() {
         myFixture.configureByText(
             "Main.kt",
@@ -110,10 +201,14 @@ class ArmeriaKotlinExtendedRegistrationCollectorDiscoveryTest : ArmeriaFixtureTe
 
             import com.linecorp.armeria.server.Server
             import com.linecorp.armeria.server.consul.ConsulUpdatingListener
+            import java.net.URI
 
             fun main() {
                 Server.builder()
-                    .serverListener(ConsulUpdatingListener.of("http://consul.example.com:8500", "consul-svc"))
+                    .serverListener(
+                        ConsulUpdatingListener
+                            .builder(URI.create("http://consul.example.com:8500"), "consul-svc")
+                            .build())
                     .build()
             }
             """.trimIndent(),
@@ -137,7 +232,11 @@ class ArmeriaKotlinExtendedRegistrationCollectorDiscoveryTest : ArmeriaFixtureTe
             import com.linecorp.armeria.server.eureka.EurekaUpdatingListener
 
             fun main() {
-                val listener = EurekaUpdatingListener.of("https://eureka.example.com/eureka/v2", "var-app")
+                val listener =
+                    EurekaUpdatingListener
+                        .builder("https://eureka.example.com/eureka/v2")
+                        .appName("var-app")
+                        .build()
                 Server.builder()
                     .serverListener(listener)
                     .build()
@@ -160,6 +259,32 @@ class ArmeriaKotlinExtendedRegistrationCollectorDiscoveryTest : ArmeriaFixtureTe
             fun main() {
                 OtherBuilder.builder()
                     .serverListener(Any())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        assertTrue(routes.none { it.routeMatch == RouteMatch.DISCOVERY })
+    }
+
+    fun testIgnoreNonRegistryUpdatingListener() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            class ZooKeeperUpdatingListener {
+                companion object {
+                    fun builder(connectionString: String): ZooKeeperUpdatingListener = ZooKeeperUpdatingListener()
+                }
+            }
+
+            fun main() {
+                Server.builder()
+                    .serverListener(ZooKeeperUpdatingListener.builder("zk://zk.example.com:2181"))
                     .build()
             }
             """.trimIndent(),

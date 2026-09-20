@@ -34,7 +34,11 @@ class ArmeriaRouteTreeDiscoveryGroupingTest : ArmeriaFixtureTestBase() {
                     Server.builder()
                         .http(8080)
                         .service("/api", new ApiService())
-                        .serverListener(EurekaUpdatingListener.of("https://eureka.example.com/eureka/v2", "my-app"))
+                        .serverListener(
+                            EurekaUpdatingListener
+                                .builder("https://eureka.example.com/eureka/v2")
+                                .appName("my-app")
+                                .build())
                         .build();
                 }
             }
