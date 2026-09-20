@@ -9,6 +9,8 @@ import com.intellij.psi.SmartPsiElementPointer
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
+import com.linecorp.intellij.plugins.armeria.explorer.model.FileServiceRoot
+import com.linecorp.intellij.plugins.armeria.explorer.model.FileServiceRootKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRouteHint
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
@@ -450,6 +452,45 @@ class ArmeriaRouteDetailFormatterTest : ArmeriaFixtureTestBase() {
                     pointer = TestPsiPointer,
                 ),
             ),
+        )
+    }
+
+    fun testAttachmentsLine_includesFileServiceStaticRoot() {
+        val fileSystemRoute =
+            ArmeriaRoute(
+                protocol = "HTTP",
+                httpMethod = "",
+                path = "/files/",
+                target = "com.linecorp.armeria.server.file.FileService",
+                routeMatch = RouteMatch.FILE_SERVICE,
+                moduleName = "app",
+                targetUnresolved = false,
+                isDocService = false,
+                decorators = emptyList(),
+                exceptionHandlers = emptyList(),
+                fileServiceRoot = FileServiceRoot(FileServiceRootKind.FILE_SYSTEM, "src/main/resources/static"),
+                pointer = TestPsiPointer,
+            )
+
+        assertEquals(
+            message("route.explorer.detail.staticRoot", "src/main/resources/static"),
+            ArmeriaRouteDetailFormatter.attachmentsLine(fileSystemRoute),
+        )
+
+        val classPathRoute =
+            fileSystemRoute.copy(
+                fileServiceRoot =
+                    FileServiceRoot(
+                        FileServiceRootKind.CLASS_PATH,
+                        "public",
+                        anchorClassName = "example.Main",
+                        anchorPackageName = "example",
+                    ),
+            )
+
+        assertEquals(
+            message("route.explorer.detail.staticRootClasspath", "example.Main · public"),
+            ArmeriaRouteDetailFormatter.attachmentsLine(classPathRoute),
         )
     }
 
