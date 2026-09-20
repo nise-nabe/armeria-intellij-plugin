@@ -33,6 +33,11 @@ data class ArmeriaRoute(
     val excludeFromDuplicateIndex: Boolean = false,
     val exampleRequests: List<String> = emptyList(),
     val exampleHeaders: List<String> = emptyList(),
+    /**
+     * Static root declared on a `FileService` registration (`FILE_SERVICE` routes only).
+     * Used by Explorer navigation to jump to the served directory instead of the call site.
+     */
+    val fileServiceRoot: FileServiceRoot? = null,
 ) {
     fun resolveSourceHint(): String {
         val element = pointer.element ?: return ""
@@ -123,6 +128,7 @@ data class ArmeriaRoute(
             excludeFromDuplicateIndex: Boolean = false,
             exampleRequests: List<String> = emptyList(),
             exampleHeaders: List<String> = emptyList(),
+            fileServiceRoot: FileServiceRoot? = null,
         ): ArmeriaRoute =
             ArmeriaRoute(
                 protocol = protocol,
@@ -148,6 +154,7 @@ data class ArmeriaRoute(
                 excludeFromDuplicateIndex = excludeFromDuplicateIndex,
                 exampleRequests = exampleRequests,
                 exampleHeaders = exampleHeaders,
+                fileServiceRoot = fileServiceRoot,
             )
 
         fun createRuntime(

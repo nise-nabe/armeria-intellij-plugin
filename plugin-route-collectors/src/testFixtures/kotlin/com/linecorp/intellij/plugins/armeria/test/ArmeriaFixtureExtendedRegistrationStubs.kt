@@ -46,6 +46,14 @@ fun JavaCodeInsightTestFixture.registerExtendedRegistrationCollectorStubs() {
                 return this;
             }
 
+            public ServerBuilder fileService(String path, java.nio.file.Path root) {
+                return this;
+            }
+
+            public ServerBuilder fileService(String path, com.linecorp.armeria.server.file.FileService service) {
+                return this;
+            }
+
             public ServerBuilder healthCheckService() {
                 return this;
             }
@@ -261,6 +269,14 @@ fun JavaCodeInsightTestFixture.registerKotlinExtendedRegistrationCollectorStubs(
             }
 
             public ServerBuilder fileService(String path, java.io.File root) {
+                return this;
+            }
+
+            public ServerBuilder fileService(String path, java.nio.file.Path root) {
+                return this;
+            }
+
+            public ServerBuilder fileService(String path, com.linecorp.armeria.server.file.FileService service) {
                 return this;
             }
 

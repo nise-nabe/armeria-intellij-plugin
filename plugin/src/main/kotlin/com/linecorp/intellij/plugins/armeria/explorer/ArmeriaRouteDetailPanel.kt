@@ -1,12 +1,19 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.application.WriteIntentReadAction
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
+import com.linecorp.intellij.plugins.armeria.expireWithPluginUnload
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaFileServiceRootResolver
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteDetailFormatter
 import com.linecorp.intellij.plugins.armeria.message
 import java.awt.BorderLayout
@@ -16,7 +23,11 @@ import javax.swing.JPanel
 /**
  * Structured detail view for a single selected [ArmeriaRoute].
  */
-class ArmeriaRouteDetailPanel : JPanel(BorderLayout()) {
+class ArmeriaRouteDetailPanel(
+    private val project: Project,
+) : JPanel(BorderLayout()) {
+    private var routeGeneration = 0
+
     private val detailStatus = wrappingValueLabel()
     private val detailMethod = JBLabel()
     private val detailProtocol = JBLabel()
@@ -78,6 +89,7 @@ class ArmeriaRouteDetailPanel : JPanel(BorderLayout()) {
     }
 
     fun setRoute(route: ArmeriaRoute?) {
+        val generation = ++routeGeneration
         if (route == null) {
             clear()
             return
@@ -89,6 +101,7 @@ class ArmeriaRouteDetailPanel : JPanel(BorderLayout()) {
         detailModule.text = route.moduleName
         setWrappingText(detailHandler, route.target, route.target)
         setWrappingText(detailStatus, ArmeriaRouteDetailFormatter.statusLine(route))
+        updateFileServiceRootStatus(route, generation)
         WriteIntentReadAction.run {
             setWrappingText(detailRegistration, ArmeriaRouteDetailFormatter.registrationSummary(route))
             val registeredInHint = route.resolveRegisteredInHint()
@@ -105,7 +118,32 @@ class ArmeriaRouteDetailPanel : JPanel(BorderLayout()) {
         }
     }
 
+    private fun updateFileServiceRootStatus(
+        route: ArmeriaRoute,
+        generation: Int,
+    ) {
+        val root = route.fileServiceRoot ?: return
+        if (route.routeMatch != RouteMatch.FILE_SERVICE) {
+            return
+        }
+        ReadAction
+            .nonBlocking<Boolean> {
+                ArmeriaFileServiceRootResolver.resolve(project, root) != null
+            }.inSmartMode(project)
+            .expireWith(project)
+            .expireWithPluginUnload()
+            .finishOnUiThread(ModalityState.any()) { resolved ->
+                if (generation != routeGeneration || resolved) {
+                    return@finishOnUiThread
+                }
+                val status = ArmeriaRouteDetailFormatter.statusLine(route)
+                val badge = message("route.explorer.badge.unresolvedStaticRoot")
+                setWrappingText(detailStatus, if (status.isEmpty()) badge else "$status · $badge")
+            }.submit(AppExecutorUtil.getAppExecutorService())
+    }
+
     fun clear() {
+        ++routeGeneration
         handlerFieldLabel.text = message("route.explorer.detail.handler")
         setWrappingText(detailStatus, "")
         setWrappingText(detailRegistration, "")

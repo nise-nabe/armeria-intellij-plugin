@@ -25,10 +25,12 @@ object ArmeriaHttpRequestGenerator {
         return when (route.routeMatch) {
             RouteMatch.ANNOTATED_HTTP -> route.httpMethod.isNotBlank()
             RouteMatch.DELEGATED -> true
-            RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.HEALTH_CHECK, RouteMatch.ROUTE_FLUENT -> true
+            RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.HEALTH_CHECK, RouteMatch.ROUTE_FLUENT,
+            RouteMatch.FILE_SERVICE,
+            -> true
             RouteMatch.RUNTIME, RouteMatch.CONFIG -> route.httpMethod.isNotBlank()
             RouteMatch.NON_HTTP -> isGrpcRoute(route) || isGraphqlRoute(route)
-            RouteMatch.ANNOTATED_SERVICE, RouteMatch.FILE_SERVICE, RouteMatch.VIRTUAL_HOST,
+            RouteMatch.ANNOTATED_SERVICE, RouteMatch.VIRTUAL_HOST,
             RouteMatch.LISTEN_PORT, RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
             -> false
         }
@@ -39,6 +41,7 @@ object ArmeriaHttpRequestGenerator {
             RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG -> route.httpMethod
             RouteMatch.DELEGATED,
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.HEALTH_CHECK, RouteMatch.ROUTE_FLUENT,
+            RouteMatch.FILE_SERVICE,
             -> route.httpMethod.ifBlank { "GET" }
             RouteMatch.NON_HTTP -> {
                 when {
@@ -46,7 +49,7 @@ object ArmeriaHttpRequestGenerator {
                     else -> error("Unsupported route match: ${route.routeMatch}")
                 }
             }
-            RouteMatch.ANNOTATED_SERVICE, RouteMatch.FILE_SERVICE, RouteMatch.VIRTUAL_HOST,
+            RouteMatch.ANNOTATED_SERVICE, RouteMatch.VIRTUAL_HOST,
             RouteMatch.LISTEN_PORT, RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
             -> error("Unsupported route match: ${route.routeMatch}")
         }
