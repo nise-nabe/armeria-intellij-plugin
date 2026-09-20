@@ -80,8 +80,18 @@ class ArmeriaHttpRequestGeneratorTest {
     }
 
     @Test
+    fun supports_fileServiceGeneratesGetForMountPrefix() {
+        val route = route(path = "/files/", routeMatch = RouteMatch.FILE_SERVICE)
+
+        assertTrue(ArmeriaHttpRequestGenerator.supports(route))
+        assertEquals("GET", ArmeriaHttpRequestGenerator.httpMethod(route))
+        assertTrue(
+            ArmeriaHttpRequestGenerator.requestText(route).contains("GET http://localhost:8080/files/"),
+        )
+    }
+
+    @Test
     fun supports_rejectsExtendedNonRequestRoutes() {
-        assertFalse(ArmeriaHttpRequestGenerator.supports(route(routeMatch = RouteMatch.FILE_SERVICE)))
         assertFalse(ArmeriaHttpRequestGenerator.supports(route(routeMatch = RouteMatch.VIRTUAL_HOST)))
         assertFalse(ArmeriaHttpRequestGenerator.supports(route(routeMatch = RouteMatch.LISTEN_PORT)))
         assertFalse(ArmeriaHttpRequestGenerator.supports(route(routeMatch = RouteMatch.ROUTE_DECORATOR)))

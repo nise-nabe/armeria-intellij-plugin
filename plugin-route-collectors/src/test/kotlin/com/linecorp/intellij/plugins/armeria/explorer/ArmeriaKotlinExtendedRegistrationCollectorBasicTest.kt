@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.linecorp.intellij.plugins.armeria.explorer.model.FileServiceRootKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
@@ -15,7 +16,35 @@ class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBa
 
     fun testCollectKotlinFileServiceRegistration() {
         configureFixture("extendedRegistration/kotlin/basic/fileService/Main.kt")
-        collectRoutes().also { it.singleRoute() }.assertRoute(RouteMatch.FILE_SERVICE, path = "/files/")
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.FILE_SERVICE, path = "/files/")
+            .also { route ->
+                assertEquals(FileServiceRootKind.FILE_SYSTEM, route.fileServiceRoot?.kind)
+                assertEquals("/tmp", route.fileServiceRoot?.path)
+            }
+    }
+
+    fun testCollectKotlinFileServiceWithPathsGetRoot() {
+        configureFixture("extendedRegistration/kotlin/basic/fileServiceWithPaths/Main.kt")
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.FILE_SERVICE, path = "/static/")
+            .also { route ->
+                assertEquals(FileServiceRootKind.FILE_SYSTEM, route.fileServiceRoot?.kind)
+                assertEquals("src/main/resources/static", route.fileServiceRoot?.path)
+            }
+    }
+
+    fun testCollectKotlinFileServiceWithServiceOfRoot() {
+        configureFixture("extendedRegistration/kotlin/basic/fileServiceWithServiceOf/Main.kt")
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.FILE_SERVICE, path = "/static/")
+            .also { route ->
+                assertEquals(FileServiceRootKind.FILE_SYSTEM, route.fileServiceRoot?.kind)
+                assertEquals("src/main/resources/public", route.fileServiceRoot?.path)
+            }
     }
 
     fun testCollectKotlinFluentRouteRegistration() {

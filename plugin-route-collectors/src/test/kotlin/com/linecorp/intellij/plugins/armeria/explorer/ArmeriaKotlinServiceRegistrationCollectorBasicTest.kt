@@ -2,6 +2,7 @@ package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
+import com.linecorp.intellij.plugins.armeria.explorer.model.FileServiceRootKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRouteHint
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
@@ -903,5 +904,161 @@ class ArmeriaKotlinServiceRegistrationCollectorBasicTest : ArmeriaFixtureTestBas
         )
         assertTrue(routes.all { it.routeMatch == RouteMatch.SERVICE })
         assertTrue(routes.none { it.path.contains("newSamlService") })
+    }
+
+    fun testCollectKotlinFileServiceRootFromFile() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.file.FileService
+            import java.io.File
+
+            fun main() {
+                Server.builder()
+                    .service("/files", FileService.of(File("src/main/resources/static")))
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val fileRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/files" }
+        assertEquals(RouteMatch.FILE_SERVICE, fileRoute.routeMatch)
+        assertEquals(FileServiceRootKind.FILE_SYSTEM, fileRoute.fileServiceRoot?.kind)
+        assertEquals("src/main/resources/static", fileRoute.fileServiceRoot?.path)
+    }
+
+    fun testCollectKotlinFileServiceRootFromPathsGet() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.file.FileService
+            import java.nio.file.Paths
+
+            fun main() {
+                Server.builder()
+                    .service("/files", FileService.of(Paths.get("src", "main")))
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val fileRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/files" }
+        assertEquals(FileServiceRootKind.FILE_SYSTEM, fileRoute.fileServiceRoot?.kind)
+        assertEquals("src/main", fileRoute.fileServiceRoot?.path)
+    }
+
+    fun testCollectKotlinFileServiceRootFromBuilder() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.file.FileService
+            import java.io.File
+
+            fun main() {
+                Server.builder()
+                    .service("/files", FileService.builder(File("builderRoot")).build())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val fileRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/files" }
+        assertEquals(FileServiceRootKind.FILE_SYSTEM, fileRoute.fileServiceRoot?.kind)
+        assertEquals("builderRoot", fileRoute.fileServiceRoot?.path)
+    }
+
+    fun testCollectKotlinFileServiceRootFromVariable() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.file.FileService
+            import java.io.File
+
+            fun main() {
+                val files = FileService.of(File("variableRoot"))
+                Server.builder()
+                    .service("/files", files)
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val fileRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/files" }
+        assertEquals(FileServiceRootKind.FILE_SYSTEM, fileRoute.fileServiceRoot?.kind)
+        assertEquals("variableRoot", fileRoute.fileServiceRoot?.path)
+    }
+
+    fun testCollectKotlinFileServiceRootFromClassAnchor() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.file.FileService
+
+            fun main() {
+                Server.builder()
+                    .service("/assets", FileService.of(Main::class.java, "/public"))
+                    .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class Main {
+            }
+            """.trimIndent(),
+        )
+
+        val fileRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/assets" }
+        assertEquals(FileServiceRootKind.CLASS_PATH, fileRoute.fileServiceRoot?.kind)
+        assertEquals("/public", fileRoute.fileServiceRoot?.path)
+        assertEquals("example.Main", fileRoute.fileServiceRoot?.anchorClassName)
+    }
+
+    fun testCollectKotlinFileServiceRootFromClassLoaderAnchor() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.file.FileService
+
+            fun main() {
+                Server.builder()
+                    .service("/assets", FileService.of(Main::class.java.classLoader, "/static"))
+                    .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class Main {
+            }
+            """.trimIndent(),
+        )
+
+        val fileRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/assets" }
+        assertEquals(FileServiceRootKind.CLASS_PATH, fileRoute.fileServiceRoot?.kind)
+        assertEquals("/static", fileRoute.fileServiceRoot?.path)
+        assertEquals("", fileRoute.fileServiceRoot?.anchorClassName)
     }
 }

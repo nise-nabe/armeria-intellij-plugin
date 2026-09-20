@@ -183,6 +183,41 @@ fun JavaCodeInsightTestFixture.registerKnownHttpServiceStubs() {
             public static FileService of(java.io.File root) {
                 return null;
             }
+
+            public static FileService of(java.nio.file.Path path) {
+                return null;
+            }
+
+            public static FileService of(ClassLoader classLoader, String path) {
+                return null;
+            }
+
+            public static FileService of(Class<?> clazz, String path) {
+                return null;
+            }
+
+            public static FileServiceBuilder builder(java.io.File root) {
+                return null;
+            }
+
+            public static FileServiceBuilder builder(java.nio.file.Path path) {
+                return null;
+            }
+
+            public static FileServiceBuilder builder(ClassLoader classLoader, String path) {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.file;
+
+        public final class FileServiceBuilder {
+            public FileService build() {
+                return null;
+            }
         }
         """.trimIndent(),
     )

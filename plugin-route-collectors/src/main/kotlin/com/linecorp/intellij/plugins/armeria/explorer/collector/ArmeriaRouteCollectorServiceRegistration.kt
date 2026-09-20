@@ -19,9 +19,12 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.jav
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.CoreServiceRegistrationMethod
 import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
+import com.linecorp.intellij.plugins.armeria.explorer.model.FileServiceRoot
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaBuilderMetadataSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaDelegationSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaFileServiceRootSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaGrpcServiceOptionsSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKnownHttpServiceClassifier
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
@@ -156,6 +159,12 @@ object ArmeriaRouteCollectorServiceRegistration {
             )
         }
         val path = extractRegistrationPath(methodName, arguments) ?: return false
+        val fileServiceRoot =
+            if (ArmeriaKnownHttpServiceClassifier.classify(serviceTypeHint) == KnownHttpServiceKind.FILE) {
+                ArmeriaFileServiceRootSupport.extractFromServiceExpression(implementationExpression)
+            } else {
+                null
+            }
         return addServiceRegistrationRoute(
             element = expression,
             registrationKey = registrationKey,
@@ -168,6 +177,7 @@ object ArmeriaRouteCollectorServiceRegistration {
             routes = routes,
             seenServiceRegistrations = seenServiceRegistrations,
             serviceExpression = implementationExpression,
+            fileServiceRoot = fileServiceRoot,
         )
     }
 
@@ -220,6 +230,7 @@ object ArmeriaRouteCollectorServiceRegistration {
         decorators: List<String>? = null,
         sourceOffset: Int? = null,
         serviceExpression: PsiElement? = null,
+        fileServiceRoot: FileServiceRoot? = null,
     ): Boolean {
         if (!seenServiceRegistrations.add(registrationKey)) {
             return false
@@ -259,6 +270,7 @@ object ArmeriaRouteCollectorServiceRegistration {
                         ArmeriaGrpcServiceOptionsSupport.contentHints(serviceExpression, kind),
                 delegationKind = delegationKind,
                 sourceOffset = sourceOffset,
+                fileServiceRoot = if (routeMatch == RouteMatch.FILE_SERVICE) fileServiceRoot else null,
             )
         return true
     }

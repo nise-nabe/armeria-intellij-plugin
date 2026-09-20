@@ -2,6 +2,7 @@ package com.linecorp.intellij.plugins.armeria.explorer.ui
 
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
+import com.linecorp.intellij.plugins.armeria.explorer.model.FileServiceRootKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRouteHint
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
@@ -40,6 +41,21 @@ object ArmeriaRouteDetailFormatter {
     fun attachmentsLine(route: ArmeriaRoute): String {
         val parts =
             buildList {
+                route.fileServiceRoot?.let { root ->
+                    val key =
+                        if (root.kind == FileServiceRootKind.CLASS_PATH) {
+                            "route.explorer.detail.staticRootClasspath"
+                        } else {
+                            "route.explorer.detail.staticRoot"
+                        }
+                    val display =
+                        if (root.anchorClassName.isNotEmpty()) {
+                            "${root.anchorClassName} · ${root.path}"
+                        } else {
+                            root.path
+                        }
+                    add(message(key, display))
+                }
                 if (route.decorators.isNotEmpty()) {
                     add(message("route.explorer.detail.decorators", route.decorators.joinToString()))
                 }

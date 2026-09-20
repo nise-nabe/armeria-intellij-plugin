@@ -2,6 +2,7 @@ package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
+import com.linecorp.intellij.plugins.armeria.explorer.model.FileServiceRootKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRouteHint
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
@@ -439,6 +440,134 @@ class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
         assertEquals(RouteMatch.FILE_SERVICE, fileRoute.routeMatch)
         assertEquals(RouteProtocol.HTTP.presentableName(), fileRoute.protocol)
         assertEquals("com.linecorp.armeria.server.file.FileService", fileRoute.target)
+        assertEquals(FileServiceRootKind.FILE_SYSTEM, fileRoute.fileServiceRoot?.kind)
+        assertEquals("/tmp", fileRoute.fileServiceRoot?.path)
+    }
+
+    fun testCollectFileServiceRootFromPathsGet() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.file.FileService;
+            import java.nio.file.Paths;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/files", FileService.of(Paths.get("src", "main")))
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val fileRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/files" }
+        assertEquals(FileServiceRootKind.FILE_SYSTEM, fileRoute.fileServiceRoot?.kind)
+        assertEquals("src/main", fileRoute.fileServiceRoot?.path)
+    }
+
+    fun testCollectFileServiceRootFromBuilder() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.file.FileService;
+            import java.io.File;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/files", FileService.builder(new File("builderRoot")).build())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val fileRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/files" }
+        assertEquals(FileServiceRootKind.FILE_SYSTEM, fileRoute.fileServiceRoot?.kind)
+        assertEquals("builderRoot", fileRoute.fileServiceRoot?.path)
+    }
+
+    fun testCollectFileServiceRootFromVariable() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.file.FileService;
+            import java.io.File;
+
+            public class Main {
+                public static void main(String[] args) {
+                    FileService files = FileService.of(new File("variableRoot"));
+                    Server.builder()
+                        .service("/files", files)
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val fileRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/files" }
+        assertEquals(FileServiceRootKind.FILE_SYSTEM, fileRoute.fileServiceRoot?.kind)
+        assertEquals("variableRoot", fileRoute.fileServiceRoot?.path)
+    }
+
+    fun testCollectFileServiceRootFromClassAnchor() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.file.FileService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/assets", FileService.of(Main.class, "/public"))
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val fileRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/assets" }
+        assertEquals(FileServiceRootKind.CLASS_PATH, fileRoute.fileServiceRoot?.kind)
+        assertEquals("/public", fileRoute.fileServiceRoot?.path)
+        assertEquals("example.Main", fileRoute.fileServiceRoot?.anchorClassName)
+    }
+
+    fun testCollectFileServiceRootFromClassLoaderAnchor() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.file.FileService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("/assets", FileService.of(Main.class.getClassLoader(), "/static"))
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val fileRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/assets" }
+        assertEquals(FileServiceRootKind.CLASS_PATH, fileRoute.fileServiceRoot?.kind)
+        assertEquals("/static", fileRoute.fileServiceRoot?.path)
+        assertEquals("", fileRoute.fileServiceRoot?.anchorClassName)
     }
 
     fun testCollectWebSocketServiceViaServiceRegistration() {

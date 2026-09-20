@@ -8,6 +8,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.model.ServiceRegistrationMethod
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinFileServiceRootSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
@@ -80,6 +81,7 @@ object ArmeriaKotlinExtendedRegistrationCollector {
                         pathType = pathType,
                         decorators = ArmeriaKotlinDecoratorSupport.collectProgrammaticDecorators(call, normalizedPath),
                         timeoutHints = ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(call),
+                        fileServiceRoot = ArmeriaKotlinFileServiceRootSupport.extractFromFileServiceArguments(call.valueArguments),
                     )
             }
             ServiceRegistrationMethod.HEALTH_CHECK_SERVICE -> {

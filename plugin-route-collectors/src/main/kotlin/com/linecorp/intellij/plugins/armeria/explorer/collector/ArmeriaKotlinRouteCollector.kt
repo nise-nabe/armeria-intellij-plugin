@@ -14,9 +14,11 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.CoreServiceRegistrationMethod
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKnownHttpServiceClassifier
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinFileServiceRootSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteTargetExtractor
+import com.linecorp.intellij.plugins.armeria.explorer.support.KnownHttpServiceKind
 import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
 import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -158,6 +160,12 @@ object ArmeriaKotlinRouteCollector {
             return
         }
         val path = extractRegistrationPath(methodName, arguments) ?: return
+        val fileServiceRoot =
+            if (ArmeriaKnownHttpServiceClassifier.classify(serviceTypeHint) == KnownHttpServiceKind.FILE) {
+                ArmeriaKotlinFileServiceRootSupport.extractFromServiceExpression(unwrappedImplementation)
+            } else {
+                null
+            }
         ArmeriaRouteCollectorServiceRegistration.addServiceRegistrationRoute(
             element = call,
             registrationKey = registrationKey,
@@ -170,6 +178,7 @@ object ArmeriaKotlinRouteCollector {
             routes = routes,
             seenServiceRegistrations = seenServiceRegistrations,
             serviceExpression = unwrappedImplementation,
+            fileServiceRoot = fileServiceRoot,
         )
     }
 

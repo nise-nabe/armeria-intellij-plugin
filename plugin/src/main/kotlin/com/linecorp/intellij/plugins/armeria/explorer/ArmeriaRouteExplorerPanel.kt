@@ -58,7 +58,7 @@ class ArmeriaRouteExplorerPanel(
             emptyText.text = message("route.explorer.empty")
         }
     private val statusLabel = JBLabel()
-    private val routeDetailPanel = ArmeriaRouteDetailPanel()
+    private val routeDetailPanel = ArmeriaRouteDetailPanel(project)
     private val detailFootnote =
         JBLabel(message("route.explorer.footnote.static")).apply {
             foreground = JBUI.CurrentTheme.Label.disabledForeground()

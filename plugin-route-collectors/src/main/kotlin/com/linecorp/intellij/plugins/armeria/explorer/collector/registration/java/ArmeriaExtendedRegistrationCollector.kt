@@ -9,6 +9,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.model.ServiceRegistrationMethod
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaFileServiceRootSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.message
 
@@ -91,6 +92,7 @@ object ArmeriaExtendedRegistrationCollector {
                 pathType = pathType,
                 decorators = ArmeriaDecoratorSupport.collectProgrammaticDecorators(expression, normalizedPath),
                 timeoutHints = ArmeriaTimeoutSupport.collectBuilderTimeoutHints(expression),
+                fileServiceRoot = ArmeriaFileServiceRootSupport.extractFromFileServiceCall(expression.argumentList.expressions),
             )
     }
 
