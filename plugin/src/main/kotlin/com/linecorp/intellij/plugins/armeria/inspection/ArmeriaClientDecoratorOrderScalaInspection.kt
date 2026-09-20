@@ -119,14 +119,9 @@ class ArmeriaClientDecoratorOrderScalaInspection : LocalInspectionTool() {
                             return reference?.refName().orEmpty()
                         }
                     }
-                    is ScReferenceExpression -> {
-                        val qualifier = current.qualifier().orNull()
-                        when (qualifier) {
-                            is ScReferenceExpression -> return qualifier.refName()
-                            is ScExpression -> qualifier
-                            else -> return current.refName()
-                        }
-                    }
+                    // A class reference's own refName is its last segment, which is the
+                    // simple name whether or not the reference is package-qualified.
+                    is ScReferenceExpression -> return current.refName()
                     else -> return current.text.substringAfterLast('.').substringBefore('(')
                 }
         }

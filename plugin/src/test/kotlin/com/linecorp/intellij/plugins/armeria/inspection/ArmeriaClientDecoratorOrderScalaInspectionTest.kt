@@ -77,6 +77,28 @@ class ArmeriaClientDecoratorOrderScalaInspectionTest : ArmeriaFixtureTestBase5()
         assertDecoratorHighlights(message("inspection.decorator.order.logging.after.retry"), 1)
     }
 
+    @Test
+    fun highlightsLoggingAfterRetryingWithQualifiedReferences() {
+        myFixture.configureByText(
+            "Main.scala",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+
+            object Main {
+                def main(): Unit = {
+                    WebClient.builder("https://example.com")
+                        .decorator(com.linecorp.armeria.client.retry.RetryingClient.newDecorator())
+                        .decorator(com.linecorp.armeria.client.logging.LoggingClient.newDecorator())
+                        .build()
+                }
+            }
+            """.trimIndent(),
+        )
+        assertDecoratorHighlights(message("inspection.decorator.order.logging.after.retry"), 1)
+    }
+
     private fun configureClient(body: String) {
         myFixture.configureByText(
             "Main.scala",

@@ -145,7 +145,7 @@ class ArmeriaMissingBlockingScalaInspection : LocalInspectionTool() {
             ) {
                 return@forEachDescendant
             }
-            findings += ArmeriaBlockingCallFinding(highlight = reference, methodName = methodName)
+            findings += ArmeriaBlockingCallFinding(highlight = reference.nameId(), methodName = methodName)
         }
         return findings
     }
