@@ -252,6 +252,7 @@ object ArmeriaRouteDuplicateIndex {
             RouteMatch.ANNOTATED_HTTP, RouteMatch.NON_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG,
             RouteMatch.FILE_SERVICE, RouteMatch.HEALTH_CHECK, RouteMatch.DELEGATED,
             RouteMatch.VIRTUAL_HOST, RouteMatch.LISTEN_PORT, RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
+            RouteMatch.DISCOVERY,
             -> false
         }
 

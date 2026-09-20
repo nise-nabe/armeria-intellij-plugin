@@ -33,6 +33,7 @@ internal object ArmeriaEndpointsSupport {
             RouteMatch.LISTEN_PORT,
             RouteMatch.ROUTE_DECORATOR,
             RouteMatch.DECORATOR_UNDER,
+            RouteMatch.DISCOVERY,
             -> false
         }
 

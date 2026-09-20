@@ -35,6 +35,12 @@ internal class ArmeriaRouteExplorerTreeRenderer : ColoredTreeCellRenderer() {
                     SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES,
                 )
             }
+            is ArmeriaRouteTreeBuilder.DiscoveryNode -> {
+                append(
+                    ArmeriaRouteTreeBuilder.discoveryDisplayLabel(userObject),
+                    SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES,
+                )
+            }
             is ArmeriaRouteTreeBuilder.RouteNode -> {
                 if (ArmeriaRouteTreeBuilder.isPortBinding(userObject.route)) {
                     renderPort(userObject.route)

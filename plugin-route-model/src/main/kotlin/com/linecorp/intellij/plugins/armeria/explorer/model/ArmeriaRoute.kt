@@ -66,6 +66,7 @@ data class ArmeriaRoute(
                 RouteMatch.DELEGATED ->
                     httpMethod.ifBlank { message("route.explorer.method.allHttp") }
                 RouteMatch.NON_HTTP -> protocol
+                RouteMatch.DISCOVERY -> protocol
                 RouteMatch.RUNTIME, RouteMatch.CONFIG -> httpMethod
             }
 
@@ -96,6 +97,7 @@ data class ArmeriaRoute(
         get() =
             when {
                 routeMatch == RouteMatch.RUNTIME -> message("route.explorer.detail.service")
+                routeMatch == RouteMatch.DISCOVERY -> message("route.explorer.detail.registry")
                 targetUnresolved -> message("route.explorer.label.unresolvedExpression")
                 else -> message("route.explorer.detail.handler")
             }

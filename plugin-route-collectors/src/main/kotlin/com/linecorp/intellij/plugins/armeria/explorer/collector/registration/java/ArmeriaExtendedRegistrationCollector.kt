@@ -25,6 +25,7 @@ object ArmeriaExtendedRegistrationCollector {
                     collectFromMethodCall(expression, routes, seenRegistrations)
                     ArmeriaExtendedRegistrationCollectorListenPort.collect(expression, routes, seenRegistrations)
                     ArmeriaExtendedRegistrationCollectorFluentRoute.tryCollectFluentRoute(expression, routes, seenRegistrations)
+                    ArmeriaExtendedRegistrationCollectorDiscovery.collect(expression, routes, seenRegistrations)
                     super.visitMethodCallExpression(expression)
                 }
             },
@@ -39,6 +40,7 @@ object ArmeriaExtendedRegistrationCollector {
         collectFromMethodCall(expression, routes, seenRegistrations)
         ArmeriaExtendedRegistrationCollectorListenPort.collect(expression, routes, seenRegistrations)
         ArmeriaExtendedRegistrationCollectorFluentRoute.tryCollectFluentRoute(expression, routes, seenRegistrations)
+        ArmeriaExtendedRegistrationCollectorDiscovery.collect(expression, routes, seenRegistrations)
     }
 
     fun collectFromMethodCall(

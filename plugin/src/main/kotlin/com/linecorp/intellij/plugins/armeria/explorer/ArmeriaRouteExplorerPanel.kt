@@ -137,6 +137,7 @@ class ArmeriaRouteExplorerPanel(
                     is ArmeriaRouteTreeBuilder.RouteNode,
                     is ArmeriaRouteTreeBuilder.ModuleNode,
                     is ArmeriaRouteTreeBuilder.VirtualHostNode,
+                    is ArmeriaRouteTreeBuilder.DiscoveryNode,
                     -> ArmeriaRouteTreeBuilder.speedSearchText(userObject)
                     else -> ""
                 }

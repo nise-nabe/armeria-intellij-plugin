@@ -68,4 +68,6 @@ abstract class ArmeriaFixtureTestBase : ArmeriaLightJavaCodeInsightFixtureTestCa
     protected fun registerExtendedRegistrationCollectorStubs() = myFixture.registerExtendedRegistrationCollectorStubs()
 
     protected fun registerKotlinExtendedRegistrationCollectorStubs() = myFixture.registerKotlinExtendedRegistrationCollectorStubs()
+
+    protected fun registerDiscoveryRegistrationStubs() = myFixture.registerDiscoveryRegistrationStubs()
 }

@@ -14,6 +14,9 @@ enum class RouteMatch {
     DECORATOR_UNDER,
     DELEGATED,
     NON_HTTP,
+
+    /** Server-side service-registry registration (ZooKeeper / Eureka / Consul) — not an HTTP route. */
+    DISCOVERY,
     RUNTIME,
 
     /** Static application config (e.g. Spring Boot armeria.*) — HTTP-capable, not live DocService fetch. */

@@ -13,17 +13,25 @@ object ArmeriaRouteTreeBuilder {
         }
         for ((moduleName, moduleRoutes) in routes.groupBy { it.moduleName }.toSortedMap()) {
             val portBindings = moduleRoutes.filter(::isPortBinding).sortedWith(portComparator)
-            val serviceRoutes = moduleRoutes.filterNot(::isPortBinding)
+            val discoveryRoutes = moduleRoutes.filter { it.routeMatch == RouteMatch.DISCOVERY }
+            val serviceRoutes = moduleRoutes.filterNot { isPortBinding(it) || it.routeMatch == RouteMatch.DISCOVERY }
             val groupByVirtualHost = serviceRoutes.any { it.virtualHostName.isNotEmpty() }
             val visibleCount =
                 if (groupByVirtualHost) {
-                    portBindings.size + serviceRoutes.count { it.routeMatch != RouteMatch.VIRTUAL_HOST }
+                    portBindings.size + discoveryRoutes.size + serviceRoutes.count { it.routeMatch != RouteMatch.VIRTUAL_HOST }
                 } else {
                     moduleRoutes.size
                 }
             val moduleNode = DefaultMutableTreeNode(ModuleNode(moduleName, visibleCount))
             for (port in portBindings) {
                 moduleNode.add(DefaultMutableTreeNode(RouteNode(port)))
+            }
+            if (discoveryRoutes.isNotEmpty()) {
+                val discoveryNode = DefaultMutableTreeNode(DiscoveryNode(discoveryRoutes.size))
+                for (route in discoveryRoutes) {
+                    discoveryNode.add(DefaultMutableTreeNode(RouteNode(route)))
+                }
+                moduleNode.add(discoveryNode)
             }
             if (groupByVirtualHost) {
                 addVirtualHostGroups(moduleNode, serviceRoutes)
@@ -89,6 +97,7 @@ object ArmeriaRouteTreeBuilder {
                 } else {
                     userObject.hostname
                 }
+            is DiscoveryNode -> message("route.explorer.tree.discovery.search")
             else -> ""
         }
 
@@ -98,6 +107,8 @@ object ArmeriaRouteTreeBuilder {
         } else {
             message("route.explorer.tree.virtualHost", node.hostname, node.routeCount)
         }
+
+    fun discoveryDisplayLabel(node: DiscoveryNode): String = message("route.explorer.tree.discovery", node.routeCount)
 
     private fun addVirtualHostGroups(
         moduleNode: DefaultMutableTreeNode,
@@ -145,7 +156,12 @@ object ArmeriaRouteTreeBuilder {
             left.httpMethod == right.httpMethod &&
             left.protocol == right.protocol &&
             left.virtualHostName == right.virtualHostName &&
-            left.delegationMountPath == right.delegationMountPath
+            left.delegationMountPath == right.delegationMountPath &&
+            // Identical `serverListener(...)` registrations share every field above —
+            // disambiguate by call-site offset so navigation targets the right one.
+            (left.routeMatch != RouteMatch.DISCOVERY || sourceOffset(left) == sourceOffset(right))
+
+    private fun sourceOffset(route: ArmeriaRoute): Int? = route.sourceOffset ?: route.pointer.range?.startOffset
 
     private val portComparator: Comparator<ArmeriaRoute> =
         compareBy<ArmeriaRoute> { portNumber(it) }.thenBy { it.protocol }.thenBy { it.path }
@@ -176,6 +192,10 @@ object ArmeriaRouteTreeBuilder {
         val hostname: String,
         val routeCount: Int,
         val navigationRoute: ArmeriaRoute?,
+    )
+
+    data class DiscoveryNode(
+        val routeCount: Int,
     )
 
     data class RouteNode(
