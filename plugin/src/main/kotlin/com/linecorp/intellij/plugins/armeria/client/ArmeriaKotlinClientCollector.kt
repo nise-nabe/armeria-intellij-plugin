@@ -258,7 +258,7 @@ internal object ArmeriaKotlinClientCollector {
                 endpointGroup = endpointGroup,
             )
         }
-        val xdsGroup = ArmeriaClientXdsSupport.labelKotlinXdsFactory(arguments.firstOrNull())
+        val xdsGroup = ArmeriaKotlinClientXdsSupport.labelKotlinXdsFactory(arguments.firstOrNull())
         if (xdsGroup != null) {
             return ClientMetadata(
                 uri = ArmeriaClientEndpointGroupSupport.extractUriFromLabel(xdsGroup),
@@ -316,7 +316,7 @@ internal object ArmeriaKotlinClientCollector {
                             ?: endpointGroup
                     return WebClientTransportInfo(uri = uri, decorators = decorators, endpointGroup = endpointGroup)
                 }
-                val xdsGroup = ArmeriaClientXdsSupport.labelKotlinXdsFactory(arguments.firstOrNull())
+                val xdsGroup = ArmeriaKotlinClientXdsSupport.labelKotlinXdsFactory(arguments.firstOrNull())
                 if (xdsGroup != null) {
                     return WebClientTransportInfo(
                         uri = ArmeriaClientEndpointGroupSupport.extractUriFromLabel(xdsGroup),

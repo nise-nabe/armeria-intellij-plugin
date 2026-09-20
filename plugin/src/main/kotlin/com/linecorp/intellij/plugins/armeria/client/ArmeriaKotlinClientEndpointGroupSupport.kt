@@ -34,7 +34,7 @@ internal object ArmeriaKotlinClientEndpointGroupSupport {
             return labelKotlinEndpointGroupCall(
                 receiver,
                 arguments,
-                ArmeriaClientXdsSupport.resolveKotlinFactoryClass(call),
+                ArmeriaKotlinClientXdsSupport.resolveKotlinFactoryClass(call),
                 visited,
             )
         }
