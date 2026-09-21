@@ -258,6 +258,14 @@ internal object ArmeriaKotlinClientCollector {
                 endpointGroup = endpointGroup,
             )
         }
+        val xdsGroup = ArmeriaKotlinClientXdsSupport.labelKotlinXdsFactory(arguments.firstOrNull())
+        if (xdsGroup != null) {
+            return ClientMetadata(
+                uri = ArmeriaClientEndpointGroupSupport.extractUriFromLabel(xdsGroup),
+                decorators = decorators,
+                endpointGroup = xdsGroup,
+            )
+        }
         val uri = ArmeriaKotlinExpressionSupport.extractKotlinString(arguments.firstOrNull()) ?: return null
         return ClientMetadata(uri = uri, decorators = decorators)
     }
@@ -307,6 +315,14 @@ internal object ArmeriaKotlinClientCollector {
                         ArmeriaKotlinClientEndpointGroupSupport.extractKotlinEndpointGroupUri(arguments[1])
                             ?: endpointGroup
                     return WebClientTransportInfo(uri = uri, decorators = decorators, endpointGroup = endpointGroup)
+                }
+                val xdsGroup = ArmeriaKotlinClientXdsSupport.labelKotlinXdsFactory(arguments.firstOrNull())
+                if (xdsGroup != null) {
+                    return WebClientTransportInfo(
+                        uri = ArmeriaClientEndpointGroupSupport.extractUriFromLabel(xdsGroup),
+                        decorators = decorators,
+                        endpointGroup = xdsGroup,
+                    )
                 }
                 val uri = ArmeriaKotlinExpressionSupport.extractKotlinString(arguments.firstOrNull()) ?: return null
                 return WebClientTransportInfo(uri = uri, decorators = decorators)

@@ -683,4 +683,211 @@ class ArmeriaClientCollectorTest : ArmeriaClientFixtureTestBase() {
         assertEquals("Health-checked (DNS (example.com))", endpoint.endpointGroup)
         assertEquals("example.com", endpoint.uri)
     }
+
+    fun testCollectXdsEndpointGroupKind() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+            import com.linecorp.armeria.common.SessionProtocol;
+            import com.linecorp.armeria.xds.XdsBootstrap;
+            import com.linecorp.armeria.xds.client.endpoint.XdsEndpointGroup;
+
+            public class Main {
+                public static void main(String[] args) {
+                    XdsBootstrap bootstrap = null;
+                    WebClient.builder(SessionProtocol.HTTP, XdsEndpointGroup.of("my-listener", bootstrap));
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("xDS (my-listener)", endpoint.endpointGroup)
+        assertEquals("my-listener", endpoint.uri)
+        assertTrue(!ArmeriaClientEndpointsSupport.isVisible(endpoint))
+    }
+
+    fun testCollectXdsHttpPreprocessorClient() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+            import com.linecorp.armeria.xds.XdsBootstrap;
+            import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
+
+            public class Main {
+                public static void main(String[] args) {
+                    XdsBootstrap bootstrap = null;
+                    WebClient.of(XdsHttpPreprocessor.ofListener("my-listener", bootstrap));
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("HTTP", endpoint.clientType)
+        assertEquals("xDS (my-listener)", endpoint.endpointGroup)
+        assertEquals("my-listener", endpoint.uri)
+        assertTrue(!ArmeriaClientEndpointsSupport.isVisible(endpoint))
+    }
+
+    fun testCollectXdsHttpPreprocessorWithBootstrapName() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+            import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
+
+            public class Main {
+                public static void main(String[] args) {
+                    WebClient.of(XdsHttpPreprocessor.ofListener("my-bootstrap", "my-listener"));
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("xDS (my-listener)", endpoint.endpointGroup)
+        assertEquals("my-listener", endpoint.uri)
+    }
+
+    fun testCollectXdsRpcPreprocessorThriftClient() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.thrift.ThriftClients;
+            import com.linecorp.armeria.xds.XdsBootstrap;
+            import com.linecorp.armeria.xds.client.endpoint.XdsRpcPreprocessor;
+
+            public class Main {
+                public static void main(String[] args) {
+                    XdsBootstrap bootstrap = null;
+                    ThriftClients.newClient(XdsRpcPreprocessor.ofListener("my-listener", bootstrap), HelloService.Iface.class);
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+                public interface Iface {
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("Thrift", endpoint.clientType)
+        assertEquals("xDS (my-listener)", endpoint.endpointGroup)
+        assertEquals("my-listener", endpoint.uri)
+    }
+
+    fun testDoesNotLabelUserDefinedXdsEndpointGroupAsXds() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+            import com.linecorp.armeria.common.SessionProtocol;
+            import example.other.XdsEndpointGroup;
+
+            public class Main {
+                public static void main(String[] args) {
+                    WebClient.builder(SessionProtocol.HTTP, XdsEndpointGroup.of("my-listener"));
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example.other;
+
+            public final class XdsEndpointGroup implements com.linecorp.armeria.client.endpoint.EndpointGroup {
+                public static XdsEndpointGroup of(String name) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("XdsEndpointGroup (my-listener)", endpoint.endpointGroup)
+    }
+
+    fun testCollectXdsHttpPreprocessorViaVariable() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+            import com.linecorp.armeria.xds.XdsBootstrap;
+            import com.linecorp.armeria.xds.client.endpoint.XdsHttpPreprocessor;
+
+            public class Main {
+                public static void main(String[] args) {
+                    XdsBootstrap bootstrap = null;
+                    XdsHttpPreprocessor preprocessor = XdsHttpPreprocessor.ofListener("my-listener", bootstrap);
+                    WebClient.of(preprocessor);
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("xDS (my-listener)", endpoint.endpointGroup)
+        assertEquals("my-listener", endpoint.uri)
+        assertTrue(!ArmeriaClientEndpointsSupport.isVisible(endpoint))
+    }
+
+    fun testDoesNotLabelUserDefinedXdsHttpPreprocessorAsXds() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+            import example.other.XdsHttpPreprocessor;
+
+            public class Main {
+                public static void main(String[] args) {
+                    WebClient.of(XdsHttpPreprocessor.ofListener("my-listener"));
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example.other;
+
+            public final class XdsHttpPreprocessor {
+                public static XdsHttpPreprocessor ofListener(String listenerName) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertNull(endpoint.endpointGroup)
+    }
 }

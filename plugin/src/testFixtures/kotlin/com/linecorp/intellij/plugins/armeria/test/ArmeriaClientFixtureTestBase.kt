@@ -12,7 +12,7 @@ abstract class ArmeriaClientFixtureTestBase : ArmeriaLightJavaCodeInsightFixture
             package com.linecorp.armeria.client;
 
             public final class WebClient {
-                public static WebClient of(String uri) {
+                public static WebClient of(Object uriOrPreprocessor) {
                     return null;
                 }
 
@@ -501,6 +501,94 @@ abstract class ArmeriaClientFixtureTestBase : ArmeriaLightJavaCodeInsightFixture
         )
         myFixture.addClass(
             """
+            package com.linecorp.armeria.client;
+
+            public interface HttpPreprocessor {
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.client;
+
+            public interface RpcPreprocessor {
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.xds;
+
+            public interface XdsBootstrap {
+                static XdsBootstrap of(Object bootstrap) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.xds.client.endpoint;
+
+            public final class XdsEndpointGroup implements com.linecorp.armeria.client.endpoint.EndpointGroup {
+                public static XdsEndpointGroup of(
+                        String listenerName, com.linecorp.armeria.xds.XdsBootstrap xdsBootstrap) {
+                    return null;
+                }
+
+                public static XdsEndpointGroup of(
+                        String listenerName,
+                        com.linecorp.armeria.xds.XdsBootstrap xdsBootstrap,
+                        boolean allowEmptyEndpoints) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.xds.client.endpoint;
+
+            public final class XdsHttpPreprocessor implements com.linecorp.armeria.client.HttpPreprocessor {
+                public static com.linecorp.armeria.client.HttpPreprocessor ofListener(String listenerName) {
+                    return null;
+                }
+
+                public static com.linecorp.armeria.client.HttpPreprocessor ofListener(
+                        String bootstrapName, String listenerName) {
+                    return null;
+                }
+
+                public static XdsHttpPreprocessor ofListener(
+                        String listenerName, com.linecorp.armeria.xds.XdsBootstrap xdsBootstrap) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.xds.client.endpoint;
+
+            public final class XdsRpcPreprocessor implements com.linecorp.armeria.client.RpcPreprocessor {
+                public static com.linecorp.armeria.client.RpcPreprocessor ofListener(String listenerName) {
+                    return null;
+                }
+
+                public static com.linecorp.armeria.client.RpcPreprocessor ofListener(
+                        String bootstrapName, String listenerName) {
+                    return null;
+                }
+
+                public static XdsRpcPreprocessor ofListener(
+                        String listenerName, com.linecorp.armeria.xds.XdsBootstrap xdsBootstrap) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
             package com.linecorp.armeria.client.retrofit2;
 
             public final class ArmeriaRetrofit {
@@ -616,7 +704,7 @@ abstract class ArmeriaClientFixtureTestBase : ArmeriaLightJavaCodeInsightFixture
                     return null;
                 }
 
-                public static Object newClient(String uri, Class<?> ifaceClass) {
+                public static Object newClient(Object uriOrPreprocessor, Class<?> ifaceClass) {
                     return null;
                 }
             }
