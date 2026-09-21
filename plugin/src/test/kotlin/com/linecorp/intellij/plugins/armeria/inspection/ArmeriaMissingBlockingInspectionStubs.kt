@@ -17,9 +17,54 @@ fun JavaCodeInsightTestFixture.registerMissingBlockingGraphqlStubs() {
         package graphql.schema.idl;
 
         public class TypeRuntimeWiring {
+            public static Builder newTypeWiring(String typeName) {
+                return new Builder();
+            }
+
             public TypeRuntimeWiring dataFetcher(String fieldName, graphql.schema.DataFetcher<?> dataFetcher) {
                 return this;
             }
+
+            public static final class Builder {
+                public Builder dataFetcher(String fieldName, graphql.schema.DataFetcher<?> dataFetcher) {
+                    return this;
+                }
+
+                public TypeRuntimeWiring build() {
+                    return new TypeRuntimeWiring();
+                }
+            }
+        }
+        """.trimIndent(),
+    )
+    addClass(
+        """
+        package graphql.schema.idl;
+
+        public final class RuntimeWiring {
+            public static Builder newRuntimeWiring() {
+                return new Builder();
+            }
+
+            public static final class Builder {
+                public Builder type(TypeRuntimeWiring typeWiring) {
+                    return this;
+                }
+
+                public RuntimeWiring build() {
+                    return new RuntimeWiring();
+                }
+            }
+        }
+        """.trimIndent(),
+    )
+    addClass(
+        """
+        package com.linecorp.armeria.server.graphql;
+
+        @FunctionalInterface
+        public interface RuntimeWiringConfigurator {
+            void configure(graphql.schema.idl.RuntimeWiring.Builder builder);
         }
         """.trimIndent(),
     )
@@ -40,6 +85,14 @@ fun JavaCodeInsightTestFixture.registerMissingBlockingGraphqlStubs() {
 
         public final class GraphqlServiceBuilder {
             public GraphqlServiceBuilder runtimeWiring(java.util.function.Consumer<Object> configurer) {
+                return this;
+            }
+
+            public GraphqlServiceBuilder runtimeWiring(RuntimeWiringConfigurator... configurators) {
+                return this;
+            }
+
+            public GraphqlServiceBuilder runtimeWiring(Object wiring) {
                 return this;
             }
 

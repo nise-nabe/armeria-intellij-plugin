@@ -16,6 +16,7 @@ import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtCallExpression
+import org.jetbrains.kotlin.psi.KtCallableReferenceExpression
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtConstructor
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
@@ -151,15 +152,18 @@ internal object ArmeriaMissingBlockingKotlinSupport {
     }
 
     fun isGraphqlDataFetcherLambda(lambda: KtLambdaExpression): Boolean {
-        if (graphqlBuilderCall(lambda) == null) {
-            return false
-        }
         val call = enclosingCall(lambda) ?: return false
         val name = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return false
         if (name !in DATA_FETCHER_METHODS) {
             return false
         }
-        return isDirectLambdaArgument(lambda, call)
+        if (!isDirectLambdaArgument(lambda, call)) {
+            return false
+        }
+        if (graphqlBuilderCall(lambda) != null) {
+            return true
+        }
+        return flowsIntoGraphqlChain(lambda)
     }
 
     fun dataFetcherLambdas(call: KtCallExpression): List<KtLambdaExpression> {
@@ -190,6 +194,13 @@ internal object ArmeriaMissingBlockingKotlinSupport {
 
     fun hasBlockingDataFetcher(builderCall: KtCallExpression): Boolean {
         val root = chainRoot(outermostChainCall(builderCall))
+        if (containsBlockingFetcher(root)) {
+            return true
+        }
+        return externalWiringRoots(root).any(::containsBlockingFetcher)
+    }
+
+    private fun containsBlockingFetcher(root: PsiElement): Boolean {
         var found = false
         root.forEachDescendant { element ->
             if (found) {
@@ -300,7 +311,10 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         val file = klass.containingKtFile
         val precise =
             graphqlBuilderCoverages(file) { root ->
-                chainReferencesName(root, className) || chainRegistersDataFetcherClass(root, klass)
+                val roots = listOf(root) + externalWiringRoots(root)
+                roots.any {
+                    chainReferencesName(it, className) || chainRegistersDataFetcherClass(it, klass)
+                }
             }
         if (precise.isNotEmpty()) {
             return precise
@@ -374,14 +388,134 @@ internal object ArmeriaMissingBlockingKotlinSupport {
     private fun coveragesFromReferences(klass: KtClassOrObject): List<Boolean> =
         try {
             val coverages = mutableListOf<Boolean>()
-            ReferencesSearch.search(klass, klass.useScope).forEach { reference ->
-                val builder = graphqlBuilderCall(reference.element) ?: return@forEach
-                coverages += chainCalls(builder, outermostChainCall(builder)).any(::isUseBlockingTaskExecutorTrue)
+            val searched = mutableSetOf<PsiElement>()
+            val queue = ArrayDeque<PsiElement>()
+            queue.add(klass)
+            while (queue.isNotEmpty()) {
+                val holder = queue.removeFirst()
+                if (!searched.add(holder)) {
+                    continue
+                }
+                ReferencesSearch.search(holder, holder.useScope).forEach { reference ->
+                    val builder = graphqlBuilderCall(reference.element)
+                    if (builder != null) {
+                        coverages +=
+                            chainCalls(builder, outermostChainCall(builder)).any(::isUseBlockingTaskExecutorTrue)
+                    } else {
+                        enclosingWiringHolder(reference.element)?.let(queue::add)
+                    }
+                }
             }
             coverages
         } catch (_: IndexNotReadyException) {
             emptyList()
         }
+
+    /**
+     * Nearest property, variable, or function that owns [element]. Used to follow a DataFetcher
+     * reference outward when the registration happens inside extracted wiring helpers.
+     */
+    private fun enclosingWiringHolder(element: PsiElement): PsiElement? =
+        PsiTreeUtil.getParentOfType(
+            element,
+            KtProperty::class.java,
+            KtNamedFunction::class.java,
+            PsiVariable::class.java,
+            PsiMethod::class.java,
+        )
+
+    /**
+     * Whether [element] sits inside a property/function whose value flows into a
+     * `GraphqlService.builder()` chain (e.g. a `RuntimeWiring` helper passed to `runtimeWiring`).
+     */
+    private fun flowsIntoGraphqlChain(element: PsiElement): Boolean =
+        try {
+            val searched = mutableSetOf<PsiElement>()
+            val queue = ArrayDeque<PsiElement>()
+            enclosingWiringHolder(element)?.let(queue::add)
+            while (queue.isNotEmpty()) {
+                val holder = queue.removeFirst()
+                if (!searched.add(holder)) {
+                    continue
+                }
+                for (reference in ReferencesSearch.search(holder, holder.useScope)) {
+                    if (graphqlBuilderCall(reference.element) != null) {
+                        return true
+                    }
+                    enclosingWiringHolder(reference.element)?.let(queue::add)
+                }
+            }
+            false
+        } catch (_: IndexNotReadyException) {
+            false
+        }
+
+    /**
+     * Subtrees outside [seed]'s own PSI tree that may still contain `dataFetcher(...)`
+     * registrations: bodies of helper functions, callable references such as `this::configure`,
+     * and initializers of properties passed into the builder chain.
+     */
+    private fun externalWiringRoots(seed: PsiElement): List<PsiElement> {
+        val visited = mutableSetOf<PsiElement>()
+        val roots = mutableListOf<PsiElement>()
+        val queue = ArrayDeque<PsiElement>()
+        queue.add(seed)
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            if (!visited.add(current)) {
+                continue
+            }
+            if (current !== seed) {
+                roots += current
+            }
+            externalSource(current, queue)
+            current.forEachDescendant { externalSource(it, queue) }
+        }
+        return roots
+    }
+
+    private fun externalSource(
+        element: PsiElement,
+        queue: ArrayDeque<PsiElement>,
+    ) {
+        when (element) {
+            is KtCallableReferenceExpression -> {
+                val resolved = element.callableReference.references.firstNotNullOfOrNull { it.resolve() }
+                wiringBody(resolved)?.let(queue::add)
+            }
+            is KtCallExpression -> {
+                val resolved = element.calleeExpression?.references?.firstNotNullOfOrNull { it.resolve() }
+                wiringBody(resolved)?.let(queue::add)
+            }
+            is KtNameReferenceExpression -> {
+                when (val resolved = element.references.firstOrNull()?.resolve()) {
+                    is KtProperty -> resolved.initializer?.let(queue::add)
+                    is PsiVariable -> resolved.initializer?.let(queue::add)
+                }
+            }
+        }
+    }
+
+    private fun wiringBody(resolved: PsiElement?): PsiElement? =
+        when (resolved) {
+            is KtNamedFunction -> resolved.bodyExpression
+            is PsiMethod -> resolved.takeIf(::isUserWiringMethod)?.body
+            else -> null
+        }
+
+    /**
+     * Helper functions that may carry `dataFetcher(...)` registrations. Library methods
+     * (graphql-java / Armeria / JDK) are already covered by scanning the call's own subtree.
+     */
+    private fun isUserWiringMethod(method: PsiMethod): Boolean {
+        if (method.isConstructor) {
+            return false
+        }
+        val qualifiedName = method.containingClass?.qualifiedName ?: return false
+        return !qualifiedName.startsWith("graphql.") &&
+            !qualifiedName.startsWith("com.linecorp.armeria.") &&
+            !qualifiedName.startsWith("java.")
+    }
 
     private fun chainReferencesName(
         root: PsiElement,
