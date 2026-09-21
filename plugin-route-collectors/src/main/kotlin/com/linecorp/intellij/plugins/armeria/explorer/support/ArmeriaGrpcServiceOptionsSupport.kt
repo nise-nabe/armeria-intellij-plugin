@@ -48,6 +48,43 @@ object ArmeriaGrpcServiceOptionsSupport {
 
     fun hasReflectionHint(hints: List<String>): Boolean = GrpcRouteHint.REFLECTION in hints
 
+    /**
+     * Text-scan variant for sources without PSI wiring. Scala registrations are collected by
+     * regex over comment-blanked source text, so [registrationText] carries the whole
+     * `.service(...)` call span — including the nested `GrpcService.builder()...build()` chain.
+     */
+    fun scalaContentHints(
+        registrationText: String?,
+        kind: KnownHttpServiceKind,
+    ): List<String> {
+        if (kind != KnownHttpServiceKind.GRPC || registrationText == null) {
+            return emptyList()
+        }
+        return buildList {
+            if (scalaUnframedEnabled(registrationText)) {
+                add(GrpcRouteHint.UNFRAMED)
+            }
+            if (looksLikeReflectionName(registrationText)) {
+                add(GrpcRouteHint.REFLECTION)
+            }
+        }
+    }
+
+    private val SCALA_UNFRAMED_CALL = Regex("""\.enableUnframedRequests\s*(?:\(\s*([^)]*?)\s*\))?""")
+
+    private fun scalaUnframedEnabled(text: String): Boolean {
+        // The outermost call wins, mirroring collectJava's mergeInner — in a fluent chain the
+        // outermost call appears last in the text.
+        val argument =
+            SCALA_UNFRAMED_CALL
+                .findAll(text)
+                .lastOrNull()
+                ?.groupValues
+                ?.getOrNull(1)
+                ?.trim()
+        return argument != null && argument != "false"
+    }
+
     private fun collect(element: PsiElement?): GrpcServiceOptions {
         if (element == null) {
             return GrpcServiceOptions()

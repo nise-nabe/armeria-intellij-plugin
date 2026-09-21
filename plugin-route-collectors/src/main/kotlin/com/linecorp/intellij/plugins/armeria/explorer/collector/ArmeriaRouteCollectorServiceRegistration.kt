@@ -231,6 +231,7 @@ object ArmeriaRouteCollectorServiceRegistration {
         sourceOffset: Int? = null,
         serviceExpression: PsiElement? = null,
         fileServiceRoot: FileServiceRoot? = null,
+        registrationText: String? = null,
     ): Boolean {
         if (!seenServiceRegistrations.add(registrationKey)) {
             return false
@@ -267,7 +268,8 @@ object ArmeriaRouteCollectorServiceRegistration {
                 timeoutHints = timeoutHints,
                 contentHints =
                     sseContentHints(kind) +
-                        ArmeriaGrpcServiceOptionsSupport.contentHints(serviceExpression, kind),
+                        ArmeriaGrpcServiceOptionsSupport.contentHints(serviceExpression, kind) +
+                        ArmeriaGrpcServiceOptionsSupport.scalaContentHints(registrationText, kind),
                 delegationKind = delegationKind,
                 sourceOffset = sourceOffset,
                 fileServiceRoot = if (routeMatch == RouteMatch.FILE_SERVICE) fileServiceRoot else null,
