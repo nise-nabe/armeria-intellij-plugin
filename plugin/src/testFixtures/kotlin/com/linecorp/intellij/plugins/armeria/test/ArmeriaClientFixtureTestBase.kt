@@ -504,6 +504,11 @@ abstract class ArmeriaClientFixtureTestBase : ArmeriaLightJavaCodeInsightFixture
             package com.linecorp.armeria.client;
 
             public interface HttpPreprocessor {
+                static HttpPreprocessor of(
+                        com.linecorp.armeria.common.SessionProtocol protocol,
+                        com.linecorp.armeria.client.endpoint.EndpointGroup endpointGroup) {
+                    return null;
+                }
             }
             """.trimIndent(),
         )
@@ -512,6 +517,11 @@ abstract class ArmeriaClientFixtureTestBase : ArmeriaLightJavaCodeInsightFixture
             package com.linecorp.armeria.client;
 
             public interface RpcPreprocessor {
+                static RpcPreprocessor of(
+                        com.linecorp.armeria.common.SessionProtocol protocol,
+                        com.linecorp.armeria.client.endpoint.EndpointGroup endpointGroup) {
+                    return null;
+                }
             }
             """.trimIndent(),
         )

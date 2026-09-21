@@ -752,4 +752,108 @@ class ArmeriaKotlinClientCollectorTest : ArmeriaClientFixtureTestBase() {
 
         assertTrue(endpoints.none { it.endpointGroup?.startsWith("xDS") == true })
     }
+
+    fun testCollectHttpPreprocessorEndpointGroup() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.HttpPreprocessor
+            import com.linecorp.armeria.client.WebClient
+            import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup
+            import com.linecorp.armeria.common.SessionProtocol
+
+            fun main() {
+                WebClient.of(HttpPreprocessor.of(
+                    SessionProtocol.HTTP, DnsAddressEndpointGroup.of("example.com", 8080)))
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("DNS (example.com)", endpoint.endpointGroup)
+        assertEquals("example.com", endpoint.uri)
+    }
+
+    fun testCollectRpcPreprocessorEndpointGroup() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.RpcPreprocessor
+            import com.linecorp.armeria.client.WebClient
+            import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup
+            import com.linecorp.armeria.common.SessionProtocol
+
+            fun main() {
+                WebClient.of(RpcPreprocessor.of(
+                    SessionProtocol.HTTP, DnsAddressEndpointGroup.of("example.com", 8080)))
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("DNS (example.com)", endpoint.endpointGroup)
+        assertEquals("example.com", endpoint.uri)
+    }
+
+    fun testCollectHttpPreprocessorEndpointGroupViaProperty() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.HttpPreprocessor
+            import com.linecorp.armeria.client.WebClient
+            import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup
+            import com.linecorp.armeria.common.SessionProtocol
+
+            fun main() {
+                val preprocessor = HttpPreprocessor.of(
+                    SessionProtocol.HTTP, DnsAddressEndpointGroup.of("example.com", 8080))
+                WebClient.of(preprocessor)
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("DNS (example.com)", endpoint.endpointGroup)
+        assertEquals("example.com", endpoint.uri)
+    }
+
+    fun testDoesNotLabelNonPreprocessorFactoryAsEndpointGroup() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.client.WebClient
+            import example.other.CustomFactory
+
+            fun main() {
+                WebClient.of(CustomFactory.of("https://example.com"))
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example.other;
+
+            public final class CustomFactory {
+                public static CustomFactory of(String uri) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoints = ArmeriaClientCollector.collect(project)
+
+        assertTrue(endpoints.none { it.endpointGroup != null })
+    }
 }
