@@ -306,7 +306,7 @@ class ArmeriaServerDecoratorInspectionTest : ArmeriaFixtureTestBase5() {
                   .build();
             """.trimIndent(),
         )
-        assertHighlights(message("inspection.server.decorator.auth.after.logging"), 1)
+        assertHighlightText(message("inspection.server.decorator.auth.after.logging"), "AuthService.newDecorator()")
     }
 
     @Test
@@ -334,7 +334,7 @@ class ArmeriaServerDecoratorInspectionTest : ArmeriaFixtureTestBase5() {
                   .build();
             """.trimIndent(),
         )
-        assertHighlights(message("inspection.server.decorator.auth.after.logging"), 1)
+        assertHighlightText(message("inspection.server.decorator.auth.after.logging"), "AuthService.newDecorator()")
     }
 
     @Test
@@ -410,5 +410,15 @@ class ArmeriaServerDecoratorInspectionTest : ArmeriaFixtureTestBase5() {
     ) {
         val highlights = myFixture.doHighlighting().filter { it.description == expected }
         assertEquals(count, highlights.size, highlights.joinToString { it.description.orEmpty() })
+    }
+
+    private fun assertHighlightText(
+        expected: String,
+        expectedText: String,
+    ) {
+        val highlights = myFixture.doHighlighting().filter { it.description == expected }
+        assertEquals(1, highlights.size, highlights.joinToString { it.description.orEmpty() })
+        val highlight = highlights.single()
+        assertEquals(expectedText, myFixture.file.text.substring(highlight.startOffset, highlight.endOffset))
     }
 }
