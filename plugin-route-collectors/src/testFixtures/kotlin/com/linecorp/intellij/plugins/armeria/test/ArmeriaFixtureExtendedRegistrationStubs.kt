@@ -645,4 +645,32 @@ fun JavaCodeInsightTestFixture.registerDiscoveryRegistrationStubs() {
         }
         """.trimIndent(),
     )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.nacos;
+
+        import com.linecorp.armeria.server.ServerListener;
+
+        public final class NacosUpdatingListener implements ServerListener {
+            public static NacosUpdatingListenerBuilder builder(java.net.URI nacosUri, String serviceName) {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server.nacos;
+
+        public final class NacosUpdatingListenerBuilder {
+            public NacosUpdatingListenerBuilder groupName(String groupName) {
+                return this;
+            }
+
+            public NacosUpdatingListener build() {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
 }

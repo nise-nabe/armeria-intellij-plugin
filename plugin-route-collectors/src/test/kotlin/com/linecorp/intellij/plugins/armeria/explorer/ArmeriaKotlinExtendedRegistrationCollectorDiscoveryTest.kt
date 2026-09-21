@@ -222,6 +222,36 @@ class ArmeriaKotlinExtendedRegistrationCollectorDiscoveryTest : ArmeriaFixtureTe
         assertNoHttpRouteFor(discovery)
     }
 
+    fun testCollectNacosRegistration() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.nacos.NacosUpdatingListener
+            import java.net.URI
+
+            fun main() {
+                Server.builder()
+                    .serverListener(
+                        NacosUpdatingListener
+                            .builder(URI.create("http://nacos.example.com:8848/nacos"), "nacos-svc")
+                            .groupName("my-group")
+                            .build())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val discovery = collectDiscovery()
+        kotlinAssertNotNull(discovery)
+        assertEquals("Nacos", discovery.protocol)
+        assertEquals("nacos-svc", discovery.path)
+        assertEquals("http://nacos.example.com:8848/nacos", discovery.target)
+        assertNoHttpRouteFor(discovery)
+    }
+
     fun testCollectRegistrationViaListenerVariable() {
         myFixture.configureByText(
             "Main.kt",
