@@ -34,6 +34,11 @@ class ArmeriaDuplicateRouteKotlinInspection : LocalInspectionTool() {
                     }
                 }
                 for (function in duplicateFunctions) {
+                    // Superclass functions can live in other files; only register problems on
+                    // elements inside the file being inspected.
+                    if (function.containingFile != klass.containingFile) {
+                        continue
+                    }
                     holder.registerProblem(
                         function.nameIdentifier ?: function,
                         message("inspection.duplicate.route.problem"),

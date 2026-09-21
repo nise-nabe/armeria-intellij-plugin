@@ -22,7 +22,7 @@ object ArmeriaGraphqlRouteCollector {
         scope: GlobalSearchScope,
         routes: MutableList<ArmeriaRoute>,
     ) {
-        if (!ArmeriaIdlRouteSupport.isGraphqlOnClasspath(project, scope)) {
+        if (!ArmeriaIdlRouteSupport.isGraphqlOnClasspath(project)) {
             return
         }
         val seenGraphqlRoutes = mutableSetOf<String>()

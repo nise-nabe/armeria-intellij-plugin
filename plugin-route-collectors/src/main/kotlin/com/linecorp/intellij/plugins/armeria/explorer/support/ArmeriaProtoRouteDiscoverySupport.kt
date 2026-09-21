@@ -32,23 +32,21 @@ object ArmeriaProtoRouteDiscoverySupport {
         }
 
     /**
-     * Whether [GRPC_SERVICE_CLASS] is resolvable in [scope] (gRPC proto overlay prerequisite).
+     * Whether [GRPC_SERVICE_CLASS] is on the project classpath (gRPC proto overlay prerequisite).
      *
-     * Project-scoped lookups are cached and invalidated with library/PSI/root changes so gutter
+     * `GrpcService` lives in a library jar, so it is resolved with [GlobalSearchScope.allScope].
+     * The lookup is cached per project and invalidated with library/PSI/root changes so gutter
      * markers do not repeat [JavaPsiFacade.findClass] on every `rpc` token visit.
      */
-    fun isGrpcOnClasspath(
-        project: Project,
-        scope: GlobalSearchScope,
-    ): Boolean {
-        if (scope != GlobalSearchScope.projectScope(project)) {
-            return JavaPsiFacade.getInstance(project).findClass(GRPC_SERVICE_CLASS, scope) != null
-        }
-        return CachedValuesManager.getManager(project).getCachedValue(
+    fun isGrpcOnClasspath(project: Project): Boolean =
+        CachedValuesManager.getManager(project).getCachedValue(
             project,
             GRPC_ON_CLASSPATH_KEY,
             CachedValueProvider {
-                val onClasspath = JavaPsiFacade.getInstance(project).findClass(GRPC_SERVICE_CLASS, scope) != null
+                val onClasspath =
+                    JavaPsiFacade
+                        .getInstance(project)
+                        .findClass(GRPC_SERVICE_CLASS, GlobalSearchScope.allScope(project)) != null
                 CachedValueProvider.Result.create(
                     onClasspath,
                     *ArmeriaRouteCacheSupport.invalidators(project),
@@ -56,5 +54,4 @@ object ArmeriaProtoRouteDiscoverySupport {
             },
             false,
         )
-    }
 }

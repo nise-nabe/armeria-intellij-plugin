@@ -13,7 +13,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.RouteContributor
 object ArmeriaSpringRouteContributor : RouteContributor {
     override fun collect(context: RouteCollectContext) {
         val psiFacade = JavaPsiFacade.getInstance(context.project)
-        val springBootArmeriaAvailable = ArmeriaRouteSupport.isSpringBootArmeriaAvailable(psiFacade, context.scope)
+        val springBootArmeriaAvailable = ArmeriaRouteSupport.isSpringBootArmeriaAvailable(psiFacade)
         if (ArmeriaKotlinPluginSupport.isKotlinPluginAvailable() && springBootArmeriaAvailable) {
             ArmeriaKotlinSpringBootRouteCollector.collect(context)
         }

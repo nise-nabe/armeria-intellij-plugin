@@ -8,7 +8,6 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiIdentifier
 import com.intellij.psi.PsiMethod
-import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.message
 
 class ArmeriaJUnitServerExtensionLineMarkerProvider : LineMarkerProviderDescriptor() {
@@ -22,17 +21,16 @@ class ArmeriaJUnitServerExtensionLineMarkerProvider : LineMarkerProviderDescript
         if (containingFile == null || !ArmeriaJUnitServerExtensionSupport.isInTestSourceContent(containingFile)) {
             return null
         }
-        val scope = GlobalSearchScope.projectScope(element.project)
         val field = element.parent as? PsiField
         if (field != null && element == field.nameIdentifier) {
-            if (ArmeriaJUnitServerExtensionSupport.serverExtensionFromField(field, scope) != null) {
+            if (ArmeriaJUnitServerExtensionSupport.serverExtensionFromField(field) != null) {
                 return markerFor(field.nameIdentifier, field.textRange, field.name)
             }
             return null
         }
         val method = element.parent as? PsiMethod
         if (method != null && element == method.nameIdentifier) {
-            if (ArmeriaJUnitServerExtensionSupport.serverExtensionFromMethod(method, scope) != null) {
+            if (ArmeriaJUnitServerExtensionSupport.serverExtensionFromMethod(method) != null) {
                 return markerFor(method.nameIdentifier ?: method, method.textRange, method.name)
             }
         }

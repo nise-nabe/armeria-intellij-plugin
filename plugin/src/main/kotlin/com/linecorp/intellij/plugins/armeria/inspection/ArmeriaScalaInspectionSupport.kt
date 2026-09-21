@@ -20,8 +20,7 @@ import scala.Option
  * extraction on top of the `PsiMethod`/`PsiAnnotation` adapters the Scala plugin provides.
  */
 internal object ArmeriaScalaInspectionSupport {
-    fun routeAnnotation(method: PsiMethod): Pair<PsiAnnotation, String>? =
-        routeAnnotations(method).firstOrNull()
+    fun routeAnnotation(method: PsiMethod): Pair<PsiAnnotation, String>? = routeAnnotations(method).firstOrNull()
 
     fun routeAnnotations(method: PsiMethod): List<Pair<PsiAnnotation, String>> =
         method.annotations.mapNotNull { candidate ->

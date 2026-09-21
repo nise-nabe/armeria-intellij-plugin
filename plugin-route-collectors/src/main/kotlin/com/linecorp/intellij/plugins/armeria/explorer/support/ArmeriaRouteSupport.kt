@@ -7,7 +7,6 @@ import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiVariable
-import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 
 object ArmeriaRouteSupport {
@@ -215,15 +214,10 @@ object ArmeriaRouteSupport {
         return normalizedRoute == normalizedPattern
     }
 
-    fun isSpringBootArmeriaAvailable(
-        psiFacade: JavaPsiFacade,
-        scope: GlobalSearchScope,
-    ): Boolean = ArmeriaServerBuilderSupport.isSpringBootArmeriaAvailable(psiFacade, scope)
+    fun isSpringBootArmeriaAvailable(psiFacade: JavaPsiFacade): Boolean =
+        ArmeriaServerBuilderSupport.isSpringBootArmeriaAvailable(psiFacade)
 
-    fun isArmeriaServerBeanReturnType(
-        method: PsiMethod,
-        scope: GlobalSearchScope,
-    ): Boolean = ArmeriaServerBuilderSupport.isArmeriaServerBeanReturnType(method, scope)
+    fun isArmeriaServerBeanReturnType(method: PsiMethod): Boolean = ArmeriaServerBuilderSupport.isArmeriaServerBeanReturnType(method)
 
     fun isArmeriaServerBeanReturnType(returnType: String): Boolean = ArmeriaServerBuilderSupport.isArmeriaServerBeanReturnType(returnType)
 

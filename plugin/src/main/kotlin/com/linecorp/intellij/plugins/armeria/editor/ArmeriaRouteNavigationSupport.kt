@@ -147,10 +147,12 @@ internal object ArmeriaRouteNavigationSupport {
         }
         val registrations = linkedSetOf<PsiElement>()
         val scope = GlobalSearchScope.projectScope(project)
+        // ServerBuilder lives in a library jar — resolve with allScope, but search references
+        // only in project content.
         val builderClass =
             JavaPsiFacade
                 .getInstance(project)
-                .findClass(ArmeriaRouteSupport.SERVER_BUILDER_CLASS, scope)
+                .findClass(ArmeriaRouteSupport.SERVER_BUILDER_CLASS, GlobalSearchScope.allScope(project))
                 ?: return emptyList()
         try {
             for (methodName in serviceRegistrationMethodNames) {
@@ -224,10 +226,16 @@ internal object ArmeriaRouteNavigationSupport {
             ArmeriaRouteSupport.extractPrimaryPath(
                 method.containingClass?.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION),
             )
+        // With multiple HTTP-method annotations, prefix each path with its method so the
+        // method/path pairing is not lost in goto-related and marker labels.
+        val paired = routeAnnotationPaths.size > 1
         return routeAnnotationPaths
-            .flatMap { it.second }
-            .distinct()
-            .map { path -> ArmeriaRouteSupport.formatAnnotatedHandlerPath(classPrefix, path) }
+            .flatMap { (httpMethod, paths) ->
+                paths.map { path ->
+                    val display = ArmeriaRouteSupport.formatAnnotatedHandlerPath(classPrefix, path)
+                    if (paired) "$httpMethod $display" else display
+                }
+            }.distinct()
     }
 
     private fun methodFromElement(element: PsiElement): PsiMethod? =

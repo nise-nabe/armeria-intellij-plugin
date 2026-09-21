@@ -37,7 +37,15 @@ internal object ArmeriaKotlinRouteNavigationSupport {
     fun routePath(handler: PsiElement): String =
         (handler as? KtNamedFunction)
             ?.let { function ->
-                kotlinMethodRoutes(function).flatMap { it.paths }.distinct().joinToString(", ")
+                val routes = kotlinMethodRoutes(function)
+                // With multiple HTTP-method annotations, prefix each path with its method so the
+                // method/path pairing is not lost in goto-related and marker labels.
+                val paired = routes.size > 1
+                routes
+                    .flatMap { route ->
+                        route.paths.map { path -> if (paired) "${route.httpMethod} $path" else path }
+                    }.distinct()
+                    .joinToString(", ")
             }.orEmpty()
 
     fun relatedRegistrations(handler: PsiElement): List<PsiElement> {

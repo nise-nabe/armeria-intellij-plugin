@@ -7,6 +7,7 @@ import com.intellij.psi.JavaRecursiveElementWalkingVisitor
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
+import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.searches.AnnotatedElementsSearch
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
@@ -33,13 +34,19 @@ object ArmeriaSpringBootRouteCollector {
 
     fun collect(context: RouteCollectContext) {
         val psiFacade = JavaPsiFacade.getInstance(context.project)
-        val beanAnnotation = psiFacade.findClass(ArmeriaRouteSupport.SPRING_BEAN_ANNOTATION, context.scope) ?: return
+        // `@Bean` lives in spring-context (a library jar) — resolve with allScope, but search
+        // annotated methods only in project content.
+        val beanAnnotation =
+            psiFacade.findClass(
+                ArmeriaRouteSupport.SPRING_BEAN_ANNOTATION,
+                GlobalSearchScope.allScope(context.project),
+            ) ?: return
         val seenBeanMethods = mutableSetOf<PsiMethod>()
         AnnotatedElementsSearch.searchPsiMethods(beanAnnotation, context.scope).forEach { method ->
             if (!seenBeanMethods.add(method)) {
                 return@forEach
             }
-            if (!ArmeriaRouteSupport.isArmeriaServerBeanReturnType(method, context.scope)) {
+            if (!ArmeriaRouteSupport.isArmeriaServerBeanReturnType(method)) {
                 return@forEach
             }
             collectServiceRegistrationsFromBeanMethod(method, context.routes, context.seenServiceRegistrations, context)

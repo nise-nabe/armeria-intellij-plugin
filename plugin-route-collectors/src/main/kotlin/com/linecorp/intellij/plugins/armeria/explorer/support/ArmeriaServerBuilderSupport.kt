@@ -12,10 +12,9 @@ import com.intellij.psi.PsiVariable
 import com.intellij.psi.search.GlobalSearchScope
 
 internal object ArmeriaServerBuilderSupport {
-    fun isSpringBootArmeriaAvailable(
-        psiFacade: JavaPsiFacade,
-        scope: GlobalSearchScope,
-    ): Boolean {
+    fun isSpringBootArmeriaAvailable(psiFacade: JavaPsiFacade): Boolean {
+        // `@Bean` and Armeria server types live in library jars — resolve with allScope.
+        val scope = GlobalSearchScope.allScope(psiFacade.project)
         if (psiFacade.findClass(ArmeriaRouteSupport.SPRING_BEAN_ANNOTATION, scope) == null) {
             return false
         }
@@ -24,14 +23,11 @@ internal object ArmeriaServerBuilderSupport {
             psiFacade.findClass(ArmeriaRouteSupport.ARMERIA_SERVER_CLASS, scope) != null
     }
 
-    fun isArmeriaServerBeanReturnType(
-        method: PsiMethod,
-        scope: GlobalSearchScope,
-    ): Boolean {
+    fun isArmeriaServerBeanReturnType(method: PsiMethod): Boolean {
         val returnType = method.returnType ?: return false
         val psiClass = (returnType as? PsiClassType)?.resolve()
         if (psiClass != null) {
-            return isArmeriaServerBeanReturnType(psiClass, JavaPsiFacade.getInstance(method.project), scope)
+            return isArmeriaServerBeanReturnType(psiClass, JavaPsiFacade.getInstance(method.project))
         }
         return isArmeriaServerBeanReturnType(returnType.canonicalText)
     }
@@ -79,7 +75,6 @@ internal object ArmeriaServerBuilderSupport {
     private fun isArmeriaServerBeanReturnType(
         psiClass: PsiClass,
         psiFacade: JavaPsiFacade,
-        scope: GlobalSearchScope,
     ): Boolean {
         val qualifiedName = psiClass.qualifiedName
         if (qualifiedName == ArmeriaRouteSupport.ARMERIA_SERVER_CLASS ||
@@ -88,6 +83,8 @@ internal object ArmeriaServerBuilderSupport {
         ) {
             return true
         }
+        // Framework types live in library jars — resolve with allScope.
+        val scope = GlobalSearchScope.allScope(psiFacade.project)
         val configuratorClass = psiFacade.findClass(ArmeriaRouteSupport.ARMERIA_SERVER_CONFIGURATOR_CLASS, scope)
         if (configuratorClass != null && psiClass.isInheritor(configuratorClass, true)) {
             return true

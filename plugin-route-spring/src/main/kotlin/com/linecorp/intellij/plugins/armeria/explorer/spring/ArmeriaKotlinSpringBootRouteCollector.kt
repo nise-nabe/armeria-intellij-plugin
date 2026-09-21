@@ -82,7 +82,7 @@ object ArmeriaKotlinSpringBootRouteCollector {
             if (!lightMethods.any { it.hasAnnotation(ArmeriaRouteSupport.SPRING_BEAN_ANNOTATION) }) {
                 continue
             }
-            if (!lightMethods.any { ArmeriaRouteSupport.isArmeriaServerBeanReturnType(it, context.scope) }) {
+            if (!lightMethods.any { ArmeriaRouteSupport.isArmeriaServerBeanReturnType(it) }) {
                 continue
             }
             context.registration.collectServiceRegistrationsInScope(

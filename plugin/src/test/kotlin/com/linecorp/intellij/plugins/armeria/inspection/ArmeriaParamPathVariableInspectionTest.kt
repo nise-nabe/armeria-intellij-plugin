@@ -252,6 +252,33 @@ class ArmeriaParamPathVariableInspectionTest : ArmeriaFixtureTestBase5() {
         assertEquals(1, highlights.size)
     }
 
+    @Test
+    fun ignoresPathAnnotationVariablesWhenMethodAnnotationDeclaresPath() {
+        myFixture.configureByText(
+            "MixedService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.Param;
+            import com.linecorp.armeria.server.annotation.Path;
+
+            public class MixedService {
+                @Get("/users/{id}")
+                @Path("/ignored/{role}")
+                public String handler(@Param("id") String id) {
+                    return id;
+                }
+            }
+            """.trimIndent(),
+        )
+        val descriptions = myFixture.doHighlighting().mapNotNull { it.description }
+        assertTrue(
+            descriptions.none { it.contains("role") },
+            descriptions.joinToString(),
+        )
+    }
+
     private fun configureUsersGet(methodBody: String) {
         myFixture.configureByText(
             "UserService.java",
