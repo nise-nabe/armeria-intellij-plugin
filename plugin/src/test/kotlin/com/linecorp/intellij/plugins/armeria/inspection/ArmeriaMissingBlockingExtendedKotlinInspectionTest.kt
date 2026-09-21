@@ -414,6 +414,377 @@ class ArmeriaMissingBlockingExtendedKotlinInspectionTest : ArmeriaFixtureTestBas
         }
     }
 
+    @Test
+    fun highlightsDataFetcherRegisteredViaExtractedConfiguratorProperty() {
+        myFixture.configureByText(
+            "Server.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.graphql.GraphqlService
+            import com.linecorp.armeria.server.graphql.RuntimeWiringConfigurator
+            import graphql.schema.DataFetcher
+            import graphql.schema.idl.TypeRuntimeWiring
+            import java.util.concurrent.CompletableFuture
+
+            class Server {
+                fun graphql(): Any {
+                    val wiring = RuntimeWiringConfigurator { b ->
+                        b.type(
+                            TypeRuntimeWiring.newTypeWiring("Query")
+                                .dataFetcher("user", UserFetcher())
+                                .build(),
+                        )
+                    }
+                    return GraphqlService.builder()
+                        .runtimeWiring(wiring)
+                        .build()
+                }
+            }
+
+            class UserFetcher : DataFetcher<String> {
+                override fun get(env: Any): String =
+                    CompletableFuture.completedFuture("ok").join()
+            }
+            """.trimIndent(),
+        )
+        assertGraphqlHighlights(1, "join")
+        assertExecutorHighlights(1)
+    }
+
+    @Test
+    fun highlightsDataFetcherRegisteredViaWiringHelperFunction() {
+        myFixture.configureByText(
+            "Server.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.graphql.GraphqlService
+            import com.linecorp.armeria.server.graphql.RuntimeWiringConfigurator
+            import graphql.schema.DataFetcher
+            import graphql.schema.idl.TypeRuntimeWiring
+            import java.util.concurrent.CompletableFuture
+
+            class Server {
+                fun graphql(): Any =
+                    GraphqlService.builder()
+                        .runtimeWiring(wiring())
+                        .build()
+
+                private fun wiring(): RuntimeWiringConfigurator =
+                    RuntimeWiringConfigurator { b ->
+                        b.type(
+                            TypeRuntimeWiring.newTypeWiring("Query")
+                                .dataFetcher("user", UserFetcher())
+                                .build(),
+                        )
+                    }
+            }
+
+            class UserFetcher : DataFetcher<String> {
+                override fun get(env: Any): String =
+                    CompletableFuture.completedFuture("ok").join()
+            }
+            """.trimIndent(),
+        )
+        assertGraphqlHighlights(1, "join")
+        assertExecutorHighlights(1)
+    }
+
+    @Test
+    fun highlightsDataFetcherRegisteredViaCallableReferenceConfigurer() {
+        myFixture.configureByText(
+            "Server.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.graphql.GraphqlService
+            import graphql.schema.DataFetcher
+            import graphql.schema.idl.RuntimeWiring
+            import graphql.schema.idl.TypeRuntimeWiring
+            import java.util.concurrent.CompletableFuture
+
+            class Server {
+                fun graphql(): Any =
+                    GraphqlService.builder()
+                        .runtimeWiring(this::configure)
+                        .build()
+
+                private fun configure(builder: RuntimeWiring.Builder) {
+                    builder.type(
+                        TypeRuntimeWiring.newTypeWiring("Query")
+                            .dataFetcher("user", UserFetcher())
+                            .build(),
+                    )
+                }
+            }
+
+            class UserFetcher : DataFetcher<String> {
+                override fun get(env: Any): String =
+                    CompletableFuture.completedFuture("ok").join()
+            }
+            """.trimIndent(),
+        )
+        assertGraphqlHighlights(1, "join")
+        assertExecutorHighlights(1)
+    }
+
+    @Test
+    fun highlightsDataFetcherRegisteredViaExtractedTypeWiringProperty() {
+        myFixture.configureByText(
+            "Server.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.graphql.GraphqlService
+            import graphql.schema.DataFetcher
+            import graphql.schema.idl.TypeRuntimeWiring
+            import java.util.concurrent.CompletableFuture
+
+            class Server {
+                private val queryWiring =
+                    TypeRuntimeWiring.newTypeWiring("Query")
+                        .dataFetcher("user", UserFetcher())
+                        .build()
+
+                fun graphql(): Any =
+                    GraphqlService.builder()
+                        .runtimeWiring { b -> b.type(queryWiring) }
+                        .build()
+            }
+
+            class UserFetcher : DataFetcher<String> {
+                override fun get(env: Any): String =
+                    CompletableFuture.completedFuture("ok").join()
+            }
+            """.trimIndent(),
+        )
+        assertGraphqlHighlights(1, "join")
+        assertExecutorHighlights(1)
+    }
+
+    @Test
+    fun allowsExtractedWiringDataFetcherWithBlockingExecutor() {
+        myFixture.configureByText(
+            "Server.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.graphql.GraphqlService
+            import com.linecorp.armeria.server.graphql.RuntimeWiringConfigurator
+            import graphql.schema.DataFetcher
+            import graphql.schema.idl.TypeRuntimeWiring
+            import java.util.concurrent.CompletableFuture
+
+            class Server {
+                fun graphql(): Any =
+                    GraphqlService.builder()
+                        .runtimeWiring(wiring())
+                        .useBlockingTaskExecutor(true)
+                        .build()
+
+                private fun wiring(): RuntimeWiringConfigurator =
+                    RuntimeWiringConfigurator { b ->
+                        b.type(
+                            TypeRuntimeWiring.newTypeWiring("Query")
+                                .dataFetcher("user", UserFetcher())
+                                .build(),
+                        )
+                    }
+            }
+
+            class UserFetcher : DataFetcher<String> {
+                override fun get(env: Any): String =
+                    CompletableFuture.completedFuture("ok").join()
+            }
+            """.trimIndent(),
+        )
+        assertGraphqlHighlights(0, "join")
+        assertExecutorHighlights(0)
+    }
+
+    @Test
+    fun highlightsExtractedDataFetcherLambdaViaCallableReference() {
+        myFixture.configureByText(
+            "Server.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.graphql.GraphqlService
+            import graphql.schema.idl.RuntimeWiring
+            import graphql.schema.idl.TypeRuntimeWiring
+            import java.util.concurrent.CompletableFuture
+
+            class Server {
+                fun graphql(): Any =
+                    GraphqlService.builder()
+                        .runtimeWiring(this::configure)
+                        .build()
+
+                private fun configure(builder: RuntimeWiring.Builder) {
+                    builder.type(
+                        TypeRuntimeWiring.newTypeWiring("Query")
+                            .dataFetcher("user") {
+                                CompletableFuture.completedFuture("ok").join()
+                            }
+                            .build(),
+                    )
+                }
+            }
+            """.trimIndent(),
+        )
+        assertGraphqlHighlights(1, "join")
+        assertExecutorHighlights(1)
+    }
+
+    @Test
+    fun allowsExtractedDataFetcherLambdaWithBlockingExecutor() {
+        myFixture.configureByText(
+            "Server.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.graphql.GraphqlService
+            import graphql.schema.idl.RuntimeWiring
+            import graphql.schema.idl.TypeRuntimeWiring
+            import java.util.concurrent.CompletableFuture
+
+            class Server {
+                fun graphql(): Any =
+                    GraphqlService.builder()
+                        .runtimeWiring(this::configure)
+                        .useBlockingTaskExecutor(true)
+                        .build()
+
+                private fun configure(builder: RuntimeWiring.Builder) {
+                    builder.type(
+                        TypeRuntimeWiring.newTypeWiring("Query")
+                            .dataFetcher("user") {
+                                CompletableFuture.completedFuture("ok").join()
+                            }
+                            .build(),
+                    )
+                }
+            }
+            """.trimIndent(),
+        )
+        assertGraphqlHighlights(0, "join")
+        assertExecutorHighlights(0)
+    }
+
+    @Test
+    fun doesNotAttributeFetcherBuiltInNonWiringArgument() {
+        myFixture.configureByText(
+            "Server.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.graphql.GraphqlService
+            import graphql.schema.DataFetcher
+            import java.util.concurrent.CompletableFuture
+
+            class Server {
+                fun graphql(): Any =
+                    GraphqlService.builder()
+                        .useBlockingTaskExecutor(helper())
+                        .build()
+
+                private fun helper(): Boolean {
+                    UserFetcher()
+                    return true
+                }
+            }
+
+            class UserFetcher : DataFetcher<String> {
+                override fun get(env: Any): String =
+                    CompletableFuture.completedFuture("ok").join()
+            }
+            """.trimIndent(),
+        )
+        assertExecutorHighlights(0)
+    }
+
+    @Test
+    fun doesNotHangOnCyclicWiringHelpers() {
+        myFixture.configureByText(
+            "Server.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.graphql.GraphqlService
+            import com.linecorp.armeria.server.graphql.RuntimeWiringConfigurator
+            import graphql.schema.DataFetcher
+            import graphql.schema.idl.TypeRuntimeWiring
+            import java.util.concurrent.CompletableFuture
+
+            class Server {
+                fun graphql(): Any =
+                    GraphqlService.builder()
+                        .runtimeWiring(wiring())
+                        .build()
+
+                private fun wiring(): RuntimeWiringConfigurator = second()
+
+                private fun second(): RuntimeWiringConfigurator {
+                    if (System.currentTimeMillis() < 0) {
+                        return wiring()
+                    }
+                    return RuntimeWiringConfigurator { b ->
+                        b.type(
+                            TypeRuntimeWiring.newTypeWiring("Query")
+                                .dataFetcher("user", UserFetcher())
+                                .build(),
+                        )
+                    }
+                }
+            }
+
+            class UserFetcher : DataFetcher<String> {
+                override fun get(env: Any): String =
+                    CompletableFuture.completedFuture("ok").join()
+            }
+            """.trimIndent(),
+        )
+        assertGraphqlHighlights(1, "join")
+        assertExecutorHighlights(1)
+    }
+
+    @Test
+    fun doesNotRegisterFetcherForTypeOnlyMention() {
+        myFixture.configureByText(
+            "Server.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.graphql.GraphqlService
+            import com.linecorp.armeria.server.graphql.RuntimeWiringConfigurator
+            import graphql.schema.DataFetcher
+            import graphql.schema.idl.TypeRuntimeWiring
+            import java.util.concurrent.CompletableFuture
+
+            class Server {
+                fun graphql(): Any =
+                    GraphqlService.builder()
+                        .runtimeWiring(wiring())
+                        .build()
+
+                private fun wiring(): RuntimeWiringConfigurator =
+                    RuntimeWiringConfigurator { b ->
+                        val unused: UserFetcher? = null
+                        b.type(TypeRuntimeWiring.newTypeWiring("Query").build())
+                    }
+            }
+
+            class UserFetcher : DataFetcher<String> {
+                override fun get(env: Any): String =
+                    CompletableFuture.completedFuture("ok").join()
+            }
+            """.trimIndent(),
+        )
+        assertGraphqlHighlights(0, "join")
+        assertExecutorHighlights(0)
+    }
+
     private fun assertBlockingHighlights(
         expectedCount: Int,
         methodName: String,
