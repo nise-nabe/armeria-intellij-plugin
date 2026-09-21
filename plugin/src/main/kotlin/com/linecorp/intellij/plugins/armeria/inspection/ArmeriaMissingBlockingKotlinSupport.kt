@@ -15,6 +15,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSuppor
 import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
+import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtCallableReferenceExpression
 import org.jetbrains.kotlin.psi.KtClassOrObject
@@ -28,13 +29,22 @@ import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtObjectDeclaration
 import org.jetbrains.kotlin.psi.KtParameter
 import org.jetbrains.kotlin.psi.KtProperty
+import org.jetbrains.kotlin.psi.KtReturnExpression
 import org.jetbrains.kotlin.psi.KtSuperTypeListEntry
+import org.jetbrains.kotlin.psi.KtTypeReference
+import org.jetbrains.kotlin.psi.KtValueArgument
+import org.jetbrains.kotlin.psi.KtValueArgumentList
 
 internal object ArmeriaMissingBlockingKotlinSupport {
     private const val BUILDER_METHOD = "builder"
     private const val USE_BLOCKING_TASK_EXECUTOR = "useBlockingTaskExecutor"
     private val DATA_FETCHER_METHODS = setOf("dataFetcher", "dataFetchers", "DataFetcher")
     private val GRAPHQL_BUILDER_METHODS = setOf("runtimeWiring", "useBlockingTaskExecutor", "graphql")
+    private val WIRING_BUILDER_METHODS = setOf("runtimeWiring", "graphql")
+    private val CONFIGURER_FUNCTION_NAMES = setOf("configure", "accept", "apply")
+    private val LIBRARY_PACKAGE_PREFIXES = ArmeriaGraphqlBlockingSupport.LIBRARY_PACKAGE_PREFIXES
+    private const val MAX_EXTERNAL_WIRING_ROOTS = 64
+    private const val MAX_HOLDER_SEARCHES = 16
     private val HTTP_SERVICE_HANDLER_METHODS =
         setOf(
             "serve",
@@ -151,26 +161,22 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         return receiverText == "GraphqlService" || receiverText.endsWith(".GraphqlService")
     }
 
-    fun isGraphqlDataFetcherLambda(lambda: KtLambdaExpression): Boolean {
+    fun isGraphqlDataFetcherLambda(lambda: KtLambdaExpression): Boolean = isDataFetcherLambda(lambda) && findGraphqlChain(lambda) != null
+
+    private fun isDataFetcherLambda(lambda: KtLambdaExpression): Boolean {
         val call = enclosingCall(lambda) ?: return false
         val name = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return false
         if (name !in DATA_FETCHER_METHODS) {
             return false
         }
-        if (!isDirectLambdaArgument(lambda, call)) {
-            return false
-        }
-        if (graphqlBuilderCall(lambda) != null) {
-            return true
-        }
-        return flowsIntoGraphqlChain(lambda)
+        return isDirectLambdaArgument(lambda, call)
     }
 
     fun dataFetcherLambdas(call: KtCallExpression): List<KtLambdaExpression> {
         if (ArmeriaKotlinExpressionSupport.resolveCallName(call) !in DATA_FETCHER_METHODS) {
             return emptyList()
         }
-        if (graphqlBuilderCall(call) == null) {
+        if (findGraphqlChain(call) == null) {
             return emptyList()
         }
         val lambdas = linkedSetOf<KtLambdaExpression>()
@@ -180,8 +186,8 @@ internal object ArmeriaMissingBlockingKotlinSupport {
     }
 
     fun hasBlockingTaskExecutor(element: PsiElement): Boolean {
-        val builder = graphqlBuilderCall(element) ?: return false
-        return chainCalls(builder, outermostChainCall(builder)).any(::isUseBlockingTaskExecutorTrue)
+        val chain = findGraphqlChain(element) ?: return false
+        return chain.any(::isUseBlockingTaskExecutorTrue)
     }
 
     /** First `useBlockingTaskExecutor(...)` in the GraphqlService builder chain, if any. */
@@ -194,27 +200,38 @@ internal object ArmeriaMissingBlockingKotlinSupport {
 
     fun hasBlockingDataFetcher(builderCall: KtCallExpression): Boolean {
         val root = chainRoot(outermostChainCall(builderCall))
-        if (containsBlockingFetcher(root)) {
+        if (containsBlockingFetcher(root, looseClassRefs = true)) {
             return true
         }
-        return externalWiringRoots(root).any(::containsBlockingFetcher)
+        return externalWiringRoots(root).any { containsBlockingFetcher(it, looseClassRefs = false) }
     }
 
-    private fun containsBlockingFetcher(root: PsiElement): Boolean {
+    /**
+     * Scans [root] for blocking `DataFetcher` registrations. With [looseClassRefs] any fetcher
+     * construction in the subtree counts (chain-internal behavior); external wiring subtrees
+     * only count fetchers in a `dataFetcher` argument, an initializer, or a return.
+     */
+    private fun containsBlockingFetcher(
+        root: PsiElement,
+        looseClassRefs: Boolean,
+    ): Boolean {
         var found = false
         root.forEachDescendant { element ->
             if (found) {
                 return@forEachDescendant
             }
             when {
-                element is KtLambdaExpression && isGraphqlDataFetcherLambda(element) -> {
+                element is KtLambdaExpression && isDataFetcherLambda(element) -> {
                     val body = element.bodyExpression ?: return@forEachDescendant
                     if (findingsIn(body, element).isNotEmpty()) {
                         found = true
                     }
                 }
                 element is KtObjectDeclaration && element.isObjectLiteral() -> {
-                    if (isDataFetcherHierarchy(element) && dataFetcherClassHasBlockingCall(element)) {
+                    if (isDataFetcherHierarchy(element) &&
+                        (looseClassRefs || isFetcherRegistrationPosition(element)) &&
+                        dataFetcherClassHasBlockingCall(element)
+                    ) {
                         found = true
                     }
                 }
@@ -224,6 +241,9 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                         if (dataFetcherCallHasBlockingTarget(element)) {
                             found = true
                         }
+                        return@forEachDescendant
+                    }
+                    if (!looseClassRefs && !isFetcherRegistrationPosition(element)) {
                         return@forEachDescendant
                     }
                     val klass = resolveClassByName(element, className) ?: return@forEachDescendant
@@ -309,17 +329,14 @@ internal object ArmeriaMissingBlockingKotlinSupport {
     private fun coveragesInFile(klass: KtClassOrObject): List<Boolean> {
         val className = klass.name ?: return emptyList()
         val file = klass.containingKtFile
-        val precise =
-            graphqlBuilderCoverages(file) { root ->
-                val roots = listOf(root) + externalWiringRoots(root)
-                roots.any {
-                    chainReferencesName(it, className) || chainRegistersDataFetcherClass(it, klass)
+        return graphqlBuilderCoverages(file) { root ->
+            chainReferencesName(root, className) ||
+                chainRegistersDataFetcherClass(root, klass) ||
+                externalWiringRoots(root).any {
+                    chainReferencesName(it, className, strict = true) ||
+                        chainRegistersDataFetcherClass(it, klass)
                 }
-            }
-        if (precise.isNotEmpty()) {
-            return precise
         }
-        return emptyList()
     }
 
     private fun chainRegistersDataFetcherClass(
@@ -361,7 +378,14 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         val name = klass.name ?: return false
         return when (resolved) {
             is KtClassOrObject -> resolved.name == name && resolved.containingFile == klass.containingFile
-            is PsiClass -> resolved.name == name
+            is PsiClass -> {
+                val fqName = klass.fqName?.asString()
+                if (fqName != null && resolved.qualifiedName != null) {
+                    resolved.qualifiedName == fqName
+                } else {
+                    resolved.name == name
+                }
+            }
             else -> false
         }
     }
@@ -391,17 +415,17 @@ internal object ArmeriaMissingBlockingKotlinSupport {
             val searched = mutableSetOf<PsiElement>()
             val queue = ArrayDeque<PsiElement>()
             queue.add(klass)
-            while (queue.isNotEmpty()) {
+            while (queue.isNotEmpty() && searched.size < MAX_HOLDER_SEARCHES) {
                 val holder = queue.removeFirst()
                 if (!searched.add(holder)) {
                     continue
                 }
                 ReferencesSearch.search(holder, holder.useScope).forEach { reference ->
-                    val builder = graphqlBuilderCall(reference.element)
+                    val builder = graphqlWiringBuilderCall(reference.element)
                     if (builder != null) {
                         coverages +=
                             chainCalls(builder, outermostChainCall(builder)).any(::isUseBlockingTaskExecutorTrue)
-                    } else {
+                    } else if (isValuePosition(reference.element)) {
                         enclosingWiringHolder(reference.element)?.let(queue::add)
                     }
                 }
@@ -425,51 +449,136 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         )
 
     /**
-     * Whether [element] sits inside a property/function whose value flows into a
-     * `GraphqlService.builder()` chain (e.g. a `RuntimeWiring` helper passed to `runtimeWiring`).
+     * The `GraphqlService.builder()` chain reachable from [element], either directly or through
+     * the holders (properties / functions) whose value flows into a `runtimeWiring(...)` or
+     * `graphql(...)` argument.
      */
-    private fun flowsIntoGraphqlChain(element: PsiElement): Boolean =
-        try {
+    private fun findGraphqlChain(element: PsiElement): List<KtCallExpression>? {
+        graphqlBuilderCall(element)?.let { builder ->
+            return chainCalls(builder, outermostChainCall(builder))
+        }
+        return try {
             val searched = mutableSetOf<PsiElement>()
             val queue = ArrayDeque<PsiElement>()
             enclosingWiringHolder(element)?.let(queue::add)
-            while (queue.isNotEmpty()) {
+            while (queue.isNotEmpty() && searched.size < MAX_HOLDER_SEARCHES) {
                 val holder = queue.removeFirst()
                 if (!searched.add(holder)) {
                     continue
                 }
-                for (reference in ReferencesSearch.search(holder, holder.useScope)) {
-                    if (graphqlBuilderCall(reference.element) != null) {
-                        return true
+                for (reference in ReferencesSearch.search(holder, holder.useScope).findAll()) {
+                    graphqlWiringBuilderCall(reference.element)?.let { builder ->
+                        return chainCalls(builder, outermostChainCall(builder))
                     }
-                    enclosingWiringHolder(reference.element)?.let(queue::add)
+                    if (isValuePosition(reference.element)) {
+                        enclosingWiringHolder(reference.element)?.let(queue::add)
+                    }
                 }
             }
-            false
+            null
         } catch (_: IndexNotReadyException) {
-            false
+            null
         }
+    }
+
+    /**
+     * The `builder()` call of the chain containing [element], but only when [element] sits inside
+     * a `runtimeWiring(...)` or `graphql(...)` argument — references in other arguments
+     * (`path(...)`, `graphiql(...)`, ...) do not register fetchers.
+     */
+    private fun graphqlWiringBuilderCall(start: PsiElement): KtCallExpression? {
+        var current: PsiElement? = start
+        while (current != null && current !is KtFile) {
+            if (current is KtCallExpression && isGraphqlBuilderMethod(current)) {
+                if (ArmeriaKotlinExpressionSupport.resolveCallName(current) !in WIRING_BUILDER_METHODS) {
+                    return null
+                }
+                return findGraphqlServiceBuilderCall(current)
+            }
+            current = current.parent
+        }
+        return null
+    }
+
+    /** Whether [element]'s value flows outward: inside call arguments, initializers, returns, or lambda bodies. */
+    private fun isValuePosition(element: PsiElement): Boolean {
+        var current = element.parent
+        while (current != null) {
+            when (current) {
+                is KtValueArgument, is KtValueArgumentList, is KtReturnExpression, is KtProperty -> return true
+                is KtBlockExpression ->
+                    return current.statements
+                        .lastOrNull()
+                        ?.let { PsiTreeUtil.isAncestor(it, element, false) } == true
+                is KtLambdaExpression -> return true
+                is KtNamedFunction -> return true
+                is KtClassOrObject, is KtFile -> return false
+            }
+            current = current.parent
+        }
+        return false
+    }
+
+    /** Inside a `dataFetcher(...)`/`dataFetchers(...)` argument, a property initializer, or a produced value. */
+    private fun isFetcherRegistrationPosition(element: PsiElement): Boolean {
+        var current = element.parent
+        while (current != null) {
+            when {
+                current is KtCallExpression &&
+                    ArmeriaKotlinExpressionSupport.resolveCallName(current) in DATA_FETCHER_METHODS -> return true
+                current is KtProperty || current is KtReturnExpression -> return true
+                current is KtBlockExpression ->
+                    return current.statements
+                        .lastOrNull()
+                        ?.let { PsiTreeUtil.isAncestor(it, element, false) } == true
+                current is KtLambdaExpression -> return true
+                current is KtNamedFunction || current is KtClassOrObject || current is KtFile -> return false
+            }
+            current = current.parent
+        }
+        return false
+    }
 
     /**
      * Subtrees outside [seed]'s own PSI tree that may still contain `dataFetcher(...)`
-     * registrations: bodies of helper functions, callable references such as `this::configure`,
-     * and initializers of properties passed into the builder chain.
+     * registrations, reachable from the `runtimeWiring(...)`/`graphql(...)` arguments of the
+     * chain: bodies of helper functions and callable references such as `this::configure`,
+     * configurer classes, and initializers of properties passed into those arguments.
      */
     private fun externalWiringRoots(seed: PsiElement): List<PsiElement> {
+        val queue = ArrayDeque<PsiElement>()
+        val seedContainers = mutableSetOf<PsiElement>()
+        seed.forEachDescendant { element ->
+            val call = element as? KtCallExpression ?: return@forEachDescendant
+            if (ArmeriaKotlinExpressionSupport.resolveCallName(call) !in WIRING_BUILDER_METHODS) {
+                return@forEachDescendant
+            }
+            call.valueArgumentList?.let {
+                queue.add(it)
+                seedContainers.add(it)
+            }
+            call.lambdaArguments.forEach { argument ->
+                argument.getLambdaExpression()?.let {
+                    queue.add(it)
+                    seedContainers.add(it)
+                }
+            }
+        }
         val visited = mutableSetOf<PsiElement>()
         val roots = mutableListOf<PsiElement>()
-        val queue = ArrayDeque<PsiElement>()
-        queue.add(seed)
-        while (queue.isNotEmpty()) {
-            val current = queue.removeFirst()
-            if (!visited.add(current)) {
-                continue
+        try {
+            while (queue.isNotEmpty() && roots.size < MAX_EXTERNAL_WIRING_ROOTS) {
+                val current = queue.removeFirst()
+                if (!visited.add(current)) {
+                    continue
+                }
+                if (current !in seedContainers) {
+                    roots += current
+                }
+                current.forEachDescendant { externalSource(it, queue) }
             }
-            if (current !== seed) {
-                roots += current
-            }
-            externalSource(current, queue)
-            current.forEachDescendant { externalSource(it, queue) }
+        } catch (_: IndexNotReadyException) {
+            // keep the roots collected so far
         }
         return roots
     }
@@ -478,15 +587,26 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         element: PsiElement,
         queue: ArrayDeque<PsiElement>,
     ) {
+        if (!isValuePosition(element)) {
+            return
+        }
         when (element) {
             is KtCallableReferenceExpression -> {
-                val resolved = element.callableReference.references.firstNotNullOfOrNull { it.resolve() }
-                wiringBody(resolved)?.let(queue::add)
+                val resolved =
+                    runCatching { element.callableReference }
+                        .getOrNull()
+                        ?.references
+                        ?.firstNotNullOfOrNull { it.resolve() }
+                wiringBody(resolved, queue)
             }
             is KtCallExpression -> {
                 val resolved = element.calleeExpression?.references?.firstNotNullOfOrNull { it.resolve() }
-                wiringBody(resolved)?.let(queue::add)
+                wiringBody(resolved, queue)
             }
+            is KtObjectDeclaration ->
+                if (element.isObjectLiteral()) {
+                    configurerBodies(element, queue)
+                }
             is KtNameReferenceExpression -> {
                 when (val resolved = element.references.firstOrNull()?.resolve()) {
                     is KtProperty -> resolved.initializer?.let(queue::add)
@@ -496,12 +616,51 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         }
     }
 
-    private fun wiringBody(resolved: PsiElement?): PsiElement? =
+    private fun wiringBody(
+        resolved: PsiElement?,
+        queue: ArrayDeque<PsiElement>,
+    ) {
         when (resolved) {
-            is KtNamedFunction -> resolved.bodyExpression
-            is PsiMethod -> resolved.takeIf(::isUserWiringMethod)?.body
-            else -> null
+            is KtNamedFunction -> resolved.bodyExpression?.let(queue::add)
+            is KtConstructor<*> ->
+                configurerBodies(PsiTreeUtil.getParentOfType(resolved, KtClassOrObject::class.java), queue)
+            is KtClassOrObject -> configurerBodies(resolved, queue)
+            is PsiMethod ->
+                if (resolved.isConstructor) {
+                    configurerBodies(resolved.containingClass, queue)
+                } else {
+                    resolved.takeIf(::isUserWiringMethod)?.body?.let(queue::add)
+                }
         }
+    }
+
+    /** Bodies of `configure`/`accept`/`apply` on a configurer class passed to `runtimeWiring(...)`. */
+    private fun configurerBodies(
+        target: PsiElement?,
+        queue: ArrayDeque<PsiElement>,
+    ) {
+        when (target) {
+            is KtClassOrObject -> {
+                val qualifiedName = target.fqName?.asString()
+                if (qualifiedName != null && LIBRARY_PACKAGE_PREFIXES.any(qualifiedName::startsWith)) {
+                    return
+                }
+                target.declarations
+                    .filterIsInstance<KtNamedFunction>()
+                    .filter { it.name in CONFIGURER_FUNCTION_NAMES }
+                    .mapNotNullTo(queue) { it.bodyExpression }
+            }
+            is PsiClass -> {
+                val qualifiedName = target.qualifiedName
+                if (qualifiedName != null && LIBRARY_PACKAGE_PREFIXES.any(qualifiedName::startsWith)) {
+                    return
+                }
+                target.methods
+                    .filter { !it.isConstructor && it.name in CONFIGURER_FUNCTION_NAMES }
+                    .mapNotNullTo(queue) { it.body }
+            }
+        }
+    }
 
     /**
      * Helper functions that may carry `dataFetcher(...)` registrations. Library methods
@@ -512,14 +671,13 @@ internal object ArmeriaMissingBlockingKotlinSupport {
             return false
         }
         val qualifiedName = method.containingClass?.qualifiedName ?: return false
-        return !qualifiedName.startsWith("graphql.") &&
-            !qualifiedName.startsWith("com.linecorp.armeria.") &&
-            !qualifiedName.startsWith("java.")
+        return LIBRARY_PACKAGE_PREFIXES.none(qualifiedName::startsWith)
     }
 
     private fun chainReferencesName(
         root: PsiElement,
         className: String,
+        strict: Boolean = false,
     ): Boolean {
         var found = false
         root.forEachDescendant { element ->
@@ -528,11 +686,21 @@ internal object ArmeriaMissingBlockingKotlinSupport {
             }
             when (element) {
                 is KtNameReferenceExpression -> {
-                    if (element.getReferencedName() == className || refersToClass(element, className)) {
+                    if (strict) {
+                        if (element.parent is KtTypeReference) {
+                            return@forEachDescendant
+                        }
+                        if (refersToClass(element, className) && isFetcherRegistrationPosition(element)) {
+                            found = true
+                        }
+                    } else if (element.getReferencedName() == className || refersToClass(element, className)) {
                         found = true
                     }
                 }
                 is KtCallExpression -> {
+                    if (strict && !isFetcherRegistrationPosition(element)) {
+                        return@forEachDescendant
+                    }
                     if (ArmeriaKotlinExpressionSupport.resolveCallName(element) == className) {
                         found = true
                     }
