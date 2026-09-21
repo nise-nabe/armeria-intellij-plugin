@@ -749,6 +749,42 @@ class ArmeriaMissingBlockingExtendedKotlinInspectionTest : ArmeriaFixtureTestBas
         assertExecutorHighlights(1)
     }
 
+    @Test
+    fun doesNotRegisterFetcherForTypeOnlyMention() {
+        myFixture.configureByText(
+            "Server.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.graphql.GraphqlService
+            import com.linecorp.armeria.server.graphql.RuntimeWiringConfigurator
+            import graphql.schema.DataFetcher
+            import graphql.schema.idl.TypeRuntimeWiring
+            import java.util.concurrent.CompletableFuture
+
+            class Server {
+                fun graphql(): Any =
+                    GraphqlService.builder()
+                        .runtimeWiring(wiring())
+                        .build()
+
+                private fun wiring(): RuntimeWiringConfigurator =
+                    RuntimeWiringConfigurator { b ->
+                        val unused: UserFetcher? = null
+                        b.type(TypeRuntimeWiring.newTypeWiring("Query").build())
+                    }
+            }
+
+            class UserFetcher : DataFetcher<String> {
+                override fun get(env: Any): String =
+                    CompletableFuture.completedFuture("ok").join()
+            }
+            """.trimIndent(),
+        )
+        assertGraphqlHighlights(0, "join")
+        assertExecutorHighlights(0)
+    }
+
     private fun assertBlockingHighlights(
         expectedCount: Int,
         methodName: String,

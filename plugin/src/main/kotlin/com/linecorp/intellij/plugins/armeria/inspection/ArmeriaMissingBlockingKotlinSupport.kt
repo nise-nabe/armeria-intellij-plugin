@@ -18,6 +18,7 @@ import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtCallableReferenceExpression
+import org.jetbrains.kotlin.psi.KtClassLiteralExpression
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtConstructor
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
@@ -425,7 +426,7 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                     if (builder != null) {
                         coverages +=
                             chainCalls(builder, outermostChainCall(builder)).any(::isUseBlockingTaskExecutorTrue)
-                    } else if (isValuePosition(reference.element)) {
+                    } else if (isValuePosition(reference.element) && !isTypePosition(reference.element)) {
                         enclosingWiringHolder(reference.element)?.let(queue::add)
                     }
                 }
@@ -470,7 +471,7 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                     graphqlWiringBuilderCall(reference.element)?.let { builder ->
                         return chainCalls(builder, outermostChainCall(builder))
                     }
-                    if (isValuePosition(reference.element)) {
+                    if (isValuePosition(reference.element) && !isTypePosition(reference.element)) {
                         enclosingWiringHolder(reference.element)?.let(queue::add)
                     }
                 }
@@ -519,6 +520,21 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         return false
     }
 
+    /**
+     * Whether [element] names a type in type position (`x: UserFetcher`, `as UserFetcher`).
+     * `x: UserFetcher` parses as `KtTypeReference > KtUserType > KtNameReferenceExpression`, so
+     * the enclosing type reference — not the immediate parent — marks it. `Foo::class` wraps
+     * its lhs in an expression, so the class-literal boundary keeps
+     * `dataFetcher("x", Foo::class.java)` registerable.
+     */
+    private fun isTypePosition(element: PsiElement): Boolean =
+        PsiTreeUtil.getParentOfType(
+            element,
+            KtTypeReference::class.java,
+            true,
+            KtClassLiteralExpression::class.java,
+        ) != null
+
     /** Inside a `dataFetcher(...)`/`dataFetchers(...)` argument, a property initializer, or a produced value. */
     private fun isFetcherRegistrationPosition(element: PsiElement): Boolean {
         var current = element.parent
@@ -526,6 +542,7 @@ internal object ArmeriaMissingBlockingKotlinSupport {
             when {
                 current is KtCallExpression &&
                     ArmeriaKotlinExpressionSupport.resolveCallName(current) in DATA_FETCHER_METHODS -> return true
+                current is KtTypeReference -> return false
                 current is KtProperty || current is KtReturnExpression -> return true
                 current is KtBlockExpression ->
                     return current.statements
@@ -687,7 +704,7 @@ internal object ArmeriaMissingBlockingKotlinSupport {
             when (element) {
                 is KtNameReferenceExpression -> {
                     if (strict) {
-                        if (element.parent is KtTypeReference) {
+                        if (isTypePosition(element)) {
                             return@forEachDescendant
                         }
                         if (refersToClass(element, className) && isFetcherRegistrationPosition(element)) {
