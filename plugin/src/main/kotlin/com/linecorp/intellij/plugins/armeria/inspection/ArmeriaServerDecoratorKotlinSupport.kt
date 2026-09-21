@@ -322,24 +322,7 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         if (!ArmeriaBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)) {
             return false
         }
-        val arguments = call.valueArguments.mapNotNull { it.getArgumentExpression() }
-        val pathExpression: KtExpression?
-        val decoratorExpression: KtExpression
-        when {
-            methodName == "decoratorUnder" -> {
-                pathExpression = arguments.getOrNull(0)
-                decoratorExpression = arguments.getOrNull(1) ?: return false
-            }
-            arguments.size >= 2 -> {
-                pathExpression = arguments[0]
-                decoratorExpression = arguments[1]
-            }
-            arguments.isNotEmpty() -> {
-                pathExpression = null
-                decoratorExpression = arguments[0]
-            }
-            else -> return false
-        }
+        val (pathExpression, decoratorExpression) = decoratorArguments(call, methodName) ?: return false
         if (decoratorKindFromExpression(decoratorExpression) != ArmeriaServerDecoratorKind.CORS) {
             return false
         }
@@ -348,6 +331,41 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         }
         val path = stringValue(pathExpression) ?: return false
         return ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(path, routePath)
+    }
+
+    /**
+     * Binds the path and decorator arguments of a `decorator`/`decoratorUnder` call, honoring
+     * named arguments (`pathPattern`/`prefix` and `decorator`/`decoratingHttpServiceFunction`)
+     * with positional fallback.
+     */
+    private fun decoratorArguments(
+        call: KtCallExpression,
+        methodName: String,
+    ): Pair<KtExpression?, KtExpression>? {
+        val valueArguments = call.valueArguments
+        if (valueArguments.isEmpty()) {
+            return null
+        }
+        val namedPath = namedArgument(valueArguments, "pathPattern") ?: namedArgument(valueArguments, "prefix")
+        val namedDecorator =
+            namedArgument(valueArguments, "decorator")
+                ?: namedArgument(valueArguments, "decoratingHttpServiceFunction")
+        val positional =
+            valueArguments
+                .filter { it.getArgumentName() == null }
+                .mapNotNull { it.getArgumentExpression() }
+        val pathExpression =
+            namedPath
+                ?: when {
+                    methodName == "decoratorUnder" -> positional.getOrNull(0)
+                    namedDecorator != null || positional.size >= 2 -> positional.getOrNull(0)
+                    else -> null
+                }
+        val decoratorExpression =
+            namedDecorator
+                ?: positional.firstOrNull { it != pathExpression }
+                ?: return null
+        return pathExpression to decoratorExpression
     }
 
     private fun isDecoratedServiceWithRoutes(expression: KtExpression): Boolean {
@@ -565,25 +583,8 @@ internal object ArmeriaServerDecoratorKotlinSupport {
             return null
         }
         val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return null
-        val arguments = call.valueArguments.mapNotNull { it.getArgumentExpression() }
-        val pathExpression: KtExpression?
-        val decoratorExpression: KtExpression
+        val (pathExpression, decoratorExpression) = decoratorArguments(call, methodName) ?: return null
         val decoratorUnder = methodName == "decoratorUnder"
-        when {
-            decoratorUnder -> {
-                pathExpression = arguments.getOrNull(0)
-                decoratorExpression = arguments.getOrNull(1) ?: return null
-            }
-            arguments.size >= 2 -> {
-                pathExpression = arguments[0]
-                decoratorExpression = arguments[1]
-            }
-            arguments.isNotEmpty() -> {
-                pathExpression = null
-                decoratorExpression = arguments[0]
-            }
-            else -> return null
-        }
         val pathPattern =
             if (pathExpression == null) {
                 null

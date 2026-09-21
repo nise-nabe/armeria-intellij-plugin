@@ -64,7 +64,7 @@ fun JavaCodeInsightTestFixture.registerServerDecoratorInspectionStubs() {
                 return this;
             }
 
-            public ServerBuilder decoratorUnder(String path, Object decorator) {
+            public ServerBuilder decoratorUnder(String prefix, Object decorator) {
                 return this;
             }
 
