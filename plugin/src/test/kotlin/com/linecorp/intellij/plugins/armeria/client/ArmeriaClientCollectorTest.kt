@@ -1002,4 +1002,106 @@ class ArmeriaClientCollectorTest : ArmeriaClientFixtureTestBase() {
 
         assertNull(endpoint.endpointGroup)
     }
+
+    fun testCollectHttpPreprocessorEndpointGroupViaWebClientTransport() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.HttpPreprocessor;
+            import com.linecorp.armeria.client.RestClient;
+            import com.linecorp.armeria.client.WebClient;
+            import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
+            import com.linecorp.armeria.common.SessionProtocol;
+
+            public class Main {
+                public static void main(String[] args) {
+                    RestClient.of(WebClient.of(HttpPreprocessor.of(
+                        SessionProtocol.HTTP, DnsAddressEndpointGroup.of("example.com", 8080))));
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("DNS (example.com)", endpoint.endpointGroup)
+        assertEquals("example.com", endpoint.uri)
+        assertEquals("WebClient transport", endpoint.transport)
+    }
+
+    fun testCollectRpcPreprocessorEndpointGroupWithClientTypeArgument() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.RpcPreprocessor;
+            import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
+            import com.linecorp.armeria.client.thrift.ThriftClients;
+            import com.linecorp.armeria.common.SessionProtocol;
+
+            public class Main {
+                public static void main(String[] args) {
+                    ThriftClients.newClient(
+                        RpcPreprocessor.of(
+                            SessionProtocol.HTTP, DnsAddressEndpointGroup.of("example.com", 8080)),
+                        MyIface.class);
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public interface MyIface {
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertEquals("DNS (example.com)", endpoint.endpointGroup)
+        assertEquals("example.com", endpoint.uri)
+    }
+
+    fun testDoesNotLabelUserDefinedHttpPreprocessorAsEndpointGroup() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.client.WebClient;
+            import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
+            import com.linecorp.armeria.common.SessionProtocol;
+            import example.other.HttpPreprocessor;
+
+            public class Main {
+                public static void main(String[] args) {
+                    WebClient.of(HttpPreprocessor.of(
+                        SessionProtocol.HTTP, DnsAddressEndpointGroup.of("example.com", 8080)));
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example.other;
+
+            public final class HttpPreprocessor {
+                public static HttpPreprocessor of(
+                        com.linecorp.armeria.common.SessionProtocol protocol,
+                        com.linecorp.armeria.client.endpoint.EndpointGroup endpointGroup) {
+                    return null;
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val endpoint = ArmeriaClientCollector.collect(project).single()
+
+        assertNull(endpoint.endpointGroup)
+    }
 }

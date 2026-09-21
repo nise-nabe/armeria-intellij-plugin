@@ -6,6 +6,7 @@ import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiParenthesizedExpression
 import com.intellij.psi.PsiReferenceExpression
+import com.intellij.psi.PsiTypeCastExpression
 import com.intellij.psi.PsiVariable
 
 /**
@@ -38,10 +39,11 @@ internal object ArmeriaClientPreprocessorSupport {
                     return null
                 }
                 expression.argumentList.expressions.firstNotNullOfOrNull {
-                    ArmeriaClientEndpointGroupSupport.labelJavaEndpointGroup(it, visited)
+                    ArmeriaClientEndpointGroupSupport.labelJavaEndpointGroup(it)
                 }
             }
             is PsiParenthesizedExpression -> labelJavaPreprocessorFactory(expression.expression, visited)
+            is PsiTypeCastExpression -> labelJavaPreprocessorFactory(expression.operand, visited)
             is PsiReferenceExpression -> {
                 val resolved = expression.resolve() as? PsiVariable ?: return null
                 if (!visited.add(resolved)) {

@@ -64,12 +64,14 @@ internal object ArmeriaKotlinClientPreprocessorSupport {
             }
         } else {
             val receiver = (call.parent as? KtQualifiedExpression)?.receiverExpression ?: return null
-            val resolved = receiver.references.firstOrNull()?.resolve() ?: return null
             val resolvedName =
-                when (resolved) {
+                when (val resolved = lastNameReference(receiver)?.references?.firstOrNull()?.resolve()) {
                     is PsiClass -> resolved.qualifiedName
                     is KtClassOrObject -> resolved.fqName?.asString()
-                    else -> null
+                    else ->
+                        receiver.text.takeIf {
+                            ArmeriaClientPreprocessorSupport.isArmeriaPreprocessorClass(it)
+                        }
                 }
             if (!ArmeriaClientPreprocessorSupport.isArmeriaPreprocessorClass(resolvedName)) {
                 return null
@@ -79,4 +81,11 @@ internal object ArmeriaKotlinClientPreprocessorSupport {
             ArmeriaKotlinClientEndpointGroupSupport.labelKotlinEndpointGroup(argument.getArgumentExpression())
         }
     }
+
+    private fun lastNameReference(expression: KtExpression?): KtNameReferenceExpression? =
+        when (expression) {
+            is KtNameReferenceExpression -> expression
+            is KtQualifiedExpression -> lastNameReference(expression.selectorExpression)
+            else -> null
+        }
 }
