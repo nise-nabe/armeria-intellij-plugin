@@ -86,4 +86,31 @@ class ArmeriaExtendedRegistrationCollectorDiscoveryClasspathGateTest : ArmeriaFi
         val routes = ArmeriaRouteCollector.collect(project)
         assertTrue(routes.none { it.routeMatch == RouteMatch.DISCOVERY })
     }
+
+    fun testNoDiscoveryRouteWhenNacosIntegrationAbsent() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.nacos.NacosUpdatingListener;
+            import java.net.URI;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .serverListener(
+                            NacosUpdatingListener
+                                .builder(URI.create("http://nacos.example.com:8848/nacos"), "svc")
+                                .build())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+        assertTrue(routes.none { it.routeMatch == RouteMatch.DISCOVERY })
+    }
 }

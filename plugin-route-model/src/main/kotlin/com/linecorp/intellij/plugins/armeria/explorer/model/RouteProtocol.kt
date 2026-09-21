@@ -16,6 +16,7 @@ enum class RouteProtocol(
     ZOOKEEPER("route.explorer.protocol.zookeeper"),
     EUREKA("route.explorer.protocol.eureka"),
     CONSUL("route.explorer.protocol.consul"),
+    NACOS("route.explorer.protocol.nacos"),
     ;
 
     fun presentableName(): String = message(messageKey)

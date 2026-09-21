@@ -14,10 +14,10 @@ object ArmeriaServerRegistrationSupport {
 
     /**
      * Parameter names of listener factories that carry the registry endpoint
-     * (`zkConnectionStr`, `eurekaUri`, `consulUri` across the real Armeria overloads).
+     * (`zkConnectionStr`, `eurekaUri`, `consulUri`, `nacosUri` across the real Armeria overloads).
      */
     internal val REGISTRY_URI_PARAMETER_NAMES: Set<String> =
-        setOf("zkConnectionStr", "zkConnectionString", "eurekaUri", "consulUri", "uri", "connectionString")
+        setOf("zkConnectionStr", "zkConnectionString", "eurekaUri", "consulUri", "nacosUri", "uri", "connectionString")
 
     /** Parameter names carrying the registered service name (`znodePath` is the ZooKeeper analogue). */
     internal val SERVICE_NAME_PARAMETER_NAMES: Set<String> = setOf("znodePath", "appName", "serviceName", "name")
@@ -44,6 +44,11 @@ object ArmeriaServerRegistrationSupport {
             "ConsulUpdatingListener",
             "com.linecorp.armeria.server.consul.ConsulUpdatingListener",
             RouteProtocol.CONSUL,
+        ),
+        NACOS(
+            "NacosUpdatingListener",
+            "com.linecorp.armeria.server.nacos.NacosUpdatingListener",
+            RouteProtocol.NACOS,
         ),
         ;
 
