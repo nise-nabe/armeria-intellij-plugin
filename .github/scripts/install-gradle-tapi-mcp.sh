@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-readonly GRADLE_TAPI_MCP_VERSION="0.11.0"
-readonly GRADLE_TAPI_MCP_SHA256="404d4544a92af42a9f441cfb150fc7ca497c8a71b6451720482f86621d9e3dbc"
+readonly GRADLE_TAPI_MCP_VERSION="0.13.4"
+readonly GRADLE_TAPI_MCP_SHA256="9159b5020f85ced96e126eb9efbff22c72c3195111f7a61beaa57f8f72c9a6c4"
 readonly INSTALL_DIR="${HOME}/.local/share/gradle-tapi-mcp-server"
 readonly VERSIONED_JAR_NAME="gradle-tapi-mcp-server-${GRADLE_TAPI_MCP_VERSION}.jar"
 readonly VERSIONED_JAR_PATH="${INSTALL_DIR}/${VERSIONED_JAR_NAME}"
@@ -64,4 +64,10 @@ ensure_jar() {
 }
 
 ensure_jar
-ln -sfn "${VERSIONED_JAR_NAME}" "${STABLE_JAR_PATH}"
+
+# Git Bash on Windows copies instead of symlinking, and a running MCP server can
+# hold the stable jar open; skip re-linking when it already matches the pin.
+if ! verify_jar_sha256 "${STABLE_JAR_PATH}" >/dev/null 2>&1; then
+  ln -sfn "${VERSIONED_JAR_NAME}" "${STABLE_JAR_PATH}" 2>/dev/null ||
+    cp -f "${VERSIONED_JAR_PATH}" "${STABLE_JAR_PATH}"
+fi

@@ -2,14 +2,9 @@
   "mcpServers": {
     "gradle": {
       "type": "stdio",
-      "command": "java",
-      "args": [
-        "-jar",
-        "${userHome}/.local/share/gradle-tapi-mcp-server/gradle-tapi-mcp-server.jar"
-      ],
-      "env": {
-        "GRADLE_PROJECT_DIR": "${workspaceFolder}"
-      }
+      "command": "bash",
+      "args": [".github/scripts/gradle-mcp-server.sh"],
+      "tools": ["*"]
     }
   }
 }

@@ -5,12 +5,12 @@ alwaysApply: true
 
 # Gradle tasks via MCP
 
-For **all Gradle task execution and build verification** in this repository, prefer the `gradle` MCP server (`nise-nabe/gradle-tapi-mcp-server` v0.11.0) over shell `./gradlew`.
+For **all Gradle task execution and build verification** in this repository, prefer the `gradle` MCP server (`nise-nabe/gradle-tapi-mcp-server` v0.13.4) over shell `./gradlew`.
 
 ## Before running tasks
 
 1. `gradle_connection_status` — confirm `connectedAny: true`
-2. If not connected, `gradle_connect` with the repository root (or rely on `GRADLE_PROJECT_DIR` from `.cursor/mcp.json` / `.github/scripts/gradle-mcp-server.sh`)
+2. If not connected, `gradle_connect` with the repository root (or rely on `GRADLE_PROJECT_DIR` set by `.github/scripts/gradle-mcp-server.sh`, which `.cursor/mcp.json` launches)
 
 Read `.cursor/skills/gradle-tapi-mcp/SKILL.md` for the full workflow.
 
