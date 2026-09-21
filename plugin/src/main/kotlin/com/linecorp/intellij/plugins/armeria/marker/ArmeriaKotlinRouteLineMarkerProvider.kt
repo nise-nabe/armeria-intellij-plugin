@@ -83,9 +83,9 @@ internal class ArmeriaKotlinRouteLineMarkerProvider : LineMarkerProvider {
     ): String? =
         when (ServiceRegistrationMethod.fromMethodName(methodName)) {
             ServiceRegistrationMethod.SERVICE ->
-                ArmeriaKotlinExpressionSupport.extractKotlinString(arguments.firstOrNull()?.getArgumentExpression())
+                ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(arguments.firstOrNull()?.getArgumentExpression())
             ServiceRegistrationMethod.SERVICE_UNDER ->
-                ArmeriaKotlinExpressionSupport.extractKotlinString(
+                ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(
                     arguments
                         .firstOrNull { it.getArgumentName()?.asName?.identifier == "pathPrefix" }
                         ?.getArgumentExpression()
@@ -93,7 +93,7 @@ internal class ArmeriaKotlinRouteLineMarkerProvider : LineMarkerProvider {
                 )
             ServiceRegistrationMethod.ANNOTATED_SERVICE ->
                 if (arguments.size > 1) {
-                    ArmeriaKotlinExpressionSupport.extractKotlinString(
+                    ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(
                         arguments
                             .firstOrNull { it.getArgumentName()?.asName?.identifier == "pathPrefix" }
                             ?.getArgumentExpression()

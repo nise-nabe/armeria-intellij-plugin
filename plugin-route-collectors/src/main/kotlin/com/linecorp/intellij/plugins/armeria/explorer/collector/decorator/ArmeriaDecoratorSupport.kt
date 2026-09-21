@@ -182,15 +182,9 @@ object ArmeriaDecoratorSupport {
             else -> computeJavaPathPatternConstant(expression)
         }
 
-    private fun computeJavaPathPatternConstant(expression: PsiExpression): String? {
-        val constantValue =
-            JavaPsiFacade
-                .getInstance(expression.project)
-                .constantEvaluationHelper
-                .computeConstantExpression(expression) as? String
-        return constantValue ?: expression.text
-            .trim()
-            .trim('"')
-            .takeIf { it.isNotEmpty() }
-    }
+    private fun computeJavaPathPatternConstant(expression: PsiExpression): String? =
+        JavaPsiFacade
+            .getInstance(expression.project)
+            .constantEvaluationHelper
+            .computeConstantExpression(expression) as? String
 }

@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -268,5 +269,74 @@ class ArmeriaKotlinRouteCollectorEdgeCaseTest : ArmeriaFixtureTestBase() {
         val routes = ArmeriaRouteCollector.collect(project)
 
         assertNull(routes.firstOrNull { it.path == "/oops" })
+    }
+
+    fun testSkipsServiceRegistrationWithNonConstantPath() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun computePath(): String = "/dynamic"
+
+            fun main() {
+                val path = computePath()
+                Server.builder()
+                    .service(path, Any())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertNull(routes.firstOrNull { it.routeMatch == RouteMatch.SERVICE })
+    }
+
+    fun testSkipsServiceRegistrationWithInterpolatedPath() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                val version = "v1"
+                Server.builder()
+                    .service("/api/${'$'}version", Any())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertNull(routes.firstOrNull { it.routeMatch == RouteMatch.SERVICE })
+    }
+
+    fun testCollectsServiceRegistrationWithConstantPropertyPath() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            const val PATH = "/const"
+
+            fun main() {
+                Server.builder()
+                    .service(PATH, Any())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        kotlinAssertNotNull(routes.firstOrNull { it.path == "/const" && it.routeMatch == RouteMatch.SERVICE })
     }
 }

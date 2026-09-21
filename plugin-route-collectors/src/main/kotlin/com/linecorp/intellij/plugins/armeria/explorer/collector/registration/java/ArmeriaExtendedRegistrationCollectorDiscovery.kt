@@ -237,7 +237,7 @@ internal object ArmeriaExtendedRegistrationCollectorDiscovery {
                 is PsiParenthesizedExpression -> expression.expression
                 is PsiReferenceExpression -> (expression.resolve() as? PsiVariable)?.initializer
                 else -> null
-            } ?: return expression.text.takeIf { it.isNotBlank() }
+            } ?: return null
         return extractTextLike(nested, hops + 1)
     }
 

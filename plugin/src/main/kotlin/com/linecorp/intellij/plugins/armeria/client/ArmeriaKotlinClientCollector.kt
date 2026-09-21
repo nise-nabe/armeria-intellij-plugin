@@ -217,7 +217,7 @@ internal object ArmeriaKotlinClientCollector {
                 val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(factoryCall)
                 if (methodName in ArmeriaClientSupport.FACTORY_METHOD_NAMES) {
                     val uri =
-                        ArmeriaKotlinExpressionSupport.extractKotlinString(
+                        ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(
                             factoryCall.valueArguments.firstOrNull()?.getArgumentExpression(),
                         )
                     if (uri != null) {
@@ -227,9 +227,17 @@ internal object ArmeriaKotlinClientCollector {
             }
             current = qualifierReceiver(current)
         }
-        return ArmeriaKotlinExpressionSupport.extractKotlinString(
-            call.valueArguments.firstOrNull()?.getArgumentExpression(),
-        )
+        return uriLabel(call.valueArguments.firstOrNull()?.getArgumentExpression())
+    }
+
+    /**
+     * Client URI label — resolves constants, then falls back to the raw expression
+     * text so dynamically computed URIs still appear in the Clients explorer.
+     */
+    private fun uriLabel(expression: KtExpression?): String? {
+        expression ?: return null
+        return ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(expression)
+            ?: expression.text.takeIf { it.isNotBlank() }
     }
 
     private fun extractFactoryMetadata(
@@ -275,7 +283,7 @@ internal object ArmeriaKotlinClientCollector {
                 endpointGroup = preprocessorGroup,
             )
         }
-        val uri = ArmeriaKotlinExpressionSupport.extractKotlinString(arguments.firstOrNull()) ?: return null
+        val uri = uriLabel(arguments.firstOrNull()) ?: return null
         return ClientMetadata(uri = uri, decorators = decorators)
     }
 
@@ -342,7 +350,7 @@ internal object ArmeriaKotlinClientCollector {
                         endpointGroup = preprocessorGroup,
                     )
                 }
-                val uri = ArmeriaKotlinExpressionSupport.extractKotlinString(arguments.firstOrNull()) ?: return null
+                val uri = uriLabel(arguments.firstOrNull()) ?: return null
                 return WebClientTransportInfo(uri = uri, decorators = decorators)
             }
             // Unwrap fluent WebClientBuilder chains passed to Retrofit, e.g.

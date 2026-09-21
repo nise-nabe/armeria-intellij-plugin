@@ -1034,4 +1034,57 @@ class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
         assertTrue(routes.all { it.routeMatch == RouteMatch.SERVICE })
         assertTrue(routes.none { it.path.contains("newSamlService") })
     }
+
+    fun testSkipsServiceRegistrationWithNonConstantPath() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    String path = computePath();
+                    Server.builder()
+                        .service(path, new Object())
+                        .build();
+                }
+
+                private static String computePath() {
+                    return "/dynamic";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.SERVICE })
+    }
+
+    fun testCollectServiceRegistrationWithConstantFieldPath() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                private static final String PATH = "/const";
+
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service(PATH, new Object())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        kotlinAssertNotNull(routes.firstOrNull { it.path == "/const" && it.routeMatch == RouteMatch.SERVICE })
+    }
 }

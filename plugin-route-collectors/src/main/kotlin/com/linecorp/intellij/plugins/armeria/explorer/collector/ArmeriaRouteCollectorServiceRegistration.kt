@@ -1,13 +1,11 @@
 package com.linecorp.intellij.plugins.armeria.explorer.collector
 import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.JavaRecursiveElementWalkingVisitor
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiJavaFile
-import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.search.FileTypeIndex
@@ -317,34 +315,12 @@ object ArmeriaRouteCollectorServiceRegistration {
             return false
         }
         val serviceExpression = arguments[0]
-        if (extractConstantString(serviceExpression) != null) {
+        if (ArmeriaRouteSupport.extractJavaStringConstant(serviceExpression) != null) {
             return false
         }
         val hint = ArmeriaRouteTargetExtractor.extractKnownServiceType(serviceExpression).orEmpty()
         return ArmeriaKnownHttpServiceClassifier.isSaml(ArmeriaKnownHttpServiceClassifier.classify(hint))
     }
 
-    private fun extractConstantString(expression: PsiExpression): String? {
-        if (expression is PsiLiteralExpression) {
-            (expression.value as? String)?.let { return it }
-        }
-        return JavaPsiFacade
-            .getInstance(expression.project)
-            .constantEvaluationHelper
-            .computeConstantExpression(expression) as? String
-    }
-
-    private fun extractString(expression: PsiExpression?): String? =
-        when (expression) {
-            null -> null
-            is PsiLiteralExpression -> expression.value as? String
-            else -> {
-                val constantValue =
-                    JavaPsiFacade
-                        .getInstance(expression.project)
-                        .constantEvaluationHelper
-                        .computeConstantExpression(expression) as? String
-                constantValue ?: expression.text.takeIf { StringUtil.isNotEmpty(it) }
-            }
-        }
+    private fun extractString(expression: PsiExpression?): String? = ArmeriaRouteSupport.extractJavaStringConstant(expression)
 }

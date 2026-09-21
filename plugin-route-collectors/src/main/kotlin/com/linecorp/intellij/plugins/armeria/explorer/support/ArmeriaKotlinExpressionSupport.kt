@@ -62,25 +62,6 @@ object ArmeriaKotlinExpressionSupport {
         return arguments.getOrNull(positionalIndex)?.getArgumentExpression()
     }
 
-    fun extractKotlinString(
-        expression: KtExpression?,
-        visitedProperties: MutableSet<KtProperty> = mutableSetOf(),
-    ): String? {
-        val unwrapped = unwrapKotlinExpression(expression) ?: return null
-        return when (unwrapped) {
-            is KtStringTemplateExpression -> {
-                if (unwrapped.entries.size == 1) {
-                    unwrapped.entries[0].text.trim('"')
-                } else {
-                    unwrapped.text.trim('"')
-                }
-            }
-            is KtDotQualifiedExpression -> extractKotlinStringFromReference(unwrapped, visitedProperties)
-            is KtNameReferenceExpression -> extractKotlinStringFromReference(unwrapped, visitedProperties)
-            else -> unwrapped.text.trim('"').takeIf { it.isNotEmpty() }
-        }
-    }
-
     /**
      * String literal or resolvable compile-time constant.
      * Unresolved names and non-string initializers return null — never PSI `.text`.
@@ -135,34 +116,6 @@ object ArmeriaKotlinExpressionSupport {
             }
         }
         return null
-    }
-
-    private fun extractKotlinStringFromReference(
-        expression: KtExpression,
-        visitedProperties: MutableSet<KtProperty>,
-    ): String? {
-        val resolved = expression.references.firstOrNull()?.resolve()
-        when (resolved) {
-            is KtProperty -> {
-                if (!visitedProperties.add(resolved)) {
-                    return null
-                }
-                extractKotlinString(resolved.initializer, visitedProperties)?.let { return it }
-            }
-            is PsiVariable -> ArmeriaRouteSupport.evaluateJavaStringConstant(resolved)?.let { return it }
-        }
-        if (expression is KtDotQualifiedExpression) {
-            val selector = expression.selectorExpression as? KtNameReferenceExpression ?: return null
-            val receiver = expression.receiverExpression as? KtNameReferenceExpression ?: return null
-            val containingClass =
-                receiver.references.firstOrNull()?.resolve() as? com.intellij.psi.PsiClass
-                    ?: return null
-            val field = containingClass.findFieldByName(selector.getReferencedName(), true)
-            if (field != null) {
-                ArmeriaRouteSupport.evaluateJavaStringConstant(field)?.let { return it }
-            }
-        }
-        return expression.text.trim('"').takeIf { it.isNotEmpty() }
     }
 
     fun unwrapKotlinExpression(expression: KtExpression?): KtExpression? {

@@ -215,4 +215,56 @@ class ArmeriaKotlinAnnotatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertEquals("/v1", registrationRoute.path)
         assertTrue(registrationRoute.annotatedServiceHasPathPrefix)
     }
+
+    fun testCollectAnnotatedRouteFromKotlinLightMethod_constantPropertyPath() {
+        myFixture.configureByText(
+            "HelloService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+
+            const val PATH = "/hello"
+
+            class HelloService {
+                @Get(PATH)
+                fun hello(): String = "hello"
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertEquals(
+            setOf("GET" to "/hello"),
+            routes.map { it.httpMethod to it.path }.toSet(),
+        )
+    }
+
+    fun testCollectAnnotatedRouteFromKotlinLightMethod_skipsUnresolvedPathArgument() {
+        myFixture.configureByText(
+            "HelloService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+
+            val dynamicPath = computePath()
+
+            class HelloService {
+                @Get(dynamicPath)
+                fun hello(): String = "hello"
+            }
+
+            fun computePath(): String = "/hello"
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertTrue(
+            routes.none { it.routeMatch == RouteMatch.ANNOTATED_HTTP },
+            "routes=${routes.map { it.httpMethod to it.path }}",
+        )
+    }
 }

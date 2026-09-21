@@ -698,7 +698,7 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         }
     }
 
-    private fun stringValue(expression: KtExpression): String? = ArmeriaKotlinExpressionSupport.extractKotlinString(expression)
+    private fun stringValue(expression: KtExpression): String? = ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(expression)
 
     private fun highlightDecorateOrArgument(expression: KtExpression): PsiElement {
         val unwrapped = unwrap(expression)

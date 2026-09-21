@@ -227,14 +227,14 @@ object ArmeriaKotlinRouteCollector {
     ): String? =
         when (CoreServiceRegistrationMethod.fromMethodName(methodName)) {
             CoreServiceRegistrationMethod.SERVICE ->
-                ArmeriaKotlinExpressionSupport.extractKotlinString(
+                ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(
                     ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "path", 0),
                 )
             CoreServiceRegistrationMethod.SERVICE_UNDER ->
-                ArmeriaKotlinExpressionSupport.extractKotlinString(findPathPrefixArgument(arguments, 0))
+                ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(findPathPrefixArgument(arguments, 0))
             CoreServiceRegistrationMethod.ANNOTATED_SERVICE -> {
                 if (arguments.size > 1) {
-                    ArmeriaKotlinExpressionSupport.extractKotlinString(findPathPrefixArgument(arguments, 0))
+                    ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(findPathPrefixArgument(arguments, 0))
                 } else {
                     "/"
                 }
@@ -245,9 +245,9 @@ object ArmeriaKotlinRouteCollector {
     fun extractKotlinStrings(expression: KtExpression?): List<String> {
         val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: return emptyList()
         if (unwrapped is KtCollectionLiteralExpression) {
-            return unwrapped.getInnerExpressions().mapNotNull(ArmeriaKotlinExpressionSupport::extractKotlinString)
+            return unwrapped.getInnerExpressions().mapNotNull(ArmeriaKotlinExpressionSupport::extractKotlinStringConstant)
         }
-        return ArmeriaKotlinExpressionSupport.extractKotlinString(unwrapped)?.let { listOf(it) }.orEmpty()
+        return ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(unwrapped)?.let { listOf(it) }.orEmpty()
     }
 
     private fun extractKotlinKnownServiceType(

@@ -21,7 +21,10 @@ internal object ArmeriaKotlinRegistrationChainSupport {
     fun toChainStep(call: KtCallExpression): RegistrationChainStep =
         RegistrationChainStep(
             methodName = resolveCallName(call).orEmpty(),
-            firstStringArg = ArmeriaKotlinExpressionSupport.extractKotlinString(call.valueArguments.firstOrNull()?.getArgumentExpression()),
+            firstStringArg =
+                ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(
+                    call.valueArguments.firstOrNull()?.getArgumentExpression(),
+                ),
             rawMethodArgs = call.valueArguments.mapNotNull { it.getArgumentExpression()?.text },
         )
 

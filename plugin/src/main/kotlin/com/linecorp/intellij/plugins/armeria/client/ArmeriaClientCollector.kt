@@ -378,6 +378,10 @@ object ArmeriaClientCollector {
             ?.startOffset
     }
 
+    /**
+     * Client URI label for `WebClient.of(...)`-style arguments. Falls back to the raw
+     * expression text so dynamically computed URIs still appear in the Clients explorer.
+     */
     internal fun extractString(expression: PsiExpression?): String? =
         when (expression) {
             null -> null

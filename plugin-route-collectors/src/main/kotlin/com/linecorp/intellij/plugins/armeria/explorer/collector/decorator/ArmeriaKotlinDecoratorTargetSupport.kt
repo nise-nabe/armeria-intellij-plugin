@@ -1,7 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer.collector.decorator
 import com.intellij.psi.PsiVariable
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
-import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteTargetExtractor
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClassLiteralExpression
@@ -10,7 +10,6 @@ import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtProperty
-import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 
 internal object ArmeriaKotlinDecoratorTargetSupport {
     fun extractKotlinDecoratorCandidate(call: KtCallExpression): ArmeriaDecoratorSupport.DecoratorCandidate? {
@@ -142,46 +141,6 @@ internal object ArmeriaKotlinDecoratorTargetSupport {
         }
     }
 
-    private fun extractKotlinPathPattern(expression: KtExpression?): String? {
-        val unwrapped = expression ?: return null
-        return when (unwrapped) {
-            is KtStringTemplateExpression -> {
-                if (unwrapped.entries.size == 1) {
-                    unwrapped.entries[0].text.trim('"')
-                } else {
-                    unwrapped.text.trim('"')
-                }
-            }
-            is KtDotQualifiedExpression -> extractKotlinPathPatternFromReference(unwrapped)
-            is KtNameReferenceExpression -> extractKotlinPathPatternFromReference(unwrapped)
-            else ->
-                unwrapped.text
-                    .trim()
-                    .trim('"')
-                    .takeIf { it.isNotEmpty() }
-        }
-    }
-
-    private fun extractKotlinPathPatternFromReference(expression: KtExpression): String? {
-        val resolved = expression.references.firstOrNull()?.resolve()
-        when (resolved) {
-            is KtProperty -> extractKotlinPathPattern(resolved.initializer)?.let { return it }
-            is PsiVariable -> ArmeriaRouteSupport.evaluateJavaStringConstant(resolved)?.let { return it }
-        }
-        if (expression is KtDotQualifiedExpression) {
-            val selector = expression.selectorExpression as? KtNameReferenceExpression ?: return null
-            val receiver = expression.receiverExpression as? KtNameReferenceExpression ?: return null
-            val containingClass =
-                receiver.references.firstOrNull()?.resolve() as? com.intellij.psi.PsiClass
-                    ?: return null
-            val field = containingClass.findFieldByName(selector.getReferencedName(), true)
-            if (field != null) {
-                ArmeriaRouteSupport.evaluateJavaStringConstant(field)?.let { return it }
-            }
-        }
-        return expression.text
-            .trim()
-            .trim('"')
-            .takeIf { it.isNotEmpty() }
-    }
+    private fun extractKotlinPathPattern(expression: KtExpression?): String? =
+        ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(expression)
 }
