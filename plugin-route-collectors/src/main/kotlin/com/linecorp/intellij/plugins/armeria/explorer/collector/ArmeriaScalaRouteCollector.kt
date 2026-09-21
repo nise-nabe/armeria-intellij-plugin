@@ -43,6 +43,7 @@ internal object ArmeriaScalaRouteCollector {
         seenServiceRegistrations: MutableSet<String>,
     ) {
         val virtualFilePath = file.virtualFile?.path ?: return
+        val scan = ArmeriaScalaTextSupport.scanScalaText(contents)
         for (match in ArmeriaScalaTextSupport.findServiceRegistrations(contents)) {
             val element = file.findElementAt(match.startOffset) ?: file
             val target = ArmeriaScalaTextSupport.renderScalaTarget(match.targetText)
@@ -65,6 +66,8 @@ internal object ArmeriaScalaRouteCollector {
                 routes = routes,
                 seenServiceRegistrations = seenServiceRegistrations,
                 sourceOffset = match.startOffset,
+                registrationText =
+                    scan.textWithoutComments.substring(match.startOffset, match.endOffset),
             )
         }
     }

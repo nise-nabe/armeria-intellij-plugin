@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRouteHint
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 import kotlin.test.assertEquals
@@ -115,5 +116,109 @@ class ArmeriaScalaRouteCollectorTest : ArmeriaFixtureTestBase() {
         val route = routes.firstOrNull { it.path == "/prefix" && it.routeMatch == RouteMatch.ANNOTATED_SERVICE }
         kotlinAssertNotNull(route)
         assertEquals("AnnotatedService", route.target)
+    }
+
+    fun testCollectScalaGrpcServiceUnframedAndReflectionHints() {
+        myFixture.configureByText(
+            "Main.scala",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.grpc.GrpcService
+            import io.grpc.protobuf.services.ProtoReflectionService
+
+            object Main {
+              Server.builder()
+                .service("/grpc", GrpcService.builder()
+                  .addService(new HelloGrpcService())
+                  .enableUnframedRequests(true)
+                  .addService(ProtoReflectionService.newInstance())
+                  .build())
+                .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloGrpcService {
+            }
+            """.trimIndent(),
+        )
+
+        val grpcRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/grpc" }
+
+        assertTrue(grpcRoute.contentHints.contains(GrpcRouteHint.UNFRAMED))
+        assertTrue(grpcRoute.contentHints.contains(GrpcRouteHint.REFLECTION))
+    }
+
+    fun testCollectScalaGrpcServiceEnableUnframedRequestsFalseIsNotUnframed() {
+        myFixture.configureByText(
+            "Main.scala",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.grpc.GrpcService
+
+            object Main {
+              Server.builder()
+                .service("/grpc", GrpcService.builder()
+                  .addService(new HelloGrpcService())
+                  .enableUnframedRequests(false)
+                  .build())
+                .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloGrpcService {
+            }
+            """.trimIndent(),
+        )
+
+        val grpcRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/grpc" }
+
+        assertFalse(grpcRoute.contentHints.contains(GrpcRouteHint.UNFRAMED))
+        assertFalse(grpcRoute.contentHints.contains(GrpcRouteHint.REFLECTION))
+    }
+
+    fun testCollectScalaGrpcServiceDoesNotHintUnrelatedLookalikes() {
+        myFixture.configureByText(
+            "Main.scala",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.grpc.GrpcService
+
+            object Main {
+              // .enableUnframedRequests(true) inside a comment must not count
+              Server.builder()
+                .service("/grpc", GrpcService.builder()
+                  .addService(new MyProtoReflectionService())
+                  .build())
+                .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class MyProtoReflectionService {
+            }
+            """.trimIndent(),
+        )
+
+        val grpcRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/grpc" }
+
+        assertFalse(grpcRoute.contentHints.contains(GrpcRouteHint.UNFRAMED))
+        assertFalse(grpcRoute.contentHints.contains(GrpcRouteHint.REFLECTION))
     }
 }
