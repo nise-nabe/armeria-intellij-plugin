@@ -125,6 +125,29 @@ class ArmeriaDuplicateRouteScalaInspectionTest : ArmeriaFixtureTestBase5() {
         assertDuplicateRouteHighlights(2)
     }
 
+    @Test
+    fun highlightsDuplicateAcrossHttpMethodAnnotations() {
+        myFixture.configureByText(
+            "BadService.scala",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+            import com.linecorp.armeria.server.annotation.Post
+
+            class BadService {
+                @Get("/dup")
+                @Post("/dup")
+                def first(): String = "first"
+
+                @Post("/dup")
+                def second(): String = "second"
+            }
+            """.trimIndent(),
+        )
+        assertDuplicateRouteHighlights(2)
+    }
+
     private fun assertDuplicateRouteHighlights(expectedCount: Int) {
         val expected = message("inspection.duplicate.route.problem")
         val highlights = myFixture.doHighlighting().filter { it.description == expected }

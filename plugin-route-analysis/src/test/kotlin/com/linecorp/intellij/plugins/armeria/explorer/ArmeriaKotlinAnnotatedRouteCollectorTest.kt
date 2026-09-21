@@ -144,6 +144,41 @@ class ArmeriaKotlinAnnotatedRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertTrue(registrationRoute.annotatedServiceHasPathPrefix)
     }
 
+    fun testCollectAnnotatedRouteFromKotlin_multipleHttpMethodAnnotations() {
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation;
+
+            public @interface Post {
+                String value() default "";
+                String path() default "";
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "HelloService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+            import com.linecorp.armeria.server.annotation.Post
+
+            class HelloService {
+                @Get("/hello")
+                @Post("/hello")
+                fun hello(): String = "hello"
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertEquals(
+            setOf("GET" to "/hello", "POST" to "/hello"),
+            routes.map { it.httpMethod to it.path }.toSet(),
+        )
+    }
+
     fun testCollectAnnotatedServiceWithPathPrefix() {
         myFixture.configureByText(
             "HelloService.kt",

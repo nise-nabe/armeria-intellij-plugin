@@ -23,7 +23,7 @@ object ArmeriaThriftRouteCollector {
         scope: GlobalSearchScope,
         routes: MutableList<ArmeriaRoute>,
     ) {
-        if (!ArmeriaIdlRouteSupport.isThriftOnClasspath(project, scope)) {
+        if (!ArmeriaIdlRouteSupport.isThriftOnClasspath(project)) {
             return
         }
         val seenThriftRoutes = mutableSetOf<String>()

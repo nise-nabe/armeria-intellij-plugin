@@ -23,67 +23,60 @@ internal object ArmeriaKotlinJUnitServerExtensionCollector {
             if (!ArmeriaJUnitServerExtensionSupport.fileMayContainRegisterExtension(file.text)) {
                 continue
             }
-            collectProperties(file.declarations.filterIsInstance<KtProperty>(), scope, extensions, seen)
-            collectFunctions(file.declarations.filterIsInstance<KtNamedFunction>(), scope, extensions, seen)
+            collectProperties(file.declarations.filterIsInstance<KtProperty>(), extensions, seen)
+            collectFunctions(file.declarations.filterIsInstance<KtNamedFunction>(), extensions, seen)
             for (ktClass in file.declarations.filterIsInstance<KtClass>()) {
-                collectFromKotlinClass(ktClass, scope, extensions, seen)
+                collectFromKotlinClass(ktClass, extensions, seen)
             }
             for (objectDeclaration in file.declarations.filterIsInstance<KtObjectDeclaration>()) {
                 if (objectDeclaration.isCompanion()) {
                     continue
                 }
-                collectProperties(objectDeclaration.declarations.filterIsInstance<KtProperty>(), scope, extensions, seen)
-                collectFunctions(objectDeclaration.declarations.filterIsInstance<KtNamedFunction>(), scope, extensions, seen)
+                collectProperties(objectDeclaration.declarations.filterIsInstance<KtProperty>(), extensions, seen)
+                collectFunctions(objectDeclaration.declarations.filterIsInstance<KtNamedFunction>(), extensions, seen)
             }
         }
     }
 
     private fun collectProperties(
         properties: List<KtProperty>,
-        scope: GlobalSearchScope,
         extensions: MutableList<ArmeriaJUnitServerExtension>,
         seen: MutableSet<String>,
     ) {
         for (property in properties) {
-            from(property, scope)?.let { ArmeriaJUnitServerExtensionCollector.add(it, extensions, seen) }
+            from(property)?.let { ArmeriaJUnitServerExtensionCollector.add(it, extensions, seen) }
         }
     }
 
     private fun collectFunctions(
         functions: List<KtNamedFunction>,
-        scope: GlobalSearchScope,
         extensions: MutableList<ArmeriaJUnitServerExtension>,
         seen: MutableSet<String>,
     ) {
         for (function in functions) {
-            fromFunction(function, scope)?.let { ArmeriaJUnitServerExtensionCollector.add(it, extensions, seen) }
+            fromFunction(function)?.let { ArmeriaJUnitServerExtensionCollector.add(it, extensions, seen) }
         }
     }
 
     private fun collectFromKotlinClass(
         ktClass: KtClass,
-        scope: GlobalSearchScope,
         extensions: MutableList<ArmeriaJUnitServerExtension>,
         seen: MutableSet<String>,
     ) {
-        collectProperties(ktClass.declarations.filterIsInstance<KtProperty>(), scope, extensions, seen)
-        collectFunctions(ktClass.declarations.filterIsInstance<KtNamedFunction>(), scope, extensions, seen)
+        collectProperties(ktClass.declarations.filterIsInstance<KtProperty>(), extensions, seen)
+        collectFunctions(ktClass.declarations.filterIsInstance<KtNamedFunction>(), extensions, seen)
         ktClass.companionObjects.forEach { companion ->
-            collectProperties(companion.declarations.filterIsInstance<KtProperty>(), scope, extensions, seen)
-            collectFunctions(companion.declarations.filterIsInstance<KtNamedFunction>(), scope, extensions, seen)
+            collectProperties(companion.declarations.filterIsInstance<KtProperty>(), extensions, seen)
+            collectFunctions(companion.declarations.filterIsInstance<KtNamedFunction>(), extensions, seen)
         }
         for (nestedClass in ktClass.declarations.filterIsInstance<KtClass>()) {
-            collectFromKotlinClass(nestedClass, scope, extensions, seen)
+            collectFromKotlinClass(nestedClass, extensions, seen)
         }
     }
 
-    private fun from(
-        property: KtProperty,
-        scope: GlobalSearchScope,
-    ): ArmeriaJUnitServerExtension? = ArmeriaJUnitServerExtensionSupport.serverExtensionFromKotlinProperty(property, scope)
+    private fun from(property: KtProperty): ArmeriaJUnitServerExtension? =
+        ArmeriaJUnitServerExtensionSupport.serverExtensionFromKotlinProperty(property)
 
-    private fun fromFunction(
-        function: KtNamedFunction,
-        scope: GlobalSearchScope,
-    ): ArmeriaJUnitServerExtension? = ArmeriaJUnitServerExtensionSupport.serverExtensionFromKotlinFunction(function, scope)
+    private fun fromFunction(function: KtNamedFunction): ArmeriaJUnitServerExtension? =
+        ArmeriaJUnitServerExtensionSupport.serverExtensionFromKotlinFunction(function)
 }

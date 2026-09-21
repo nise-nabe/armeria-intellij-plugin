@@ -41,7 +41,10 @@ object ArmeriaRouteCollectorServiceRegistration {
         seenServiceRegistrations: MutableSet<String>,
     ) {
         val psiFacade = JavaPsiFacade.getInstance(project)
-        val builderClass = psiFacade.findClass(ArmeriaRouteSupport.SERVER_BUILDER_CLASS, scope) ?: return
+        // ServerBuilder lives in a library jar — resolve with allScope, but search its
+        // references only in [scope] (project content).
+        val builderClass =
+            psiFacade.findClass(ArmeriaRouteSupport.SERVER_BUILDER_CLASS, GlobalSearchScope.allScope(project)) ?: return
         for (methodName in CoreServiceRegistrationMethod.METHOD_NAMES) {
             for (method in builderClass.findMethodsByName(methodName, false)) {
                 ReferencesSearch.search(method, scope).forEach { reference ->

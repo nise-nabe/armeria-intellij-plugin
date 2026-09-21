@@ -59,7 +59,7 @@ object ArmeriaRouteCollector {
                 if (
                     includeProtoRoutes &&
                     ArmeriaProtoRouteDiscoverySupport.isEnabled() &&
-                    ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, collectionScope(project))
+                    ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project)
                 ) {
                     cachedProjectRoutesWithProto(project, contributors)
                 } else {
@@ -139,7 +139,10 @@ object ArmeriaRouteCollector {
         val seenServiceRegistrations = mutableSetOf<String>()
         val seenConfigRoutes = mutableSetOf<String>()
         val psiFacade = JavaPsiFacade.getInstance(project)
-        val serverBuilderOnClasspath = psiFacade.findClass(ArmeriaRouteSupport.SERVER_BUILDER_CLASS, scope) != null
+        // ServerBuilder lives in a library jar — resolve with allScope, not the project-scoped
+        // [scope] used for user-code searches.
+        val serverBuilderOnClasspath =
+            psiFacade.findClass(ArmeriaRouteSupport.SERVER_BUILDER_CLASS, GlobalSearchScope.allScope(project)) != null
 
         ArmeriaRouteCollectorAnnotatedRoutes.collectAnnotatedRoutesIndexed(project, scope, routes)
         ArmeriaRouteCollectorServiceRegistration.collectServiceRegistrationsIndexed(

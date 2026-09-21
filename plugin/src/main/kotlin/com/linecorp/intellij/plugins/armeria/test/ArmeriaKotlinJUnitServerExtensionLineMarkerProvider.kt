@@ -5,7 +5,6 @@ import com.intellij.codeInsight.daemon.LineMarkerProviderDescriptor
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.psi.PsiElement
-import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtNamedFunction
@@ -19,17 +18,16 @@ class ArmeriaKotlinJUnitServerExtensionLineMarkerProvider : LineMarkerProviderDe
         if (containingFile == null || !ArmeriaJUnitServerExtensionSupport.isInTestSourceContent(containingFile)) {
             return null
         }
-        val scope = GlobalSearchScope.projectScope(element.project)
         val property = element.parent as? KtProperty
         if (property != null && element == property.nameIdentifier) {
-            if (ArmeriaJUnitServerExtensionSupport.serverExtensionFromKotlinProperty(property, scope) != null) {
+            if (ArmeriaJUnitServerExtensionSupport.serverExtensionFromKotlinProperty(property) != null) {
                 return markerFor(property.nameIdentifier ?: property, property.textRange, property.name)
             }
             return null
         }
         val function = element.parent as? KtNamedFunction
         if (function != null && element.node.elementType == KtTokens.IDENTIFIER && element.text == function.name) {
-            if (ArmeriaJUnitServerExtensionSupport.serverExtensionFromKotlinFunction(function, scope) != null) {
+            if (ArmeriaJUnitServerExtensionSupport.serverExtensionFromKotlinFunction(function) != null) {
                 return markerFor(function.nameIdentifier ?: function, function.textRange, function.name)
             }
         }

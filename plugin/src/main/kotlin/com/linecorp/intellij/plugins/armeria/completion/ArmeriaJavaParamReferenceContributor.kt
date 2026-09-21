@@ -198,13 +198,9 @@ private fun javaRouteRawPaths(method: PsiMethod): List<String> {
         ArmeriaRouteSupport.extractPrimaryPath(
             method.containingClass?.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION),
         )
-    val route = ArmeriaRouteSupport.findRouteAnnotation(method)
     val routePaths =
-        if (route != null) {
-            ArmeriaRouteSupport.extractPaths(route.first) + ArmeriaRouteSupport.extractPathAnnotations(method)
-        } else {
-            emptyList()
-        }
+        ArmeriaRouteSupport.findRouteAnnotations(method).flatMap { ArmeriaRouteSupport.extractPaths(it.first) } +
+            ArmeriaRouteSupport.extractPathAnnotations(method)
     return buildList {
         if (classPrefix.isNotEmpty()) {
             add(classPrefix)
@@ -225,8 +221,11 @@ private fun javaClassRawPaths(owner: PsiClass): List<String> {
         owner.methods
             .filter { it.containingClass == owner }
             .forEach { method ->
-                val route = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return@forEach
-                addAll(ArmeriaRouteSupport.extractPaths(route.first))
+                val routeAnnotations = ArmeriaRouteSupport.findRouteAnnotations(method)
+                if (routeAnnotations.isEmpty()) {
+                    return@forEach
+                }
+                routeAnnotations.forEach { addAll(ArmeriaRouteSupport.extractPaths(it.first)) }
                 addAll(ArmeriaRouteSupport.extractPathAnnotations(method))
             }
     }

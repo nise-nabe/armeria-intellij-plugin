@@ -108,7 +108,7 @@ internal fun resolveQualifiedClass(
     try {
         JavaPsiFacade.getInstance(context.project).findClass(
             qualifiedName,
-            GlobalSearchScope.projectScope(context.project),
+            GlobalSearchScope.allScope(context.project),
         )
     } catch (exception: ProcessCanceledException) {
         throw exception
@@ -142,7 +142,7 @@ internal fun resolveClassByName(
         val matches =
             PsiShortNamesCache.getInstance(context.project).getClassesByName(
                 name,
-                GlobalSearchScope.projectScope(context.project),
+                GlobalSearchScope.allScope(context.project),
             )
         when {
             matches.size == 1 -> matches[0]

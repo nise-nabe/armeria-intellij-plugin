@@ -172,6 +172,35 @@ class ArmeriaKotlinMethodRouteTest : ArmeriaLightJavaCodeInsightFixtureTestCase(
         assertEquals(listOf("/one", "/two"), route.paths)
     }
 
+    fun testReturnsRoutePerHttpMethodAnnotation() {
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation;
+            public @interface Post { String value() default ""; String path() default ""; }
+            """.trimIndent(),
+        )
+        val file =
+            myFixture.configureByText(
+                "HelloService.kt",
+                """
+                package example
+
+                import com.linecorp.armeria.server.annotation.Get
+                import com.linecorp.armeria.server.annotation.Post
+
+                class HelloService {
+                    @Get("/hello")
+                    @Post("/hello")
+                    fun hello(): String = "hello"
+                }
+                """.trimIndent(),
+            ) as KtFile
+        val routes = functionsIn(file).flatMap(ArmeriaKotlinMethodRoute::all)
+
+        assertEquals(listOf("GET", "POST"), routes.map { it.httpMethod })
+        assertTrue(routes.all { it.paths == listOf("/hello") })
+    }
+
     private fun configureKotlinService(body: String) =
         myFixture.configureByText(
             "HelloService.kt",

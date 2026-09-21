@@ -294,6 +294,31 @@ class ArmeriaRouteNavigationSupportTest : ArmeriaLightJavaCodeInsightFixtureTest
         assertEquals("/hello", ArmeriaRouteNavigationSupport.routePath(method))
     }
 
+    fun testRoutePathPairsHttpMethodWithPathForMultipleAnnotations() {
+        myFixture.addClass(
+            "package com.linecorp.armeria.server.annotation; public @interface Post { String[] value() default {}; String[] path() default {}; }",
+        )
+        myFixture.configureByText(
+            "MultiMethodService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.Post;
+
+            public class MultiMethodService {
+                @Get("/a")
+                @Post("/b")
+                public String multi() { return "multi"; }
+            }
+            """.trimIndent(),
+        )
+
+        val method = findMethod("example.MultiMethodService", "multi")
+        assertEquals("GET,POST", ArmeriaRouteNavigationSupport.httpMethod(method))
+        assertEquals("GET /a, POST /b", ArmeriaRouteNavigationSupport.routePath(method))
+    }
+
     fun testRoutePathPreservesPathTypePrefix() {
         myFixture.configureByText(
             "PrefixService.java",

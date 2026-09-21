@@ -31,7 +31,7 @@ object ArmeriaJUnitServerExtensionCollector {
             psiClass.qualifiedName
                 ?: ArmeriaJUnitServerExtensionSupport.toKtClassOrObject(psiClass)?.fqName?.asString()
                 ?: return emptyList()
-        val fromFields = extensionsFromClassHierarchy(psiClass, scope)
+        val fromFields = extensionsFromClassHierarchy(psiClass)
         if (fromFields.isNotEmpty()) {
             return fromFields
         }
@@ -46,15 +46,12 @@ object ArmeriaJUnitServerExtensionCollector {
             }.distinctBy { "${it.containingClassName}#${it.variableName}" }
     }
 
-    private fun extensionsFromClassHierarchy(
-        psiClass: PsiClass,
-        scope: GlobalSearchScope,
-    ): List<ArmeriaJUnitServerExtension> {
+    private fun extensionsFromClassHierarchy(psiClass: PsiClass): List<ArmeriaJUnitServerExtension> {
         val extensions = mutableListOf<ArmeriaJUnitServerExtension>()
         val seen = mutableSetOf<String>()
         var current: PsiClass? = psiClass
         while (current != null) {
-            for (extension in ArmeriaJUnitServerExtensionSupport.serverExtensionsInClass(current, scope)) {
+            for (extension in ArmeriaJUnitServerExtensionSupport.serverExtensionsInClass(current)) {
                 val key = "${extension.containingClassName}#${extension.variableName}"
                 if (seen.add(key)) {
                     extensions += extension
@@ -77,7 +74,7 @@ object ArmeriaJUnitServerExtensionCollector {
             file.accept(
                 object : JavaRecursiveElementWalkingVisitor() {
                     override fun visitClass(aClass: PsiClass) {
-                        for (extension in ArmeriaJUnitServerExtensionSupport.serverExtensionsInClass(aClass, scope)) {
+                        for (extension in ArmeriaJUnitServerExtensionSupport.serverExtensionsInClass(aClass)) {
                             add(extension, extensions, seen)
                         }
                         super.visitClass(aClass)

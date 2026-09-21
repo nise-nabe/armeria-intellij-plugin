@@ -7,7 +7,6 @@ import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiVariable
-import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 
 object ArmeriaRouteSupport {
@@ -80,6 +79,12 @@ object ArmeriaRouteSupport {
     fun isArmeriaQualifiedName(name: String): Boolean = name == ARMERIA_PACKAGE_PREFIX || name.startsWith("$ARMERIA_PACKAGE_PREFIX.")
 
     fun findRouteAnnotation(method: PsiMethod): Pair<PsiAnnotation, String>? = ArmeriaRouteAnnotationSupport.findRouteAnnotation(method)
+
+    fun findRouteAnnotations(method: PsiMethod): List<Pair<PsiAnnotation, String>> =
+        ArmeriaRouteAnnotationSupport.findRouteAnnotations(method)
+
+    fun routeAnnotationPaths(method: PsiMethod): List<Pair<String, List<String>>> =
+        ArmeriaRouteAnnotationSupport.routeAnnotationPaths(method)
 
     fun extractPaths(annotation: com.intellij.psi.PsiAnnotation): List<String> = ArmeriaRouteAnnotationSupport.extractPaths(annotation)
 
@@ -209,15 +214,10 @@ object ArmeriaRouteSupport {
         return normalizedRoute == normalizedPattern
     }
 
-    fun isSpringBootArmeriaAvailable(
-        psiFacade: JavaPsiFacade,
-        scope: GlobalSearchScope,
-    ): Boolean = ArmeriaServerBuilderSupport.isSpringBootArmeriaAvailable(psiFacade, scope)
+    fun isSpringBootArmeriaAvailable(psiFacade: JavaPsiFacade): Boolean =
+        ArmeriaServerBuilderSupport.isSpringBootArmeriaAvailable(psiFacade)
 
-    fun isArmeriaServerBeanReturnType(
-        method: PsiMethod,
-        scope: GlobalSearchScope,
-    ): Boolean = ArmeriaServerBuilderSupport.isArmeriaServerBeanReturnType(method, scope)
+    fun isArmeriaServerBeanReturnType(method: PsiMethod): Boolean = ArmeriaServerBuilderSupport.isArmeriaServerBeanReturnType(method)
 
     fun isArmeriaServerBeanReturnType(returnType: String): Boolean = ArmeriaServerBuilderSupport.isArmeriaServerBeanReturnType(returnType)
 

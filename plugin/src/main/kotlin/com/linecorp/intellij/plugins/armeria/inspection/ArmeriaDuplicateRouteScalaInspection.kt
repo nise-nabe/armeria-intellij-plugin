@@ -24,14 +24,14 @@ class ArmeriaDuplicateRouteScalaInspection : LocalInspectionTool() {
                 val duplicateFunctions = linkedSetOf<PsiMethod>()
                 val seen = mutableMapOf<Pair<String, String>, PsiMethod>()
                 for (function in routeAnnotatedFunctions(definition)) {
-                    val route =
-                        ArmeriaScalaInspectionSupport.methodRoute(function) ?: continue
-                    for (path in route.paths) {
-                        val key = route.httpMethod to path
-                        val previous = seen.putIfAbsent(key, function)
-                        if (previous != null) {
-                            duplicateFunctions += previous
-                            duplicateFunctions += function
+                    for (route in ArmeriaScalaInspectionSupport.methodRoutes(function)) {
+                        for (path in route.paths) {
+                            val key = route.httpMethod to path
+                            val previous = seen.putIfAbsent(key, function)
+                            if (previous != null) {
+                                duplicateFunctions += previous
+                                duplicateFunctions += function
+                            }
                         }
                     }
                 }

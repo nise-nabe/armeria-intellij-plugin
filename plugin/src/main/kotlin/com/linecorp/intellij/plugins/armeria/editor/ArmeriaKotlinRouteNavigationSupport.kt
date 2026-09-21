@@ -26,13 +26,27 @@ internal object ArmeriaKotlinRouteNavigationSupport {
 
     fun annotatedKotlinRouteFunction(element: PsiElement): PsiElement? {
         val function = kotlinFunctionFromElement(element) ?: return null
-        return function.takeIf { kotlinMethodRoute(it) != null }
+        return function.takeIf { kotlinMethodRoutes(it).isNotEmpty() }
     }
 
-    fun httpMethod(handler: PsiElement): String? = (handler as? KtNamedFunction)?.let { kotlinMethodRoute(it)?.httpMethod }
+    fun httpMethod(handler: PsiElement): String? =
+        (handler as? KtNamedFunction)
+            ?.let { kotlinMethodRoutes(it).map(ArmeriaKotlinMethodRoute::httpMethod).distinct().joinToString(",") }
+            ?.ifEmpty { null }
 
     fun routePath(handler: PsiElement): String =
-        (handler as? KtNamedFunction)?.let { kotlinMethodRoute(it)?.paths?.joinToString(", ") }.orEmpty()
+        (handler as? KtNamedFunction)
+            ?.let { function ->
+                val routes = kotlinMethodRoutes(function)
+                // With multiple HTTP-method annotations, prefix each path with its method so the
+                // method/path pairing is not lost in goto-related and marker labels.
+                val paired = routes.size > 1
+                routes
+                    .flatMap { route ->
+                        route.paths.map { path -> if (paired) "${route.httpMethod} $path" else path }
+                    }.distinct()
+                    .joinToString(", ")
+            }.orEmpty()
 
     fun relatedRegistrations(handler: PsiElement): List<PsiElement> {
         val function = handler as? KtNamedFunction ?: return emptyList()
@@ -62,7 +76,7 @@ internal object ArmeriaKotlinRouteNavigationSupport {
 
     fun annotatedHandlerFromMethod(method: PsiMethod): PsiElement? {
         val kotlinFunction = method.originalElement as? KtNamedFunction ?: return null
-        return kotlinFunction.takeIf { kotlinMethodRoute(it) != null }
+        return kotlinFunction.takeIf { kotlinMethodRoutes(it).isNotEmpty() }
     }
 
     fun resolvedClassFromReference(expression: PsiElement): PsiClass? =
@@ -118,14 +132,14 @@ internal object ArmeriaKotlinRouteNavigationSupport {
         return function.nameIdentifier ?: handler
     }
 
-    private fun kotlinMethodRoute(function: KtNamedFunction): ArmeriaKotlinMethodRoute? {
+    private fun kotlinMethodRoutes(function: KtNamedFunction): List<ArmeriaKotlinMethodRoute> {
         if (DumbService.isDumb(function.project)) {
-            return null
+            return emptyList()
         }
         return try {
-            ArmeriaKotlinMethodRoute.from(function)
+            ArmeriaKotlinMethodRoute.all(function)
         } catch (_: IndexNotReadyException) {
-            null
+            emptyList()
         }
     }
 

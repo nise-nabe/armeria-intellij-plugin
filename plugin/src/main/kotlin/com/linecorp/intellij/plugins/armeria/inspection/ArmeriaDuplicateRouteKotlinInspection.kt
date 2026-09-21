@@ -22,17 +22,23 @@ class ArmeriaDuplicateRouteKotlinInspection : LocalInspectionTool() {
                 val duplicateFunctions = linkedSetOf<KtNamedFunction>()
                 val seen = mutableMapOf<Pair<String, String>, KtNamedFunction>()
                 for (function in routeAnnotatedFunctions(klass)) {
-                    val route = ArmeriaKotlinMethodRoute.from(function) ?: continue
-                    for (path in route.paths) {
-                        val key = route.httpMethod to path
-                        val previous = seen.putIfAbsent(key, function)
-                        if (previous != null) {
-                            duplicateFunctions += previous
-                            duplicateFunctions += function
+                    for (route in ArmeriaKotlinMethodRoute.all(function)) {
+                        for (path in route.paths) {
+                            val key = route.httpMethod to path
+                            val previous = seen.putIfAbsent(key, function)
+                            if (previous != null) {
+                                duplicateFunctions += previous
+                                duplicateFunctions += function
+                            }
                         }
                     }
                 }
                 for (function in duplicateFunctions) {
+                    // Superclass functions can live in other files; only register problems on
+                    // elements inside the file being inspected.
+                    if (function.containingFile != klass.containingFile) {
+                        continue
+                    }
                     holder.registerProblem(
                         function.nameIdentifier ?: function,
                         message("inspection.duplicate.route.problem"),

@@ -20,34 +20,57 @@ import scala.Option
  * extraction on top of the `PsiMethod`/`PsiAnnotation` adapters the Scala plugin provides.
  */
 internal object ArmeriaScalaInspectionSupport {
-    fun routeAnnotation(method: PsiMethod): Pair<PsiAnnotation, String>? =
-        method.annotations.firstNotNullOfOrNull { candidate ->
-            val qualifiedName = candidate.qualifiedName ?: return@firstNotNullOfOrNull null
+    fun routeAnnotation(method: PsiMethod): Pair<PsiAnnotation, String>? = routeAnnotations(method).firstOrNull()
+
+    fun routeAnnotations(method: PsiMethod): List<Pair<PsiAnnotation, String>> =
+        method.annotations.mapNotNull { candidate ->
+            val qualifiedName = candidate.qualifiedName ?: return@mapNotNull null
             ArmeriaRouteSupport.routeAnnotations[qualifiedName]?.let { candidate to it }
         }
 
-    fun methodRoute(method: PsiMethod): ArmeriaScalaMethodRoute? {
-        val routeAnnotation = routeAnnotation(method) ?: return null
+    fun methodRoutes(method: PsiMethod): List<ArmeriaScalaMethodRoute> {
+        val routeAnnotations = routeAnnotations(method)
+        if (routeAnnotations.isEmpty()) {
+            return emptyList()
+        }
         val classPrefix = classPrefixOf(method)
         val pathAnnotations =
-            listOf(routeAnnotation.first) +
-                method.annotations.filter { it.qualifiedName == ArmeriaRouteSupport.PATH_ANNOTATION }
-        val rawPaths = mutableListOf<String>()
-        for (annotation in pathAnnotations) {
-            val paths = annotationPaths(annotation)
+            method.annotations.filter { it.qualifiedName == ArmeriaRouteSupport.PATH_ANNOTATION }
+        return routeAnnotations.mapNotNull { (routeAnnotation, httpMethod) ->
             // An annotation with arguments we could not resolve (e.g. a Scala constant
             // reference) must not collapse to "/" and produce a false duplicate.
-            if (paths.isEmpty() && hasArguments(annotation)) {
-                return null
+            val ownPaths = annotationPaths(routeAnnotation)
+            if (ownPaths.isEmpty() && hasArguments(routeAnnotation)) {
+                return@mapNotNull null
             }
-            rawPaths += paths
+            val rawPaths =
+                if (ownPaths.isNotEmpty()) {
+                    // A path declared on the HTTP-method annotation cannot be combined
+                    // with `@Path` (line/armeria#2853).
+                    ownPaths
+                } else {
+                    var resolvable = true
+                    val collected = mutableListOf<String>()
+                    for (annotation in pathAnnotations) {
+                        val paths = annotationPaths(annotation)
+                        if (paths.isEmpty() && hasArguments(annotation)) {
+                            resolvable = false
+                            break
+                        }
+                        collected += paths
+                    }
+                    if (!resolvable) {
+                        return@mapNotNull null
+                    }
+                    collected
+                }
+            val paths =
+                rawPaths
+                    .ifEmpty { listOf("/") }
+                    .map { rawPath -> ArmeriaRouteSupport.formatAnnotatedHandlerPath(classPrefix, rawPath) }
+                    .distinct()
+            ArmeriaScalaMethodRoute(httpMethod, paths)
         }
-        val paths =
-            rawPaths
-                .ifEmpty { listOf("/") }
-                .map { rawPath -> ArmeriaRouteSupport.formatAnnotatedHandlerPath(classPrefix, rawPath) }
-                .distinct()
-        return ArmeriaScalaMethodRoute(routeAnnotation.second, paths)
     }
 
     fun classPrefixOf(method: PsiMethod): String {

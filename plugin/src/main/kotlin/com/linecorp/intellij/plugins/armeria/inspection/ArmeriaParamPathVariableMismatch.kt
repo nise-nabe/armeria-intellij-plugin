@@ -54,15 +54,19 @@ internal object ArmeriaParamPathVariableMismatch {
     }
 
     fun pathVariables(method: PsiMethod): Set<String> {
-        val route = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return emptySet()
+        val routeAnnotationPaths = ArmeriaRouteSupport.routeAnnotationPaths(method)
+        if (routeAnnotationPaths.isEmpty()) {
+            return emptySet()
+        }
         val classPrefix =
             ArmeriaRouteSupport.extractPrimaryPath(
                 method.containingClass?.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION),
             )
-        val routePaths = ArmeriaRouteSupport.extractPaths(route.first) + ArmeriaRouteSupport.extractPathAnnotations(method)
         return buildSet {
             addAll(ArmeriaPathVariableSupport.extractPathVariables(classPrefix))
-            routePaths.ifEmpty { listOf("/") }.forEach { addAll(ArmeriaPathVariableSupport.extractPathVariables(it)) }
+            routeAnnotationPaths.flatMap { it.second }.forEach {
+                addAll(ArmeriaPathVariableSupport.extractPathVariables(it))
+            }
         }
     }
 

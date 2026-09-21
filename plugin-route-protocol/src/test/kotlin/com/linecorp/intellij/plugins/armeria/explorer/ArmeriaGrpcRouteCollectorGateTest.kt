@@ -2,7 +2,6 @@ package com.linecorp.intellij.plugins.armeria.explorer
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.psi.PsiDocumentManager
-import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.testFramework.PsiTestUtil
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.protocol.ArmeriaGrpcRouteCollector
@@ -32,7 +31,7 @@ class ArmeriaGrpcRouteCollectorGateTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        assertFalse(ArmeriaGrpcRouteCollector.isGrpcOnClasspath(project, GlobalSearchScope.projectScope(project)))
+        assertFalse(ArmeriaGrpcRouteCollector.isGrpcOnClasspath(project))
         assertTrue(
             ArmeriaRouteCollector
                 .collect(
@@ -223,9 +222,8 @@ class ArmeriaGrpcRouteCollectorGateTest : ArmeriaFixtureTestBase() {
     }
 
     fun testIsGrpcOnClasspathMemoizedForProjectScope() {
-        val scope = GlobalSearchScope.projectScope(project)
-        assertFalse(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
-        assertFalse(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
+        assertFalse(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project))
+        assertFalse(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project))
 
         myFixture.addClass(
             """
@@ -239,12 +237,11 @@ class ArmeriaGrpcRouteCollectorGateTest : ArmeriaFixtureTestBase() {
             """.trimIndent(),
         )
 
-        assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
-        assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
+        assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project))
+        assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project))
     }
 
     fun testIsGrpcOnClasspathInvalidatesOnProjectRootChange() {
-        val scope = GlobalSearchScope.projectScope(project)
         val grpcClass =
             myFixture.addClass(
                 """
@@ -257,8 +254,8 @@ class ArmeriaGrpcRouteCollectorGateTest : ArmeriaFixtureTestBase() {
                 }
                 """.trimIndent(),
             )
-        assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
-        assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
+        assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project))
+        assertTrue(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project))
 
         val extraRoot = myFixture.tempDirFixture.findOrCreateDir("grpc-extra-root")
         try {
@@ -267,7 +264,7 @@ class ArmeriaGrpcRouteCollectorGateTest : ArmeriaFixtureTestBase() {
                 grpcClass.containingFile.virtualFile.delete(this)
             }
             PsiDocumentManager.getInstance(project).commitAllDocuments()
-            assertFalse(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope))
+            assertFalse(ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project))
         } finally {
             PsiTestUtil.removeSourceRoot(module, extraRoot)
         }

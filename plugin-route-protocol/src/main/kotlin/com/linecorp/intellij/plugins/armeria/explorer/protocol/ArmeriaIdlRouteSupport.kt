@@ -8,15 +8,12 @@ internal object ArmeriaIdlRouteSupport {
     const val THRIFT_HTTP_SERVICE_CLASS = "com.linecorp.armeria.server.thrift.THttpService"
     const val DEFAULT_GRAPHQL_MOUNT_PATH = "/graphql"
 
-    fun isGraphqlOnClasspath(
-        project: Project,
-        scope: GlobalSearchScope,
-    ): Boolean = JavaPsiFacade.getInstance(project).findClass(GRAPHQL_SERVICE_CLASS, scope) != null
+    // Service classes live in library jars — resolve with allScope.
+    fun isGraphqlOnClasspath(project: Project): Boolean =
+        JavaPsiFacade.getInstance(project).findClass(GRAPHQL_SERVICE_CLASS, GlobalSearchScope.allScope(project)) != null
 
-    fun isThriftOnClasspath(
-        project: Project,
-        scope: GlobalSearchScope,
-    ): Boolean = JavaPsiFacade.getInstance(project).findClass(THRIFT_HTTP_SERVICE_CLASS, scope) != null
+    fun isThriftOnClasspath(project: Project): Boolean =
+        JavaPsiFacade.getInstance(project).findClass(THRIFT_HTTP_SERVICE_CLASS, GlobalSearchScope.allScope(project)) != null
 
     fun stripBlockComments(text: String): String = text.replace(Regex("""/\*[\s\S]*?\*/"""), "")
 

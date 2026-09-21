@@ -28,7 +28,7 @@ object ArmeriaGrpcRouteCollector {
         scope: GlobalSearchScope,
         routes: MutableList<ArmeriaRoute>,
     ) {
-        if (!ArmeriaProtoRouteDiscoverySupport.isEnabled() || !ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope)) {
+        if (!ArmeriaProtoRouteDiscoverySupport.isEnabled() || !ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project)) {
             return
         }
         val seenProtoRoutes = mutableSetOf<String>()
@@ -155,10 +155,7 @@ object ArmeriaGrpcRouteCollector {
 
     fun isProtoRouteDiscoveryEnabled(): Boolean = ArmeriaProtoRouteDiscoverySupport.isEnabled()
 
-    internal fun isGrpcOnClasspath(
-        project: Project,
-        scope: GlobalSearchScope,
-    ): Boolean = ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project, scope)
+    internal fun isGrpcOnClasspath(project: Project): Boolean = ArmeriaProtoRouteDiscoverySupport.isGrpcOnClasspath(project)
 
     private fun findServiceBodies(text: String): List<Pair<String, String>> {
         val results = mutableListOf<Pair<String, String>>()
