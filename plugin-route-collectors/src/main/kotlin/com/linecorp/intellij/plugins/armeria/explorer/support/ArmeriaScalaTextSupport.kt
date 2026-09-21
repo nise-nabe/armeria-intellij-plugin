@@ -93,8 +93,9 @@ object ArmeriaScalaTextSupport {
             ),
         )
 
-    fun findServiceRegistrations(text: String): List<ScalaServiceRegistrationMatch> {
-        val scan = scanScalaSource(text)
+    fun findServiceRegistrations(text: String): List<ScalaServiceRegistrationMatch> = findServiceRegistrations(scanScalaSource(text))
+
+    internal fun findServiceRegistrations(scan: ScalaTextScan): List<ScalaServiceRegistrationMatch> {
         if (!looksLikeServerBuilderScalaFile(scan.textWithoutComments)) {
             return emptyList()
         }
@@ -106,13 +107,13 @@ object ArmeriaScalaTextSupport {
                         return@mapNotNull null
                     }
                     val targetStart = rule.targetStart(match)
-                    val targetExtraction = extractBalancedExpression(scan.textWithoutComments, targetStart) ?: return@mapNotNull null
+                    val targetExtraction = extractBalancedExpression(scan, targetStart) ?: return@mapNotNull null
                     val (targetText, targetEnd) = targetExtraction
                     val path =
                         rule.path(match)
                             ?: rule.pathAfterTarget?.invoke(scan.textWithoutComments, targetEnd)
                             ?: return@mapNotNull null
-                    val registrationEnd = findRegistrationCallEnd(scan.textWithoutComments, targetEnd) ?: return@mapNotNull null
+                    val registrationEnd = findRegistrationCallEnd(scan, targetEnd) ?: return@mapNotNull null
                     ScalaServiceRegistrationMatch(
                         methodName = rule.methodName,
                         path = path,
@@ -227,9 +228,10 @@ object ArmeriaScalaTextSupport {
             )
 
     private fun extractBalancedExpression(
-        text: String,
+        scan: ScalaTextScan,
         start: Int,
     ): Pair<String, Int>? {
+        val text = scan.textWithoutComments
         var index = start
         while (index < text.length && text[index].isWhitespace()) {
             index++
@@ -241,23 +243,25 @@ object ArmeriaScalaTextSupport {
         var parenDepth = 0
         var hasOpenParen = false
         while (index < text.length) {
-            when (text[index]) {
-                '(' -> {
-                    parenDepth++
-                    hasOpenParen = true
-                }
-                ')' -> {
-                    if (!hasOpenParen) {
-                        return text.substring(expressionStart, index).trim() to index
+            if (!scan.isInsideLiteral(index)) {
+                when (text[index]) {
+                    '(' -> {
+                        parenDepth++
+                        hasOpenParen = true
                     }
-                    parenDepth--
-                    if (parenDepth == 0) {
-                        return text.substring(expressionStart, index + 1).trim() to (index + 1)
+                    ')' -> {
+                        if (!hasOpenParen) {
+                            return text.substring(expressionStart, index).trim() to index
+                        }
+                        parenDepth--
+                        if (parenDepth == 0) {
+                            return text.substring(expressionStart, index + 1).trim() to (index + 1)
+                        }
                     }
-                }
-                ',' -> {
-                    if (!hasOpenParen && parenDepth == 0) {
-                        return text.substring(expressionStart, index).trim() to index
+                    ',' -> {
+                        if (!hasOpenParen && parenDepth == 0) {
+                            return text.substring(expressionStart, index).trim() to index
+                        }
                     }
                 }
             }
@@ -271,19 +275,22 @@ object ArmeriaScalaTextSupport {
     }
 
     private fun findRegistrationCallEnd(
-        text: String,
+        scan: ScalaTextScan,
         targetEndOffset: Int,
     ): Int? {
+        val text = scan.textWithoutComments
         var depth = 0
         var index = targetEndOffset
         while (index < text.length) {
-            when (text[index]) {
-                '(' -> depth++
-                ')' -> {
-                    if (depth == 0) {
-                        return index + 1
+            if (!scan.isInsideLiteral(index)) {
+                when (text[index]) {
+                    '(' -> depth++
+                    ')' -> {
+                        if (depth == 0) {
+                            return index + 1
+                        }
+                        depth--
                     }
-                    depth--
                 }
             }
             index++
@@ -338,6 +345,27 @@ object ArmeriaScalaTextSupport {
         fun isInsideLiteral(offset: Int): Boolean = literalRanges.any { offset in it }
 
         fun isInsideStringLiteral(offset: Int): Boolean = isInsideLiteral(offset)
+
+        /**
+         * The sub-range with string/char literal contents blanked (offsets preserved), for
+         * feature scans that must not match tokens inside literal text.
+         */
+        fun textWithoutLiterals(
+            startOffset: Int,
+            endOffset: Int,
+        ): String {
+            val chars = textWithoutComments.substring(startOffset, endOffset).toCharArray()
+            for (range in literalRanges) {
+                val start = (range.first - startOffset).coerceAtLeast(0)
+                val end = (range.last - startOffset).coerceAtMost(chars.size - 1)
+                for (index in start..end) {
+                    if (chars[index] != '\n') {
+                        chars[index] = ' '
+                    }
+                }
+            }
+            return String(chars)
+        }
     }
 
     private fun scanScalaSource(text: String): ScalaTextScan {

@@ -221,4 +221,74 @@ class ArmeriaScalaRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertFalse(grpcRoute.contentHints.contains(GrpcRouteHint.UNFRAMED))
         assertFalse(grpcRoute.contentHints.contains(GrpcRouteHint.REFLECTION))
     }
+
+    fun testCollectScalaGrpcServiceIgnoresOptionTokensInsideStringLiterals() {
+        myFixture.configureByText(
+            "Main.scala",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.grpc.GrpcService
+
+            object Main {
+              Server.builder()
+                .service("/grpc", GrpcService.builder()
+                  .addService(new HelloGrpcService("call .enableUnframedRequests(true) and ProtoReflectionService"))
+                  .build())
+                .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloGrpcService {
+                public HelloGrpcService(String name) {
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val grpcRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/grpc" }
+
+        assertFalse(grpcRoute.contentHints.contains(GrpcRouteHint.UNFRAMED))
+        assertFalse(grpcRoute.contentHints.contains(GrpcRouteHint.REFLECTION))
+    }
+
+    fun testCollectScalaGrpcServiceHintsSurviveParensInsideLiterals() {
+        myFixture.configureByText(
+            "Main.scala",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.grpc.GrpcService
+
+            object Main {
+              Server.builder()
+                .service("/grpc", GrpcService.builder()
+                  .addService(new HelloGrpcService(")"))
+                  .enableUnframedRequests(true)
+                  .build())
+                .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloGrpcService {
+                public HelloGrpcService(String name) {
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val grpcRoute = ArmeriaRouteCollector.collect(project).single { it.path == "/grpc" }
+
+        assertTrue(grpcRoute.contentHints.contains(GrpcRouteHint.UNFRAMED))
+    }
 }

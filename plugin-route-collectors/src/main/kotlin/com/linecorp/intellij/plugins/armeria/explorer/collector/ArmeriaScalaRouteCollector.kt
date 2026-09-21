@@ -44,7 +44,7 @@ internal object ArmeriaScalaRouteCollector {
     ) {
         val virtualFilePath = file.virtualFile?.path ?: return
         val scan = ArmeriaScalaTextSupport.scanScalaText(contents)
-        for (match in ArmeriaScalaTextSupport.findServiceRegistrations(contents)) {
+        for (match in ArmeriaScalaTextSupport.findServiceRegistrations(scan)) {
             val element = file.findElementAt(match.startOffset) ?: file
             val target = ArmeriaScalaTextSupport.renderScalaTarget(match.targetText)
             val targetUnresolved = ArmeriaScalaTextSupport.isUnresolvedScalaTarget(match.targetText, target)
@@ -67,7 +67,7 @@ internal object ArmeriaScalaRouteCollector {
                 seenServiceRegistrations = seenServiceRegistrations,
                 sourceOffset = match.startOffset,
                 registrationText =
-                    scan.textWithoutComments.substring(match.startOffset, match.endOffset),
+                    scan.textWithoutLiterals(match.startOffset, match.endOffset),
             )
         }
     }
