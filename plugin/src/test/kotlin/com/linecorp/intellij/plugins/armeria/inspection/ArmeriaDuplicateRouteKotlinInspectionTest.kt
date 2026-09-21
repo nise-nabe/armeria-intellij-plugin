@@ -53,6 +53,29 @@ class ArmeriaDuplicateRouteKotlinInspectionTest : ArmeriaLightJavaCodeInsightFix
         myFixture.testHighlighting(true, false, true)
     }
 
+    fun testHighlightsDuplicateAcrossHttpMethodAnnotations() {
+        myFixture.configureByText(
+            "BadService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+            import com.linecorp.armeria.server.annotation.Post
+
+            class BadService {
+                @Get("/dup")
+                @Post("/dup")
+                fun <warning descr="This annotated Armeria route duplicates another HTTP method/path combination in the same service class.">first</warning>(): String = "first"
+
+                @Post("/dup")
+                fun <warning descr="This annotated Armeria route duplicates another HTTP method/path combination in the same service class.">second</warning>(): String = "second"
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.testHighlighting(true, false, true)
+    }
+
     private fun registerArmeriaStubs() {
         myFixture.configureByText(
             "Get.kt",
@@ -60,6 +83,14 @@ class ArmeriaDuplicateRouteKotlinInspectionTest : ArmeriaLightJavaCodeInsightFix
             package com.linecorp.armeria.server.annotation
 
             annotation class Get(val value: String = "", val path: String = "")
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Post.kt",
+            """
+            package com.linecorp.armeria.server.annotation
+
+            annotation class Post(val value: String = "", val path: String = "")
             """.trimIndent(),
         )
     }

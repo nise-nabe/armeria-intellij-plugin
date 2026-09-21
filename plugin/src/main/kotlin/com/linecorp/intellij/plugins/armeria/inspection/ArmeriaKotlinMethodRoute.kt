@@ -13,13 +13,24 @@ internal data class ArmeriaKotlinMethodRoute(
     val classPrefix: String,
 ) {
     companion object {
-        fun from(function: KtNamedFunction): ArmeriaKotlinMethodRoute? {
-            val methodAnnotation =
-                function.annotationEntries.firstNotNullOfOrNull { entry ->
-                    val qualifiedName = ArmeriaKotlinAnnotationSupport.qualifiedName(entry) ?: return@firstNotNullOfOrNull null
-                    val method = ArmeriaRouteSupport.routeAnnotations[qualifiedName] ?: return@firstNotNullOfOrNull null
+        fun from(function: KtNamedFunction): ArmeriaKotlinMethodRoute? = all(function).firstOrNull()
+
+        /**
+         * One route per HTTP-method annotation entry. Armeria binds a route for each
+         * annotation, and a path declared on the annotation cannot be combined with
+         * `@Path` (line/armeria#1870, line/armeria#2853), so the entry's own paths take
+         * precedence and `@Path` values apply only when the entry declares none.
+         */
+        fun all(function: KtNamedFunction): List<ArmeriaKotlinMethodRoute> {
+            val methodAnnotations =
+                function.annotationEntries.mapNotNull { entry ->
+                    val qualifiedName = ArmeriaKotlinAnnotationSupport.qualifiedName(entry) ?: return@mapNotNull null
+                    val method = ArmeriaRouteSupport.routeAnnotations[qualifiedName] ?: return@mapNotNull null
                     entry to method
-                } ?: return null
+                }
+            if (methodAnnotations.isEmpty()) {
+                return emptyList()
+            }
             val classPrefix =
                 PsiTreeUtil
                     .getParentOfType(function, KtClassOrObject::class.java)
@@ -28,18 +39,21 @@ internal data class ArmeriaKotlinMethodRoute(
                         ArmeriaKotlinAnnotationSupport.qualifiedName(it) == ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION
                     }?.let(::extractPathPrefix)
                     .orEmpty()
-            val rawPaths =
-                buildList {
-                    addAll(extractPaths(methodAnnotation.first))
-                    function.annotationEntries
-                        .filter { ArmeriaKotlinAnnotationSupport.qualifiedName(it) == ArmeriaRouteSupport.PATH_ANNOTATION }
-                        .forEach { addAll(extractPaths(it)) }
-                }.ifEmpty { listOf("/") }
-            val paths =
-                rawPaths
-                    .map { rawPath -> ArmeriaRouteSupport.formatAnnotatedHandlerPath(classPrefix, rawPath) }
-                    .distinct()
-            return ArmeriaKotlinMethodRoute(methodAnnotation.second, paths, rawPaths, classPrefix)
+            val pathAnnotationPaths =
+                function.annotationEntries
+                    .filter { ArmeriaKotlinAnnotationSupport.qualifiedName(it) == ArmeriaRouteSupport.PATH_ANNOTATION }
+                    .flatMap(::extractPaths)
+            return methodAnnotations.map { (entry, httpMethod) ->
+                val rawPaths =
+                    extractPaths(entry)
+                        .ifEmpty { pathAnnotationPaths }
+                        .ifEmpty { listOf("/") }
+                val paths =
+                    rawPaths
+                        .map { rawPath -> ArmeriaRouteSupport.formatAnnotatedHandlerPath(classPrefix, rawPath) }
+                        .distinct()
+                ArmeriaKotlinMethodRoute(httpMethod, paths, rawPaths, classPrefix)
+            }
         }
 
         private fun extractPathPrefix(annotation: KtAnnotationEntry): String = extractPaths(annotation).firstOrNull().orEmpty()

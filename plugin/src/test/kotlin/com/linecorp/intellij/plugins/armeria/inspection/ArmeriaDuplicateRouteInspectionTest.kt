@@ -92,6 +92,33 @@ class ArmeriaDuplicateRouteInspectionTest : ArmeriaFixtureTestBase() {
         assertNoDuplicateRouteHighlights()
     }
 
+    fun testHighlightsDuplicateAcrossHttpMethodAnnotations() {
+        myFixture.configureByText(
+            "BadService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.Post;
+
+            public class BadService {
+                @Get("/dup")
+                @Post("/dup")
+                public String first() {
+                    return "first";
+                }
+
+                @Post("/dup")
+                public String second() {
+                    return "second";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertDuplicateRouteHighlightsOnMethods("BadService", "first", "BadService", "second")
+    }
+
     fun testStillFlagsDuplicatesWhenMatchesHeaderDiffers() {
         myFixture.configureByText(
             "HeaderService.java",

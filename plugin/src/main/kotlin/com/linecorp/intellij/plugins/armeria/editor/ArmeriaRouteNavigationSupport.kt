@@ -56,7 +56,13 @@ internal object ArmeriaRouteNavigationSupport {
 
     fun httpMethod(handler: PsiElement): String? =
         when (handler) {
-            is PsiMethod -> ArmeriaRouteSupport.findRouteAnnotation(handler)?.second
+            is PsiMethod ->
+                ArmeriaRouteSupport
+                    .findRouteAnnotations(handler)
+                    .map { it.second }
+                    .distinct()
+                    .joinToString(",")
+                    .ifEmpty { null }
             else -> if (isKotlinPluginAvailable()) ArmeriaKotlinRouteNavigationSupport.httpMethod(handler) else null
         }
 
@@ -210,15 +216,16 @@ internal object ArmeriaRouteNavigationSupport {
     }
 
     private fun routePathsForJavaMethod(method: PsiMethod): List<String> {
-        val annotation = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return emptyList()
+        val routeAnnotationPaths = ArmeriaRouteSupport.routeAnnotationPaths(method)
+        if (routeAnnotationPaths.isEmpty()) {
+            return emptyList()
+        }
         val classPrefix =
             ArmeriaRouteSupport.extractPrimaryPath(
                 method.containingClass?.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION),
             )
-        return buildList {
-            addAll(ArmeriaRouteSupport.extractPaths(annotation.first))
-            addAll(ArmeriaRouteSupport.extractPathAnnotations(method))
-        }.ifEmpty { listOf("/") }
+        return routeAnnotationPaths
+            .flatMap { it.second }
             .distinct()
             .map { path -> ArmeriaRouteSupport.formatAnnotatedHandlerPath(classPrefix, path) }
     }

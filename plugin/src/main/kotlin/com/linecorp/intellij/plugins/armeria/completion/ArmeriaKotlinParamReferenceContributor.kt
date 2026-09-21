@@ -199,12 +199,16 @@ private fun kotlinClassPrefixHasVariable(
 }
 
 private fun kotlinRouteRawPaths(function: KtNamedFunction): List<String> {
-    val route = ArmeriaKotlinMethodRoute.from(function) ?: return emptyList()
+    val routes = ArmeriaKotlinMethodRoute.all(function)
+    if (routes.isEmpty()) {
+        return emptyList()
+    }
     return buildList {
-        if (route.classPrefix.isNotEmpty()) {
-            add(route.classPrefix)
+        val classPrefix = routes.first().classPrefix
+        if (classPrefix.isNotEmpty()) {
+            add(classPrefix)
         }
-        addAll(route.rawPaths)
+        routes.forEach { addAll(it.rawPaths) }
     }
 }
 

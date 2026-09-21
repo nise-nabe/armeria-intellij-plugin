@@ -180,6 +180,128 @@ class ArmeriaRouteCollectorAnnotatedRouteTest : ArmeriaFixtureTestBase() {
         assertEquals(listOf("Blocking"), route.executionHints)
     }
 
+    fun testCollectAnnotatedRoute_multipleHttpMethodAnnotations() {
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation;
+
+            public @interface Post {
+                String value() default "";
+                String path() default "";
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.Post;
+
+            public class HelloService {
+                @Get("/hello")
+                @Post("/hello")
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertEquals(
+            setOf("GET" to "/hello", "POST" to "/hello"),
+            routes.map { it.httpMethod to it.path }.toSet(),
+        )
+    }
+
+    fun testCollectAnnotatedRoute_pathAnnotationAppliesToEachHttpMethodAnnotation() {
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation;
+
+            public @interface Post {
+                String value() default "";
+                String path() default "";
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation;
+
+            public @interface Path {
+                String[] value() default {};
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.Path;
+            import com.linecorp.armeria.server.annotation.Post;
+
+            public class HelloService {
+                @Get
+                @Post
+                @Path("/hello")
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertEquals(
+            setOf("GET" to "/hello", "POST" to "/hello"),
+            routes.map { it.httpMethod to it.path }.toSet(),
+        )
+    }
+
+    fun testCollectAnnotatedRoute_annotationPathDoesNotLeakToOtherAnnotations() {
+        myFixture.addClass(
+            """
+            package com.linecorp.armeria.server.annotation;
+
+            public @interface Post {
+                String value() default "";
+                String path() default "";
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.Post;
+
+            public class HelloService {
+                @Get("/hello")
+                @Post
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertEquals(
+            setOf("GET" to "/hello", "POST" to "/"),
+            routes.map { it.httpMethod to it.path }.toSet(),
+        )
+    }
+
     fun testCollectAnnotatedRoute_doesNotAttachUnrelatedFileTimeouts() {
         myFixture.addClass(
             """

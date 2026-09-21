@@ -55,10 +55,30 @@ internal object ArmeriaRouteAnnotationSupport {
             TRACE_ANNOTATION to "TRACE",
         )
 
-    fun findRouteAnnotation(method: PsiMethod): Pair<PsiAnnotation, String>? {
-        return method.modifierList.annotations.firstNotNullOfOrNull { candidate ->
-            val qualifiedName = candidate.qualifiedName ?: return@firstNotNullOfOrNull null
+    fun findRouteAnnotation(method: PsiMethod): Pair<PsiAnnotation, String>? = findRouteAnnotations(method).firstOrNull()
+
+    fun findRouteAnnotations(method: PsiMethod): List<Pair<PsiAnnotation, String>> =
+        method.modifierList.annotations.mapNotNull { candidate ->
+            val qualifiedName = candidate.qualifiedName ?: return@mapNotNull null
             routeAnnotations[qualifiedName]?.let { candidate to it }
+        }
+
+    /**
+     * `(httpMethod, paths)` pairs for every HTTP-method annotation on [method].
+     *
+     * Armeria binds one route per HTTP-method annotation, and a path declared on the
+     * method annotation cannot be combined with `@Path` (line/armeria#1870,
+     * line/armeria#2853), so the annotation's own paths take precedence and `@Path`
+     * values apply only when the annotation declares none.
+     */
+    fun routeAnnotationPaths(method: PsiMethod): List<Pair<String, List<String>>> {
+        val pathAnnotationPaths = extractPathAnnotations(method)
+        return findRouteAnnotations(method).map { (annotation, httpMethod) ->
+            httpMethod to
+                extractPaths(annotation)
+                    .ifEmpty { pathAnnotationPaths }
+                    .ifEmpty { listOf("/") }
+                    .distinct()
         }
     }
 

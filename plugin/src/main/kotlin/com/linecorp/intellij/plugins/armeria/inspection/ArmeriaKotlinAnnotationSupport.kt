@@ -51,10 +51,15 @@ internal object ArmeriaKotlinAnnotationSupport {
     }
 
     fun pathVariables(function: KtNamedFunction): Set<String> {
-        val route = ArmeriaKotlinMethodRoute.from(function) ?: return emptySet()
+        val routes = ArmeriaKotlinMethodRoute.all(function)
+        if (routes.isEmpty()) {
+            return emptySet()
+        }
         return buildSet {
-            addAll(ArmeriaPathVariableSupport.extractPathVariables(route.classPrefix))
-            route.rawPaths.forEach { addAll(ArmeriaPathVariableSupport.extractPathVariables(it)) }
+            addAll(ArmeriaPathVariableSupport.extractPathVariables(routes.first().classPrefix))
+            routes.forEach { route ->
+                route.rawPaths.forEach { addAll(ArmeriaPathVariableSupport.extractPathVariables(it)) }
+            }
         }
     }
 

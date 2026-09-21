@@ -32,7 +32,10 @@ object ArmeriaRouteCollectorAnnotatedRoutes {
         method: PsiMethod,
         routes: MutableList<ArmeriaRoute>,
     ) {
-        val annotation = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return
+        val routeAnnotationPaths = ArmeriaRouteSupport.routeAnnotationPaths(method)
+        if (routeAnnotationPaths.isEmpty()) {
+            return
+        }
         val containingClass = method.containingClass ?: return
         val classPrefix =
             ArmeriaRouteSupport.extractPrimaryPath(containingClass.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION))
@@ -40,11 +43,6 @@ object ArmeriaRouteCollectorAnnotatedRoutes {
             ArmeriaRouteSupport.extractNames(containingClass.getAnnotation(ArmeriaRouteSupport.DECORATOR_ANNOTATION))
         val classExceptionHandlers =
             ArmeriaRouteSupport.extractNames(containingClass.getAnnotation(ArmeriaRouteSupport.EXCEPTION_HANDLER_ANNOTATION))
-        val paths =
-            buildList {
-                addAll(ArmeriaRouteSupport.extractPaths(annotation.first))
-                addAll(ArmeriaRouteSupport.extractPathAnnotations(method))
-            }.ifEmpty { listOf("/") }.distinct()
         val methodDecorators =
             classDecorators + ArmeriaRouteSupport.extractNames(method.getAnnotation(ArmeriaRouteSupport.DECORATOR_ANNOTATION))
         val methodExceptionHandlers =
@@ -54,23 +52,25 @@ object ArmeriaRouteCollectorAnnotatedRoutes {
                 )
         val target = buildMethodTarget(containingClass, method)
         val executionHints = ArmeriaTimeoutSupport.collectExecutionHints(method)
-        for (rawPath in paths) {
-            val (pathType, normalizedPath) = ArmeriaRouteSupport.parsePathType(rawPath)
-            val combinedPath = ArmeriaRouteSupport.combinePaths(classPrefix, normalizedPath)
-            routes +=
-                ArmeriaRoute.create(
-                    element = method,
-                    protocol = ArmeriaAnnotatedMetadataSupport.protocol(method).presentableName(),
-                    httpMethod = annotation.second,
-                    path = combinedPath,
-                    target = target,
-                    routeMatch = RouteMatch.ANNOTATED_HTTP,
-                    pathType = pathType,
-                    decorators = methodDecorators.distinct(),
-                    exceptionHandlers = methodExceptionHandlers.distinct(),
-                    executionHints = executionHints,
-                    contentHints = ArmeriaAnnotatedMetadataSupport.collectContentHints(method, combinedPath, pathType),
-                )
+        for ((httpMethod, paths) in routeAnnotationPaths) {
+            for (rawPath in paths) {
+                val (pathType, normalizedPath) = ArmeriaRouteSupport.parsePathType(rawPath)
+                val combinedPath = ArmeriaRouteSupport.combinePaths(classPrefix, normalizedPath)
+                routes +=
+                    ArmeriaRoute.create(
+                        element = method,
+                        protocol = ArmeriaAnnotatedMetadataSupport.protocol(method).presentableName(),
+                        httpMethod = httpMethod,
+                        path = combinedPath,
+                        target = target,
+                        routeMatch = RouteMatch.ANNOTATED_HTTP,
+                        pathType = pathType,
+                        decorators = methodDecorators.distinct(),
+                        exceptionHandlers = methodExceptionHandlers.distinct(),
+                        executionHints = executionHints,
+                        contentHints = ArmeriaAnnotatedMetadataSupport.collectContentHints(method, combinedPath, pathType),
+                    )
+            }
         }
     }
 

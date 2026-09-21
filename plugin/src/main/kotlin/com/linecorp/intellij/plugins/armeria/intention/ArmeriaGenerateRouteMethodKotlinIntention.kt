@@ -162,11 +162,11 @@ open class ArmeriaGenerateRouteMethodKotlinIntention : PsiElementBaseIntentionAc
         klass.declarations
             .filterIsInstance<KtNamedFunction>()
             .flatMapTo(linkedSetOf()) { function ->
-                val route = ArmeriaKotlinMethodRoute.from(function) ?: return@flatMapTo emptyList()
-                if (route.httpMethod != httpMethod) {
-                    return@flatMapTo emptyList()
-                }
-                route.rawPaths.filter { it.isNotEmpty() }
+                ArmeriaKotlinMethodRoute
+                    .all(function)
+                    .filter { it.httpMethod == httpMethod }
+                    .flatMap { it.rawPaths }
+                    .filter { it.isNotEmpty() }
             }
 
     private fun hasSuspendRouteFunction(klass: KtClassOrObject): Boolean =

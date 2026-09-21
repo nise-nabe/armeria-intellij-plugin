@@ -81,6 +81,12 @@ object ArmeriaRouteSupport {
 
     fun findRouteAnnotation(method: PsiMethod): Pair<PsiAnnotation, String>? = ArmeriaRouteAnnotationSupport.findRouteAnnotation(method)
 
+    fun findRouteAnnotations(method: PsiMethod): List<Pair<PsiAnnotation, String>> =
+        ArmeriaRouteAnnotationSupport.findRouteAnnotations(method)
+
+    fun routeAnnotationPaths(method: PsiMethod): List<Pair<String, List<String>>> =
+        ArmeriaRouteAnnotationSupport.routeAnnotationPaths(method)
+
     fun extractPaths(annotation: com.intellij.psi.PsiAnnotation): List<String> = ArmeriaRouteAnnotationSupport.extractPaths(annotation)
 
     fun extractPrimaryPath(annotation: com.intellij.psi.PsiAnnotation?): String =

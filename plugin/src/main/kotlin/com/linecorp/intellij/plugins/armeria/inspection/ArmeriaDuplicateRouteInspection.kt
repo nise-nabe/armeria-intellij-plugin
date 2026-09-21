@@ -21,13 +21,14 @@ class ArmeriaDuplicateRouteInspection : AbstractBaseJavaLocalInspectionTool() {
                 val duplicateRoutes = mutableSetOf<PsiMethod>()
                 val seen = mutableMapOf<Pair<String, String>, PsiMethod>()
                 for (method in aClass.methods) {
-                    val route = ArmeriaMethodRoute.from(method) ?: continue
-                    for (path in route.paths) {
-                        val key = route.httpMethod to ArmeriaRouteSupport.combinePaths(route.classPrefix, path)
-                        val previous = seen.putIfAbsent(key, method)
-                        if (previous != null) {
-                            duplicateRoutes += previous
-                            duplicateRoutes += method
+                    for (route in ArmeriaMethodRoute.from(method)) {
+                        for (path in route.paths) {
+                            val key = route.httpMethod to ArmeriaRouteSupport.combinePaths(route.classPrefix, path)
+                            val previous = seen.putIfAbsent(key, method)
+                            if (previous != null) {
+                                duplicateRoutes += previous
+                                duplicateRoutes += method
+                            }
                         }
                     }
                 }
@@ -47,14 +48,18 @@ private data class ArmeriaMethodRoute(
     val paths: List<String>,
 ) {
     companion object {
-        fun from(method: PsiMethod): ArmeriaMethodRoute? {
-            val annotation = ArmeriaRouteSupport.findRouteAnnotation(method) ?: return null
+        fun from(method: PsiMethod): List<ArmeriaMethodRoute> {
+            val routeAnnotationPaths = ArmeriaRouteSupport.routeAnnotationPaths(method)
+            if (routeAnnotationPaths.isEmpty()) {
+                return emptyList()
+            }
             val classPrefix =
                 ArmeriaRouteSupport.extractPrimaryPath(
                     method.containingClass?.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION),
                 )
-            val paths = ArmeriaRouteSupport.extractPaths(annotation.first).ifEmpty { listOf("/") }
-            return ArmeriaMethodRoute(annotation.second, classPrefix, paths)
+            return routeAnnotationPaths.map { (httpMethod, paths) ->
+                ArmeriaMethodRoute(httpMethod, classPrefix, paths)
+            }
         }
     }
 }
