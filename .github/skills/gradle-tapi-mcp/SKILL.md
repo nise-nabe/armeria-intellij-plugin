@@ -8,7 +8,7 @@ description: >-
 
 # Gradle Tooling API MCP (Copilot / GitHub Agents)
 
-This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.11.0:
+This repository configures [nise-nabe/gradle-tapi-mcp-server](https://github.com/nise-nabe/gradle-tapi-mcp-server) v0.13.4:
 
 | Environment | Config | Install |
 |-------------|--------|---------|
