@@ -881,6 +881,45 @@ class ArmeriaMissingBlockingExtendedInspectionTest : ArmeriaFixtureTestBase5() {
         assertExecutorHighlights(1)
     }
 
+    @Test
+    fun doesNotRegisterFetcherForTypeOnlyMention() {
+        myFixture.configureByText(
+            "Server.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.graphql.GraphqlService;
+            import com.linecorp.armeria.server.graphql.RuntimeWiringConfigurator;
+            import graphql.schema.DataFetcher;
+            import graphql.schema.idl.TypeRuntimeWiring;
+            import java.util.concurrent.CompletableFuture;
+
+            public class Server {
+                public Object graphql() {
+                    return GraphqlService.builder()
+                            .runtimeWiring(wiring())
+                            .build();
+                }
+
+                private RuntimeWiringConfigurator wiring() {
+                    return b -> {
+                        UserFetcher unused = null;
+                        b.type(TypeRuntimeWiring.newTypeWiring("Query").build());
+                    };
+                }
+            }
+
+            class UserFetcher implements DataFetcher<String> {
+                public String get(Object env) {
+                    return CompletableFuture.completedFuture("ok").join();
+                }
+            }
+            """.trimIndent(),
+        )
+        assertGraphqlHighlights(0, "join")
+        assertExecutorHighlights(0)
+    }
+
     private fun configureGraphqlFetcher(useBlockingExecutor: Boolean) {
         val executorCall =
             if (useBlockingExecutor) {
