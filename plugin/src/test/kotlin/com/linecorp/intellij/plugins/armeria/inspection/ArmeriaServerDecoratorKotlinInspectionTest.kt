@@ -409,6 +409,34 @@ class ArmeriaServerDecoratorKotlinInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun highlightsAuthAfterLoggingOnReorderedNamedArguments() {
+        configureServer(
+            """
+            Server.builder()
+                .decorator(pathPattern = "/api", decorator = LoggingService.newDecorator())
+                .decorator(decorator = AuthService.newDecorator(), pathPattern = "/api")
+                .service("/api", null as HttpService?)
+                .build()
+            """.trimIndent(),
+        )
+        assertHighlightText(message("inspection.server.decorator.auth.after.logging"), "AuthService.newDecorator()")
+    }
+
+    @Test
+    fun highlightsAuthAfterLoggingOnDecoratorUnderNamedArguments() {
+        configureServer(
+            """
+            Server.builder()
+                .decoratorUnder(prefix = "/api", decorator = LoggingService.newDecorator())
+                .decoratorUnder(decorator = AuthService.newDecorator(), prefix = "/api")
+                .service("/api", null as HttpService?)
+                .build()
+            """.trimIndent(),
+        )
+        assertHighlightText(message("inspection.server.decorator.auth.after.logging"), "AuthService.newDecorator()")
+    }
+
+    @Test
     fun highlightsAuthAfterLoggingWhenGlobalLoggingThenPathAuth() {
         configureServer(
             """
