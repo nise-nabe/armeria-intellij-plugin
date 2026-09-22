@@ -58,7 +58,8 @@ internal class ArmeriaJavaRouteLineMarkerProvider : LineMarkerProvider {
         if (!ArmeriaRouteCollector.looksLikeArmeriaBuilderCall(call)) {
             return null
         }
-        val path = javaRegistrationPath(methodName, call.argumentList.expressions.toList()) ?: "/"
+        // A present-but-unresolvable path argument must not display a fabricated "/" marker.
+        val path = javaRegistrationPath(methodName, call.argumentList.expressions.toList()) ?: return null
         return ArmeriaRouteLineMarkerSupport.createMarker(
             element,
             message("marker.route.registration", methodName, path),
@@ -71,13 +72,15 @@ internal class ArmeriaJavaRouteLineMarkerProvider : LineMarkerProvider {
             expressions: List<PsiExpression>,
         ): String? =
             when (methodName) {
-                "annotatedService" -> {
-                    if (expressions.size > 1) {
-                        ArmeriaRouteSupport.extractJavaStringConstant(expressions[0])
-                    } else {
-                        "/"
+                "annotatedService" ->
+                    when {
+                        expressions.size <= 1 -> "/"
+                        // Only a String-valued first argument is the pathPattern overload;
+                        // annotatedService(service, decorators…) is pathless.
+                        ArmeriaRouteSupport.isStringValuedJavaExpression(expressions[0]) ->
+                            ArmeriaRouteSupport.extractJavaStringConstant(expressions[0])
+                        else -> "/"
                     }
-                }
                 else -> ArmeriaRouteSupport.extractJavaStringConstant(expressions.firstOrNull())
             }
     }

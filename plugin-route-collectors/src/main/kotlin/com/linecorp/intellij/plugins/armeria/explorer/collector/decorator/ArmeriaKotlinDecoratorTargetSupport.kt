@@ -16,7 +16,9 @@ internal object ArmeriaKotlinDecoratorTargetSupport {
         val arguments = call.valueArguments
         val pathPattern =
             if (arguments.size >= 2) {
-                extractKotlinPathPattern(arguments[0].getArgumentExpression())
+                // An unresolvable path argument means unknown scope — do not treat
+                // the decorator as global.
+                extractKotlinPathPattern(arguments[0].getArgumentExpression()) ?: return null
             } else {
                 null
             }

@@ -1,8 +1,10 @@
 package com.linecorp.intellij.plugins.armeria.explorer.support
 import com.intellij.openapi.util.TextRange
+import com.intellij.psi.CommonClassNames
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiAnnotationMemberValue
+import com.intellij.psi.PsiClassType
 import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiMethod
@@ -226,6 +228,26 @@ object ArmeriaRouteSupport {
     fun evaluateJavaStringConstant(variable: PsiVariable): String? = ArmeriaServerBuilderSupport.evaluateJavaStringConstant(variable)
 
     fun extractJavaStringConstant(expression: PsiExpression?): String? = ArmeriaServerBuilderSupport.extractJavaStringConstant(expression)
+
+    /**
+     * True when [expression] denotes a `String` value — a compile-time constant or a
+     * `String`-typed expression. Used to decide whether an unresolved argument
+     * occupies a path parameter slot.
+     */
+    fun isStringValuedJavaExpression(expression: PsiExpression?): Boolean {
+        if (expression == null) {
+            return false
+        }
+        if (extractJavaStringConstant(expression) != null) {
+            return true
+        }
+        val type = expression.type ?: return false
+        // Light-PSI fixtures render java.lang.String with canonical text "String".
+        if (type.equalsToText(CommonClassNames.JAVA_LANG_STRING) || type.equalsToText("String")) {
+            return true
+        }
+        return (type as? PsiClassType)?.resolve()?.qualifiedName == CommonClassNames.JAVA_LANG_STRING
+    }
 
     fun referencesArmeriaInText(
         contents: CharSequence,

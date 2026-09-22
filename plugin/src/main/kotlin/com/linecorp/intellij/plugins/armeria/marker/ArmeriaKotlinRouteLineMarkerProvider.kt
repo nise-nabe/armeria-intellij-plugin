@@ -58,7 +58,8 @@ internal class ArmeriaKotlinRouteLineMarkerProvider : LineMarkerProvider {
         if (!ArmeriaKotlinRouteCollector.looksLikeArmeriaBuilderCall(call)) {
             return null
         }
-        val path = kotlinRegistrationPath(methodName, call.valueArguments) ?: "/"
+        // A present-but-unresolvable path argument must not display a fabricated "/" marker.
+        val path = kotlinRegistrationPath(methodName, call.valueArguments) ?: return null
         return ArmeriaRouteLineMarkerSupport.createMarker(
             element,
             message("marker.route.registration", methodName, path),
@@ -92,15 +93,23 @@ internal class ArmeriaKotlinRouteLineMarkerProvider : LineMarkerProvider {
                         ?: arguments.firstOrNull()?.getArgumentExpression(),
                 )
             ServiceRegistrationMethod.ANNOTATED_SERVICE ->
-                if (arguments.size > 1) {
-                    ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(
-                        arguments
-                            .firstOrNull { it.getArgumentName()?.asName?.identifier == "pathPrefix" }
-                            ?.getArgumentExpression()
-                            ?: arguments.firstOrNull()?.getArgumentExpression(),
-                    )
-                } else {
-                    "/"
+                when {
+                    arguments.size <= 1 -> "/"
+                    else -> {
+                        val pathExpression =
+                            arguments
+                                .firstOrNull { it.getArgumentName()?.asName?.identifier == "pathPrefix" }
+                                ?.getArgumentExpression()
+                                ?: arguments.firstOrNull()?.getArgumentExpression()
+                        if (pathExpression != null &&
+                            ArmeriaKotlinExpressionSupport.isStringValuedExpression(pathExpression)
+                        ) {
+                            ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(pathExpression)
+                        } else {
+                            // annotatedService(service, decorators…) is pathless.
+                            "/"
+                        }
+                    }
                 }
             else -> null
         }

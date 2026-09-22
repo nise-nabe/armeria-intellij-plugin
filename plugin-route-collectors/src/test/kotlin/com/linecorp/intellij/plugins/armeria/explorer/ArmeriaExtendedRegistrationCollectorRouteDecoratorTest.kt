@@ -5,6 +5,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.test.assertNotNull as kotlinAssertNotNull
 
 class ArmeriaExtendedRegistrationCollectorRouteDecoratorTest : ArmeriaFixtureTestBase() {
@@ -152,5 +153,36 @@ class ArmeriaExtendedRegistrationCollectorRouteDecoratorTest : ArmeriaFixtureTes
         val routes = ArmeriaRouteCollector.collect(project)
         val decoratorRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_DECORATOR }
         kotlinAssertNotNull(decoratorRoute)
+    }
+
+    fun testSkipsRouteDecoratorWithNonConstantPath() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.logging.LoggingService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    String path = dynamicPath();
+                    Server.builder()
+                        .routeDecorator()
+                        .pathPrefix(path)
+                        .build(LoggingService.newDecorator())
+                        .build();
+                }
+
+                private static String dynamicPath() {
+                    return "/dynamic";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_DECORATOR })
     }
 }

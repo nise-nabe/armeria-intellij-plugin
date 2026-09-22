@@ -131,6 +131,62 @@ class ArmeriaRouteLineMarkerProviderTest : ArmeriaLightJavaCodeInsightFixtureTes
         kotlinAssertNotNull(marker)
     }
 
+    fun testJavaServiceRegistrationMarkerSuppressedForUnresolvedPath() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    String path = dynamicPath();
+                    Server.builder()
+                        .service(path, new Object())
+                        .build();
+                }
+
+                private static String dynamicPath() {
+                    return "/dynamic";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val fileText = myFixture.file.text
+        val serviceIndex = fileText.indexOf(".service(") + 1
+        val element = myFixture.file.findElementAt(serviceIndex)!!
+
+        assertNull(javaProvider.getLineMarkerInfo(element))
+    }
+
+    fun testKotlinServiceRegistrationMarkerSuppressedForUnresolvedPath() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                val path = dynamicPath()
+                Server.builder()
+                    .service(path, Any())
+                    .build()
+            }
+
+            private fun dynamicPath(): String = "/dynamic"
+            """.trimIndent(),
+        )
+
+        val fileText = myFixture.file.text
+        val serviceIndex = fileText.indexOf(".service(") + 1
+        val element = myFixture.file.findElementAt(serviceIndex)!!
+
+        assertNull(kotlinProvider.getLineMarkerInfo(element))
+    }
+
     fun testKotlinServiceRegistrationMarker() {
         myFixture.configureByText(
             "Main.kt",

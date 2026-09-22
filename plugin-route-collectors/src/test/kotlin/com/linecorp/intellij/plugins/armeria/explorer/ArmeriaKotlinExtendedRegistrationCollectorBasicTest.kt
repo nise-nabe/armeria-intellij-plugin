@@ -8,6 +8,7 @@ import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 import com.linecorp.intellij.plugins.armeria.test.assertRoute
 import com.linecorp.intellij.plugins.armeria.test.singleRoute
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
@@ -103,5 +104,107 @@ class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBa
     fun testCollectKotlinFileServiceFromConstValPath() {
         configureFixture("extendedRegistration/kotlin/basic/fileServiceWithConstVal/Main.kt")
         collectRoutes().also { it.singleRoute() }.assertRoute(RouteMatch.FILE_SERVICE, path = "/files/")
+    }
+
+    fun testSkipsKotlinFileServiceWithNonConstantPath() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import java.io.File
+
+            fun main() {
+                val path = dynamicPath()
+                Server.builder()
+                    .fileService(path, File("/tmp"))
+                    .build()
+            }
+
+            private fun dynamicPath(): String = "/dynamic"
+            """.trimIndent(),
+        )
+
+        val routes = collectRoutes()
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.FILE_SERVICE })
+    }
+
+    fun testSkipsKotlinHealthCheckServiceWithNonConstantPath() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                val path = dynamicPath()
+                Server.builder()
+                    .healthCheckService(path)
+                    .build()
+            }
+
+            private fun dynamicPath(): String = "/dynamic"
+            """.trimIndent(),
+        )
+
+        val routes = collectRoutes()
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.HEALTH_CHECK })
+    }
+
+    fun testSkipsKotlinFluentRouteWithNonConstantPath() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                val path = dynamicPath()
+                Server.builder()
+                    .route()
+                    .post(path)
+                    .build(Any())
+                    .build()
+            }
+
+            private fun dynamicPath(): String = "/dynamic"
+            """.trimIndent(),
+        )
+
+        val routes = collectRoutes()
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
+    }
+
+    fun testSkipsKotlinFluentRouteWithNonConstantPathPrefix() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                val path = dynamicPath()
+                Server.builder()
+                    .route()
+                    .pathPrefix(path)
+                    .get("/items")
+                    .build(Any())
+                    .build()
+            }
+
+            private fun dynamicPath(): String = "/dynamic"
+            """.trimIndent(),
+        )
+
+        val routes = collectRoutes()
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
     }
 }

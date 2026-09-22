@@ -152,7 +152,9 @@ object ArmeriaDecoratorSupport {
         val arguments = expression.argumentList.expressions
         val pathPattern =
             if (arguments.size >= 2) {
-                extractJavaPathPattern(arguments[0])
+                // An unresolvable path argument means unknown scope — do not treat
+                // the decorator as global.
+                extractJavaPathPattern(arguments[0]) ?: return null
             } else {
                 null
             }

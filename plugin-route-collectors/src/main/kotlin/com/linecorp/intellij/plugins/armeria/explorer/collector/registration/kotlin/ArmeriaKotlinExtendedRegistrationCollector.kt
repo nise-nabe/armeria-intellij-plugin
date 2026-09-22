@@ -63,6 +63,11 @@ object ArmeriaKotlinExtendedRegistrationCollector {
         val pathArg = call.valueArguments.firstOrNull()?.getArgumentExpression()
         when (ServiceRegistrationMethod.fromMethodName(methodName)) {
             ServiceRegistrationMethod.FILE_SERVICE -> {
+                if (pathArg != null && ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(pathArg) == null) {
+                    // A declared path argument that does not resolve must not
+                    // fabricate a "/" route.
+                    return
+                }
                 val rawPath = ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(pathArg) ?: "/"
                 val (pathType, normalizedPath) = ArmeriaRouteSupport.parsePathType(rawPath)
                 val target =
@@ -86,6 +91,11 @@ object ArmeriaKotlinExtendedRegistrationCollector {
                     )
             }
             ServiceRegistrationMethod.HEALTH_CHECK_SERVICE -> {
+                if (pathArg != null && ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(pathArg) == null) {
+                    // A declared path argument that does not resolve must not fall
+                    // back to the default health-check path.
+                    return
+                }
                 val path =
                     pathArg?.let(ArmeriaKotlinExpressionSupport::extractKotlinStringConstant)?.let(ArmeriaRouteSupport::normalizePath)
                         ?: "/internal/healthcheck"
@@ -102,7 +112,9 @@ object ArmeriaKotlinExtendedRegistrationCollector {
                     )
             }
             ServiceRegistrationMethod.ROUTE_DECORATOR -> {
-                val chainInfo = ArmeriaKotlinExtendedRegistrationCollectorRouteDecorator.extractRouteDecoratorChain(call)
+                val chainInfo =
+                    ArmeriaKotlinExtendedRegistrationCollectorRouteDecorator.extractRouteDecoratorChain(call)
+                        ?: return
                 routes += ArmeriaKotlinExtendedRegistrationCollectorRouteDecorator.createRouteDecoratorRoute(call, chainInfo)
             }
             ServiceRegistrationMethod.DECORATOR_UNDER -> {

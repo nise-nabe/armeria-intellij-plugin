@@ -398,4 +398,34 @@ class ArmeriaRouteCollectorAnnotatedRouteTest : ArmeriaFixtureTestBase() {
 
         assertTrue(routes.none { it.routeMatch == RouteMatch.ANNOTATED_HTTP })
     }
+
+    fun testCollectAnnotatedRoute_skipsUnresolvedClassPathPrefix() {
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.PathPrefix;
+
+            @PathPrefix(PREFIX)
+            public class HelloService {
+                private static String PREFIX = computePrefix();
+
+                @Get("/hello")
+                public String hello() {
+                    return "hello";
+                }
+
+                private static String computePrefix() {
+                    return "/api";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.ANNOTATED_HTTP })
+    }
 }

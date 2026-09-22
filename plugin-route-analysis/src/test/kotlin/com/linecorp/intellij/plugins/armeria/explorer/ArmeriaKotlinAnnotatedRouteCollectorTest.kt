@@ -267,4 +267,33 @@ class ArmeriaKotlinAnnotatedRouteCollectorTest : ArmeriaFixtureTestBase() {
             "routes=${routes.map { it.httpMethod to it.path }}",
         )
     }
+
+    fun testCollectAnnotatedRouteFromKotlinLightMethod_skipsUnresolvedClassPathPrefix() {
+        myFixture.configureByText(
+            "HelloService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+            import com.linecorp.armeria.server.annotation.PathPrefix
+
+            val dynamicPrefix = computePrefix()
+
+            @PathPrefix(dynamicPrefix)
+            class HelloService {
+                @Get("/hello")
+                fun hello(): String = "hello"
+            }
+
+            fun computePrefix(): String = "/api"
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertTrue(
+            routes.none { it.routeMatch == RouteMatch.ANNOTATED_HTTP },
+            "routes=${routes.map { it.httpMethod to it.path }}",
+        )
+    }
 }

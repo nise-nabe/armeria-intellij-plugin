@@ -32,14 +32,18 @@ internal data class ArmeriaKotlinMethodRoute(
             if (methodAnnotations.isEmpty()) {
                 return emptyList()
             }
-            val classPrefix =
+            val classPrefixEntry =
                 PsiTreeUtil
                     .getParentOfType(function, KtClassOrObject::class.java)
                     ?.annotationEntries
                     ?.firstOrNull {
                         ArmeriaKotlinAnnotationSupport.qualifiedName(it) == ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION
-                    }?.let(::extractPathPrefix)
-                    .orEmpty()
+                    }
+            if (classPrefixEntry != null && declaresUnresolvedPathArg(classPrefixEntry)) {
+                // An unresolvable class prefix would silently emit un-prefixed paths.
+                return emptyList()
+            }
+            val classPrefix = classPrefixEntry?.let(::extractPathPrefix).orEmpty()
             val pathEntries =
                 function.annotationEntries
                     .filter { ArmeriaKotlinAnnotationSupport.qualifiedName(it) == ArmeriaRouteSupport.PATH_ANNOTATION }

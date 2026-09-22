@@ -50,7 +50,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorRouteDecorator {
             timeoutHints = ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(call),
         )
 
-    fun extractRouteDecoratorChain(routeDecoratorCall: KtCallExpression): RouteDecoratorChainInfo {
+    fun extractRouteDecoratorChain(routeDecoratorCall: KtCallExpression): RouteDecoratorChainInfo? {
         val outerBuild =
             ArmeriaKotlinRegistrationChainSupport.findForwardChainedCall(routeDecoratorCall) { call ->
                 ArmeriaKotlinRegistrationChainSupport.resolveCallName(call) == "build" && call.valueArguments.isEmpty()

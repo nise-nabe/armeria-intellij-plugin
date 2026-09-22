@@ -143,7 +143,7 @@ internal object ArmeriaServerDecoratorSupport {
                 serviceExpression = service,
                 hasExplicitPath = true,
                 extraDecorators = arguments.drop(2),
-                routePath = stringValue(arguments[0]) ?: "/",
+                routePath = stringValue(arguments[0]),
             )
         }
         return if (isPathPatternExpression(arguments[0])) {
@@ -152,7 +152,7 @@ internal object ArmeriaServerDecoratorSupport {
                 serviceExpression = service,
                 hasExplicitPath = true,
                 extraDecorators = arguments.drop(2),
-                routePath = stringValue(arguments[0]) ?: "/",
+                routePath = stringValue(arguments[0]),
             )
         } else {
             ServiceRegistrationArgs(
@@ -191,7 +191,7 @@ internal object ArmeriaServerDecoratorSupport {
 
     private fun builderHasCors(
         serviceCall: PsiMethodCallExpression,
-        routePath: String,
+        routePath: String?,
     ): Boolean = collectBuilderDecoratorCalls(serviceCall).any { corsDecoratorApplies(it, routePath) }
 
     private fun collectBuilderDecoratorCalls(anchor: PsiMethodCallExpression): List<PsiMethodCallExpression> {
@@ -267,7 +267,7 @@ internal object ArmeriaServerDecoratorSupport {
 
     private fun corsDecoratorApplies(
         call: PsiMethodCallExpression,
-        routePath: String,
+        routePath: String?,
     ): Boolean {
         val methodName = call.methodExpression.referenceName ?: return false
         if (methodName != "decorator" && methodName != "decoratorUnder") {
@@ -300,7 +300,10 @@ internal object ArmeriaServerDecoratorSupport {
         if (pathExpression == null) {
             return true
         }
-        val path = stringValue(pathExpression) ?: return false
+        // An unresolvable decorator scope or route path is undecidable — assume the
+        // decorator applies so a possibly-covered route does not warn.
+        val path = stringValue(pathExpression) ?: return true
+        routePath ?: return true
         return ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(path, routePath)
     }
 
@@ -679,6 +682,6 @@ internal object ArmeriaServerDecoratorSupport {
         val serviceExpression: PsiExpression,
         val hasExplicitPath: Boolean,
         val extraDecorators: List<PsiExpression>,
-        val routePath: String,
+        val routePath: String?,
     )
 }

@@ -176,6 +176,36 @@ class ArmeriaServerDecoratorKotlinInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun allowsGrpcServiceWhenRoutePathIsUnresolved() {
+        configureServer(
+            """
+            val grpcService = GrpcService.builder().build()
+            val path = "/grpc".substring(1)
+            Server.builder()
+                .decoratorUnder("/api", CorsService.newDecorator())
+                .serviceUnder(path, grpcService)
+                .build()
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.grpc.cors"), 0)
+    }
+
+    @Test
+    fun allowsGrpcServiceWhenPathScopedCorsPathIsUnresolved() {
+        configureServer(
+            """
+            val grpcService = GrpcService.builder().build()
+            val path = "/api".substring(1)
+            Server.builder()
+                .decorator(path, CorsService.newDecorator())
+                .service(grpcService)
+                .build()
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.grpc.cors"), 0)
+    }
+
+    @Test
     fun allowsGrpcServiceWithCorsDecoratorBeforeApply() {
         configureServer(
             """

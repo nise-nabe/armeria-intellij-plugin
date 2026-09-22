@@ -103,7 +103,7 @@ internal object ArmeriaRouteAnnotationSupport {
      * than `findDeclaredAttributeValue` because Kotlin light annotations expose a
      * `value` pair whose PSI value is null for unresolvable arguments.
      */
-    private fun declaresUnresolvedPathArg(annotation: PsiAnnotation): Boolean {
+    fun declaresUnresolvedPathArg(annotation: PsiAnnotation): Boolean {
         val kotlinEntry = kotlinAnnotationEntry(annotation)
         if (kotlinEntry != null) {
             return kotlinEntry.valueArguments.any { argument ->

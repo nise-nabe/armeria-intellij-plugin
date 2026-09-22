@@ -7,6 +7,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.annotation.Armer
 import com.linecorp.intellij.plugins.armeria.explorer.collector.annotation.ArmeriaTimeoutSupport
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteAnnotationSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 
 object ArmeriaRouteCollectorAnnotatedRoutes {
@@ -40,8 +41,14 @@ object ArmeriaRouteCollectorAnnotatedRoutes {
             return
         }
         val containingClass = method.containingClass ?: return
-        val classPrefix =
-            ArmeriaRouteSupport.extractPrimaryPath(containingClass.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION))
+        val classPrefixAnnotation = containingClass.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION)
+        if (classPrefixAnnotation != null &&
+            ArmeriaRouteAnnotationSupport.declaresUnresolvedPathArg(classPrefixAnnotation)
+        ) {
+            // An unresolvable class prefix would silently emit un-prefixed paths.
+            return
+        }
+        val classPrefix = ArmeriaRouteSupport.extractPrimaryPath(classPrefixAnnotation)
         val classDecorators =
             ArmeriaRouteSupport.extractNames(containingClass.getAnnotation(ArmeriaRouteSupport.DECORATOR_ANNOTATION))
         val classExceptionHandlers =
