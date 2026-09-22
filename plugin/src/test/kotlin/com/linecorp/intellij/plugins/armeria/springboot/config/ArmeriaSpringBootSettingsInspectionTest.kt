@@ -44,6 +44,24 @@ class ArmeriaSpringBootSettingsInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun yamlHighlightsPortConflictWithCompactSequence() {
+        myFixture.configureByText(
+            "application.yml",
+            """
+            server:
+              port: 8080
+            armeria:
+              ports:
+              - port: 8080
+                protocols:
+                - http
+            """.trimIndent(),
+        )
+        val highlights = highlights(message("inspection.springboot.settings.port.conflict"))
+        assertEquals(1, highlights.size, highlights.toString())
+    }
+
+    @Test
     fun yamlDoesNotHighlightWhenServerPortIsMinusOne() {
         myFixture.configureByText(
             "application.yml",

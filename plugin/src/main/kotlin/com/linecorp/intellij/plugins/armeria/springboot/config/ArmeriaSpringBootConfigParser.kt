@@ -86,14 +86,22 @@ object ArmeriaSpringBootConfigParser {
                 }
                 val indent = raw.takeWhile { it == ' ' || it == '\t' }.length
                 val trimmed = raw.trim()
-                while (stack.isNotEmpty() && indent <= stack.last().indent) {
-                    stack.removeLast()
+                if (trimmed.startsWith("- ")) {
+                    // YAML compact sequences allow `-` items at the same column as
+                    // the parent key — only sibling list items at that column close.
+                    while (closesOnSequenceItem(stack, indent)) {
+                        stack.removeLast()
+                    }
+                } else {
+                    while (stack.isNotEmpty() && indent <= stack.last().indent) {
+                        stack.removeLast()
+                    }
                 }
                 when {
                     trimmed.startsWith("- ") -> {
                         val parent = stack.lastOrNull() ?: continue
                         val listPath = "${parent.path}[${parent.nextListIndex()}]"
-                        stack.addLast(YamlFrame(indent, listPath))
+                        stack.addLast(YamlFrame(indent, listPath, isListItem = true))
                         val content = trimmed.removePrefix("- ").trim()
                         if (isInlineMappingListItem(content)) {
                             val ci = content.indexOf(':')
@@ -178,9 +186,18 @@ object ArmeriaSpringBootConfigParser {
         }
     }
 
+    private fun closesOnSequenceItem(
+        stack: ArrayDeque<YamlFrame>,
+        indent: Int,
+    ): Boolean {
+        val top = stack.lastOrNull() ?: return false
+        return indent < top.indent || (indent == top.indent && top.isListItem)
+    }
+
     private data class YamlFrame(
         val indent: Int,
         val path: String,
+        val isListItem: Boolean = false,
         var listItemCount: Int = 0,
     ) {
         fun nextListIndex() = listItemCount++
