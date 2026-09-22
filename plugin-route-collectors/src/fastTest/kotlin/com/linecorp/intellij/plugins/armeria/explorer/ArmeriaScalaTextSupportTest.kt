@@ -328,6 +328,86 @@ class ArmeriaScalaTextSupportTest {
     }
 
     @Test
+    fun symbolLiteralDoesNotSwallowFollowingRoutes() {
+        val matches =
+            ArmeriaScalaTextSupport.findServiceRegistrations(
+                """
+                import com.linecorp.armeria.server.Server
+
+                object Main {
+                  val state = 'running
+                  Server.builder()
+                    .service("/api", new HelloService())
+                    .build()
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(1, matches.size)
+        assertEquals("/api", matches.single().path)
+    }
+
+    @Test
+    fun identifierPrimeDoesNotSwallowFollowingRoutes() {
+        val matches =
+            ArmeriaScalaTextSupport.findServiceRegistrations(
+                """
+                import com.linecorp.armeria.server.Server
+
+                object Main {
+                  val count' = 0
+                  Server.builder()
+                    .service("/api", new HelloService())
+                    .build()
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(1, matches.size)
+        assertEquals("/api", matches.single().path)
+    }
+
+    @Test
+    fun charLiteralSlashDoesNotStartLineComment() {
+        val matches =
+            ArmeriaScalaTextSupport.findServiceRegistrations(
+                """
+                import com.linecorp.armeria.server.Server
+
+                object Main {
+                  val slash = '/'
+                  Server.builder()
+                    .service("/api", new HelloService())
+                    .build()
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(1, matches.size)
+        assertEquals("/api", matches.single().path)
+    }
+
+    @Test
+    fun escapedQuoteCharLiteralDoesNotSwallowFollowingRoutes() {
+        val matches =
+            ArmeriaScalaTextSupport.findServiceRegistrations(
+                """
+                import com.linecorp.armeria.server.Server
+
+                object Main {
+                  val quote = '\''
+                  Server.builder()
+                    .service("/api", new HelloService())
+                    .build()
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(1, matches.size)
+        assertEquals("/api", matches.single().path)
+    }
+
+    @Test
     fun ignoresMyServerBuilderServiceCall() {
         val matches =
             ArmeriaScalaTextSupport.findServiceRegistrations(
