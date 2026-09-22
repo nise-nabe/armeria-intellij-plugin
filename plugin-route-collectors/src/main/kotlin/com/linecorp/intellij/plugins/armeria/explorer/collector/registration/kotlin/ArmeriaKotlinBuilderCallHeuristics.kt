@@ -222,7 +222,10 @@ internal object ArmeriaKotlinBuilderCallHeuristics {
                     is KtCallExpression -> {
                         when (val callee = current.calleeExpression) {
                             is KtDotQualifiedExpression -> callee.receiverExpression
-                            else -> (current.parent as? KtDotQualifiedExpression)?.receiverExpression
+                            else ->
+                                (current.parent as? KtDotQualifiedExpression)
+                                    ?.receiverExpression
+                                    ?.takeIf { it !== current }
                         }
                     }
                     else -> null

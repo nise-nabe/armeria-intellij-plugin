@@ -322,7 +322,9 @@ object ArmeriaRouteCollectorServiceRegistration {
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
     ): Boolean {
-        val buildCall = arguments.getOrNull(0) as? PsiMethodCallExpression ?: return false
+        val serviceArgument = arguments.getOrNull(1) ?: return false
+        val firstArgument = arguments.getOrNull(0)?.let(ArmeriaRouteTargetExtractor::unwrapCast) ?: return false
+        val buildCall = firstArgument as? PsiMethodCallExpression ?: return false
         if (!ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(buildCall)) {
             return false
         }
@@ -331,7 +333,7 @@ object ArmeriaRouteCollectorServiceRegistration {
             routes,
             seenServiceRegistrations,
             requireRouteAnchor = true,
-            handlerTarget = arguments.getOrNull(1)?.let(ArmeriaRouteTargetExtractor::extractTarget),
+            handlerTarget = ArmeriaRouteTargetExtractor.extractTarget(serviceArgument),
         )
     }
 

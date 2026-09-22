@@ -208,6 +208,9 @@ object ArmeriaKotlinRouteCollector {
         val pathArgument =
             ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "path", 0)
                 ?: return false
+        val serviceArgument =
+            ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 1)
+                ?: return false
         val buildCall =
             when (val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(pathArgument)) {
                 is KtDotQualifiedExpression -> unwrapped.selectorExpression as? KtCallExpression
@@ -219,8 +222,7 @@ object ArmeriaKotlinRouteCollector {
         }
         val handlerTarget =
             ArmeriaKotlinExpressionSupport
-                .findArgumentExpression(arguments, "service", 1)
-                ?.let(ArmeriaKotlinExpressionSupport::unwrapKotlinExpression)
+                .unwrapKotlinExpression(serviceArgument)
                 ?.let(::extractKotlinTargetExpression)
                 ?.let { renderKotlinTarget(it) }
         return ArmeriaKotlinExtendedRegistrationCollectorFluentRoute.addFluentRouteFromBuild(
@@ -510,7 +512,10 @@ object ArmeriaKotlinRouteCollector {
     ): KtExpression? =
         when (callee) {
             is KtDotQualifiedExpression -> callee.receiverExpression
-            else -> (expression.parent as? KtDotQualifiedExpression)?.receiverExpression
+            else ->
+                (expression.parent as? KtDotQualifiedExpression)
+                    ?.receiverExpression
+                    ?.takeIf { it !== expression }
         }
 
     private fun resolveQualifiedClassName(resolved: PsiElement?): String? =

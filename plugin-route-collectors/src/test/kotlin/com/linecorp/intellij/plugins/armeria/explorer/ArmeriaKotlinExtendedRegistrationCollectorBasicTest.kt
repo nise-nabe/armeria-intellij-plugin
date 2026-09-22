@@ -266,9 +266,11 @@ class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBa
 
             import com.linecorp.armeria.server.Server
 
+            class HelloService
+
             fun main() {
                 val sb = Server.builder()
-                sb.service(sb.route().path("/fluent").build(), Any())
+                sb.service(sb.route().path("/fluent").build(), HelloService())
             }
             """.trimIndent(),
         )
@@ -276,6 +278,7 @@ class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBa
         collectRoutes()
             .also { it.singleRoute() }
             .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/fluent")
+            .also { route -> assertTrue(route.target.endsWith("HelloService")) }
     }
 
     fun testSkipsKotlinServiceRegistrationWithUnresolvedFluentRouteArgument() {
@@ -299,5 +302,83 @@ class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBa
         val routes = collectRoutes()
 
         assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
+    }
+
+    fun testSkipsKotlinServiceRegistrationWithNonArmeriaFluentRouteArgument() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            class HelloService
+
+            class OtherBuilder {
+                fun route(): OtherBuilder = this
+                fun path(path: String): OtherBuilder = this
+                fun build(): Any = this
+            }
+
+            fun main() {
+                val sb = Server.builder()
+                val other = OtherBuilder()
+                sb.service(other.route().path("/other").build(), HelloService())
+            }
+            """.trimIndent(),
+        )
+
+        val routes = collectRoutes()
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
+    }
+
+    fun testKotlinServiceFluentRouteArgumentTerminatesOnCallReceiver() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            class HelloService
+
+            fun factory(): Any = Any()
+
+            fun main() {
+                val sb = Server.builder()
+                sb.service(factory().build(), HelloService())
+            }
+            """.trimIndent(),
+        )
+
+        val routes = collectRoutes()
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
+    }
+
+    fun testCollectsKotlinServiceFluentRouteViaCallReceiver() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.ServerBuilder
+
+            class HelloService
+
+            fun serverBuilder(): ServerBuilder = Server.builder()
+
+            fun main() {
+                val sb = Server.builder()
+                sb.service(serverBuilder().route().path("/fluent").build(), HelloService())
+            }
+            """.trimIndent(),
+        )
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/fluent")
     }
 }
