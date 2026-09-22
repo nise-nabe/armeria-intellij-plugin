@@ -4,11 +4,6 @@
 
 ### Added
 
-- Java debugger renders Armeria `ServiceRequestContext` and `ClientRequestContext` with method, path, and request id in the label, plus expandable children for id, remote address, and timeout (evaluated in the debuggee; Armeria classes are not loaded at plugin start).
-- Missing-`@Blocking` inspection offers a quick-fix on `GraphqlService.builder()` that inserts `useBlockingTaskExecutor(true)` when blocking DataFetchers are registered without it (Java and Kotlin).
-- Route Explorer can export an OpenAPI 3 document (`Export OpenAPI`) from annotated HTTP routes and unframed gRPC JSON to `.idea/armeria-openapi.yaml`, mapping path variables, `@Consumes` / `@Produces`, and `@StatusCode`. Thrift and framed gRPC are omitted with a comment. DocService remains the first-class UI.
-- Route Explorer classifies Armeria SAML registrations (`SamlService` / `SamlServiceProvider.newSamlService()`). Path-less `Server.builder().service(ssp.newSamlService())` shows the default ACS, SLO, and metadata paths. Spring Boot Config warns when `armeria.athenz.*` is set without `zts-uri`, lists `ZtsBaseClient` and `AthenzServiceDecoratorFactory` beans, and shows a Dropwizard detected row with a docs link when `armeria-dropwizard2` is on the classpath (Dropwizard YAML is not parsed).
-
 ### Changed
 
 ### Deprecated
@@ -17,9 +12,20 @@
 
 ### Fixed
 
-- Generate HTTP Request for gRPC methods uses the same DocService base as Open DocService debug form (static mount such as `/internal/docs`, or the last synced runtime docs URL) instead of always commenting `# Invoke via DocService: …/docs/#/methods/…`.
-
 ### Security
+
+## [0.5.1] - 2026-09-22
+
+### Added
+
+- Java debugger renders Armeria `ServiceRequestContext` and `ClientRequestContext` with method, path, and request id in the label, plus expandable children for id, remote address, and timeout (evaluated in the debuggee; Armeria classes are not loaded at plugin start).
+- Missing-`@Blocking` inspection offers a quick-fix on `GraphqlService.builder()` that inserts `useBlockingTaskExecutor(true)` when blocking DataFetchers are registered without it (Java and Kotlin).
+- Route Explorer can export an OpenAPI 3 document (`Export OpenAPI`) from annotated HTTP routes and unframed gRPC JSON to `.idea/armeria-openapi.yaml`, mapping path variables, `@Consumes` / `@Produces`, and `@StatusCode`. Thrift and framed gRPC are omitted with a comment. DocService remains the first-class UI.
+- Route Explorer classifies Armeria SAML registrations (`SamlService` / `SamlServiceProvider.newSamlService()`). Path-less `Server.builder().service(ssp.newSamlService())` shows the default ACS, SLO, and metadata paths. Spring Boot Config warns when `armeria.athenz.*` is set without `zts-uri`, lists `ZtsBaseClient` and `AthenzServiceDecoratorFactory` beans, and shows a Dropwizard detected row with a docs link when `armeria-dropwizard2` is on the classpath (Dropwizard YAML is not parsed).
+
+### Fixed
+
+- Generate HTTP Request for gRPC methods uses the same DocService base as Open DocService debug form (static mount such as `/internal/docs`, or the last synced runtime docs URL) instead of always commenting `# Invoke via DocService: …/docs/#/methods/…`.
 
 ## [0.5.0] - 2026-09-05
 
