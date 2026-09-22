@@ -103,8 +103,10 @@ object ArmeriaSpringBootConfigParser {
                         val parent = stack.lastOrNull() ?: continue
                         val listPath = "${parent.path}[${parent.nextListIndex()}]"
                         stack.addLast(YamlFrame(indent, listPath, isListItem = true))
-                        val content = yamlScalarValue(trimmed.removePrefix("-"))
-                        if (content.isEmpty()) {
+                        // Strip anchors/tags but not comments yet: comment-stripping the
+                        // whole `key: value` text would corrupt quoted values containing ` #`.
+                        val content = stripLeadingYamlTokens(trimmed.removePrefix("-"))
+                        if (content.isEmpty() || content.startsWith('#')) {
                             // Bare `-` (or comment/anchor only): nested lines
                             // attach under the new list item frame.
                             continue
@@ -119,7 +121,7 @@ object ArmeriaSpringBootConfigParser {
                                 stack.addLast(YamlFrame(indent + 2, "$listPath.$key"))
                             }
                         } else {
-                            putLast(result, listPath, unquote(content))
+                            putLast(result, listPath, unquote(yamlScalarValue(content)))
                             stack.removeLast()
                         }
                     }
@@ -174,12 +176,8 @@ object ArmeriaSpringBootConfigParser {
             }.maxByOrNull { it.length }
     }
 
-    /**
-     * Normalizes a YAML scalar-ish value: drops leading anchor/alias/tag tokens
-     * (`&a`, `*b`, `!tag`/`!!str`) and trailing `#` comments on plain scalars.
-     * An empty result means the node content continues on following lines.
-     */
-    private fun yamlScalarValue(raw: String): String {
+    /** Strips leading anchor/alias/tag tokens (`&a`, `*b`, `!tag`/`!!str`). */
+    private fun stripLeadingYamlTokens(raw: String): String {
         var v = raw.trim()
         while (v.startsWith('&') || v.startsWith('*') || v.startsWith('!')) {
             val space = v.indexOfFirst { it == ' ' || it == '\t' }
@@ -188,6 +186,16 @@ object ArmeriaSpringBootConfigParser {
             }
             v = v.substring(space + 1).trim()
         }
+        return v
+    }
+
+    /**
+     * Normalizes a YAML scalar-ish value: drops leading anchor/alias/tag tokens
+     * (`&a`, `*b`, `!tag`/`!!str`) and trailing `#` comments on plain scalars.
+     * An empty result means the node content continues on following lines.
+     */
+    private fun yamlScalarValue(raw: String): String {
+        val v = stripLeadingYamlTokens(raw)
         if (v.startsWith('#')) {
             return ""
         }

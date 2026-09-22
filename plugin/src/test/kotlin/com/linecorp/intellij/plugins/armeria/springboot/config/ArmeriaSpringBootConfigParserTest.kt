@@ -498,6 +498,21 @@ class ArmeriaSpringBootConfigParserTest {
     }
 
     @Test
+    fun parseYaml_listItemMappingKeepsQuotedHashInValue() {
+        val m =
+            ArmeriaSpringBootConfigParser.flattenYaml(
+                """
+                armeria:
+                  docs:
+                  - name: "a # b"
+                    path: /docs
+                """.trimIndent(),
+            )
+        assertEquals("a # b", m["armeria.docs[0].name"])
+        assertEquals("/docs", m["armeria.docs[0].path"])
+    }
+
+    @Test
     fun parseYaml_anchoredScalarValueIsKept() {
         val m =
             ArmeriaSpringBootConfigParser.flattenYaml(
