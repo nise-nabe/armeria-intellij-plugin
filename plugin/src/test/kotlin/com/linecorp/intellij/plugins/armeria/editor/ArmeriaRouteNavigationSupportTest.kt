@@ -463,6 +463,50 @@ class ArmeriaRouteNavigationSupportTest : ArmeriaLightJavaCodeInsightFixtureTest
         assertEquals(1, ArmeriaRouteNavigationSupport.relatedHandlers(registration).size)
     }
 
+    fun testRelatedItemsWithAnnotatedServicePathPrefix() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example; import com.linecorp.armeria.server.Server;
+            public class Main { public static void main(String[] a) {
+                Server.builder().annotatedService("/api", new HelloService()).build();
+            }}
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example; import com.linecorp.armeria.server.annotation.Get;
+            public class HelloService { @Get("/hello") public String hello() { return "hello"; } }
+            """.trimIndent(),
+        )
+        val handler = findMethod("hello")
+        val registration = ArmeriaRouteNavigationSupport.relatedRegistrations(handler).single()
+        assertEquals(1, ArmeriaRouteNavigationSupport.relatedHandlers(registration).size)
+    }
+
+    fun testRelatedItemsWithAnnotatedServicePathlessDecorator() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example; import com.linecorp.armeria.server.Server;
+            public class Main { public static void main(String[] a) {
+                MyDecorator decorator = new MyDecorator();
+                Server.builder().annotatedService(new HelloService(), decorator).build();
+            }}
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example; import com.linecorp.armeria.server.annotation.Get;
+            public class HelloService { @Get("/hello") public String hello() { return "hello"; } }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class MyDecorator {}")
+        val handler = findMethod("hello")
+        val registration = ArmeriaRouteNavigationSupport.relatedRegistrations(handler).single()
+        assertEquals(1, ArmeriaRouteNavigationSupport.relatedHandlers(registration).size)
+    }
+
     private fun findMethod(
         className: String,
         name: String,
@@ -495,6 +539,8 @@ class ArmeriaRouteNavigationSupportTest : ArmeriaLightJavaCodeInsightFixtureTest
             public final class ServerBuilder {
                 public ServerBuilder service(String path, Object handler) { return this; }
                 public ServerBuilder annotatedService(Object service) { return this; }
+                public ServerBuilder annotatedService(String pathPattern, Object service) { return this; }
+                public ServerBuilder annotatedService(Object service, Object decorator) { return this; }
                 public com.linecorp.armeria.server.Server build() { return null; }
             }
             """.trimIndent(),
