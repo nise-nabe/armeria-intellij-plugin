@@ -86,7 +86,8 @@ object ArmeriaSpringBootConfigParser {
                 }
                 val indent = raw.takeWhile { it == ' ' || it == '\t' }.length
                 val trimmed = raw.trim()
-                if (trimmed.startsWith("- ")) {
+                val isDashItem = trimmed == "-" || trimmed.startsWith("- ")
+                if (isDashItem) {
                     // YAML compact sequences allow `-` items at the same column as
                     // the parent key — only sibling list items at that column close.
                     while (closesOnSequenceItem(stack, indent)) {
@@ -98,22 +99,29 @@ object ArmeriaSpringBootConfigParser {
                     }
                 }
                 when {
-                    trimmed.startsWith("- ") -> {
+                    isDashItem -> {
                         val parent = stack.lastOrNull() ?: continue
                         val listPath = "${parent.path}[${parent.nextListIndex()}]"
                         stack.addLast(YamlFrame(indent, listPath, isListItem = true))
-                        val content = trimmed.removePrefix("- ").trim()
+                        // Strip anchors/tags but not comments yet: comment-stripping the
+                        // whole `key: value` text would corrupt quoted values containing ` #`.
+                        val content = stripLeadingYamlTokens(trimmed.removePrefix("-"))
+                        if (content.isEmpty() || content.startsWith('#')) {
+                            // Bare `-` (or comment/anchor only): nested lines
+                            // attach under the new list item frame.
+                            continue
+                        }
                         if (isInlineMappingListItem(content)) {
                             val ci = content.indexOf(':')
                             val key = content.substring(0, ci).trim()
-                            val value = content.substring(ci + 1).trim()
+                            val value = yamlScalarValue(content.substring(ci + 1))
                             if (value.isNotEmpty()) {
                                 putLast(result, "$listPath.$key", unquote(value))
                             } else {
                                 stack.addLast(YamlFrame(indent + 2, "$listPath.$key"))
                             }
                         } else {
-                            putLast(result, listPath, unquote(content))
+                            putLast(result, listPath, unquote(yamlScalarValue(content)))
                             stack.removeLast()
                         }
                     }
@@ -123,7 +131,7 @@ object ArmeriaSpringBootConfigParser {
                             continue
                         }
                         val key = trimmed.substring(0, ci).trim()
-                        val value = trimmed.substring(ci + 1).trim()
+                        val value = yamlScalarValue(trimmed.substring(ci + 1))
                         val path = stack.lastOrNull()?.path?.let { "$it.$key" } ?: key
                         if (value.isEmpty()) {
                             stack.addLast(YamlFrame(indent, path))
@@ -166,6 +174,48 @@ object ArmeriaSpringBootConfigParser {
                             line[key.length].isWhitespace()
                     )
             }.maxByOrNull { it.length }
+    }
+
+    /** Strips leading anchor/alias/tag tokens (`&a`, `*b`, `!tag`/`!!str`). */
+    private fun stripLeadingYamlTokens(raw: String): String {
+        var v = raw.trim()
+        while (v.startsWith('&') || v.startsWith('*') || v.startsWith('!')) {
+            val space = v.indexOfFirst { it == ' ' || it == '\t' }
+            if (space < 0) {
+                return ""
+            }
+            v = v.substring(space + 1).trim()
+        }
+        return v
+    }
+
+    /**
+     * Normalizes a YAML scalar-ish value: drops leading anchor/alias/tag tokens
+     * (`&a`, `*b`, `!tag`/`!!str`) and trailing `#` comments on plain scalars.
+     * An empty result means the node content continues on following lines.
+     */
+    private fun yamlScalarValue(raw: String): String {
+        val v = stripLeadingYamlTokens(raw)
+        if (v.startsWith('#')) {
+            return ""
+        }
+        if (v.startsWith('"') || v.startsWith('\'')) {
+            val quote = v[0]
+            var from = 1
+            while (true) {
+                val end = v.indexOf(quote, from)
+                if (end < 0) {
+                    return v
+                }
+                if (v[end - 1] != '\\') {
+                    return v.substring(0, end + 1)
+                }
+                from = end + 1
+            }
+        }
+        val commentIndex =
+            v.indices.firstOrNull { i -> v[i] == '#' && i > 0 && v[i - 1].isWhitespace() } ?: -1
+        return if (commentIndex > 0) v.substring(0, commentIndex).trimEnd() else v
     }
 
     private fun isInlineMappingListItem(content: String): Boolean {
