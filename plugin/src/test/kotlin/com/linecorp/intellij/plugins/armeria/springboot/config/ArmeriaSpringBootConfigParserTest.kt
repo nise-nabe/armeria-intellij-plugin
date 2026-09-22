@@ -377,5 +377,137 @@ class ArmeriaSpringBootConfigParserTest {
         assertEquals(ArmeriaDropwizardConfigCollector.DOCS_URL, dropwizard.entries.single().externalUrl)
     }
 
+    @Test
+    fun parseYaml_bareDashListItems() {
+        val m =
+            ArmeriaSpringBootConfigParser.flattenYaml(
+                """
+                armeria:
+                  ports:
+                  -
+                    port: 8080
+                  -
+                    port: 9090
+                """.trimIndent(),
+            )
+        assertEquals("8080", m["armeria.ports[0].port"])
+        assertEquals("9090", m["armeria.ports[1].port"])
+    }
+
+    @Test
+    fun parseYaml_bareDashListItemNestedDeeper() {
+        val m =
+            ArmeriaSpringBootConfigParser.flattenYaml(
+                """
+                armeria:
+                  ports:
+                    -
+                      port: 8080
+                      protocol: http
+                """.trimIndent(),
+            )
+        assertEquals("8080", m["armeria.ports[0].port"])
+        assertEquals("http", m["armeria.ports[0].protocol"])
+    }
+
+    @Test
+    fun parseYaml_commentOnlyValueKeepsChildrenUnderKey() {
+        val m =
+            ArmeriaSpringBootConfigParser.flattenYaml(
+                """
+                armeria: # main config
+                  ports:
+                    - port: 8080
+                """.trimIndent(),
+            )
+        assertEquals("8080", m["armeria.ports[0].port"])
+    }
+
+    @Test
+    fun parseYaml_anchorValueKeepsChildrenUnderKey() {
+        val m =
+            ArmeriaSpringBootConfigParser.flattenYaml(
+                """
+                armeria: &a
+                  ports:
+                    - port: 8080
+                """.trimIndent(),
+            )
+        assertEquals("8080", m["armeria.ports[0].port"])
+    }
+
+    @Test
+    fun parseYaml_aliasValueKeepsChildrenUnderKey() {
+        val m =
+            ArmeriaSpringBootConfigParser.flattenYaml(
+                """
+                armeria: *b
+                  ports:
+                    - port: 8080
+                """.trimIndent(),
+            )
+        assertEquals("8080", m["armeria.ports[0].port"])
+    }
+
+    @Test
+    fun parseYaml_stripsTrailingCommentOnPlainScalar() {
+        val m =
+            ArmeriaSpringBootConfigParser.flattenYaml(
+                """
+                server:
+                  port: 8080 # primary listener
+                """.trimIndent(),
+            )
+        assertEquals("8080", m["server.port"])
+    }
+
+    @Test
+    fun parseYaml_quotedScalarKeepsHashInsideValue() {
+        val m =
+            ArmeriaSpringBootConfigParser.flattenYaml(
+                """
+                armeria:
+                  docs-path: "/docs # v1"
+                """.trimIndent(),
+            )
+        assertEquals("/docs # v1", m["armeria.docs-path"])
+    }
+
+    @Test
+    fun parseYaml_anchoredScalarValueIsKept() {
+        val m =
+            ArmeriaSpringBootConfigParser.flattenYaml(
+                """
+                server:
+                  port: &p 8080
+                """.trimIndent(),
+            )
+        assertEquals("8080", m["server.port"])
+    }
+
+    @Test
+    fun portConflict_detectedThroughBareDashAndAnchoredYaml() {
+        val m =
+            ArmeriaSpringBootConfigParser.flattenYaml(
+                """
+                server:
+                  port: 8080
+                armeria: &a
+                  ports:
+                  -
+                    port: 8080
+                """.trimIndent(),
+            )
+        val findings =
+            ArmeriaSpringBootSettingsConflict.findings(
+                m,
+                emptySet(),
+            )
+        assertEquals(
+            listOf(ArmeriaSpringBootSettingsConflict.Kind.PORT_CONFLICT),
+            findings.map { it.kind },
+        )
+    }
+
     private fun fixture(path: String) = javaClass.classLoader.getResource(path)!!.readText()
 }
