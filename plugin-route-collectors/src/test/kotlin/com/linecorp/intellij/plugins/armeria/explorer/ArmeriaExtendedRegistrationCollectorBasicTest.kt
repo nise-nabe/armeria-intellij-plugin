@@ -276,4 +276,72 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
 
         assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
     }
+
+    fun testCollectsServiceRegistrationWithFluentRouteArgument() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.ServerBuilder;
+
+            public class Main {
+                public static void main(String[] args) {
+                    ServerBuilder sb = Server.builder();
+                    sb.service(sb.route().path("/fluent").build(), new HelloService());
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/fluent")
+            .also { route -> assertEquals("example.HelloService", route.target) }
+    }
+
+    fun testSkipsServiceRegistrationWithUnresolvedFluentRouteArgument() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.ServerBuilder;
+
+            public class Main {
+                public static void main(String[] args) {
+                    String path = dynamicPath();
+                    ServerBuilder sb = Server.builder();
+                    sb.service(sb.route().path(path).build(), new HelloService());
+                }
+
+                private static String dynamicPath() {
+                    return "/dynamic";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = collectRoutes()
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
+    }
 }

@@ -41,18 +41,21 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorFluentRoute {
         routes: MutableList<ArmeriaRoute>,
         seenRegistrations: MutableSet<String>,
         requireRouteAnchor: Boolean,
-    ) {
-        val chainInfo = extractFluentRouteChain(buildCall, requireRouteAnchor) ?: return
-        val key = ArmeriaKotlinRegistrationChainSupport.registrationKey(buildCall) ?: return
+        handlerTarget: String? = null,
+    ): Boolean {
+        val chainInfo = extractFluentRouteChain(buildCall, requireRouteAnchor, handlerTarget) ?: return false
+        val key = ArmeriaKotlinRegistrationChainSupport.registrationKey(buildCall) ?: return false
         if (!seenRegistrations.add(key)) {
-            return
+            return false
         }
         routes += createFluentRoute(buildCall, chainInfo)
+        return true
     }
 
     fun extractFluentRouteChain(
         buildCall: KtCallExpression,
         requireRouteAnchor: Boolean,
+        handlerTarget: String? = null,
     ): FluentRouteChainInfo? {
         if (ArmeriaKotlinRegistrationChainSupport.resolveCallName(buildCall) != "build") {
             return null
@@ -64,10 +67,11 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorFluentRoute {
             current = ArmeriaKotlinRegistrationChainSupport.parentCallExpression(current)
         }
         val handlerArg =
-            buildCall.valueArguments
-                .firstOrNull()
-                ?.getArgumentExpression()
-                ?.text
+            handlerTarget
+                ?: buildCall.valueArguments
+                    .firstOrNull()
+                    ?.getArgumentExpression()
+                    ?.text
         return ArmeriaRegistrationChainReducer.reduceFluentRouteChain(
             stepsFromBuildUpward = steps,
             requireRouteAnchor = requireRouteAnchor,

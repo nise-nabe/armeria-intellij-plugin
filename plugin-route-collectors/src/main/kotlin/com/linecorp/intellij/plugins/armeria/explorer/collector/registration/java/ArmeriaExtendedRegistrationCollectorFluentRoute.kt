@@ -35,18 +35,21 @@ internal object ArmeriaExtendedRegistrationCollectorFluentRoute {
         routes: MutableList<ArmeriaRoute>,
         seenRegistrations: MutableSet<String>,
         requireRouteAnchor: Boolean,
-    ) {
-        val chainInfo = extractFluentRouteChain(buildCall, requireRouteAnchor) ?: return
-        val key = ArmeriaJavaRegistrationChainSupport.registrationKey(buildCall) ?: return
+        handlerTarget: String? = null,
+    ): Boolean {
+        val chainInfo = extractFluentRouteChain(buildCall, requireRouteAnchor, handlerTarget) ?: return false
+        val key = ArmeriaJavaRegistrationChainSupport.registrationKey(buildCall) ?: return false
         if (!seenRegistrations.add(key)) {
-            return
+            return false
         }
         routes += createFluentRoute(buildCall, chainInfo)
+        return true
     }
 
     fun extractFluentRouteChain(
         buildCall: PsiMethodCallExpression,
         requireRouteAnchor: Boolean,
+        handlerTarget: String? = null,
     ): FluentRouteChainInfo? {
         if (buildCall.methodExpression.referenceName != "build") {
             return null
@@ -58,9 +61,10 @@ internal object ArmeriaExtendedRegistrationCollectorFluentRoute {
             current = ArmeriaJavaRegistrationChainSupport.previousMethodCallInChain(current)
         }
         val handlerArg =
-            buildCall.argumentList.expressions
-                .firstOrNull()
-                ?.text
+            handlerTarget
+                ?: buildCall.argumentList.expressions
+                    .firstOrNull()
+                    ?.text
         return ArmeriaRegistrationChainReducer.reduceFluentRouteChain(
             stepsFromBuildUpward = steps,
             requireRouteAnchor = requireRouteAnchor,

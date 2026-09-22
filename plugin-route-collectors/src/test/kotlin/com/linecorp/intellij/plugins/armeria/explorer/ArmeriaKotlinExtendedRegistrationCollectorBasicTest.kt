@@ -257,4 +257,47 @@ class ArmeriaKotlinExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBa
 
         assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
     }
+
+    fun testCollectsKotlinServiceRegistrationWithFluentRouteArgument() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                val sb = Server.builder()
+                sb.service(sb.route().path("/fluent").build(), Any())
+            }
+            """.trimIndent(),
+        )
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/fluent")
+    }
+
+    fun testSkipsKotlinServiceRegistrationWithUnresolvedFluentRouteArgument() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                val path = dynamicPath()
+                val sb = Server.builder()
+                sb.service(sb.route().path(path).build(), Any())
+            }
+
+            private fun dynamicPath(): String = "/dynamic"
+            """.trimIndent(),
+        )
+
+        val routes = collectRoutes()
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
+    }
 }
