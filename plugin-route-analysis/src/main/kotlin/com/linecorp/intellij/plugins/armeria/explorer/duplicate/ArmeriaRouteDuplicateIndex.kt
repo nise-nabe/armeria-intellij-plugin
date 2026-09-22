@@ -9,11 +9,11 @@ import com.intellij.psi.PsiMethod
 import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
-import com.intellij.psi.util.PsiModificationTracker
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnalysisCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCacheSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 
 /**
@@ -85,7 +85,7 @@ object ArmeriaRouteDuplicateIndex {
                     groups = groups,
                     hitsByVirtualFile = buildHitsByVirtualFile(groups),
                 ),
-                PsiModificationTracker.MODIFICATION_COUNT,
+                *ArmeriaRouteCacheSupport.invalidators(project),
             )
         }
 

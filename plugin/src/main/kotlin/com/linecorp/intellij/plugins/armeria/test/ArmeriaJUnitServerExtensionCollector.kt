@@ -12,7 +12,7 @@ import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
-import com.intellij.psi.util.PsiModificationTracker
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCacheSupport
 
 object ArmeriaJUnitServerExtensionCollector {
     private val KOTLIN_PLUGIN_ID = PluginId.getId("org.jetbrains.kotlin")
@@ -86,7 +86,7 @@ object ArmeriaJUnitServerExtensionCollector {
             ArmeriaKotlinJUnitServerExtensionCollector.collect(project, scope, extensions, seen)
         }
         val sorted = extensions.sortedWith(compareBy({ it.moduleName }, { it.containingClassName }, { it.variableName }))
-        return CachedValueProvider.Result.create(sorted, PsiModificationTracker.MODIFICATION_COUNT)
+        return CachedValueProvider.Result.create(sorted, *ArmeriaRouteCacheSupport.invalidators(project))
     }
 
     internal fun add(
