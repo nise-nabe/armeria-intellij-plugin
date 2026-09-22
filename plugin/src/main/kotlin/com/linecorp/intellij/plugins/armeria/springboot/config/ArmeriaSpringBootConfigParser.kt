@@ -182,7 +182,7 @@ object ArmeriaSpringBootConfigParser {
     private fun yamlScalarValue(raw: String): String {
         var v = raw.trim()
         while (v.startsWith('&') || v.startsWith('*') || v.startsWith('!')) {
-            val space = v.indexOf(' ')
+            val space = v.indexOfFirst { it == ' ' || it == '\t' }
             if (space < 0) {
                 return ""
             }
@@ -192,10 +192,22 @@ object ArmeriaSpringBootConfigParser {
             return ""
         }
         if (v.startsWith('"') || v.startsWith('\'')) {
-            return v
+            val quote = v[0]
+            var from = 1
+            while (true) {
+                val end = v.indexOf(quote, from)
+                if (end < 0) {
+                    return v
+                }
+                if (v[end - 1] != '\\') {
+                    return v.substring(0, end + 1)
+                }
+                from = end + 1
+            }
         }
-        val commentIndex = v.indexOf(" #")
-        return if (commentIndex >= 0) v.substring(0, commentIndex).trimEnd() else v
+        val commentIndex =
+            v.indices.firstOrNull { i -> v[i] == '#' && i > 0 && v[i - 1].isWhitespace() } ?: -1
+        return if (commentIndex > 0) v.substring(0, commentIndex).trimEnd() else v
     }
 
     private fun isInlineMappingListItem(content: String): Boolean {

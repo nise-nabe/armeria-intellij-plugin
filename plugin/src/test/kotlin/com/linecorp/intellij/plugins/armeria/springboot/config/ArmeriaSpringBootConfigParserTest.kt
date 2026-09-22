@@ -474,6 +474,30 @@ class ArmeriaSpringBootConfigParserTest {
     }
 
     @Test
+    fun parseYaml_quotedScalarDropsTrailingComment() {
+        val m =
+            ArmeriaSpringBootConfigParser.flattenYaml(
+                """
+                server:
+                  port: "8080" # main listener
+                """.trimIndent(),
+            )
+        assertEquals("8080", m["server.port"])
+    }
+
+    @Test
+    fun parseYaml_hashWithoutPrecedingSpaceIsNotAComment() {
+        val m =
+            ArmeriaSpringBootConfigParser.flattenYaml(
+                """
+                armeria:
+                  docs-path: /docs#v1
+                """.trimIndent(),
+            )
+        assertEquals("/docs#v1", m["armeria.docs-path"])
+    }
+
+    @Test
     fun parseYaml_anchoredScalarValueIsKept() {
         val m =
             ArmeriaSpringBootConfigParser.flattenYaml(
