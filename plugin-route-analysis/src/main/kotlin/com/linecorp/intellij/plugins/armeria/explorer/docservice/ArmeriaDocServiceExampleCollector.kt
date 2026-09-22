@@ -21,10 +21,10 @@ import com.intellij.psi.search.searches.ReferencesSearch
 import com.intellij.psi.util.CachedValue
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
-import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.PsiUtil
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinPluginSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCacheSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
 
@@ -42,7 +42,7 @@ object ArmeriaDocServiceExampleCollector {
             {
                 CachedValueProvider.Result.create(
                     doCollect(project, GlobalSearchScope.projectScope(project)),
-                    PsiModificationTracker.MODIFICATION_COUNT,
+                    *ArmeriaRouteCacheSupport.invalidators(project),
                 )
             },
             false,
