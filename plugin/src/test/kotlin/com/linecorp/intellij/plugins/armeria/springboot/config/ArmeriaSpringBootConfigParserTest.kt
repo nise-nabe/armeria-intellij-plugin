@@ -59,6 +59,41 @@ class ArmeriaSpringBootConfigParserTest {
     }
 
     @Test
+    fun parseYaml_compactSequenceKeepsParentKey() {
+        val m =
+            ArmeriaSpringBootConfigParser.flattenYaml(
+                """
+                armeria:
+                  ports:
+                  - port: 8080
+                    protocols:
+                    - http
+                  - port: 9090
+                """.trimIndent(),
+            )
+        assertEquals("8080", m["armeria.ports[0].port"])
+        assertEquals("http", m["armeria.ports[0].protocols[0]"])
+        assertEquals("9090", m["armeria.ports[1].port"])
+        assertFalse(m.containsKey("armeria[0].port"))
+    }
+
+    @Test
+    fun parseYaml_compactTopLevelSequenceUnderKey() {
+        val m =
+            ArmeriaSpringBootConfigParser.flattenYaml(
+                """
+                armeria:
+                  internal-services:
+                    include:
+                    - docs
+                    - health
+                """.trimIndent(),
+            )
+        assertEquals("docs", m["armeria.internal-services.include[0]"])
+        assertEquals("health", m["armeria.internal-services.include[1]"])
+    }
+
+    @Test
     fun parseYaml_listItemWithColonInScalar_isNotTreatedAsInlineMapping() {
         val m =
             ArmeriaSpringBootConfigParser.flattenYaml(
