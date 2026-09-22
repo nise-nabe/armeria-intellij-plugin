@@ -19,6 +19,7 @@ import com.intellij.psi.PsiThisExpression
 import com.intellij.psi.PsiType
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinPluginSupport
 import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -130,7 +131,7 @@ internal object ArmeriaJUnitServerExtensionSupport {
     }
 
     fun serverExtensionsInClass(psiClass: PsiClass): List<ArmeriaJUnitServerExtension> {
-        if (toKtClass(psiClass) != null) {
+        if (isKotlinPluginAvailable() && toKtClass(psiClass) != null) {
             return emptyList()
         }
         return psiClass.fields.mapNotNull(::serverExtensionFromField) +
@@ -300,11 +301,17 @@ internal object ArmeriaJUnitServerExtensionSupport {
     }
 
     fun enclosingTestClassName(element: PsiElement): String? {
-        element.getParentOfType<KtObjectDeclaration>(true)?.let { objectDeclaration ->
-            return kotlinContainingClassName(objectDeclaration)
+        if (isKotlinPluginAvailable()) {
+            element.getParentOfType<KtObjectDeclaration>(true)?.let { objectDeclaration ->
+                return kotlinContainingClassName(objectDeclaration)
+            }
+            element
+                .getParentOfType<KtClass>(true)
+                ?.fqName
+                ?.asString()
+                ?.let { return it }
         }
-        return element.getParentOfType<KtClass>(true)?.fqName?.asString()
-            ?: PsiTreeUtil.getParentOfType(element, PsiClass::class.java)?.qualifiedName
+        return PsiTreeUtil.getParentOfType(element, PsiClass::class.java)?.qualifiedName
     }
 
     fun enclosingServerExtension(
@@ -335,10 +342,13 @@ internal object ArmeriaJUnitServerExtensionSupport {
 
     fun classHierarchyQualifiedNames(psiClass: PsiClass): Set<String> {
         val names = linkedSetOf<String>()
+        val kotlinAvailable = isKotlinPluginAvailable()
         var current: PsiClass? = psiClass
         while (current != null) {
             current.qualifiedName?.let(names::add)
-            toKtClass(current)?.let { addKotlinSuperTypeNames(it, names) }
+            if (kotlinAvailable) {
+                toKtClass(current)?.let { addKotlinSuperTypeNames(it, names) }
+            }
             current = current.superClass
         }
         return names
@@ -361,7 +371,12 @@ internal object ArmeriaJUnitServerExtensionSupport {
         if (testClass != null && extensionClass != null && testClass.isInheritor(extensionClass, true)) {
             return true
         }
-        val kotlinSupertypes = findKtClass(testClassName, project, scope)?.let { collectKotlinSuperTypeNames(it) } ?: emptySet()
+        val kotlinSupertypes =
+            if (isKotlinPluginAvailable()) {
+                findKtClass(testClassName, project, scope)?.let { collectKotlinSuperTypeNames(it) } ?: emptySet()
+            } else {
+                emptySet()
+            }
         return extensionClassName in kotlinSupertypes
     }
 
@@ -505,6 +520,9 @@ internal object ArmeriaJUnitServerExtensionSupport {
             }
             current = current.containingClass
         }
+        if (!isKotlinPluginAvailable()) {
+            return false
+        }
         var kotlinClass = PsiTreeUtil.getParentOfType(context, KtClassOrObject::class.java)
         while (kotlinClass != null) {
             if (kotlinTypeIsSameOrInherits(kotlinClass, resolved)) {
@@ -581,6 +599,9 @@ internal object ArmeriaJUnitServerExtensionSupport {
                 return true
             }
         }
+        if (!isKotlinPluginAvailable()) {
+            return false
+        }
         (expression as? KtCallExpression)?.let { call ->
             if (call.calleeExpression?.text != "httpUri") {
                 return false
@@ -645,6 +666,8 @@ internal object ArmeriaJUnitServerExtensionSupport {
             is KtNameReferenceExpression -> isKotlinClassReference(receiver)
             else -> false
         }
+
+    private fun isKotlinPluginAvailable(): Boolean = ArmeriaKotlinPluginSupport.isKotlinPluginAvailable()
 
     private fun isKotlinClassReference(reference: KtNameReferenceExpression): Boolean {
         when (val resolved = reference.reference?.resolve()) {
@@ -713,8 +736,10 @@ internal object ArmeriaJUnitServerExtensionSupport {
     ): Boolean = serverVariableName in referencedServerVariableNames(element)
 
     private fun referencedServerVariableNames(element: PsiElement): Set<String> {
-        PsiTreeUtil.getParentOfType(element, KtCallExpression::class.java, false)?.let { call ->
-            return referencedServerVariableNamesFromKotlinCall(call)
+        if (isKotlinPluginAvailable()) {
+            PsiTreeUtil.getParentOfType(element, KtCallExpression::class.java, false)?.let { call ->
+                return referencedServerVariableNamesFromKotlinCall(call)
+            }
         }
         PsiTreeUtil.getParentOfType(element, PsiMethodCallExpression::class.java, false)?.let { call ->
             return referencedServerVariableNamesFromJavaCall(call)

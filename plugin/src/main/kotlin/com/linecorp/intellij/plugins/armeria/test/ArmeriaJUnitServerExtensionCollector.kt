@@ -29,7 +29,13 @@ object ArmeriaJUnitServerExtensionCollector {
         val scope = GlobalSearchScope.projectScope(project)
         val testClassName =
             psiClass.qualifiedName
-                ?: ArmeriaJUnitServerExtensionSupport.toKtClassOrObject(psiClass)?.fqName?.asString()
+                ?: (
+                    if (PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)) {
+                        ArmeriaJUnitServerExtensionSupport.toKtClassOrObject(psiClass)?.fqName?.asString()
+                    } else {
+                        null
+                    }
+                )
                 ?: return emptyList()
         val fromFields = extensionsFromClassHierarchy(psiClass)
         if (fromFields.isNotEmpty()) {
