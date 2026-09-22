@@ -3,10 +3,14 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiAnnotationMemberValue
 import com.intellij.psi.PsiArrayInitializerMemberValue
+import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiLiteral
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethod
+import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaKotlinRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
+import org.jetbrains.kotlin.asJava.elements.KtLightElement
+import org.jetbrains.kotlin.psi.KtAnnotationEntry
 
 internal object ArmeriaRouteAnnotationSupport {
     const val PATH_ANNOTATION = "com.linecorp.armeria.server.annotation.Path"
@@ -72,17 +76,52 @@ internal object ArmeriaRouteAnnotationSupport {
      * values apply only when the annotation declares none.
      */
     fun routeAnnotationPaths(method: PsiMethod): List<Pair<String, List<String>>> {
-        val pathAnnotationPaths = extractPathAnnotations(method)
-        return findRouteAnnotations(method).map { (annotation, httpMethod) ->
-            httpMethod to
-                extractPaths(annotation)
-                    .ifEmpty { pathAnnotationPaths }
-                    .ifEmpty { listOf("/") }
-                    .distinct()
+        val pathAnnotations = method.annotations.filter { it.qualifiedName == PATH_ANNOTATION }
+        val pathAnnotationPaths = pathAnnotations.flatMap(::extractPaths)
+        val pathArgsResolvable = pathAnnotations.none(::declaresUnresolvedPathArg)
+        return findRouteAnnotations(method).mapNotNull { (annotation, httpMethod) ->
+            val ownPaths = extractPaths(annotation)
+            if (ownPaths.isEmpty() && declaresUnresolvedPathArg(annotation)) {
+                // An annotation argument we cannot resolve must not collapse to "/"
+                // and produce a false route (same guard as the Scala inspections).
+                return@mapNotNull null
+            }
+            val rawPaths =
+                ownPaths.ifEmpty {
+                    if (!pathArgsResolvable) {
+                        return@mapNotNull null
+                    }
+                    pathAnnotationPaths
+                }
+            httpMethod to rawPaths.ifEmpty { listOf("/") }.distinct()
+        }
+    }
+
+    /**
+     * True when the annotation declares `value`/`path` attributes that do not
+     * resolve to constant strings. Declared name-value pairs are inspected rather
+     * than `findDeclaredAttributeValue` because Kotlin light annotations expose a
+     * `value` pair whose PSI value is null for unresolvable arguments.
+     */
+    fun declaresUnresolvedPathArg(annotation: PsiAnnotation): Boolean {
+        val kotlinEntry = kotlinAnnotationEntry(annotation)
+        if (kotlinEntry != null) {
+            return kotlinEntry.valueArguments.any { argument ->
+                val name = argument.getArgumentName()?.asName?.asString()
+                (name == null || name == "value" || name == "path") &&
+                    ArmeriaKotlinRouteCollector
+                        .extractKotlinStrings(argument.getArgumentExpression())
+                        .isEmpty()
+            }
+        }
+        return annotation.parameterList.attributes.any { attribute ->
+            val name = attribute.name ?: "value"
+            (name == "value" || name == "path") && extractStrings(attribute.value).isEmpty()
         }
     }
 
     fun extractPaths(annotation: PsiAnnotation): List<String> {
+        extractKotlinPaths(annotation)?.let { return it }
         val values = extractStrings(annotation.findDeclaredAttributeValue("value"))
         if (values.isNotEmpty()) {
             return values.map(::preserveOrNormalizePath)
@@ -92,6 +131,31 @@ internal object ArmeriaRouteAnnotationSupport {
             return pathValues.map(::preserveOrNormalizePath)
         }
         return emptyList()
+    }
+
+    /**
+     * Kotlin light annotations expose their declared arguments through the source
+     * [KtAnnotationEntry]; the light attribute value is null for non-literal
+     * arguments, so paths are resolved through Kotlin PSI instead.
+     */
+    private fun extractKotlinPaths(annotation: PsiAnnotation): List<String>? {
+        val entry = kotlinAnnotationEntry(annotation) ?: return null
+        return entry.valueArguments
+            .filter { argument ->
+                val name = argument.getArgumentName()?.asName?.asString()
+                name == null || name == "value" || name == "path"
+            }.flatMap { argument ->
+                ArmeriaKotlinRouteCollector.extractKotlinStrings(argument.getArgumentExpression())
+            }.map(::preserveOrNormalizePath)
+    }
+
+    private fun kotlinAnnotationEntry(annotation: PsiAnnotation): KtAnnotationEntry? {
+        // org.jetbrains.kotlin is an optional plugin dependency — a Java-only
+        // annotation must never trigger loading Kotlin PSI classes.
+        if (annotation.language.id != "kotlin") {
+            return null
+        }
+        return (annotation as? KtLightElement<*, *>)?.kotlinOrigin as? KtAnnotationEntry
     }
 
     fun extractPrimaryPath(annotation: PsiAnnotation?): String {
@@ -124,6 +188,11 @@ internal object ArmeriaRouteAnnotationSupport {
             is PsiLiteralExpression -> listOfNotNull(value.value as? String)
             is PsiLiteral -> listOfNotNull(value.value as? String)
             is PsiArrayInitializerMemberValue -> value.initializers.flatMap(::extractStrings)
+            is PsiExpression ->
+                ArmeriaServerBuilderSupport
+                    .extractJavaStringConstant(value)
+                    ?.let { listOf(it) }
+                    ?: emptyList()
             else -> evaluateConstant(value)?.let { listOf(it) } ?: emptyList()
         }
 

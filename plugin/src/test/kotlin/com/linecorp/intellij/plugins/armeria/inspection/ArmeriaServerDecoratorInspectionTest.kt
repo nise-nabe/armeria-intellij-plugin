@@ -133,6 +133,36 @@ class ArmeriaServerDecoratorInspectionTest : ArmeriaFixtureTestBase5() {
     }
 
     @Test
+    fun allowsGrpcServiceWhenRoutePathIsUnresolved() {
+        configureServer(
+            """
+            GrpcService grpcService = GrpcService.builder().build();
+            String path = args.length > 0 ? args[0] : "/grpc";
+            Server.builder()
+                  .decoratorUnder("/api", CorsService.newDecorator())
+                  .serviceUnder(path, grpcService)
+                  .build();
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.grpc.cors"), 0)
+    }
+
+    @Test
+    fun allowsGrpcServiceWhenPathScopedCorsPathIsUnresolved() {
+        configureServer(
+            """
+            GrpcService grpcService = GrpcService.builder().build();
+            String path = args.length > 0 ? args[0] : "/api";
+            Server.builder()
+                  .decorator(path, CorsService.newDecorator())
+                  .service(grpcService)
+                  .build();
+            """.trimIndent(),
+        )
+        assertHighlights(message("inspection.server.decorator.grpc.cors"), 0)
+    }
+
+    @Test
     fun allowsGrpcServiceWithCorsExtraArgs() {
         configureServer(
             """

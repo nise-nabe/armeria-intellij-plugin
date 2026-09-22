@@ -78,6 +78,15 @@ fun JavaCodeInsightTestFixture.registerRouteDuplicateIndexStubs() {
     )
     this.addClass(
         """
+        package com.linecorp.armeria.server.annotation;
+
+        public @interface PathPrefix {
+            String value();
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
         package com.linecorp.armeria.server;
 
         public final class Server {
@@ -205,6 +214,10 @@ fun JavaCodeInsightTestFixture.registerRouteCollectorStubs() {
                 return this;
             }
 
+            public ServerBuilder annotatedService(Object service, java.util.function.Function<Object, Object> decorator) {
+                return this;
+            }
+
             public ServerBuilder decorator(Object decorator) {
                 return this;
             }
@@ -303,6 +316,10 @@ fun JavaCodeInsightTestFixture.registerKotlinRouteCollectorStubs() {
             }
 
             public ServerBuilder annotatedService(String pathPrefix, Object service) {
+                return this;
+            }
+
+            public ServerBuilder annotatedService(Object service, java.util.function.Function<Object, Object> decorator) {
                 return this;
             }
 

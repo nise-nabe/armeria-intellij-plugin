@@ -61,6 +61,6 @@ class ArmeriaRegistrationChainReducerTest {
                 defaultDecoratorLabel = message("route.explorer.target.routeDecorator"),
             )
 
-        assertEquals("DELETE", chain.methods)
+        assertEquals("DELETE", chain?.methods)
     }
 }

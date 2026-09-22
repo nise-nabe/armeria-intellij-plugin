@@ -24,9 +24,6 @@ internal object ArmeriaExtendedRegistrationCollectorVirtualHost {
         val key = ArmeriaJavaRegistrationChainSupport.registrationKey(expression) ?: return
         val hostname =
             ArmeriaJavaRegistrationChainSupport.extractString(expression.argumentList.expressions.firstOrNull())
-                ?: expression.argumentList.expressions
-                    .firstOrNull()
-                    ?.text
                 ?: message("route.explorer.target.virtualHost")
         if (seenRegistrations.add(key)) {
             routes +=

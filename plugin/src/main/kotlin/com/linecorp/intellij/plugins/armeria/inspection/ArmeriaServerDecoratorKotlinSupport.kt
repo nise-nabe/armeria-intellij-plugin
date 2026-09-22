@@ -169,7 +169,7 @@ internal object ArmeriaServerDecoratorKotlinSupport {
             serviceExpression = serviceExpression,
             hasExplicitPath = hasExplicitPath,
             extraDecorators = extraDecorators.distinct(),
-            routePath = pathExpression?.let(::stringValue) ?: "/",
+            routePath = if (pathExpression == null) "/" else stringValue(pathExpression),
         )
     }
 
@@ -212,7 +212,7 @@ internal object ArmeriaServerDecoratorKotlinSupport {
 
     private fun builderHasCors(
         serviceCall: KtCallExpression,
-        routePath: String,
+        routePath: String?,
     ): Boolean = collectBuilderDecoratorCalls(serviceCall).any { corsDecoratorApplies(it, routePath) }
 
     private fun collectBuilderDecoratorCalls(anchor: KtCallExpression): List<KtCallExpression> {
@@ -313,7 +313,7 @@ internal object ArmeriaServerDecoratorKotlinSupport {
 
     private fun corsDecoratorApplies(
         call: KtCallExpression,
-        routePath: String,
+        routePath: String?,
     ): Boolean {
         val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return false
         if (methodName != "decorator" && methodName != "decoratorUnder") {
@@ -329,7 +329,10 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         if (pathExpression == null) {
             return true
         }
-        val path = stringValue(pathExpression) ?: return false
+        // An unresolvable decorator scope or route path is undecidable — assume the
+        // decorator applies so a possibly-covered route does not warn.
+        val path = stringValue(pathExpression) ?: return true
+        routePath ?: return true
         return ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(path, routePath)
     }
 
@@ -698,7 +701,7 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         }
     }
 
-    private fun stringValue(expression: KtExpression): String? = ArmeriaKotlinExpressionSupport.extractKotlinString(expression)
+    private fun stringValue(expression: KtExpression): String? = ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(expression)
 
     private fun highlightDecorateOrArgument(expression: KtExpression): PsiElement {
         val unwrapped = unwrap(expression)
@@ -813,6 +816,6 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         val serviceExpression: KtExpression,
         val hasExplicitPath: Boolean,
         val extraDecorators: List<KtExpression>,
-        val routePath: String,
+        val routePath: String?,
     )
 }

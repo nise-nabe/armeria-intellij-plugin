@@ -1,13 +1,11 @@
 package com.linecorp.intellij.plugins.armeria.explorer.collector
 import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.JavaRecursiveElementWalkingVisitor
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiJavaFile
-import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.search.FileTypeIndex
@@ -134,7 +132,12 @@ object ArmeriaRouteCollectorServiceRegistration {
             } else {
                 when (registrationMethod) {
                     CoreServiceRegistrationMethod.ANNOTATED_SERVICE ->
-                        arguments.getOrNull(1) ?: arguments.getOrNull(0)
+                        if (annotatedServiceFirstArgIsPath(arguments)) {
+                            arguments.getOrNull(1)
+                        } else {
+                            // annotatedService(service[, decorators…]) — pathless overload.
+                            arguments.getOrNull(0)
+                        }
                     CoreServiceRegistrationMethod.SERVICE, CoreServiceRegistrationMethod.SERVICE_UNDER ->
                         arguments.getOrNull(1)
                 }
@@ -162,6 +165,9 @@ object ArmeriaRouteCollectorServiceRegistration {
             )
         }
         val path = extractRegistrationPath(methodName, arguments) ?: return false
+        val annotatedServiceHasPathPrefix =
+            registrationMethod == CoreServiceRegistrationMethod.ANNOTATED_SERVICE &&
+                annotatedServiceFirstArgIsPath(arguments)
         val fileServiceRoot =
             if (ArmeriaKnownHttpServiceClassifier.classify(serviceTypeHint) == KnownHttpServiceKind.FILE) {
                 ArmeriaFileServiceRootSupport.extractFromServiceExpression(implementationExpression)
@@ -181,6 +187,7 @@ object ArmeriaRouteCollectorServiceRegistration {
             seenServiceRegistrations = seenServiceRegistrations,
             serviceExpression = implementationExpression,
             fileServiceRoot = fileServiceRoot,
+            explicitPathPrefix = annotatedServiceHasPathPrefix,
         )
     }
 
@@ -235,6 +242,7 @@ object ArmeriaRouteCollectorServiceRegistration {
         serviceExpression: PsiElement? = null,
         fileServiceRoot: FileServiceRoot? = null,
         registrationText: String? = null,
+        explicitPathPrefix: Boolean? = null,
     ): Boolean {
         if (!seenServiceRegistrations.add(registrationKey)) {
             return false
@@ -245,7 +253,8 @@ object ArmeriaRouteCollectorServiceRegistration {
         val routeMatch = ArmeriaKnownHttpServiceClassifier.routeMatch(kind, registrationMethod)
         val httpMethod = ArmeriaKnownHttpServiceClassifier.defaultHttpMethod(kind)
         val annotatedServiceHasPathPrefix =
-            registrationMethod == CoreServiceRegistrationMethod.ANNOTATED_SERVICE && argumentCount > 1
+            explicitPathPrefix
+                ?: (registrationMethod == CoreServiceRegistrationMethod.ANNOTATED_SERVICE && argumentCount > 1)
         val normalizedPath = ArmeriaRouteSupport.normalizePath(path)
         val programmaticDecorators = decorators ?: ArmeriaBuilderMetadataSupport.collectProgrammaticDecorators(element, normalizedPath)
         val timeoutHints = ArmeriaBuilderMetadataSupport.collectBuilderTimeoutHints(element)
@@ -305,9 +314,22 @@ object ArmeriaRouteCollectorServiceRegistration {
             CoreServiceRegistrationMethod.SERVICE, CoreServiceRegistrationMethod.SERVICE_UNDER ->
                 extractString(arguments.getOrNull(0))
             CoreServiceRegistrationMethod.ANNOTATED_SERVICE ->
-                if (arguments.size > 1) extractString(arguments.getOrNull(0)) else "/"
+                when {
+                    // annotatedService(service[, decorators…]) is the pathless overload.
+                    arguments.size <= 1 -> "/"
+                    annotatedServiceFirstArgIsPath(arguments) -> extractString(arguments.getOrNull(0))
+                    else -> "/"
+                }
             null -> null
         }
+
+    /**
+     * True when the first argument selects the `annotatedService(pathPattern, …)`
+     * overload — a string constant or a `String`-typed expression. A non-string
+     * first argument is the service itself (`annotatedService(service, decorators…)`).
+     */
+    private fun annotatedServiceFirstArgIsPath(arguments: Array<PsiExpression>): Boolean =
+        ArmeriaRouteSupport.isStringValuedJavaExpression(arguments.getOrNull(0))
 
     private fun isPathlessSamlServiceCall(
         registrationMethod: CoreServiceRegistrationMethod,
@@ -317,34 +339,12 @@ object ArmeriaRouteCollectorServiceRegistration {
             return false
         }
         val serviceExpression = arguments[0]
-        if (extractConstantString(serviceExpression) != null) {
+        if (ArmeriaRouteSupport.extractJavaStringConstant(serviceExpression) != null) {
             return false
         }
         val hint = ArmeriaRouteTargetExtractor.extractKnownServiceType(serviceExpression).orEmpty()
         return ArmeriaKnownHttpServiceClassifier.isSaml(ArmeriaKnownHttpServiceClassifier.classify(hint))
     }
 
-    private fun extractConstantString(expression: PsiExpression): String? {
-        if (expression is PsiLiteralExpression) {
-            (expression.value as? String)?.let { return it }
-        }
-        return JavaPsiFacade
-            .getInstance(expression.project)
-            .constantEvaluationHelper
-            .computeConstantExpression(expression) as? String
-    }
-
-    private fun extractString(expression: PsiExpression?): String? =
-        when (expression) {
-            null -> null
-            is PsiLiteralExpression -> expression.value as? String
-            else -> {
-                val constantValue =
-                    JavaPsiFacade
-                        .getInstance(expression.project)
-                        .constantEvaluationHelper
-                        .computeConstantExpression(expression) as? String
-                constantValue ?: expression.text.takeIf { StringUtil.isNotEmpty(it) }
-            }
-        }
+    private fun extractString(expression: PsiExpression?): String? = ArmeriaRouteSupport.extractJavaStringConstant(expression)
 }

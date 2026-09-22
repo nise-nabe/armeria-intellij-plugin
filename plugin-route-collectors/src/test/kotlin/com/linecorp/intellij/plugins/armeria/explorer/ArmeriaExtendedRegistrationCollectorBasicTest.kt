@@ -8,6 +8,7 @@ import com.linecorp.intellij.plugins.armeria.test.ArmeriaFixtureTestBase
 import com.linecorp.intellij.plugins.armeria.test.assertRoute
 import com.linecorp.intellij.plugins.armeria.test.singleRoute
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
     override fun registerArmeriaStubs() {
@@ -100,5 +101,179 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
             httpMethod = "GET",
             pathType = PathType.EXACT,
         )
+    }
+
+    fun testSkipsFileServiceWithNonConstantPath() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import java.io.File;
+
+            public class Main {
+                public static void main(String[] args) {
+                    String path = dynamicPath();
+                    Server.builder()
+                        .fileService(path, new File("/tmp"))
+                        .build();
+                }
+
+                private static String dynamicPath() {
+                    return "/dynamic";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = collectRoutes()
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.FILE_SERVICE })
+    }
+
+    fun testSkipsHealthCheckServiceWithNonConstantPath() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    String path = dynamicPath();
+                    Server.builder()
+                        .healthCheckService(path)
+                        .build();
+                }
+
+                private static String dynamicPath() {
+                    return "/dynamic";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = collectRoutes()
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.HEALTH_CHECK })
+    }
+
+    fun testSkipsFluentRouteWithNonConstantPath() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    String path = dynamicPath();
+                    Server.builder()
+                        .route()
+                        .post(path)
+                        .build((ctx, req) -> null)
+                        .build();
+                }
+
+                private static String dynamicPath() {
+                    return "/dynamic";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = collectRoutes()
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
+    }
+
+    fun testCollectsFluentRouteWithTwoArgPath() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .route()
+                        .path("/api", "/v2")
+                        .build(new Object());
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = collectRoutes()
+
+        kotlin.test.assertEquals(
+            "/api/v2",
+            routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_FLUENT }?.path,
+        )
+    }
+
+    fun testSkipsFluentRouteWithUnresolvedTwoArgPath() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    String pattern = dynamicPath();
+                    Server.builder()
+                        .route()
+                        .path("/api", pattern)
+                        .build(new Object());
+                }
+
+                private static String dynamicPath() {
+                    return "/dynamic";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = collectRoutes()
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
+    }
+
+    fun testSkipsFluentRouteWithNonConstantPathPrefix() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    String path = dynamicPath();
+                    Server.builder()
+                        .route()
+                        .pathPrefix(path)
+                        .get("/items")
+                        .build((ctx, req) -> null)
+                        .build();
+                }
+
+                private static String dynamicPath() {
+                    return "/dynamic";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = collectRoutes()
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
     }
 }

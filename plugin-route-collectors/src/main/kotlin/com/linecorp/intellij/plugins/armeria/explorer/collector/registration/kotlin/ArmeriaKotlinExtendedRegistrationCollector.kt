@@ -63,7 +63,12 @@ object ArmeriaKotlinExtendedRegistrationCollector {
         val pathArg = call.valueArguments.firstOrNull()?.getArgumentExpression()
         when (ServiceRegistrationMethod.fromMethodName(methodName)) {
             ServiceRegistrationMethod.FILE_SERVICE -> {
-                val rawPath = ArmeriaKotlinExpressionSupport.extractKotlinString(pathArg) ?: "/"
+                if (pathArg != null && ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(pathArg) == null) {
+                    // A declared path argument that does not resolve must not
+                    // fabricate a "/" route.
+                    return
+                }
+                val rawPath = ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(pathArg) ?: "/"
                 val (pathType, normalizedPath) = ArmeriaRouteSupport.parsePathType(rawPath)
                 val target =
                     call.valueArguments
@@ -86,8 +91,13 @@ object ArmeriaKotlinExtendedRegistrationCollector {
                     )
             }
             ServiceRegistrationMethod.HEALTH_CHECK_SERVICE -> {
+                if (pathArg != null && ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(pathArg) == null) {
+                    // A declared path argument that does not resolve must not fall
+                    // back to the default health-check path.
+                    return
+                }
                 val path =
-                    pathArg?.let(ArmeriaKotlinExpressionSupport::extractKotlinString)?.let(ArmeriaRouteSupport::normalizePath)
+                    pathArg?.let(ArmeriaKotlinExpressionSupport::extractKotlinStringConstant)?.let(ArmeriaRouteSupport::normalizePath)
                         ?: "/internal/healthcheck"
                 routes +=
                     ArmeriaRoute.create(
@@ -102,11 +112,13 @@ object ArmeriaKotlinExtendedRegistrationCollector {
                     )
             }
             ServiceRegistrationMethod.ROUTE_DECORATOR -> {
-                val chainInfo = ArmeriaKotlinExtendedRegistrationCollectorRouteDecorator.extractRouteDecoratorChain(call)
+                val chainInfo =
+                    ArmeriaKotlinExtendedRegistrationCollectorRouteDecorator.extractRouteDecoratorChain(call)
+                        ?: return
                 routes += ArmeriaKotlinExtendedRegistrationCollectorRouteDecorator.createRouteDecoratorRoute(call, chainInfo)
             }
             ServiceRegistrationMethod.DECORATOR_UNDER -> {
-                val rawPath = ArmeriaKotlinExpressionSupport.extractKotlinString(pathArg) ?: return
+                val rawPath = ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(pathArg) ?: return
                 val (pathType, normalizedPath) = ArmeriaRouteSupport.parsePathType(rawPath)
                 val decoratorArg = call.valueArguments.getOrNull(1)?.getArgumentExpression()
                 val decoratorLabel =

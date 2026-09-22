@@ -58,6 +58,10 @@ fun JavaCodeInsightTestFixture.registerExtendedRegistrationCollectorStubs() {
                 return this;
             }
 
+            public ServerBuilder healthCheckService(String path) {
+                return this;
+            }
+
             public ServerBuilder virtualHost(String hostname) {
                 return this;
             }
@@ -71,6 +75,10 @@ fun JavaCodeInsightTestFixture.registerExtendedRegistrationCollectorStubs() {
             }
 
             public ServerBuilder path(String pathPattern) {
+                return this;
+            }
+
+            public ServerBuilder path(String prefix, String pathPattern) {
                 return this;
             }
 
@@ -288,6 +296,10 @@ fun JavaCodeInsightTestFixture.registerKotlinExtendedRegistrationCollectorStubs(
                 return this;
             }
 
+            public ServerBuilder healthCheckService(String path) {
+                return this;
+            }
+
             public ServerBuilder virtualHost(String hostname) {
                 return this;
             }
@@ -301,6 +313,10 @@ fun JavaCodeInsightTestFixture.registerKotlinExtendedRegistrationCollectorStubs(
             }
 
             public ServerBuilder path(String pathPattern) {
+                return this;
+            }
+
+            public ServerBuilder path(String prefix, String pathPattern) {
                 return this;
             }
 

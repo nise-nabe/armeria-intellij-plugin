@@ -8,6 +8,7 @@ internal data class RegistrationChainStep(
     val methodName: String,
     val firstStringArg: String?,
     val rawMethodArgs: List<String>,
+    val secondStringArg: String? = null,
 )
 
 internal data class FluentRouteChainInfo(
@@ -46,6 +47,10 @@ internal object ArmeriaRegistrationChainReducer {
                 }
                 in ServiceRegistrationMethod.FLUENT_ROUTE_HTTP_METHODS -> {
                     httpMethod = step.methodName.uppercase()
+                    if (step.hasUnresolvedPathArg()) {
+                        // An unresolved path argument must not collapse the route to "/".
+                        return null
+                    }
                     parsePathFromStep(step)?.let { parsed ->
                         methodPath = parsed.second
                         path = parsed.second
@@ -53,14 +58,33 @@ internal object ArmeriaRegistrationChainReducer {
                         foundPath = true
                     }
                 }
-                "path" ->
-                    parsePathFromStep(step)?.let { parsed ->
-                        methodPath = parsed.second
-                        path = parsed.second
-                        pathType = parsed.first
+                "path" -> {
+                    if (step.hasUnresolvedPathArg()) {
+                        return null
+                    }
+                    if (step.rawMethodArgs.size >= 2 && step.secondStringArg == null) {
+                        // RouteBuilder.path(prefix, pathPattern) — an unresolvable
+                        // pattern argument means the route is unknown.
+                        return null
+                    }
+                    val parsed =
+                        if (step.rawMethodArgs.size >= 2) {
+                            // path(prefix, pathPattern) concatenates both arguments.
+                            ArmeriaRouteSupport.parsePathType((step.firstStringArg ?: "") + step.secondStringArg)
+                        } else {
+                            parsePathFromStep(step)
+                        }
+                    parsed?.let {
+                        methodPath = it.second
+                        path = it.second
+                        pathType = it.first
                         foundPath = true
                     }
+                }
                 "pathPrefix" -> {
+                    if (step.hasUnresolvedPathArg()) {
+                        return null
+                    }
                     val raw = step.firstStringArg ?: path
                     val parsed = ArmeriaRouteSupport.parsePathType("prefix:$raw")
                     mountPrefix = parsed.second
@@ -69,6 +93,9 @@ internal object ArmeriaRegistrationChainReducer {
                     foundPath = true
                 }
                 "pathRegex" -> {
+                    if (step.hasUnresolvedPathArg()) {
+                        return null
+                    }
                     val raw = step.firstStringArg ?: path
                     val parsed = ArmeriaRouteSupport.parsePathType("regex:$raw")
                     pathType = parsed.first
@@ -76,6 +103,9 @@ internal object ArmeriaRegistrationChainReducer {
                     foundPath = true
                 }
                 "pathGlob" -> {
+                    if (step.hasUnresolvedPathArg()) {
+                        return null
+                    }
                     val raw = step.firstStringArg ?: path
                     val parsed = ArmeriaRouteSupport.parsePathType("glob:$raw")
                     pathType = parsed.first
@@ -119,7 +149,7 @@ internal object ArmeriaRegistrationChainReducer {
     fun reduceRouteDecoratorChain(
         steps: List<RegistrationChainStep>,
         defaultDecoratorLabel: String,
-    ): RouteDecoratorChainInfo {
+    ): RouteDecoratorChainInfo? {
         var pathPattern = "/**"
         var pathType = PathType.GLOB
         var methods = ""
@@ -127,6 +157,10 @@ internal object ArmeriaRegistrationChainReducer {
         for (step in steps) {
             when (step.methodName) {
                 "path", "pathPrefix", "pathRegex", "pathGlob" -> {
+                    if (step.hasUnresolvedPathArg()) {
+                        // The decorator scope is unknown — must not fabricate "/**".
+                        return null
+                    }
                     val raw = step.firstStringArg ?: pathPattern
                     val parsed =
                         ArmeriaRouteSupport.parsePathType(
@@ -161,6 +195,12 @@ internal object ArmeriaRegistrationChainReducer {
         val raw = step.firstStringArg ?: return null
         return ArmeriaRouteSupport.parsePathType(raw)
     }
+
+    /**
+     * True when the step carries arguments that did not resolve to a constant —
+     * distinct from a no-argument call, which is a legitimate default.
+     */
+    private fun RegistrationChainStep.hasUnresolvedPathArg(): Boolean = firstStringArg == null && rawMethodArgs.isNotEmpty()
 
     private fun formatHttpMethodArgument(argument: String): String = argument.trim().substringAfterLast('.').uppercase()
 }

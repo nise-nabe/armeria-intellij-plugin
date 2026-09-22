@@ -35,6 +35,7 @@ import org.jetbrains.kotlin.psi.KtValueArgument
 
 object ArmeriaKotlinRouteCollector {
     private val BUILDER_CHAIN_METHODS = setOf("build", "addService", "addServices", "enableUnframedRequests")
+    private val ANNOTATED_SERVICE_PATH_PARAM_NAMES = setOf("pathPrefix", "prefix", "path", "pathPattern")
 
     fun referencesArmeriaKotlinContent(file: KtFile): Boolean {
         val hasArmeriaImports =
@@ -179,6 +180,12 @@ object ArmeriaKotlinRouteCollector {
             seenServiceRegistrations = seenServiceRegistrations,
             serviceExpression = unwrappedImplementation,
             fileServiceRoot = fileServiceRoot,
+            explicitPathPrefix =
+                if (registrationMethod == CoreServiceRegistrationMethod.ANNOTATED_SERVICE) {
+                    annotatedServiceFirstArgIsPath(arguments)
+                } else {
+                    null
+                },
         )
     }
 
@@ -207,8 +214,12 @@ object ArmeriaKotlinRouteCollector {
     ): KtExpression? =
         when (CoreServiceRegistrationMethod.fromMethodName(methodName)) {
             CoreServiceRegistrationMethod.ANNOTATED_SERVICE ->
-                ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 1)
-                    ?: ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 0)
+                if (annotatedServiceFirstArgIsPath(arguments)) {
+                    ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 1)
+                } else {
+                    // annotatedService(service[, decorators…]) — pathless overload.
+                    ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 0)
+                }
             CoreServiceRegistrationMethod.SERVICE, CoreServiceRegistrationMethod.SERVICE_UNDER ->
                 ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 1)
             null -> null
@@ -227,27 +238,49 @@ object ArmeriaKotlinRouteCollector {
     ): String? =
         when (CoreServiceRegistrationMethod.fromMethodName(methodName)) {
             CoreServiceRegistrationMethod.SERVICE ->
-                ArmeriaKotlinExpressionSupport.extractKotlinString(
+                ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(
                     ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "path", 0),
                 )
             CoreServiceRegistrationMethod.SERVICE_UNDER ->
-                ArmeriaKotlinExpressionSupport.extractKotlinString(findPathPrefixArgument(arguments, 0))
+                ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(findPathPrefixArgument(arguments, 0))
             CoreServiceRegistrationMethod.ANNOTATED_SERVICE -> {
-                if (arguments.size > 1) {
-                    ArmeriaKotlinExpressionSupport.extractKotlinString(findPathPrefixArgument(arguments, 0))
-                } else {
-                    "/"
+                when {
+                    arguments.size <= 1 -> "/"
+                    annotatedServiceFirstArgIsPath(arguments) ->
+                        ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(findPathPrefixArgument(arguments, 0))
+                    else -> "/"
                 }
             }
             null -> null
         }
 
+    /**
+     * True when the first argument selects the `annotatedService(pathPattern, …)`
+     * overload — a string constant or a `String`-valued expression. A non-string
+     * first argument is the service itself (`annotatedService(service, decorators…)`).
+     */
+    private fun annotatedServiceFirstArgIsPath(arguments: List<KtValueArgument>): Boolean {
+        val named =
+            arguments
+                .firstOrNull { argument ->
+                    argument.getArgumentName()?.asName?.identifier in ANNOTATED_SERVICE_PATH_PARAM_NAMES
+                }?.getArgumentExpression()
+        if (named != null) {
+            return true
+        }
+        val first = arguments.getOrNull(0)?.getArgumentExpression() ?: return false
+        if (ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(first) != null) {
+            return true
+        }
+        return ArmeriaKotlinExpressionSupport.isStringValuedExpression(first)
+    }
+
     fun extractKotlinStrings(expression: KtExpression?): List<String> {
         val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: return emptyList()
         if (unwrapped is KtCollectionLiteralExpression) {
-            return unwrapped.getInnerExpressions().mapNotNull(ArmeriaKotlinExpressionSupport::extractKotlinString)
+            return unwrapped.getInnerExpressions().mapNotNull(ArmeriaKotlinExpressionSupport::extractKotlinStringConstant)
         }
-        return ArmeriaKotlinExpressionSupport.extractKotlinString(unwrapped)?.let { listOf(it) }.orEmpty()
+        return ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(unwrapped)?.let { listOf(it) }.orEmpty()
     }
 
     private fun extractKotlinKnownServiceType(

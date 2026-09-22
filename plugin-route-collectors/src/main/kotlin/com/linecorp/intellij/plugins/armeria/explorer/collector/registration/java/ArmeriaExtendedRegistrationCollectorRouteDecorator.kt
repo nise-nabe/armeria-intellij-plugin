@@ -20,7 +20,7 @@ internal object ArmeriaExtendedRegistrationCollectorRouteDecorator {
         if (!seenRegistrations.add(key)) {
             return
         }
-        val chainInfo = extractRouteDecoratorChain(expression)
+        val chainInfo = extractRouteDecoratorChain(expression) ?: return
         routes +=
             ArmeriaRoute.create(
                 element = expression,
@@ -57,7 +57,7 @@ internal object ArmeriaExtendedRegistrationCollectorRouteDecorator {
         )
     }
 
-    private fun extractRouteDecoratorChain(routeDecoratorCall: PsiMethodCallExpression): RouteDecoratorChainInfo {
+    private fun extractRouteDecoratorChain(routeDecoratorCall: PsiMethodCallExpression): RouteDecoratorChainInfo? {
         val outerBuild =
             ArmeriaJavaRegistrationChainSupport.findForwardChainedCall(routeDecoratorCall) { call ->
                 call.methodExpression.referenceName == "build" && call.argumentList.expressionCount == 0

@@ -115,4 +115,40 @@ class ArmeriaKotlinDecoratorRouteCollectorPathScopedTest : ArmeriaFixtureTestBas
         kotlinAssertNotNull(serviceRoute)
         assertEquals(listOf("Logging"), serviceRoute.decorators)
     }
+
+    fun testPathScopedDecoratorWithUnresolvedPatternIsNotApplied() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+            import com.linecorp.armeria.server.logging.LoggingService
+
+            fun dynamicPath(): String = "/dynamic"
+
+            fun main() {
+                val path: String = dynamicPath()
+                Server.builder()
+                    .decorator(path, LoggingService::class.java)
+                    .service("/api", HelloService())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
+        kotlinAssertNotNull(serviceRoute)
+        assertEquals(emptyList<String>(), serviceRoute.decorators)
+    }
 }

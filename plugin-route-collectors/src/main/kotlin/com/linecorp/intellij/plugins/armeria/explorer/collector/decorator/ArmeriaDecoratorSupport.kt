@@ -152,7 +152,9 @@ object ArmeriaDecoratorSupport {
         val arguments = expression.argumentList.expressions
         val pathPattern =
             if (arguments.size >= 2) {
-                extractJavaPathPattern(arguments[0])
+                // An unresolvable path argument means unknown scope — do not treat
+                // the decorator as global.
+                extractJavaPathPattern(arguments[0]) ?: return null
             } else {
                 null
             }
@@ -182,15 +184,9 @@ object ArmeriaDecoratorSupport {
             else -> computeJavaPathPatternConstant(expression)
         }
 
-    private fun computeJavaPathPatternConstant(expression: PsiExpression): String? {
-        val constantValue =
-            JavaPsiFacade
-                .getInstance(expression.project)
-                .constantEvaluationHelper
-                .computeConstantExpression(expression) as? String
-        return constantValue ?: expression.text
-            .trim()
-            .trim('"')
-            .takeIf { it.isNotEmpty() }
-    }
+    private fun computeJavaPathPatternConstant(expression: PsiExpression): String? =
+        JavaPsiFacade
+            .getInstance(expression.project)
+            .constantEvaluationHelper
+            .computeConstantExpression(expression) as? String
 }

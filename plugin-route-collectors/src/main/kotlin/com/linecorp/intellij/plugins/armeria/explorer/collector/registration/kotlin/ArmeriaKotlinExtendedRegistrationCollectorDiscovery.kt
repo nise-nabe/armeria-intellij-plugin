@@ -242,7 +242,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorDiscovery {
             return null
         }
         val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: expression
-        ArmeriaKotlinExpressionSupport.extractKotlinString(unwrapped)?.let { return it }
+        ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(unwrapped)?.let { return it }
         val nested =
             when (unwrapped) {
                 is KtCallExpression -> unwrapped.valueArguments.singleOrNull()?.getArgumentExpression()
@@ -252,7 +252,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorDiscovery {
                         ?.singleOrNull()
                         ?.getArgumentExpression()
                 else -> null
-            } ?: return unwrapped.text.takeIf { it.isNotBlank() }
+            } ?: return null
         return extractTextLike(nested, hops + 1)
     }
 }

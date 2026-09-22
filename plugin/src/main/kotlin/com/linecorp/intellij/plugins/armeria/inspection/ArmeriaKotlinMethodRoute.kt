@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.inspection
 
 import com.intellij.psi.util.PsiTreeUtil
+import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaKotlinRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtClassOrObject
@@ -31,23 +32,38 @@ internal data class ArmeriaKotlinMethodRoute(
             if (methodAnnotations.isEmpty()) {
                 return emptyList()
             }
-            val classPrefix =
+            val classPrefixEntry =
                 PsiTreeUtil
                     .getParentOfType(function, KtClassOrObject::class.java)
                     ?.annotationEntries
                     ?.firstOrNull {
                         ArmeriaKotlinAnnotationSupport.qualifiedName(it) == ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION
-                    }?.let(::extractPathPrefix)
-                    .orEmpty()
-            val pathAnnotationPaths =
+                    }
+            if (classPrefixEntry != null && declaresUnresolvedPathArg(classPrefixEntry)) {
+                // An unresolvable class prefix would silently emit un-prefixed paths.
+                return emptyList()
+            }
+            val classPrefix = classPrefixEntry?.let(::extractPathPrefix).orEmpty()
+            val pathEntries =
                 function.annotationEntries
                     .filter { ArmeriaKotlinAnnotationSupport.qualifiedName(it) == ArmeriaRouteSupport.PATH_ANNOTATION }
-                    .flatMap(::extractPaths)
-            return methodAnnotations.map { (entry, httpMethod) ->
+            val pathAnnotationPaths = pathEntries.flatMap(::extractPaths)
+            val pathArgsResolvable = pathEntries.none(::declaresUnresolvedPathArg)
+            return methodAnnotations.mapNotNull { (entry, httpMethod) ->
+                val ownPaths = extractPaths(entry)
+                if (ownPaths.isEmpty() && declaresUnresolvedPathArg(entry)) {
+                    // Unresolvable path arguments must not collapse to "/" and
+                    // produce a false duplicate (same guard as Scala).
+                    return@mapNotNull null
+                }
                 val rawPaths =
-                    extractPaths(entry)
-                        .ifEmpty { pathAnnotationPaths }
-                        .ifEmpty { listOf("/") }
+                    ownPaths
+                        .ifEmpty {
+                            if (!pathArgsResolvable) {
+                                return@mapNotNull null
+                            }
+                            pathAnnotationPaths
+                        }.ifEmpty { listOf("/") }
                 val paths =
                     rawPaths
                         .map { rawPath -> ArmeriaRouteSupport.formatAnnotatedHandlerPath(classPrefix, rawPath) }
@@ -55,6 +71,19 @@ internal data class ArmeriaKotlinMethodRoute(
                 ArmeriaKotlinMethodRoute(httpMethod, paths, rawPaths, classPrefix)
             }
         }
+
+        /**
+         * True when the entry declares positional/`value`/`path` arguments that do
+         * not resolve to constant strings.
+         */
+        private fun declaresUnresolvedPathArg(entry: KtAnnotationEntry): Boolean =
+            entry.valueArguments.any { argument ->
+                val name = argument.getArgumentName()?.asName?.asString()
+                (name == null || name == "value" || name == "path") &&
+                    ArmeriaKotlinRouteCollector
+                        .extractKotlinStrings(argument.getArgumentExpression())
+                        .isEmpty()
+            }
 
         private fun extractPathPrefix(annotation: KtAnnotationEntry): String = extractPaths(annotation).firstOrNull().orEmpty()
 

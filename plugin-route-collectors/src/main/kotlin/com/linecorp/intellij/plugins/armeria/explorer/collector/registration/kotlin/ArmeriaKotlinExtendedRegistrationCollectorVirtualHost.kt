@@ -27,7 +27,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorVirtualHost {
         val key = ArmeriaKotlinRegistrationChainSupport.registrationKey(call) ?: return
         val pathArg = call.valueArguments.firstOrNull()?.getArgumentExpression()
         val hostname =
-            ArmeriaKotlinExpressionSupport.extractKotlinString(pathArg) ?: pathArg?.text
+            ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(pathArg)
                 ?: message("route.explorer.target.virtualHost")
         if (seenRegistrations.add(key)) {
             routes +=

@@ -1034,4 +1034,132 @@ class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
         assertTrue(routes.all { it.routeMatch == RouteMatch.SERVICE })
         assertTrue(routes.none { it.path.contains("newSamlService") })
     }
+
+    fun testSkipsServiceRegistrationWithNonConstantPath() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    String path = computePath();
+                    Server.builder()
+                        .service(path, new Object())
+                        .build();
+                }
+
+                private static String computePath() {
+                    return "/dynamic";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.SERVICE })
+    }
+
+    fun testCollectServiceRegistrationWithConstantFieldPath() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                private static final String PATH = "/const";
+
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service(PATH, new Object())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        kotlinAssertNotNull(routes.firstOrNull { it.path == "/const" && it.routeMatch == RouteMatch.SERVICE })
+    }
+
+    fun testCollectAnnotatedServicePathlessOverloadWithDecorator() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+            import com.linecorp.armeria.server.logging.LoggingService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .annotatedService(new HelloService(), LoggingService.newDecorator())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        val registrationRoute = routes.firstOrNull { it.routeMatch == RouteMatch.ANNOTATED_SERVICE }
+        kotlinAssertNotNull(registrationRoute)
+        assertEquals("/", registrationRoute.path)
+        assertFalse(registrationRoute.annotatedServiceHasPathPrefix)
+        assertTrue(registrationRoute.target.contains("HelloService"))
+    }
+
+    fun testSkipsAnnotatedServiceWithNonConstantPath() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    String path = computePath();
+                    Server.builder()
+                        .annotatedService(path, new HelloService())
+                        .build();
+                }
+
+                private static String computePath() {
+                    return "/dynamic";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertTrue(
+            routes.none { it.routeMatch == RouteMatch.ANNOTATED_SERVICE },
+            "routes=${routes.map { it.routeMatch to it.path }}",
+        )
+    }
 }

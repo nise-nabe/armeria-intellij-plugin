@@ -136,7 +136,7 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
         if (unwrapped is KtClassLiteralExpression) {
             return resolveClassLiteral(unwrapped)
         }
-        return ArmeriaKotlinExpressionSupport.extractKotlinString(unwrapped)
+        return ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(unwrapped)
     }
 
     private fun resolveClassLiteral(literal: KtClassLiteralExpression): String? {
@@ -231,7 +231,7 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
         if (unwrapped is KtCallExpression) {
             return null
         }
-        return ArmeriaKotlinExpressionSupport.extractKotlinString(unwrapped)
+        return ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(unwrapped)
     }
 
     private fun decodedStringTemplate(template: KtStringTemplateExpression): String? {

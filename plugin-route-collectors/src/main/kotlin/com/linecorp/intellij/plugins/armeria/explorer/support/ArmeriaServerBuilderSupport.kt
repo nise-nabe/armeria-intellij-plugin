@@ -1,5 +1,4 @@
 package com.linecorp.intellij.plugins.armeria.explorer.support
-import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiClassType
@@ -62,14 +61,11 @@ internal object ArmeriaServerBuilderSupport {
             is PsiReferenceExpression -> {
                 (expression.resolve() as? PsiVariable)?.let(::evaluateJavaStringConstant)
             }
-            else -> {
-                val constantValue =
-                    JavaPsiFacade
-                        .getInstance(expression.project)
-                        .constantEvaluationHelper
-                        .computeConstantExpression(expression) as? String
-                constantValue ?: expression.text.takeIf { StringUtil.isNotEmpty(it) }?.trim('"')
-            }
+            else ->
+                JavaPsiFacade
+                    .getInstance(expression.project)
+                    .constantEvaluationHelper
+                    .computeConstantExpression(expression) as? String
         }
 
     private fun isArmeriaServerBeanReturnType(

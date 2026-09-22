@@ -79,7 +79,13 @@ object ArmeriaExtendedRegistrationCollector {
         if (!seenRegistrations.add(key)) {
             return
         }
-        val path = ArmeriaJavaRegistrationChainSupport.extractString(expression.argumentList.expressions.getOrNull(0)) ?: "/"
+        val pathArg = expression.argumentList.expressions.getOrNull(0)
+        if (pathArg != null && ArmeriaJavaRegistrationChainSupport.extractString(pathArg) == null) {
+            // A declared path argument that does not resolve to a constant must not
+            // fabricate a "/" route.
+            return
+        }
+        val path = ArmeriaJavaRegistrationChainSupport.extractString(pathArg) ?: "/"
         val (pathType, normalizedPath) = ArmeriaRouteSupport.parsePathType(path)
         val targetExpr = expression.argumentList.expressions.getOrNull(1)
         val target = targetExpr?.text ?: message("route.explorer.target.fileService")
@@ -107,9 +113,14 @@ object ArmeriaExtendedRegistrationCollector {
         if (!seenRegistrations.add(key)) {
             return
         }
+        val pathArg = expression.argumentList.expressions.firstOrNull()
+        if (pathArg != null && ArmeriaJavaRegistrationChainSupport.extractString(pathArg) == null) {
+            // A declared path argument that does not resolve must not fall back to
+            // the default health-check path.
+            return
+        }
         val path =
-            expression.argumentList.expressions
-                .firstOrNull()
+            pathArg
                 ?.let(ArmeriaJavaRegistrationChainSupport::extractString)
                 ?.let(ArmeriaRouteSupport::normalizePath)
                 ?: "/internal/healthcheck"

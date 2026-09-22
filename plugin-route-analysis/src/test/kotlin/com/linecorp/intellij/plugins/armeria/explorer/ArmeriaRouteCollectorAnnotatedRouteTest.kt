@@ -343,4 +343,89 @@ class ArmeriaRouteCollectorAnnotatedRouteTest : ArmeriaFixtureTestBase() {
         assertTrue(route.executionHints.isEmpty())
         assertTrue(route.timeoutHints.isEmpty())
     }
+
+    fun testCollectAnnotatedRoute_constantFieldPath() {
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class HelloService {
+                private static final String PATH = "/hello";
+
+                @Get(PATH)
+                public String hello() {
+                    return "hello";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertEquals(
+            setOf("GET" to "/hello"),
+            routes.map { it.httpMethod to it.path }.toSet(),
+        )
+    }
+
+    fun testCollectAnnotatedRoute_skipsUnresolvedPathArgument() {
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class HelloService {
+                private final String path = computePath();
+
+                @Get(path)
+                public String hello() {
+                    return "hello";
+                }
+
+                private static String computePath() {
+                    return "/hello";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.ANNOTATED_HTTP })
+    }
+
+    fun testCollectAnnotatedRoute_skipsUnresolvedClassPathPrefix() {
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.PathPrefix;
+
+            @PathPrefix(PREFIX)
+            public class HelloService {
+                private static String PREFIX = computePrefix();
+
+                @Get("/hello")
+                public String hello() {
+                    return "hello";
+                }
+
+                private static String computePrefix() {
+                    return "/api";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.ANNOTATED_HTTP })
+    }
 }

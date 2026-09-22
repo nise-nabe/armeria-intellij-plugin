@@ -340,6 +340,23 @@ class ArmeriaRouteNavigationSupportTest : ArmeriaLightJavaCodeInsightFixtureTest
         assertEquals("prefix:/api/hello", ArmeriaRouteNavigationSupport.routePath(method))
     }
 
+    fun testRoutePathEmptyWhenClassPathPrefixIsUnresolved() {
+        myFixture.configureByText(
+            "HelloService.java",
+            """
+            package example;
+            import com.linecorp.armeria.server.annotation.*;
+            @PathPrefix(PREFIX) public class HelloService {
+                private static String PREFIX = computePrefix();
+                @Get("/hello") public String hello() { return "hello"; }
+                private static String computePrefix() { return "/api"; }
+            }
+            """.trimIndent(),
+        )
+        val method = findMethod("hello")
+        assertEquals("", ArmeriaRouteNavigationSupport.routePath(method))
+    }
+
     fun testRoutePathPreservesRegexPathTypePrefix() {
         myFixture.configureByText(
             "RegexService.java",

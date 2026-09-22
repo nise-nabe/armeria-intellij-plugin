@@ -100,7 +100,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorListenPort {
         when (unwrapped) {
             is KtCallExpression -> return null
             is KtStringTemplateExpression ->
-                return ArmeriaKotlinExpressionSupport.extractKotlinString(unwrapped)?.uppercase()
+                return ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(unwrapped)?.uppercase()
             is KtNameReferenceExpression -> {
                 val resolved = unwrapped.references.firstOrNull()?.resolve()
                 return sessionProtocolNameFromResolved(resolved)
