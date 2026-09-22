@@ -339,7 +339,14 @@ internal object ArmeriaRouteNavigationSupport {
     private fun javaServiceImplementationExpression(call: PsiMethodCallExpression): PsiExpression? {
         val args = call.argumentList.expressions
         return when (ServiceRegistrationMethod.fromMethodName(call.methodExpression.referenceName ?: return null)) {
-            ServiceRegistrationMethod.ANNOTATED_SERVICE -> args.getOrNull(1) ?: args.getOrNull(0)
+            ServiceRegistrationMethod.ANNOTATED_SERVICE ->
+                if (ArmeriaRouteSupport.isStringValuedJavaExpression(args.getOrNull(0))) {
+                    // annotatedService(pathPattern, service[, decorators…])
+                    args.getOrNull(1)
+                } else {
+                    // annotatedService(service[, decorators…]) — pathless overload.
+                    args.getOrNull(0)
+                }
             ServiceRegistrationMethod.SERVICE, ServiceRegistrationMethod.SERVICE_UNDER -> args.getOrNull(1)
             else -> null
         }
