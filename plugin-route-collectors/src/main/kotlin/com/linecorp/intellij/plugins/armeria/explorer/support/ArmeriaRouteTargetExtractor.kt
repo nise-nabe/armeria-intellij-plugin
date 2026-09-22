@@ -115,7 +115,7 @@ internal object ArmeriaRouteTargetExtractor {
         }
     }
 
-    private fun unwrapCast(expression: PsiExpression): PsiExpression? {
+    fun unwrapCast(expression: PsiExpression): PsiExpression? {
         var current: PsiExpression = expression
         while (true) {
             current =

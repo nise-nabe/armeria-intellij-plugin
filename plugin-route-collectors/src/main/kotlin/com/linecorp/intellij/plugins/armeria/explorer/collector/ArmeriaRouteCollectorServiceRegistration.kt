@@ -14,6 +14,7 @@ import com.intellij.psi.search.searches.ReferencesSearch
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaBuilderCallHeuristics
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.java.ArmeriaExtendedRegistrationCollector
+import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.java.ArmeriaExtendedRegistrationCollectorFluentRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.CoreServiceRegistrationMethod
 import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
@@ -125,6 +126,11 @@ object ArmeriaRouteCollectorServiceRegistration {
         val methodName = expression.methodExpression.referenceName ?: return false
         val registrationMethod = CoreServiceRegistrationMethod.fromMethodName(methodName) ?: return false
         val arguments = expression.argumentList.expressions
+        if (registrationMethod == CoreServiceRegistrationMethod.SERVICE &&
+            tryCollectServiceFluentRouteArgument(arguments, routes, seenServiceRegistrations)
+        ) {
+            return true
+        }
         val pathlessSaml = isPathlessSamlServiceCall(registrationMethod, arguments)
         val implementationExpression =
             if (pathlessSaml) {
@@ -303,6 +309,31 @@ object ArmeriaRouteCollectorServiceRegistration {
             virtualFile.path,
             expression.textRange,
             methodName,
+        )
+    }
+
+    /**
+     * `service(route()…build(), service)` — the first argument is a `Route`, not a
+     * path string, so delegate to the fluent-route collector with the service
+     * argument as the handler target.
+     */
+    private fun tryCollectServiceFluentRouteArgument(
+        arguments: Array<PsiExpression>,
+        routes: MutableList<ArmeriaRoute>,
+        seenServiceRegistrations: MutableSet<String>,
+    ): Boolean {
+        val serviceArgument = arguments.getOrNull(1) ?: return false
+        val firstArgument = arguments.getOrNull(0)?.let(ArmeriaRouteTargetExtractor::unwrapCast) ?: return false
+        val buildCall = firstArgument as? PsiMethodCallExpression ?: return false
+        if (!ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(buildCall)) {
+            return false
+        }
+        return ArmeriaExtendedRegistrationCollectorFluentRoute.addFluentRouteFromBuild(
+            buildCall,
+            routes,
+            seenServiceRegistrations,
+            requireRouteAnchor = true,
+            handlerTarget = ArmeriaRouteTargetExtractor.extractTarget(serviceArgument),
         )
     }
 

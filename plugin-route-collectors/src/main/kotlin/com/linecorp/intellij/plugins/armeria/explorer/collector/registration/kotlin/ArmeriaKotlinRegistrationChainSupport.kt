@@ -54,7 +54,7 @@ internal object ArmeriaKotlinRegistrationChainSupport {
         return when (parent) {
             is KtDotQualifiedExpression -> {
                 when (val receiver = parent.receiverExpression) {
-                    is KtCallExpression -> receiver
+                    is KtCallExpression -> receiver.takeIf { it !== call }
                     is KtDotQualifiedExpression -> receiver.selectorExpression as? KtCallExpression
                     else -> null
                 }

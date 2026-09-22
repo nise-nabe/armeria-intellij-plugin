@@ -10,6 +10,7 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.explorer.collector.decorator.ArmeriaKotlinDecoratorChainSupport
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaBuilderCallHeuristics
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.kotlin.ArmeriaKotlinExtendedRegistrationCollector
+import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.kotlin.ArmeriaKotlinExtendedRegistrationCollectorFluentRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.CoreServiceRegistrationMethod
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKnownHttpServiceClassifier
@@ -129,6 +130,11 @@ object ArmeriaKotlinRouteCollector {
             )
         val arguments = call.valueArguments
         val registrationMethod = CoreServiceRegistrationMethod.fromMethodName(methodName) ?: return
+        if (registrationMethod == CoreServiceRegistrationMethod.SERVICE &&
+            tryCollectServiceFluentRouteArgument(arguments, routes, seenServiceRegistrations)
+        ) {
+            return
+        }
         val pathlessSaml = isPathlessSamlServiceCall(registrationMethod, arguments)
         val implementationExpression =
             if (pathlessSaml) {
@@ -186,6 +192,45 @@ object ArmeriaKotlinRouteCollector {
                 } else {
                     null
                 },
+        )
+    }
+
+    /**
+     * `service(route()…build(), service)` — the first argument is a `Route`, not a
+     * path string, so delegate to the fluent-route collector with the service
+     * argument as the handler target.
+     */
+    private fun tryCollectServiceFluentRouteArgument(
+        arguments: List<KtValueArgument>,
+        routes: MutableList<ArmeriaRoute>,
+        seenServiceRegistrations: MutableSet<String>,
+    ): Boolean {
+        val pathArgument =
+            ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "path", 0)
+                ?: return false
+        val serviceArgument =
+            ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 1)
+                ?: return false
+        val buildCall =
+            when (val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(pathArgument)) {
+                is KtDotQualifiedExpression -> unwrapped.selectorExpression as? KtCallExpression
+                is KtCallExpression -> unwrapped
+                else -> null
+            } ?: return false
+        if (!ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(buildCall)) {
+            return false
+        }
+        val handlerTarget =
+            ArmeriaKotlinExpressionSupport
+                .unwrapKotlinExpression(serviceArgument)
+                ?.let(::extractKotlinTargetExpression)
+                ?.let { renderKotlinTarget(it) }
+        return ArmeriaKotlinExtendedRegistrationCollectorFluentRoute.addFluentRouteFromBuild(
+            buildCall,
+            routes,
+            seenServiceRegistrations,
+            requireRouteAnchor = true,
+            handlerTarget = handlerTarget,
         )
     }
 
@@ -467,7 +512,10 @@ object ArmeriaKotlinRouteCollector {
     ): KtExpression? =
         when (callee) {
             is KtDotQualifiedExpression -> callee.receiverExpression
-            else -> (expression.parent as? KtDotQualifiedExpression)?.receiverExpression
+            else ->
+                (expression.parent as? KtDotQualifiedExpression)
+                    ?.receiverExpression
+                    ?.takeIf { it !== expression }
         }
 
     private fun resolveQualifiedClassName(resolved: PsiElement?): String? =
