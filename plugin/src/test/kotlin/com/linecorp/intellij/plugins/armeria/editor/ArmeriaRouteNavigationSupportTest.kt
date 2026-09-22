@@ -539,7 +539,6 @@ class ArmeriaRouteNavigationSupportTest : ArmeriaLightJavaCodeInsightFixtureTest
             public final class ServerBuilder {
                 public ServerBuilder service(String path, Object handler) { return this; }
                 public ServerBuilder annotatedService(Object service) { return this; }
-                public ServerBuilder annotatedService(String pathPattern, Object service) { return this; }
                 public ServerBuilder annotatedService(Object service, Object decorator) { return this; }
                 public com.linecorp.armeria.server.Server build() { return null; }
             }
