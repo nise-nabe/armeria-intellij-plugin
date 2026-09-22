@@ -8,6 +8,7 @@ internal data class RegistrationChainStep(
     val methodName: String,
     val firstStringArg: String?,
     val rawMethodArgs: List<String>,
+    val secondStringArg: String? = null,
 )
 
 internal data class FluentRouteChainInfo(
@@ -61,10 +62,22 @@ internal object ArmeriaRegistrationChainReducer {
                     if (step.hasUnresolvedPathArg()) {
                         return null
                     }
-                    parsePathFromStep(step)?.let { parsed ->
-                        methodPath = parsed.second
-                        path = parsed.second
-                        pathType = parsed.first
+                    if (step.rawMethodArgs.size >= 2 && step.secondStringArg == null) {
+                        // RouteBuilder.path(prefix, pathPattern) — an unresolvable
+                        // pattern argument means the route is unknown.
+                        return null
+                    }
+                    val parsed =
+                        if (step.rawMethodArgs.size >= 2) {
+                            // path(prefix, pathPattern) concatenates both arguments.
+                            ArmeriaRouteSupport.parsePathType((step.firstStringArg ?: "") + step.secondStringArg)
+                        } else {
+                            parsePathFromStep(step)
+                        }
+                    parsed?.let {
+                        methodPath = it.second
+                        path = it.second
+                        pathType = it.first
                         foundPath = true
                     }
                 }

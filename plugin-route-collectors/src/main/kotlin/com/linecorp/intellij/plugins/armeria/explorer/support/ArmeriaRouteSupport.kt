@@ -230,6 +230,13 @@ object ArmeriaRouteSupport {
     fun extractJavaStringConstant(expression: PsiExpression?): String? = ArmeriaServerBuilderSupport.extractJavaStringConstant(expression)
 
     /**
+     * True when [annotation] declares a `value`/`path` argument that is present but
+     * does not resolve to a constant — distinct from a missing argument.
+     */
+    fun declaresUnresolvedPathArg(annotation: PsiAnnotation?): Boolean =
+        annotation != null && ArmeriaRouteAnnotationSupport.declaresUnresolvedPathArg(annotation)
+
+    /**
      * True when [expression] denotes a `String` value — a compile-time constant or a
      * `String`-typed expression. Used to decide whether an unresolved argument
      * occupies a path parameter slot.

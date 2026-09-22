@@ -1,6 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.explorer.support
 
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiType
 import com.intellij.psi.PsiVariable
 import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.lexer.KtTokens
@@ -12,14 +14,17 @@ import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtEscapeStringTemplateEntry
 import org.jetbrains.kotlin.psi.KtExpression
+import org.jetbrains.kotlin.psi.KtIfExpression
 import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
+import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtParameter
 import org.jetbrains.kotlin.psi.KtParenthesizedExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 import org.jetbrains.kotlin.psi.KtUnaryExpression
 import org.jetbrains.kotlin.psi.KtValueArgument
+import org.jetbrains.kotlin.psi.KtWhenExpression
 
 object ArmeriaKotlinExpressionSupport {
     fun containingKotlinExpressionScope(call: KtCallExpression): PsiElement {
@@ -103,24 +108,55 @@ object ArmeriaKotlinExpressionSupport {
      */
     fun isStringValuedExpression(expression: KtExpression?): Boolean {
         val unwrapped = unwrapKotlinExpression(expression) ?: return false
-        if (unwrapped is KtStringTemplateExpression) {
-            return true
+        return when (unwrapped) {
+            is KtStringTemplateExpression -> true
+            is KtNameReferenceExpression, is KtDotQualifiedExpression -> isStringReferenceTarget(unwrapped)
+            is KtBinaryExpression ->
+                unwrapped.operationToken == KtTokens.PLUS &&
+                    (isStringValuedExpression(unwrapped.left) || isStringValuedExpression(unwrapped.right))
+            is KtBinaryExpressionWithTypeRHS -> unwrapped.right?.text == "String"
+            is KtIfExpression ->
+                isStringValuedExpression(unwrapped.then) && isStringValuedExpression(unwrapped.`else`)
+            is KtWhenExpression ->
+                unwrapped.entries.isNotEmpty() &&
+                    unwrapped.entries.all { isStringValuedExpression(it.expression) }
+            is KtCallExpression -> isStringReturningCall(unwrapped)
+            else -> false
         }
-        if (unwrapped !is KtNameReferenceExpression && unwrapped !is KtDotQualifiedExpression) {
-            return false
-        }
-        return when (val resolved = resolveStringReferenceTarget(unwrapped)) {
+    }
+
+    private fun isStringReferenceTarget(expression: KtExpression): Boolean =
+        when (val resolved = resolveStringReferenceTarget(expression)) {
             is KtProperty ->
                 resolved.typeReference?.text == "String" ||
                     unwrapKotlinExpression(resolved.initializer) is KtStringTemplateExpression
             is KtParameter -> resolved.typeReference?.text == "String"
-            is PsiVariable ->
-                resolved.type.canonicalText == "java.lang.String" ||
-                    // Light-PSI fixtures render java.lang.String as "String".
-                    resolved.type.canonicalText == "String"
+            is PsiVariable -> isJavaStringType(resolved.type)
             else -> false
         }
-    }
+
+    private fun isStringReturningCall(call: KtCallExpression): Boolean =
+        when (
+            val resolved =
+                call.calleeExpression
+                    ?.references
+                    ?.mapNotNull { it.resolve() }
+                    ?.firstOrNull { it is KtNamedFunction || it is PsiMethod }
+        ) {
+            is KtNamedFunction ->
+                resolved.typeReference?.text == "String" ||
+                    (
+                        resolved.typeReference == null &&
+                            unwrapKotlinExpression(resolved.bodyExpression) is KtStringTemplateExpression
+                    )
+            is PsiMethod -> isJavaStringType(resolved.returnType)
+            else -> false
+        }
+
+    private fun isJavaStringType(type: PsiType?): Boolean =
+        type?.canonicalText == "java.lang.String" ||
+            // Light-PSI fixtures render java.lang.String as "String".
+            type?.canonicalText == "String"
 
     private fun kotlinStringTemplateWithoutInterpolation(template: KtStringTemplateExpression): String? {
         if (template.hasInterpolation()) {
@@ -133,7 +169,7 @@ object ArmeriaKotlinExpressionSupport {
                     else -> append(entry.text)
                 }
             }
-        }.takeIf { it.isNotEmpty() }
+        }
     }
 
     private fun resolveStringReferenceTarget(expression: KtExpression): PsiElement? {

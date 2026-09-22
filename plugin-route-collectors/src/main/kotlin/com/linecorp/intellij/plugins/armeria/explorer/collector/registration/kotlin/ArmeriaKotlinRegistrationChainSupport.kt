@@ -26,6 +26,10 @@ internal object ArmeriaKotlinRegistrationChainSupport {
                     call.valueArguments.firstOrNull()?.getArgumentExpression(),
                 ),
             rawMethodArgs = call.valueArguments.mapNotNull { it.getArgumentExpression()?.text },
+            secondStringArg =
+                ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(
+                    call.valueArguments.getOrNull(1)?.getArgumentExpression(),
+                ),
         )
 
     fun methodCallsBetweenInStatement(

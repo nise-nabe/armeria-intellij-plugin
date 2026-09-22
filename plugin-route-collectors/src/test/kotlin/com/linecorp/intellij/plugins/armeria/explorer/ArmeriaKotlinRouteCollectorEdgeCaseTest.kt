@@ -478,4 +478,87 @@ class ArmeriaKotlinRouteCollectorEdgeCaseTest : ArmeriaFixtureTestBase() {
 
         assertTrue(routes.none { it.routeMatch == RouteMatch.ANNOTATED_SERVICE })
     }
+
+    fun testSkipsAnnotatedServiceWithNonConstantCallPath() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun computePath(): String = "/dynamic"
+
+            fun main() {
+                Server.builder()
+                    .annotatedService(computePath(), HelloService())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.ANNOTATED_SERVICE })
+    }
+
+    fun testSkipsAnnotatedServiceWithNonConstantConcatPath() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun computeBase(): String = "/dynamic"
+
+            fun main() {
+                Server.builder()
+                    .annotatedService(computeBase() + "/v1", HelloService())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.ANNOTATED_SERVICE })
+    }
+
+    fun testCollectsServiceRegistrationWithEmptyPath() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Server
+
+            fun main() {
+                Server.builder()
+                    .service("", Any())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertEquals("/", routes.firstOrNull { it.routeMatch == RouteMatch.SERVICE }?.path)
+    }
 }

@@ -147,6 +147,39 @@ class ArmeriaDuplicateRouteInspectionTest : ArmeriaFixtureTestBase() {
         assertDuplicateRouteHighlightsOnMethods("HeaderService", "android", "HeaderService", "ios")
     }
 
+    fun testSkipsDuplicatesWhenClassPathPrefixIsUnresolved() {
+        myFixture.configureByText(
+            "PrefixedService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.PathPrefix;
+
+            @PathPrefix(PREFIX)
+            public class PrefixedService {
+                private static String PREFIX = computePrefix();
+
+                @Get("/dup")
+                public String first() {
+                    return "first";
+                }
+
+                @Get("/dup")
+                public String second() {
+                    return "second";
+                }
+
+                private static String computePrefix() {
+                    return "/dynamic";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertNoDuplicateRouteHighlights()
+    }
+
     private fun assertNoDuplicateRouteHighlights() {
         val routeDuplicateHighlights =
             myFixture.doHighlighting().filter {

@@ -222,10 +222,14 @@ internal object ArmeriaRouteNavigationSupport {
         if (routeAnnotationPaths.isEmpty()) {
             return emptyList()
         }
-        val classPrefix =
-            ArmeriaRouteSupport.extractPrimaryPath(
-                method.containingClass?.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION),
-            )
+        val classPrefixAnnotation =
+            method.containingClass?.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION)
+        if (ArmeriaRouteSupport.declaresUnresolvedPathArg(classPrefixAnnotation)) {
+            // An unresolvable class prefix would display un-prefixed paths for
+            // routes the collector drops.
+            return emptyList()
+        }
+        val classPrefix = ArmeriaRouteSupport.extractPrimaryPath(classPrefixAnnotation)
         // With multiple HTTP-method annotations, prefix each path with its method so the
         // method/path pairing is not lost in goto-related and marker labels.
         val paired = routeAnnotationPaths.size > 1

@@ -190,6 +190,62 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
         assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
     }
 
+    fun testCollectsFluentRouteWithTwoArgPath() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .route()
+                        .path("/api", "/v2")
+                        .build(new Object());
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = collectRoutes()
+
+        kotlin.test.assertEquals(
+            "/api/v2",
+            routes.firstOrNull { it.routeMatch == RouteMatch.ROUTE_FLUENT }?.path,
+        )
+    }
+
+    fun testSkipsFluentRouteWithUnresolvedTwoArgPath() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    String pattern = dynamicPath();
+                    Server.builder()
+                        .route()
+                        .path("/api", pattern)
+                        .build(new Object());
+                }
+
+                private static String dynamicPath() {
+                    return "/dynamic";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = collectRoutes()
+
+        assertTrue(routes.none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
+    }
+
     fun testSkipsFluentRouteWithNonConstantPathPrefix() {
         myFixture.configureByText(
             "Main.java",

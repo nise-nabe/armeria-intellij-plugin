@@ -78,6 +78,15 @@ fun JavaCodeInsightTestFixture.registerRouteDuplicateIndexStubs() {
     )
     this.addClass(
         """
+        package com.linecorp.armeria.server.annotation;
+
+        public @interface PathPrefix {
+            String value();
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
         package com.linecorp.armeria.server;
 
         public final class Server {

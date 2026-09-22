@@ -78,6 +78,10 @@ fun JavaCodeInsightTestFixture.registerExtendedRegistrationCollectorStubs() {
                 return this;
             }
 
+            public ServerBuilder path(String prefix, String pathPattern) {
+                return this;
+            }
+
             public ServerBuilder withRoute(java.util.function.Function<RouteBuilder, RouteBuilder> fn) {
                 return this;
             }
@@ -309,6 +313,10 @@ fun JavaCodeInsightTestFixture.registerKotlinExtendedRegistrationCollectorStubs(
             }
 
             public ServerBuilder path(String pathPattern) {
+                return this;
+            }
+
+            public ServerBuilder path(String prefix, String pathPattern) {
                 return this;
             }
 

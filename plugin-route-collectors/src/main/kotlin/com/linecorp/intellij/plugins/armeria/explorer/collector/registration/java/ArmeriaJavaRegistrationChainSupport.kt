@@ -24,6 +24,7 @@ internal object ArmeriaJavaRegistrationChainSupport {
             methodName = call.methodExpression.referenceName.orEmpty(),
             firstStringArg = extractString(call.argumentList.expressions.firstOrNull()),
             rawMethodArgs = call.argumentList.expressions.map { it.text },
+            secondStringArg = extractString(call.argumentList.expressions.getOrNull(1)),
         )
 
     fun methodCallsBetweenInStatement(

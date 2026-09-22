@@ -53,10 +53,14 @@ private data class ArmeriaMethodRoute(
             if (routeAnnotationPaths.isEmpty()) {
                 return emptyList()
             }
-            val classPrefix =
-                ArmeriaRouteSupport.extractPrimaryPath(
-                    method.containingClass?.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION),
-                )
+            val classPrefixAnnotation =
+                method.containingClass?.getAnnotation(ArmeriaRouteSupport.PATH_PREFIX_ANNOTATION)
+            if (ArmeriaRouteSupport.declaresUnresolvedPathArg(classPrefixAnnotation)) {
+                // An unresolvable class prefix would flag un-prefixed paths the
+                // collector never emits.
+                return emptyList()
+            }
+            val classPrefix = ArmeriaRouteSupport.extractPrimaryPath(classPrefixAnnotation)
             return routeAnnotationPaths.map { (httpMethod, paths) ->
                 ArmeriaMethodRoute(httpMethod, classPrefix, paths)
             }
