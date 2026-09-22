@@ -149,8 +149,14 @@ internal object ArmeriaRouteAnnotationSupport {
             }.map(::preserveOrNormalizePath)
     }
 
-    private fun kotlinAnnotationEntry(annotation: PsiAnnotation): KtAnnotationEntry? =
-        (annotation as? KtLightElement<*, *>)?.kotlinOrigin as? KtAnnotationEntry
+    private fun kotlinAnnotationEntry(annotation: PsiAnnotation): KtAnnotationEntry? {
+        // org.jetbrains.kotlin is an optional plugin dependency — a Java-only
+        // annotation must never trigger loading Kotlin PSI classes.
+        if (annotation.language.id != "kotlin") {
+            return null
+        }
+        return (annotation as? KtLightElement<*, *>)?.kotlinOrigin as? KtAnnotationEntry
+    }
 
     fun extractPrimaryPath(annotation: PsiAnnotation?): String {
         if (annotation == null) {

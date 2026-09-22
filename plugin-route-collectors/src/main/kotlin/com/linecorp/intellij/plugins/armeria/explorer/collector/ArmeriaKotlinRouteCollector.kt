@@ -35,6 +35,7 @@ import org.jetbrains.kotlin.psi.KtValueArgument
 
 object ArmeriaKotlinRouteCollector {
     private val BUILDER_CHAIN_METHODS = setOf("build", "addService", "addServices", "enableUnframedRequests")
+    private val ANNOTATED_SERVICE_PATH_PARAM_NAMES = setOf("pathPrefix", "prefix", "path", "pathPattern")
 
     fun referencesArmeriaKotlinContent(file: KtFile): Boolean {
         val hasArmeriaImports =
@@ -262,8 +263,7 @@ object ArmeriaKotlinRouteCollector {
         val named =
             arguments
                 .firstOrNull { argument ->
-                    argument.getArgumentName()?.asName?.identifier in
-                        setOf("pathPrefix", "prefix", "path", "pathPattern")
+                    argument.getArgumentName()?.asName?.identifier in ANNOTATED_SERVICE_PATH_PARAM_NAMES
                 }?.getArgumentExpression()
         if (named != null) {
             return true
