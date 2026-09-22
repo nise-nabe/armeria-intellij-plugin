@@ -212,9 +212,6 @@ object ArmeriaScalaTextSupport {
         while (position >= 0 && (text[position].isLetterOrDigit() || text[position] == '_')) {
             position--
         }
-        if (position >= 0 && (text[position].isLetterOrDigit() || text[position] == '_')) {
-            return false
-        }
         val identifier = text.substring(position + 1, identifierEnd)
         return identifier == "serverBuilder"
     }
@@ -368,6 +365,34 @@ object ArmeriaScalaTextSupport {
         }
     }
 
+    // Longest char literal is '\uXXXX' — opening quote, escape, 4 hex digits,
+    // closing quote.
+    private const val MAX_CHAR_LITERAL_SPAN = 8
+
+    /**
+     * Returns the offset just past the closing quote when [start] opens a char
+     * literal (`'x'`, `'\n'`, `'\uXXXX'`), or null when the quote is something
+     * else (a symbol literal `'name`, an identifier prime, a stray quote).
+     */
+    private fun scalaCharLiteralEnd(
+        chars: CharArray,
+        start: Int,
+    ): Int? {
+        var i = start + 1
+        val bound = minOf(chars.size, start + MAX_CHAR_LITERAL_SPAN)
+        while (i < bound && chars[i] != '\n') {
+            if (chars[i] == '\\' && i + 1 < bound) {
+                i += 2
+                continue
+            }
+            if (chars[i] == '\'') {
+                return i + 1
+            }
+            i++
+        }
+        return null
+    }
+
     private fun scanScalaSource(text: String): ScalaTextScan {
         val chars = text.toCharArray()
         val literalRanges = mutableListOf<IntRange>()
@@ -402,20 +427,18 @@ object ArmeriaScalaTextSupport {
                 continue
             }
             if (chars[i] == '\'') {
-                val start = i
-                i++
-                while (i < chars.size) {
-                    if (chars[i] == '\\' && i + 1 < chars.size) {
-                        i += 2
-                        continue
-                    }
-                    if (chars[i] == '\'') {
-                        i++
-                        break
-                    }
+                // Scala char literals are fixed-width ('x', '\n', '\uXXXX'), so the
+                // closing quote sits within a few characters and never past a newline.
+                // A lone ' is a symbol literal ('name) or identifier prime (x'), not a
+                // literal start — scanning for a distant closing quote would blank real
+                // code in between.
+                val end = scalaCharLiteralEnd(chars, i)
+                if (end != null) {
+                    literalRanges += i until end
+                    i = end
+                } else {
                     i++
                 }
-                literalRanges += start until i
                 continue
             }
             if (i + 1 < chars.size && chars[i] == '/' && chars[i + 1] == '*') {
