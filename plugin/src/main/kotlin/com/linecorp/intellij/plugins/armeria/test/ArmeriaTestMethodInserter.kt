@@ -16,6 +16,7 @@ import com.intellij.psi.PsiMethod
 import com.intellij.psi.codeStyle.JavaCodeStyleManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinPluginSupport
 import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.name.FqName
@@ -43,10 +44,17 @@ internal object ArmeriaTestMethodInserter {
                 return false
             }
         val language =
-            if (targetClass.containingFile is PsiJavaFile) {
-                ArmeriaTestLanguage.JAVA
-            } else {
-                ArmeriaTestLanguage.KOTLIN
+            when {
+                targetClass.containingFile is PsiJavaFile -> ArmeriaTestLanguage.JAVA
+                isKotlinPluginAvailable() -> ArmeriaTestLanguage.KOTLIN
+                else -> {
+                    Messages.showWarningDialog(
+                        project,
+                        message("test.support.insert.noTarget"),
+                        message("test.support.insert.title"),
+                    )
+                    return false
+                }
             }
         val classExtensions = ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, targetClass)
         val extension =
@@ -210,9 +218,11 @@ internal object ArmeriaTestMethodInserter {
                 null
             }
         if (selectedPsiFile != null && selectedEditor != null) {
-            kotlinDeclarationLightClassAtCaret(elementAtCaret)?.let { kotlinClass ->
-                if (ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, kotlinClass).isNotEmpty()) {
-                    return kotlinClass
+            if (isKotlinPluginAvailable()) {
+                kotlinDeclarationLightClassAtCaret(elementAtCaret)?.let { kotlinClass ->
+                    if (ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, kotlinClass).isNotEmpty()) {
+                        return kotlinClass
+                    }
                 }
             }
             elementAtCaret?.let { PsiTreeUtil.getParentOfType(it, PsiClass::class.java) }?.let { javaClass ->
@@ -222,9 +232,10 @@ internal object ArmeriaTestMethodInserter {
             }
         }
         val selectedClass =
-            when (selectedPsiFile) {
-                is PsiJavaFile -> resolveJavaTargetClass(project, selectedPsiFile, elementAtCaret)
-                is KtFile -> selectedPsiFile.singleTopLevelKotlinDeclaration()?.toLightClass()
+            when {
+                selectedPsiFile is PsiJavaFile -> resolveJavaTargetClass(project, selectedPsiFile, elementAtCaret)
+                isKotlinPluginAvailable() ->
+                    (selectedPsiFile as? KtFile)?.singleTopLevelKotlinDeclaration()?.toLightClass()
                 else -> null
             }
         if (selectedClass != null &&
@@ -275,20 +286,22 @@ internal object ArmeriaTestMethodInserter {
             return true
         }
         if (elementAtCaret != null) {
-            if (elementAtCaret.getParentOfType<KtClass>(true) != null) {
-                return true
+            if (isKotlinPluginAvailable()) {
+                if (elementAtCaret.getParentOfType<KtClass>(true) != null) {
+                    return true
+                }
+                elementAtCaret
+                    .getParentOfType<KtObjectDeclaration>(true)
+                    ?.takeUnless { it.isCompanion() }
+                    ?.let { return true }
             }
-            elementAtCaret
-                .getParentOfType<KtObjectDeclaration>(true)
-                ?.takeUnless { it.isCompanion() }
-                ?.let { return true }
             if (PsiTreeUtil.getParentOfType(elementAtCaret, PsiClass::class.java) != null) {
                 return true
             }
         }
-        return when (selectedPsiFile) {
-            is PsiJavaFile -> selectedPsiFile.classes.any { it.containingClass == null }
-            is KtFile ->
+        return when {
+            selectedPsiFile is PsiJavaFile -> selectedPsiFile.classes.any { it.containingClass == null }
+            isKotlinPluginAvailable() && selectedPsiFile is KtFile ->
                 selectedPsiFile.declarations.any { declaration ->
                     declaration is KtClass ||
                         (declaration is KtObjectDeclaration && !declaration.isCompanion())
@@ -310,6 +323,8 @@ internal object ArmeriaTestMethodInserter {
             ?.let { return it }
         return ArmeriaJUnitServerExtensionSupport.toKtClassOrObject(targetClass)
     }
+
+    private fun isKotlinPluginAvailable(): Boolean = ArmeriaKotlinPluginSupport.isKotlinPluginAvailable()
 
     private fun kotlinDeclarationLightClassAtCaret(elementAtCaret: PsiElement?): PsiClass? {
         if (elementAtCaret == null) {
