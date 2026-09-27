@@ -80,6 +80,7 @@ class ArmeriaTestMethodGeneratorTest {
         assertTrue(generated.contains("server.blockingWebClient()"))
     }
 
+    @Test
     fun generateKotlinTestMethodEscapesPathCharacters() {
         val generated =
             ArmeriaTestMethodGenerator.generateTestMethod(
@@ -87,7 +88,7 @@ class ArmeriaTestMethodGeneratorTest {
                 serverReceiver = "server",
                 language = ArmeriaTestLanguage.KOTLIN,
             )
-        assertTrue(generated.contains("\"/legacy\\\$id\""))
+        assertTrue(generated.contains("\"/legacy/\\\$id\""))
     }
 
     private fun route(
