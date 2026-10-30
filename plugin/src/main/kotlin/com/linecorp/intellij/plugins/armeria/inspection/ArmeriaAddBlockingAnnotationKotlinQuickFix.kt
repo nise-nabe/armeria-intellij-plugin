@@ -6,6 +6,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.message
+import org.jetbrains.kotlin.idea.base.psi.addAnnotation
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtFile
@@ -40,7 +41,7 @@ internal class ArmeriaAddBlockingAnnotationKotlinQuickFix(
             return
         }
         val factory = KtPsiFactory(project)
-        owner.addAnnotationEntry(factory.createAnnotationEntry("@Blocking"))
+        owner.addAnnotation(factory.createAnnotationEntry("@Blocking"))
         val ktFile = file as? KtFile ?: owner.containingFile as? KtFile ?: return
         insertBlockingImport(factory, ktFile)
     }
