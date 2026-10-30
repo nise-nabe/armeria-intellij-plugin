@@ -212,7 +212,7 @@ object ArmeriaKotlinRouteCollector {
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
     ): Boolean {
-        val pathArgument =
+        val routeArgument =
             ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "route", -1)
                 ?: ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "path", 0)
                 ?: return false
@@ -224,7 +224,7 @@ object ArmeriaKotlinRouteCollector {
                 .unwrapKotlinExpression(serviceArgument)
                 ?.let(::extractKotlinTargetExpression)
                 ?.let { renderKotlinTarget(it) }
-        val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(pathArgument)
+        val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(routeArgument)
         val buildCall =
             when (unwrapped) {
                 is KtDotQualifiedExpression -> unwrapped.selectorExpression as? KtCallExpression
@@ -245,7 +245,7 @@ object ArmeriaKotlinRouteCollector {
             )
         }
         val chainInfo =
-            ArmeriaKotlinRouteValueExtractor.extractResolvedRoute(pathArgument, handlerTarget.orEmpty())
+            ArmeriaKotlinRouteValueExtractor.extractResolvedRoute(routeArgument, handlerTarget.orEmpty())
                 ?: return false
         val resolved =
             if (chainInfo.target.isBlank()) {
