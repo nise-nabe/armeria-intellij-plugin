@@ -123,8 +123,8 @@ intellijPlatform {
                 useInstaller = true
             }
         }
-        // Gate the release IDE on unloadability and compatibility, not pre-existing
-        // internal/experimental APIs (e.g. JavaModuleType in the wizard).
+        // Gate the release IDE on unloadability and compatibility, not deprecated,
+        // experimental, or internal API reports.
         // NOT_DYNAMIC is the restart-required finding.
         // 2026.3 Beta findings are reported by verifyPlugin20263 and do not use this failure level.
         failureLevel.set(

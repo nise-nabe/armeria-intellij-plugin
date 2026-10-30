@@ -11,12 +11,23 @@ import com.intellij.openapi.components.Service
  * Registered as a light application service so the platform disposes it on dynamic unload.
  * Do not parent plugin work to [ApplicationManager.getApplication] — that is not disposed
  * when the plugin unloads.
+ *
+ * [isDisposed] is the replacement for [com.intellij.openapi.util.Disposer.isDisposed]. That method
+ * is deprecated because it reads diagnostic state the platform drops after plugin unload.
  */
 @Service(Service.Level.APP)
 class ArmeriaPluginDisposable : Disposable {
-    override fun dispose() = Unit
+    @Volatile
+    private var disposed = false
+
+    val isDisposed: Boolean
+        get() = disposed
+
+    override fun dispose() {
+        disposed = true
+    }
 }
 
-fun pluginUnloadDisposable(): Disposable = ApplicationManager.getApplication().getService(ArmeriaPluginDisposable::class.java)
+fun pluginUnloadDisposable(): ArmeriaPluginDisposable = ApplicationManager.getApplication().getService(ArmeriaPluginDisposable::class.java)
 
 fun <T> NonBlockingReadAction<T>.expireWithPluginUnload(): NonBlockingReadAction<T> = expireWith(pluginUnloadDisposable())

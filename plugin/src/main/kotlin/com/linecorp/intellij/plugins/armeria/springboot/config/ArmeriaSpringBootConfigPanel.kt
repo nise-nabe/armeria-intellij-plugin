@@ -12,7 +12,6 @@ import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
-import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
@@ -113,7 +112,7 @@ class ArmeriaSpringBootConfigPanel(
                 }
             }.inSmartMode(project)
             .expireWith(this)
-            .expireWhen { Disposer.isDisposed(pluginUnload) }
+            .expireWhen { pluginUnload.isDisposed }
             .coalesceBy(this)
             .finishOnUiThread(ModalityState.any()) { result ->
                 if (generation != refreshGeneration) {

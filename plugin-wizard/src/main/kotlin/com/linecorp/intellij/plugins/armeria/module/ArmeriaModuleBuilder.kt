@@ -15,7 +15,6 @@ import com.intellij.ide.starters.shared.MAVEN_PROJECT
 import com.intellij.ide.starters.shared.StarterLanguage
 import com.intellij.ide.starters.shared.StarterProjectType
 import com.intellij.ide.starters.shared.StarterTestRunner
-import com.intellij.openapi.module.JavaModuleType
 import com.intellij.openapi.project.ProjectManager
 import com.linecorp.intellij.plugins.armeria.ArmeriaIcons
 import com.linecorp.intellij.plugins.armeria.message
@@ -23,8 +22,6 @@ import com.linecorp.intellij.plugins.armeria.starters.SCALA_STARTER_LANGUAGE
 import javax.swing.Icon
 
 class ArmeriaModuleBuilder : StarterModuleBuilder() {
-    override fun getModuleType() = JavaModuleType()
-
     /**
      * setup module after 'finish' button pressed
      */
