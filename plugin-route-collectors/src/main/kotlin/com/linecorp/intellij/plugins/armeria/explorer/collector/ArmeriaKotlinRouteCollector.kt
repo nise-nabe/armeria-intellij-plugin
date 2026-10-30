@@ -11,6 +11,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.decorator.Armeri
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaBuilderCallHeuristics
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.kotlin.ArmeriaKotlinExtendedRegistrationCollector
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.kotlin.ArmeriaKotlinExtendedRegistrationCollectorFluentRoute
+import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.kotlin.ArmeriaKotlinRouteValueExtractor
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.CoreServiceRegistrationMethod
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKnownHttpServiceClassifier
@@ -20,6 +21,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollec
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteTargetExtractor
 import com.linecorp.intellij.plugins.armeria.explorer.support.KnownHttpServiceKind
+import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
 import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -131,7 +133,7 @@ object ArmeriaKotlinRouteCollector {
         val arguments = call.valueArguments
         val registrationMethod = CoreServiceRegistrationMethod.fromMethodName(methodName) ?: return
         if (registrationMethod == CoreServiceRegistrationMethod.SERVICE &&
-            tryCollectServiceFluentRouteArgument(arguments, routes, seenServiceRegistrations)
+            tryCollectServiceFluentRouteArgument(call, arguments, routes, seenServiceRegistrations)
         ) {
             return
         }
@@ -196,41 +198,66 @@ object ArmeriaKotlinRouteCollector {
     }
 
     /**
-     * `service(route()…build(), service)` — the first argument is a `Route`, not a
-     * path string, so delegate to the fluent-route collector with the service
-     * argument as the handler target.
+     * `service(Route, HttpService)` — the first argument is a `Route`, not a path
+     * string. Inline `build()` chains keep the build-call dedupe key. Other Route
+     * values (`Route.of`, a local initializer, a method return) are resolved when
+     * the path is constant; otherwise the registration is omitted.
+     *
+     * Decorators and timeouts are read from this `service()` call so a qualifier
+     * chain such as `decorator(…).service(route, svc)` is visible.
      */
     private fun tryCollectServiceFluentRouteArgument(
+        serviceCall: KtCallExpression,
         arguments: List<KtValueArgument>,
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
     ): Boolean {
         val pathArgument =
-            ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "path", 0)
+            ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "route", -1)
+                ?: ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "path", 0)
                 ?: return false
         val serviceArgument =
             ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 1)
                 ?: return false
-        val buildCall =
-            when (val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(pathArgument)) {
-                is KtDotQualifiedExpression -> unwrapped.selectorExpression as? KtCallExpression
-                is KtCallExpression -> unwrapped
-                else -> null
-            } ?: return false
-        if (!ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(buildCall)) {
-            return false
-        }
         val handlerTarget =
             ArmeriaKotlinExpressionSupport
                 .unwrapKotlinExpression(serviceArgument)
                 ?.let(::extractKotlinTargetExpression)
                 ?.let { renderKotlinTarget(it) }
-        return ArmeriaKotlinExtendedRegistrationCollectorFluentRoute.addFluentRouteFromBuild(
-            buildCall,
+        val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(pathArgument)
+        val buildCall =
+            when (unwrapped) {
+                is KtDotQualifiedExpression -> unwrapped.selectorExpression as? KtCallExpression
+                is KtCallExpression -> unwrapped
+                else -> null
+            }
+        if (buildCall != null && ArmeriaKotlinExpressionSupport.resolveCallName(buildCall) == "build") {
+            if (!ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(buildCall)) {
+                return false
+            }
+            return ArmeriaKotlinExtendedRegistrationCollectorFluentRoute.addFluentRouteFromBuild(
+                buildCall,
+                routes,
+                seenServiceRegistrations,
+                requireRouteAnchor = true,
+                handlerTarget = handlerTarget,
+                metadataCall = serviceCall,
+            )
+        }
+        val chainInfo =
+            ArmeriaKotlinRouteValueExtractor.extractResolvedRoute(pathArgument, handlerTarget.orEmpty())
+                ?: return false
+        val resolved =
+            if (chainInfo.target.isBlank()) {
+                chainInfo.copy(target = message("route.explorer.target.fluentRoute"))
+            } else {
+                chainInfo
+            }
+        return ArmeriaKotlinExtendedRegistrationCollectorFluentRoute.addResolvedFluentRoute(
+            serviceCall,
+            resolved,
             routes,
             seenServiceRegistrations,
-            requireRouteAnchor = true,
-            handlerTarget = handlerTarget,
         )
     }
 

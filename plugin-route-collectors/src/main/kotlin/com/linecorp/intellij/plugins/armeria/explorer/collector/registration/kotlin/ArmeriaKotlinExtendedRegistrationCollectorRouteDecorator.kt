@@ -26,6 +26,9 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorRouteDecorator {
         val buildCall =
             ArmeriaKotlinExtendedRegistrationCollectorFluentRoute.findFluentRouteBuildForWithRoute(call, lambdaBody)
                 ?: return
+        if (ArmeriaKotlinRouteValueExtractor.isServiceRouteArgument(buildCall)) {
+            return
+        }
         ArmeriaKotlinExtendedRegistrationCollectorFluentRoute.addFluentRouteFromBuild(
             buildCall,
             routes,
