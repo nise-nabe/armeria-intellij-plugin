@@ -140,7 +140,7 @@ intellijPlatform {
 tasks.named<VerifyPluginTask>("verifyPlugin") {
     description =
         "Checks binary compatibility with the compile IDE (2026.2.4). " +
-        "2026.3 Beta is verified separately by verifyPlugin20263."
+        "Does not download or verify 2026.3 Beta."
     ides.setFrom(project.pluginVerifierIdeFiles(include20263 = false))
 }
 
@@ -242,9 +242,9 @@ tasks.register("verifyPluginPackaging") {
 }
 
 tasks.named("check") {
-    // verifyPlugin reuses the compile IDE (2026.2.4). verifyPlugin20263 downloads 2026.3 Beta
-    // and reports compatibility problems without failing the build on those findings.
-    dependsOn("verifyPluginPackaging", "verifyPlugin", "verifyPlugin20263")
+    // verifyPlugin reuses the compile IDE (2026.2.4) and does not download 2026.3 Beta.
+    // verifyPlugin20263 is a separate task; CI runs it once on Ubuntu.
+    dependsOn("verifyPluginPackaging", "verifyPlugin")
 }
 
 private val intellijPlatformExtracted: Attribute<Boolean> =
@@ -255,7 +255,9 @@ private fun Project.pluginVerifierIdeFiles(include20263: Boolean) =
         provider {
             val configuration = configurations.getByName("intellijPluginVerifierIdes")
             configuration.incoming.dependencies
-                .flatMap { dependency ->
+                .filter { dependency ->
+                    isIdea20263VerifierDependency(dependency) == include20263
+                }.flatMap { dependency ->
                     configurations
                         .detachedConfiguration(dependency)
                         .apply {
@@ -266,6 +268,14 @@ private fun Project.pluginVerifierIdeFiles(include20263: Boolean) =
                 }
         },
     )
+
+private fun isIdea20263VerifierDependency(dependency: org.gradle.api.artifacts.Dependency): Boolean {
+    val version = dependency.version.orEmpty()
+    if (version == idea20263BetaBuild || version.startsWith("263.")) {
+        return true
+    }
+    return idea20263BetaBuild in dependency.toString()
+}
 
 private fun File.isIdea20263Beta(): Boolean {
     val build = intellijPlatformBuildNumber()
