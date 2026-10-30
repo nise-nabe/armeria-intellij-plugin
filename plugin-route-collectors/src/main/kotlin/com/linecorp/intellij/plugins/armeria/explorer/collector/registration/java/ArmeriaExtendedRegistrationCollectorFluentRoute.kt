@@ -84,9 +84,10 @@ internal object ArmeriaExtendedRegistrationCollectorFluentRoute {
                 ?: buildCall.argumentList.expressions
                     .firstOrNull()
                     ?.text
+        val routeValueBuild = ArmeriaJavaRouteValueExtractor.isArmeriaRouteValueBuild(buildCall)
         return ArmeriaRegistrationChainReducer.reduceFluentRouteChain(
             stepsFromBuildUpward = steps,
-            requireRouteAnchor = requireRouteAnchor && !routeBuilderAnchor,
+            requireRouteAnchor = requireRouteAnchor && !routeBuilderAnchor && !routeValueBuild,
             handlerTarget = handlerArg,
             defaultTarget = message("route.explorer.target.fluentRoute"),
         )

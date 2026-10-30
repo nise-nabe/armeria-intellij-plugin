@@ -292,6 +292,133 @@ class ArmeriaExtendedRegistrationCollectorRouteValueTest : ArmeriaFixtureTestBas
             .also { route -> assertEquals(listOf("Logging"), route.decorators) }
     }
 
+    fun testCollectsServiceRegistrationFromHelperBuild() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Route;
+
+            public final class RouteFactory {
+                public Route build() {
+                    return Route.builder().path("/from-helper").build();
+                }
+            }
+            """.trimIndent(),
+        )
+        configureService(
+            """
+            Server.builder()
+                .service(new RouteFactory().build(), new HelloService())
+                .build();
+            """,
+        )
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/from-helper")
+            .also { route -> assertEquals("example.HelloService", route.target) }
+    }
+
+    fun testCollectsServiceRegistrationWhenMethodReturnsSameRouteTwice() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Route;
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service(getRoute(true), new HelloService())
+                        .build();
+                }
+
+                private static Route getRoute(boolean flag) {
+                    Route route = Route.of("/same");
+                    if (flag) {
+                        return route;
+                    }
+                    return route;
+                }
+            }
+            """.trimIndent(),
+        )
+        addHelloService()
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/same")
+    }
+
+    fun testCollectsServiceRegistrationWithRouteOfCatchAll() {
+        configureService(
+            """
+            Server.builder()
+                .service(Route.ofCatchAll(), new HelloService())
+                .build();
+            """,
+        )
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/*", pathType = PathType.PREFIX)
+            .also { route -> assertEquals("example.HelloService", route.target) }
+    }
+
+    fun testCollectsStandaloneStaticImportRouteBuilder() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import static com.linecorp.armeria.server.Route.builder;
+
+            public class Main {
+                public static void main(String[] args) {
+                    builder().path("/static-import").build(new HelloService());
+                }
+            }
+            """.trimIndent(),
+        )
+        addHelloService()
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/static-import")
+    }
+
+    fun testWithRouteServiceArgumentUsesBindingBuilderPath() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.RouteBuilder;
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .withRoute((RouteBuilder route) -> {
+                            Server.builder().service(route.post("/wrapped").build(), new HelloService());
+                            return route;
+                        })
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        addHelloService()
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/wrapped", httpMethod = "POST")
+            .also { route -> assertEquals("example.HelloService", route.target) }
+    }
+
     fun testWithRouteServiceArgumentKeepsServiceTarget() {
         myFixture.configureByText(
             "Main.java",

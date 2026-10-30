@@ -164,6 +164,10 @@ fun JavaCodeInsightTestFixture.registerExtendedRegistrationCollectorStubs() {
             public static Route of(com.linecorp.armeria.common.HttpMethod method, String pathPattern) {
                 return null;
             }
+
+            public static Route ofCatchAll() {
+                return null;
+            }
         }
         """.trimIndent(),
     )
@@ -439,6 +443,10 @@ fun JavaCodeInsightTestFixture.registerKotlinExtendedRegistrationCollectorStubs(
             }
 
             public static Route of(com.linecorp.armeria.common.HttpMethod method, String pathPattern) {
+                return null;
+            }
+
+            public static Route ofCatchAll() {
                 return null;
             }
         }

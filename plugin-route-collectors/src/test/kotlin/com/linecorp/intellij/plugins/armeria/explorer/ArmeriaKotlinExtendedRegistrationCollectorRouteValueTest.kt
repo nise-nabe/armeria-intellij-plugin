@@ -276,6 +276,138 @@ class ArmeriaKotlinExtendedRegistrationCollectorRouteValueTest : ArmeriaFixtureT
             .also { route -> assertEquals(listOf("Logging"), route.decorators) }
     }
 
+    fun testCollectsServiceRegistrationFromHelperBuild() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Route
+            import com.linecorp.armeria.server.Server
+
+            class HelloService
+
+            class RouteFactory {
+                fun build(): Route = Route.builder().path("/from-helper").build()
+            }
+
+            fun main() {
+                Server.builder()
+                    .service(RouteFactory().build(), HelloService())
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/from-helper")
+            .also { route -> assertTrue(route.target.endsWith("HelloService")) }
+    }
+
+    fun testCollectsServiceRegistrationWhenMethodReturnsSameRouteTwice() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Route
+            import com.linecorp.armeria.server.Server
+
+            class HelloService
+
+            fun main() {
+                Server.builder()
+                    .service(getRoute(true), HelloService())
+                    .build()
+            }
+
+            fun getRoute(flag: Boolean): Route {
+                val route = Route.of("/same")
+                if (flag) {
+                    return route
+                }
+                return route
+            }
+            """.trimIndent(),
+        )
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/same")
+    }
+
+    fun testCollectsServiceRegistrationWithRouteOfCatchAll() {
+        configureService(
+            """
+            Server.builder()
+                .service(Route.ofCatchAll(), HelloService())
+                .build()
+            """,
+        )
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/*", pathType = PathType.PREFIX)
+            .also { route -> assertTrue(route.target.endsWith("HelloService")) }
+    }
+
+    fun testWithRouteServiceArgumentUsesBindingBuilderPath() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.RouteBuilder
+            import com.linecorp.armeria.server.Server
+
+            class HelloService
+
+            fun main() {
+                Server.builder()
+                    .withRoute { route: RouteBuilder ->
+                        Server.builder().service(route.post("/wrapped").build(), HelloService())
+                        route
+                    }
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/wrapped", httpMethod = "POST")
+            .also { route -> assertTrue(route.target.endsWith("HelloService")) }
+    }
+
+    fun testWithRouteKeepsLaterBindingBuilderBuild() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.RouteBuilder
+            import com.linecorp.armeria.server.Server
+
+            class HelloService
+
+            fun main() {
+                Server.builder()
+                    .withRoute { route: RouteBuilder ->
+                        Server.builder().service(route.post("/from-service").build(), HelloService())
+                        route.post("/from-builder").build(HelloService())
+                    }
+                    .build()
+            }
+            """.trimIndent(),
+        )
+
+        val routes = collectRoutes().filter { it.routeMatch == RouteMatch.ROUTE_FLUENT }
+        assertEquals(2, routes.size)
+        assertTrue(routes.any { it.path == "/from-service" && it.target.endsWith("HelloService") })
+        assertTrue(routes.any { it.path == "/from-builder" && it.target.contains("HelloService") })
+    }
+
     fun testWithRouteServiceArgumentKeepsServiceTarget() {
         myFixture.configureByText(
             "Main.kt",

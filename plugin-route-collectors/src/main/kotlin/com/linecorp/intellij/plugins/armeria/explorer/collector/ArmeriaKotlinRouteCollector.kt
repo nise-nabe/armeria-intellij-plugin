@@ -231,10 +231,10 @@ object ArmeriaKotlinRouteCollector {
                 is KtCallExpression -> unwrapped
                 else -> null
             }
-        if (buildCall != null && ArmeriaKotlinExpressionSupport.resolveCallName(buildCall) == "build") {
-            if (!ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(buildCall)) {
-                return false
-            }
+        if (buildCall != null &&
+            ArmeriaKotlinExpressionSupport.resolveCallName(buildCall) == "build" &&
+            ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(buildCall)
+        ) {
             return ArmeriaKotlinExtendedRegistrationCollectorFluentRoute.addFluentRouteFromBuild(
                 buildCall,
                 routes,

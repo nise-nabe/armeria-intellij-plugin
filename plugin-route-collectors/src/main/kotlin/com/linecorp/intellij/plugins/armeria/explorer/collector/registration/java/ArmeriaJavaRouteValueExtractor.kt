@@ -16,6 +16,8 @@ import com.intellij.psi.PsiVariable
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaBuilderCallHeuristics
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.FluentRouteChainInfo
+import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.RouteValueResolution
+import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteTargetExtractor
@@ -33,6 +35,12 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteTarget
 internal object ArmeriaJavaRouteValueExtractor {
     private const val ARMERIA_ROUTE_CLASS = "com.linecorp.armeria.server.Route"
     private const val MAX_ROUTE_VALUE_HOPS = 8
+    private val ROUTE_BUILD_OWNERS =
+        setOf(
+            "com.linecorp.armeria.server.RouteBuilder",
+            "com.linecorp.armeria.server.ServiceBindingBuilder",
+            "com.linecorp.armeria.server.VirtualHostServiceBindingBuilder",
+        )
     private val HTTP_METHODS =
         setOf("GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "TRACE", "CONNECT")
 
@@ -61,15 +69,28 @@ internal object ArmeriaJavaRouteValueExtractor {
         return unwrapped == buildCall || PsiTreeUtil.isAncestor(unwrapped, buildCall, false)
     }
 
+    /**
+     * True when `build()` belongs to [RouteBuilder] or a service-binding builder.
+     * A constant `path` / `post` / `get` step on that receiver is enough to emit a
+     * route; `ServerBuilder.build()` stays excluded.
+     */
+    fun isArmeriaRouteValueBuild(call: PsiMethodCallExpression): Boolean {
+        if (call.methodExpression.referenceName != "build") {
+            return false
+        }
+        val owner = resolveMethod(call)?.containingClass?.qualifiedName
+        return owner in ROUTE_BUILD_OWNERS
+    }
+
     fun extractResolvedRoute(
         expression: PsiExpression,
         target: String,
-    ): FluentRouteChainInfo? = extract(expression, target, mutableSetOf(), 0)
+    ): FluentRouteChainInfo? = extract(expression, target, RouteValueResolution(), 0)
 
     internal fun extract(
         expression: PsiExpression?,
         target: String,
-        visited: MutableSet<PsiElement>,
+        resolution: RouteValueResolution,
         hops: Int,
     ): FluentRouteChainInfo? {
         if (expression == null || hops >= MAX_ROUTE_VALUE_HOPS) {
@@ -77,8 +98,8 @@ internal object ArmeriaJavaRouteValueExtractor {
         }
         val unwrapped = ArmeriaRouteTargetExtractor.unwrapCast(expression) ?: return null
         return when (unwrapped) {
-            is PsiMethodCallExpression -> extractFromCall(unwrapped, target, visited, hops)
-            is PsiReferenceExpression -> extractFromReference(unwrapped, target, visited, hops)
+            is PsiMethodCallExpression -> extractFromCall(unwrapped, target, resolution, hops)
+            is PsiReferenceExpression -> extractFromReference(unwrapped, target, resolution, hops)
             else -> null
         }
     }
@@ -86,16 +107,15 @@ internal object ArmeriaJavaRouteValueExtractor {
     private fun extractFromCall(
         call: PsiMethodCallExpression,
         target: String,
-        visited: MutableSet<PsiElement>,
+        resolution: RouteValueResolution,
         hops: Int,
     ): FluentRouteChainInfo? {
         if (isArmeriaRouteOfCall(call)) {
             return extractRouteOf(call, target)
         }
-        if (call.methodExpression.referenceName == "build") {
-            if (!ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(call)) {
-                return null
-            }
+        if (call.methodExpression.referenceName == "build" &&
+            ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(call)
+        ) {
             return ArmeriaExtendedRegistrationCollectorFluentRoute.extractFluentRouteChain(
                 call,
                 requireRouteAnchor = true,
@@ -106,46 +126,76 @@ internal object ArmeriaJavaRouteValueExtractor {
             return null
         }
         val method = resolveMethod(call) ?: return null
-        return extractFromMethod(method, target, visited, hops)
+        return extractFromMethod(method, target, resolution, hops)
     }
 
     internal fun extractFromMethod(
         method: PsiMethod,
         target: String,
-        visited: MutableSet<PsiElement>,
+        resolution: RouteValueResolution,
         hops: Int,
     ): FluentRouteChainInfo? {
-        if (hops >= MAX_ROUTE_VALUE_HOPS || !visited.add(method)) {
+        resolution.cached(method, target)?.let { return it }
+        if (isArmeriaRouteOfCatchAll(method)) {
+            val catchAll = catchAllRoute(target)
+            resolution.exit(method, catchAll)
+            return catchAll
+        }
+        if (!resolution.enter(method, hops, MAX_ROUTE_VALUE_HOPS)) {
             return null
         }
-        val body = method.body ?: return null
-        val returns =
-            PsiTreeUtil
-                .findChildrenOfType(body, PsiReturnStatement::class.java)
-                .filter { statement ->
-                    PsiTreeUtil.getParentOfType(statement, PsiMethod::class.java) == method &&
-                        PsiTreeUtil.getParentOfType(statement, PsiLambdaExpression::class.java) == null &&
-                        PsiTreeUtil.getParentOfType(statement, PsiAnonymousClass::class.java) == null
-                }
-        return singleResolvedRoute(
-            returns.map { statement ->
-                extract(statement.returnValue, target, visited, hops + 1)
-            },
-        )
+        val body = method.body
+        val result =
+            if (body == null) {
+                null
+            } else {
+                val returns =
+                    PsiTreeUtil
+                        .findChildrenOfType(body, PsiReturnStatement::class.java)
+                        .filter { statement ->
+                            PsiTreeUtil.getParentOfType(statement, PsiMethod::class.java) == method &&
+                                PsiTreeUtil.getParentOfType(statement, PsiLambdaExpression::class.java) == null &&
+                                PsiTreeUtil.getParentOfType(statement, PsiAnonymousClass::class.java) == null
+                        }
+                singleResolvedRoute(
+                    returns.map { statement ->
+                        extract(statement.returnValue, target, resolution, hops + 1)
+                    },
+                )
+            }
+        resolution.exit(method, result)
+        return result
     }
 
     private fun extractFromReference(
         reference: PsiReferenceExpression,
         target: String,
-        visited: MutableSet<PsiElement>,
+        resolution: RouteValueResolution,
         hops: Int,
     ): FluentRouteChainInfo? {
         val resolved = resolve(reference) ?: return null
-        if (resolved !is PsiVariable || !visited.add(resolved)) {
+        if (resolved !is PsiVariable) {
             return null
         }
-        return extract(resolved.initializer, target, visited, hops + 1)
+        resolution.cached(resolved, target)?.let { return it }
+        if (!resolution.enter(resolved, hops, MAX_ROUTE_VALUE_HOPS)) {
+            return null
+        }
+        val result = extract(resolved.initializer, target, resolution, hops + 1)
+        resolution.exit(resolved, result)
+        return result
     }
+
+    private fun isArmeriaRouteOfCatchAll(method: PsiMethod): Boolean =
+        method.name == "ofCatchAll" && method.containingClass?.qualifiedName == ARMERIA_ROUTE_CLASS
+
+    private fun catchAllRoute(target: String): FluentRouteChainInfo =
+        FluentRouteChainInfo(
+            httpMethod = "",
+            path = "/*",
+            pathType = PathType.PREFIX,
+            target = target,
+        )
 
     private fun extractRouteOf(
         call: PsiMethodCallExpression,

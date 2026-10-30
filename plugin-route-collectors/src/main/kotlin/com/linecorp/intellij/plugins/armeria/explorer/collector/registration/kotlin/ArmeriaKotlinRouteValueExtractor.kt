@@ -8,6 +8,7 @@ import com.intellij.psi.PsiVariable
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaBuilderCallHeuristics
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.FluentRouteChainInfo
+import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.RouteValueResolution
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.java.ArmeriaJavaRouteValueExtractor
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
@@ -33,6 +34,12 @@ import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 internal object ArmeriaKotlinRouteValueExtractor {
     private const val ARMERIA_ROUTE_CLASS = "com.linecorp.armeria.server.Route"
     private const val MAX_ROUTE_VALUE_HOPS = 8
+    private val ROUTE_BUILD_OWNERS =
+        setOf(
+            "com.linecorp.armeria.server.RouteBuilder",
+            "com.linecorp.armeria.server.ServiceBindingBuilder",
+            "com.linecorp.armeria.server.VirtualHostServiceBindingBuilder",
+        )
     private val HTTP_METHODS =
         setOf("GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "TRACE", "CONNECT")
 
@@ -60,15 +67,26 @@ internal object ArmeriaKotlinRouteValueExtractor {
         return routeArgument == buildCall || PsiTreeUtil.isAncestor(routeArgument, buildCall, false)
     }
 
+    /**
+     * True when `build()` belongs to `RouteBuilder` or a service-binding builder.
+     */
+    fun isArmeriaRouteValueBuild(call: KtCallExpression): Boolean {
+        if (ArmeriaKotlinRegistrationChainSupport.resolveCallName(call) != "build") {
+            return false
+        }
+        val owner = (resolveCallDeclaration(call) as? PsiMethod)?.containingClass?.qualifiedName
+        return owner in ROUTE_BUILD_OWNERS
+    }
+
     fun extractResolvedRoute(
         expression: KtExpression,
         target: String,
-    ): FluentRouteChainInfo? = extract(expression, target, mutableSetOf(), 0)
+    ): FluentRouteChainInfo? = extract(expression, target, RouteValueResolution(), 0)
 
     private fun extract(
         expression: KtExpression?,
         target: String,
-        visited: MutableSet<PsiElement>,
+        resolution: RouteValueResolution,
         hops: Int,
     ): FluentRouteChainInfo? {
         if (expression == null || hops >= MAX_ROUTE_VALUE_HOPS) {
@@ -76,9 +94,9 @@ internal object ArmeriaKotlinRouteValueExtractor {
         }
         val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: return null
         return when (unwrapped) {
-            is KtCallExpression -> extractFromCall(unwrapped, target, visited, hops)
-            is KtDotQualifiedExpression -> extractFromQualified(unwrapped, target, visited, hops)
-            is KtNameReferenceExpression -> extractFromReference(unwrapped, target, visited, hops)
+            is KtCallExpression -> extractFromCall(unwrapped, target, resolution, hops)
+            is KtDotQualifiedExpression -> extractFromQualified(unwrapped, target, resolution, hops)
+            is KtNameReferenceExpression -> extractFromReference(unwrapped, target, resolution, hops)
             else -> null
         }
     }
@@ -86,13 +104,13 @@ internal object ArmeriaKotlinRouteValueExtractor {
     private fun extractFromQualified(
         expression: KtDotQualifiedExpression,
         target: String,
-        visited: MutableSet<PsiElement>,
+        resolution: RouteValueResolution,
         hops: Int,
     ): FluentRouteChainInfo? {
         val selector = expression.selectorExpression
         return when (selector) {
-            is KtCallExpression -> extractFromCall(selector, target, visited, hops)
-            is KtNameReferenceExpression -> extractFromReference(selector, target, visited, hops)
+            is KtCallExpression -> extractFromCall(selector, target, resolution, hops)
+            is KtNameReferenceExpression -> extractFromReference(selector, target, resolution, hops)
             else -> null
         }
     }
@@ -100,17 +118,14 @@ internal object ArmeriaKotlinRouteValueExtractor {
     private fun extractFromCall(
         call: KtCallExpression,
         target: String,
-        visited: MutableSet<PsiElement>,
+        resolution: RouteValueResolution,
         hops: Int,
     ): FluentRouteChainInfo? {
         if (isArmeriaRouteOfCall(call)) {
             return extractRouteOf(call, target)
         }
         val name = ArmeriaKotlinRegistrationChainSupport.resolveCallName(call)
-        if (name == "build") {
-            if (!ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(call)) {
-                return null
-            }
+        if (name == "build" && ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(call)) {
             return ArmeriaKotlinExtendedRegistrationCollectorFluentRoute.extractFluentRouteChain(
                 call,
                 requireRouteAnchor = true,
@@ -121,8 +136,8 @@ internal object ArmeriaKotlinRouteValueExtractor {
             return null
         }
         return when (val resolved = resolveCallDeclaration(call)) {
-            is KtNamedFunction -> extractFromKotlinFunction(resolved, target, visited, hops)
-            is PsiMethod -> ArmeriaJavaRouteValueExtractor.extractFromMethod(resolved, target, visited, hops)
+            is KtNamedFunction -> extractFromKotlinFunction(resolved, target, resolution, hops)
+            is PsiMethod -> ArmeriaJavaRouteValueExtractor.extractFromMethod(resolved, target, resolution, hops)
             else -> null
         }
     }
@@ -130,53 +145,66 @@ internal object ArmeriaKotlinRouteValueExtractor {
     private fun extractFromKotlinFunction(
         function: KtNamedFunction,
         target: String,
-        visited: MutableSet<PsiElement>,
+        resolution: RouteValueResolution,
         hops: Int,
     ): FluentRouteChainInfo? {
-        if (hops >= MAX_ROUTE_VALUE_HOPS || !visited.add(function)) {
+        resolution.cached(function, target)?.let { return it }
+        if (!resolution.enter(function, hops, MAX_ROUTE_VALUE_HOPS)) {
             return null
         }
-        val body = function.bodyExpression ?: return null
-        if (!function.hasBlockBody()) {
-            return extract(body, target, visited, hops + 1)
-        }
-        val returns =
-            PsiTreeUtil
-                .findChildrenOfType(body, KtReturnExpression::class.java)
-                .filter { returnExpression ->
-                    returnExpression.getParentOfType<KtNamedFunction>(true) == function &&
-                        returnExpression.getParentOfType<KtLambdaExpression>(true) == null
+        val body = function.bodyExpression
+        val result =
+            when {
+                body == null -> null
+                !function.hasBlockBody() -> extract(body, target, resolution, hops + 1)
+                else -> {
+                    val returns =
+                        PsiTreeUtil
+                            .findChildrenOfType(body, KtReturnExpression::class.java)
+                            .filter { returnExpression ->
+                                returnExpression.getParentOfType<KtNamedFunction>(true) == function &&
+                                    returnExpression.getParentOfType<KtLambdaExpression>(true) == null
+                            }
+                    singleResolvedRoute(
+                        returns.map { returnExpression ->
+                            extract(returnExpression.returnedExpression, target, resolution, hops + 1)
+                        },
+                    )
                 }
-        return singleResolvedRoute(
-            returns.map { returnExpression ->
-                extract(returnExpression.returnedExpression, target, visited, hops + 1)
-            },
-        )
+            }
+        resolution.exit(function, result)
+        return result
     }
 
     private fun extractFromReference(
         reference: KtNameReferenceExpression,
         target: String,
-        visited: MutableSet<PsiElement>,
+        resolution: RouteValueResolution,
         hops: Int,
     ): FluentRouteChainInfo? {
         val resolved = resolveReference(reference) ?: return null
-        if (!visited.add(resolved)) {
+        resolution.cached(resolved, target)?.let { return it }
+        if (resolved is KtParameter) {
             return null
         }
-        return when (resolved) {
-            is KtProperty -> extract(resolved.initializer, target, visited, hops + 1)
-            is KtParameter -> null
-            is PsiVariable -> {
-                val initializer = resolved.initializer
-                if (initializer is PsiExpression) {
-                    ArmeriaJavaRouteValueExtractor.extract(initializer, target, visited, hops + 1)
-                } else {
-                    null
-                }
-            }
-            else -> null
+        if (!resolution.enter(resolved, hops, MAX_ROUTE_VALUE_HOPS)) {
+            return null
         }
+        val result =
+            when (resolved) {
+                is KtProperty -> extract(resolved.initializer, target, resolution, hops + 1)
+                is PsiVariable -> {
+                    val initializer = resolved.initializer
+                    if (initializer is PsiExpression) {
+                        ArmeriaJavaRouteValueExtractor.extract(initializer, target, resolution, hops + 1)
+                    } else {
+                        null
+                    }
+                }
+                else -> null
+            }
+        resolution.exit(resolved, result)
+        return result
     }
 
     private fun extractRouteOf(

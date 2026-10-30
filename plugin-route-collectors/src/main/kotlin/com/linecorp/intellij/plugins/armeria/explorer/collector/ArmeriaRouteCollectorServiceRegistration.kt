@@ -332,10 +332,10 @@ object ArmeriaRouteCollectorServiceRegistration {
         val firstArgument = arguments.getOrNull(0)?.let(ArmeriaRouteTargetExtractor::unwrapCast) ?: return false
         val handlerTarget = ArmeriaRouteTargetExtractor.extractTarget(serviceArgument)
         val buildCall = firstArgument as? PsiMethodCallExpression
-        if (buildCall != null && buildCall.methodExpression.referenceName == "build") {
-            if (!ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(buildCall)) {
-                return false
-            }
+        if (buildCall != null &&
+            buildCall.methodExpression.referenceName == "build" &&
+            ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(buildCall)
+        ) {
             return ArmeriaExtendedRegistrationCollectorFluentRoute.addFluentRouteFromBuild(
                 buildCall,
                 routes,

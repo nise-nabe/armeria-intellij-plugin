@@ -91,25 +91,23 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorFluentRoute {
                     .firstOrNull()
                     ?.getArgumentExpression()
                     ?.text
+        val routeValueBuild = ArmeriaKotlinRouteValueExtractor.isArmeriaRouteValueBuild(buildCall)
         return ArmeriaRegistrationChainReducer.reduceFluentRouteChain(
             stepsFromBuildUpward = steps,
-            requireRouteAnchor = requireRouteAnchor && !routeBuilderAnchor,
+            requireRouteAnchor = requireRouteAnchor && !routeBuilderAnchor && !routeValueBuild,
             handlerTarget = handlerArg,
             defaultTarget = message("route.explorer.target.fluentRoute"),
         )
     }
 
-    fun findFluentRouteBuildInLambda(root: KtExpression): KtCallExpression? {
-        var found: KtCallExpression? = null
+    private fun findFluentRouteBuildsInLambda(root: KtExpression): List<KtCallExpression> {
+        val found = mutableListOf<KtCallExpression>()
         root.forEachDescendant { element ->
-            if (found != null) {
-                return@forEachDescendant
-            }
             val call = element as? KtCallExpression ?: return@forEachDescendant
             if (ArmeriaKotlinRegistrationChainSupport.resolveCallName(call) == "build" &&
                 extractFluentRouteChain(call, requireRouteAnchor = false) != null
             ) {
-                found = call
+                found += call
             }
         }
         return found
@@ -172,7 +170,13 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorFluentRoute {
     fun findFluentRouteBuildForWithRoute(
         withRouteCall: KtCallExpression,
         lambdaBody: KtExpression,
-    ): KtCallExpression? =
-        findFluentRouteBuildInLambda(lambdaBody)
-            ?: findFluentRouteBuildAfterCall(withRouteCall)
+    ): KtCallExpression? {
+        val inLambda = findFluentRouteBuildsInLambda(lambdaBody)
+        val owned = inLambda.firstOrNull { !ArmeriaKotlinRouteValueExtractor.isServiceRouteArgument(it) }
+        if (owned != null || inLambda.isNotEmpty()) {
+            return owned
+        }
+        return findFluentRouteBuildAfterCall(withRouteCall)
+            ?.takeUnless { ArmeriaKotlinRouteValueExtractor.isServiceRouteArgument(it) }
+    }
 }
