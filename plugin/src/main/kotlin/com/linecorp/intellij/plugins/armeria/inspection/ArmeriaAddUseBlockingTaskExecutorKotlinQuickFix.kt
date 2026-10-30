@@ -6,6 +6,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.codeStyle.CodeStyleManager
 import com.linecorp.intellij.plugins.armeria.message
+import org.jetbrains.kotlin.idea.base.psi.appendValueArgument
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
 import org.jetbrains.kotlin.psi.KtExpression
@@ -47,7 +48,7 @@ internal class ArmeriaAddUseBlockingTaskExecutorKotlinQuickFix(
         val trueExpression = factory.createExpression("true")
         val arguments = argumentList.arguments
         if (arguments.isEmpty()) {
-            return argumentList.addArgument(factory.createArgument(trueExpression))
+            return argumentList.appendValueArgument(factory.createArgument(trueExpression))
         }
         val expression = arguments[0].getArgumentExpression() ?: return arguments[0].replace(factory.createArgument(trueExpression))
         return expression.replace(trueExpression)

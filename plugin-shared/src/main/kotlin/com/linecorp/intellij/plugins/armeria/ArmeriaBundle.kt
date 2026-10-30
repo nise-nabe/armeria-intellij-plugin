@@ -4,7 +4,7 @@ import com.intellij.DynamicBundle
 import org.jetbrains.annotations.Nls
 import org.jetbrains.annotations.PropertyKey
 
-class ArmeriaBundle : DynamicBundle(BUNDLE) {
+class ArmeriaBundle : DynamicBundle(ArmeriaBundle::class.java, BUNDLE) {
     companion object {
         const val BUNDLE = "messages.ArmeriaBundle"
     }

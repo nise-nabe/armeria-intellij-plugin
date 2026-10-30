@@ -11,6 +11,7 @@ import com.linecorp.intellij.plugins.armeria.inspection.ArmeriaKotlinAnnotationS
 import com.linecorp.intellij.plugins.armeria.inspection.ArmeriaKotlinClasspath
 import com.linecorp.intellij.plugins.armeria.inspection.ArmeriaKotlinMethodRoute
 import com.linecorp.intellij.plugins.armeria.message
+import org.jetbrains.kotlin.idea.base.psi.addMemberDeclaration
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
@@ -48,7 +49,6 @@ open class ArmeriaGenerateRouteMethodKotlinIntention : PsiElementBaseIntentionAc
         return isMemberDeclarationContext(element, serviceClass)
     }
 
-    @Suppress("DEPRECATION")
     override fun invoke(
         project: Project,
         editor: Editor,
@@ -74,7 +74,7 @@ open class ArmeriaGenerateRouteMethodKotlinIntention : PsiElementBaseIntentionAc
             getText(),
             null,
             {
-                val added = serviceClass.addDeclaration(function)
+                val added = serviceClass.addMemberDeclaration(function)
                 val ktFile = serviceClass.containingKtFile
                 for (fqName in ArmeriaRouteMethodStub.kotlinImports(stubKind)) {
                     insertKotlinImport(factory, ktFile, fqName)
