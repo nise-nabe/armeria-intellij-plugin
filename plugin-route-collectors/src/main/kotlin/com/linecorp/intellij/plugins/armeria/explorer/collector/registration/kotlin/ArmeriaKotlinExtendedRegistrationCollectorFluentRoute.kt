@@ -42,13 +42,28 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorFluentRoute {
         seenRegistrations: MutableSet<String>,
         requireRouteAnchor: Boolean,
         handlerTarget: String? = null,
+        metadataCall: KtCallExpression? = null,
     ): Boolean {
         val chainInfo = extractFluentRouteChain(buildCall, requireRouteAnchor, handlerTarget) ?: return false
         val key = ArmeriaKotlinRegistrationChainSupport.registrationKey(buildCall) ?: return false
         if (!seenRegistrations.add(key)) {
             return false
         }
-        routes += createFluentRoute(buildCall, chainInfo)
+        routes += createFluentRoute(buildCall, chainInfo, metadataCall ?: buildCall)
+        return true
+    }
+
+    fun addResolvedFluentRoute(
+        element: KtCallExpression,
+        chainInfo: FluentRouteChainInfo,
+        routes: MutableList<ArmeriaRoute>,
+        seenRegistrations: MutableSet<String>,
+    ): Boolean {
+        val key = ArmeriaKotlinRegistrationChainSupport.registrationKey(element) ?: return false
+        if (!seenRegistrations.add(key)) {
+            return false
+        }
+        routes += createFluentRoute(element, chainInfo)
         return true
     }
 
@@ -61,8 +76,12 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorFluentRoute {
             return null
         }
         val steps = mutableListOf<RegistrationChainStep>()
+        var routeBuilderAnchor = false
         var current: KtCallExpression? = ArmeriaKotlinRegistrationChainSupport.parentCallExpression(buildCall)
         while (current != null) {
+            if (ArmeriaKotlinRouteValueExtractor.isArmeriaRouteBuilderFactory(current)) {
+                routeBuilderAnchor = true
+            }
             steps += ArmeriaKotlinRegistrationChainSupport.toChainStep(current)
             current = ArmeriaKotlinRegistrationChainSupport.parentCallExpression(current)
         }
@@ -72,25 +91,23 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorFluentRoute {
                     .firstOrNull()
                     ?.getArgumentExpression()
                     ?.text
+        val routeValueBuild = ArmeriaKotlinRouteValueExtractor.isArmeriaRouteValueBuild(buildCall)
         return ArmeriaRegistrationChainReducer.reduceFluentRouteChain(
             stepsFromBuildUpward = steps,
-            requireRouteAnchor = requireRouteAnchor,
+            requireRouteAnchor = requireRouteAnchor && !routeBuilderAnchor && !routeValueBuild,
             handlerTarget = handlerArg,
             defaultTarget = message("route.explorer.target.fluentRoute"),
         )
     }
 
-    fun findFluentRouteBuildInLambda(root: KtExpression): KtCallExpression? {
-        var found: KtCallExpression? = null
+    private fun findFluentRouteBuildsInLambda(root: KtExpression): List<KtCallExpression> {
+        val found = mutableListOf<KtCallExpression>()
         root.forEachDescendant { element ->
-            if (found != null) {
-                return@forEachDescendant
-            }
             val call = element as? KtCallExpression ?: return@forEachDescendant
             if (ArmeriaKotlinRegistrationChainSupport.resolveCallName(call) == "build" &&
                 extractFluentRouteChain(call, requireRouteAnchor = false) != null
             ) {
-                found = call
+                found += call
             }
         }
         return found
@@ -99,6 +116,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorFluentRoute {
     private fun createFluentRoute(
         element: KtCallExpression,
         chainInfo: FluentRouteChainInfo,
+        metadataCall: KtCallExpression = element,
     ): ArmeriaRoute =
         ArmeriaRoute.create(
             element = element,
@@ -108,8 +126,8 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorFluentRoute {
             target = chainInfo.target,
             routeMatch = RouteMatch.ROUTE_FLUENT,
             pathType = chainInfo.pathType,
-            decorators = ArmeriaKotlinDecoratorSupport.collectProgrammaticDecorators(element, chainInfo.path),
-            timeoutHints = ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(element),
+            decorators = ArmeriaKotlinDecoratorSupport.collectProgrammaticDecorators(metadataCall, chainInfo.path),
+            timeoutHints = ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(metadataCall),
         )
 
     private fun findFluentRouteBuildAfterCall(withRouteCall: KtCallExpression): KtCallExpression? {
@@ -152,7 +170,13 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorFluentRoute {
     fun findFluentRouteBuildForWithRoute(
         withRouteCall: KtCallExpression,
         lambdaBody: KtExpression,
-    ): KtCallExpression? =
-        findFluentRouteBuildInLambda(lambdaBody)
-            ?: findFluentRouteBuildAfterCall(withRouteCall)
+    ): KtCallExpression? {
+        val inLambda = findFluentRouteBuildsInLambda(lambdaBody)
+        val owned = inLambda.firstOrNull { !ArmeriaKotlinRouteValueExtractor.isServiceRouteArgument(it) }
+        if (owned != null || inLambda.isNotEmpty()) {
+            return owned
+        }
+        return findFluentRouteBuildAfterCall(withRouteCall)
+            ?.takeUnless { ArmeriaKotlinRouteValueExtractor.isServiceRouteArgument(it) }
+    }
 }
