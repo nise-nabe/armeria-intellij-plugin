@@ -4,7 +4,6 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.NonBlockingReadAction
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.util.CheckedDisposable
 
 /**
  * Plugin-scoped [Disposable] cancelled when this plugin is unloaded without an IDE restart.
@@ -13,21 +12,22 @@ import com.intellij.openapi.util.CheckedDisposable
  * Do not parent plugin work to [ApplicationManager.getApplication] — that is not disposed
  * when the plugin unloads.
  *
- * Unload checks use [CheckedDisposable.isDisposed]. [com.intellij.openapi.util.Disposer.isDisposed]
- * is deprecated: its answer is diagnostic state that the platform drops after plugin unload.
+ * [isDisposed] is the replacement for [com.intellij.openapi.util.Disposer.isDisposed]. That method
+ * is deprecated because it reads diagnostic state the platform drops after plugin unload.
  */
 @Service(Service.Level.APP)
-class ArmeriaPluginDisposable : CheckedDisposable {
+class ArmeriaPluginDisposable : Disposable {
     @Volatile
     private var disposed = false
 
-    override fun isDisposed(): Boolean = disposed
+    val isDisposed: Boolean
+        get() = disposed
 
     override fun dispose() {
         disposed = true
     }
 }
 
-fun pluginUnloadDisposable(): CheckedDisposable = ApplicationManager.getApplication().getService(ArmeriaPluginDisposable::class.java)
+fun pluginUnloadDisposable(): ArmeriaPluginDisposable = ApplicationManager.getApplication().getService(ArmeriaPluginDisposable::class.java)
 
 fun <T> NonBlockingReadAction<T>.expireWithPluginUnload(): NonBlockingReadAction<T> = expireWith(pluginUnloadDisposable())
