@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-readonly KOTLIN_LSP_VERSION="262.8190.0"
+readonly KOTLIN_LSP_VERSION="263.7084.0"
 readonly INSTALL_DIR="${HOME}/.local/share/kotlin-lsp"
 readonly VERSIONED_DIR="${INSTALL_DIR}/${KOTLIN_LSP_VERSION}"
 readonly BIN_PATH="${HOME}/.local/bin/kotlin-lsp"
@@ -11,11 +11,11 @@ resolve_platform() {
   case "$(uname -s)-$(uname -m)" in
     Linux-x86_64)
       ARCHIVE_NAME="kotlin-server-${KOTLIN_LSP_VERSION}.tar.gz"
-      ARCHIVE_SHA256="8b4c70e95065420e7867c99aaf9f18e0b4e76311ec453e4c1a39e3f6ae774cbf"
+      ARCHIVE_SHA256="ae0c4b01e17ab73a4a5227a78ea99e6dcbe3e499600315b22759a4e4cddd11df"
       ;;
     Linux-aarch64)
       ARCHIVE_NAME="kotlin-server-${KOTLIN_LSP_VERSION}-aarch64.tar.gz"
-      ARCHIVE_SHA256="c3edd59ef34a7faa4d04f3517afb7a932b19c3f9cf17d1a14e9da17b0b5440ad"
+      ARCHIVE_SHA256="450ab7c1d80e48106aa429b48cb4226d82ca12a8a2400447ae02386794780cac"
       ;;
     *)
       echo "Unsupported platform for JetBrains kotlin-lsp: $(uname -s)-$(uname -m)" >&2
@@ -41,8 +41,10 @@ download_archive() {
   local tmp
   tmp="$(mktemp "${INSTALL_DIR}/.${ARCHIVE_NAME}.XXXXXX")"
 
-  if ! curl -fsSL -o "${tmp}" \
-    "https://download-cdn.jetbrains.com/language-server/kotlin-server/${KOTLIN_LSP_VERSION}/${ARCHIVE_NAME}"; then
+  # download.jetbrains.com returns 302 to a signed CDN URL. Unsigned
+  # download-cdn.jetbrains.com requests are 404, so --location is required.
+  if ! curl --fail --silent --show-error --location -o "${tmp}" \
+    "https://download.jetbrains.com/language-server/kotlin-server/${KOTLIN_LSP_VERSION}/${ARCHIVE_NAME}"; then
     rm -f "${tmp}"
     echo "curl failed to download JetBrains kotlin-lsp ${KOTLIN_LSP_VERSION}" >&2
     return 1
