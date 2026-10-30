@@ -6,6 +6,8 @@
 
 ### Changed
 
+- Target IntelliJ IDEA Ultimate 2026.2.4.
+
 ### Deprecated
 
 ### Removed

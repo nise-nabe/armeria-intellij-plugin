@@ -16,7 +16,11 @@ dependencies {
         intellijIdeaUltimate(
             libs.versions.idea.platform
                 .get(),
-        )
+        ) {
+            // 2026.2.4 is in the IntelliJ Maven repository. The products-feed installer
+            // listing still stops at 2026.2.3, so the default installer lookup cannot resolve it.
+            useInstaller = false
+        }
         bundledPlugin("com.intellij.java")
         bundledPlugin("org.jetbrains.kotlin")
         testFramework(TestFrameworkType.Plugin.Java)

@@ -19,6 +19,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinPluginSupport
 import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.asJava.toLightClass
+import org.jetbrains.kotlin.idea.base.psi.addMemberDeclaration
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtClassOrObject
@@ -152,7 +153,6 @@ internal object ArmeriaTestMethodInserter {
         editor?.scrollingModel?.scrollToCaret(ScrollType.CENTER)
     }
 
-    @Suppress("DEPRECATION")
     internal fun insertKotlinMethod(
         project: Project,
         ktTarget: KtClassOrObject,
@@ -160,7 +160,7 @@ internal object ArmeriaTestMethodInserter {
     ) {
         val factory = KtPsiFactory(project)
         val function = factory.createFunction(methodText)
-        val added = ktTarget.addDeclaration(function)
+        val added = ktTarget.addMemberDeclaration(function)
         val ktFile = ktTarget.containingKtFile
         insertKotlinImport(project, ktFile, "org.junit.jupiter.api.Test")
         insertKotlinImport(project, ktFile, "org.junit.jupiter.api.Assertions.assertEquals")

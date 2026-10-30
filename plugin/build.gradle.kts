@@ -1,10 +1,23 @@
+import org.gradle.api.attributes.Attribute
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.date
+import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.tasks.BuildPluginTask
 import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
+import java.io.File
 import java.util.EnumSet
 import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
+
+/**
+ * IDEA 2026.3 Beta (build 263.7307.44, released 2026-10-22). Installer-only; there is no
+ * Maven archive for this build. Pinned so a newer EAP does not replace the check.
+ *
+ * https://www.jetbrains.com/idea/nextversion/
+ * https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-extension.html#intellijPlatform-pluginVerification-ides
+ */
+val idea20263BetaBuild = "263.7307.44"
 
 plugins {
     id("com.linecorp.intellij.platform-plugin")
@@ -25,7 +38,11 @@ dependencies {
         intellijIdeaUltimate(
             libs.versions.idea.platform
                 .get(),
-        )
+        ) {
+            // 2026.2.4 is in the IntelliJ Maven repository. The products-feed installer
+            // listing still stops at 2026.2.3, so the default installer lookup cannot resolve it.
+            useInstaller = false
+        }
         bundledPlugin("com.intellij.java")
         bundledPlugin("org.jetbrains.plugins.gradle")
         bundledPlugin("org.jetbrains.kotlin")
@@ -98,10 +115,18 @@ intellijPlatform {
     }
     pluginVerification {
         ides {
+            // 2026.2.4, the IDE this build compiles against.
             current()
+            // 2026.3 Beta. useInstaller is required: 263.7307.44 is published as an IDE installer,
+            // not as a com.jetbrains.intellij.idea:idea Maven artifact.
+            create(IntelliJPlatformType.IntellijIdeaUltimate, idea20263BetaBuild) {
+                useInstaller = true
+            }
         }
-        // Gate on unloadability and compatibility, not pre-existing internal/experimental APIs
-        // (e.g. JavaModuleType in the wizard). NOT_DYNAMIC is the restart-required finding.
+        // Gate the release IDE on unloadability and compatibility, not pre-existing
+        // internal/experimental APIs (e.g. JavaModuleType in the wizard).
+        // NOT_DYNAMIC is the restart-required finding.
+        // 2026.3 Beta findings are reported by verifyPlugin20263 and do not use this failure level.
         failureLevel.set(
             EnumSet.of(
                 VerifyPluginTask.FailureLevel.COMPATIBILITY_PROBLEMS,
@@ -110,6 +135,43 @@ intellijPlatform {
             ),
         )
     }
+}
+
+tasks.named<VerifyPluginTask>("verifyPlugin") {
+    description =
+        "Checks binary compatibility with the compile IDE (2026.2.4). " +
+        "2026.3 Beta is verified separately by verifyPlugin20263."
+    ides.setFrom(project.pluginVerifierIdeFiles(include20263 = false))
+}
+
+tasks.register<VerifyPluginTask>("verifyPlugin20263") {
+    group = "verification"
+    description =
+        "Reports IntelliJ Plugin Verifier results for IDEA 2026.3 Beta $idea20263BetaBuild. " +
+        "Compatibility findings do not fail the build; 2026.3 is still Beta."
+    val buildPluginTask = tasks.named<BuildPluginTask>("buildPlugin")
+    archiveFile.convention(buildPluginTask.flatMap { it.archiveFile })
+    ides.setFrom(project.pluginVerifierIdeFiles(include20263 = true))
+    // Empty so every verifier category is printed and written to the report, but none fails CI.
+    // A missing verdict still fails the task (VerifyPluginTask fails closed).
+    failureLevel.set(emptyList())
+    verificationReportsDirectory.set(layout.buildDirectory.dir("reports/pluginVerifier20263"))
+    verificationReportsFormats.set(
+        listOf(
+            VerifyPluginTask.VerificationReportsFormats.PLAIN,
+            VerifyPluginTask.VerificationReportsFormats.HTML,
+            VerifyPluginTask.VerificationReportsFormats.MARKDOWN,
+        ),
+    )
+    externalPrefixes.set(emptyList())
+    freeArgs.set(emptyList())
+    teamCityOutputFormat.set(false)
+    subsystemsToCheck.set(VerifyPluginTask.Subsystems.ALL)
+    offline.set(providers.provider { gradle.startParameter.isOffline })
+    listIdes.set(false)
+    useBundledRuntime.set(true)
+    problemsReportFile.set(layout.buildDirectory.file("reports/problems/problems-report-20263.html"))
+    mustRunAfter("verifyPlugin")
 }
 
 tasks.register("verifyPluginPackaging") {
@@ -180,6 +242,58 @@ tasks.register("verifyPluginPackaging") {
 }
 
 tasks.named("check") {
-    // current() reuses the compile IDE, so this does not download an extra IU.
-    dependsOn("verifyPluginPackaging", "verifyPlugin")
+    // verifyPlugin reuses the compile IDE (2026.2.4). verifyPlugin20263 downloads 2026.3 Beta
+    // and reports compatibility problems without failing the build on those findings.
+    dependsOn("verifyPluginPackaging", "verifyPlugin", "verifyPlugin20263")
+}
+
+private val intellijPlatformExtracted: Attribute<Boolean> =
+    Attribute.of("intellijPlatformExtracted", Boolean::class.javaObjectType)
+
+private fun Project.pluginVerifierIdeFiles(include20263: Boolean) =
+    files(
+        provider {
+            val configuration = configurations.getByName("intellijPluginVerifierIdes")
+            configuration.incoming.dependencies
+                .flatMap { dependency ->
+                    configurations
+                        .detachedConfiguration(dependency)
+                        .apply {
+                            attributes.attribute(intellijPlatformExtracted, true)
+                        }.resolve()
+                }.filter { file ->
+                    file.isIdea20263Beta() == include20263
+                }
+        },
+    )
+
+private fun File.isIdea20263Beta(): Boolean {
+    val build = intellijPlatformBuildNumber()
+    if (build != null) {
+        return build == idea20263BetaBuild || build.startsWith("263.")
+    }
+    return idea20263BetaBuild in path || name.contains("263.7307.44")
+}
+
+private fun File.intellijPlatformBuildNumber(): String? {
+    val root =
+        when {
+            isDirectory -> this
+            else ->
+                runCatching { readText().trim() }
+                    .getOrNull()
+                    ?.let(::File)
+                    ?.takeIf { it.isDirectory }
+                    ?: return null
+        }
+    val info =
+        root.resolve("product-info.json").takeIf { it.isFile }
+            ?: root.listFiles()?.firstNotNullOfOrNull { child ->
+                child.resolve("product-info.json").takeIf { it.isFile }
+            }
+            ?: return null
+    return Regex(""""buildNumber"\s*:\s*"([^"]+)"""")
+        .find(info.readText())
+        ?.groupValues
+        ?.get(1)
 }
