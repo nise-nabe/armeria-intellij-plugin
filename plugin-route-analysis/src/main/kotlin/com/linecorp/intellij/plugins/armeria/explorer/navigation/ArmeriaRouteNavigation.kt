@@ -6,7 +6,6 @@ import com.intellij.openapi.application.NonBlockingReadAction
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.ToolWindowId
 import com.intellij.openapi.wm.ToolWindowManager
@@ -95,7 +94,7 @@ object ArmeriaRouteNavigation {
     ): NonBlockingReadAction<T> =
         expireWith(parentDisposable ?: project)
             .expireWhen { project.isDisposed }
-            .expireWhen { Disposer.isDisposed(pluginUnloadDisposable()) }
+            .expireWhen { pluginUnloadDisposable().isDisposed }
 
     private fun resolveNavigatable(
         pointer: SmartPsiElementPointer<PsiElement>,
