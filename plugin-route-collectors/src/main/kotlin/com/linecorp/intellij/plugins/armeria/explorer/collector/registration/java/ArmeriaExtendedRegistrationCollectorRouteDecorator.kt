@@ -45,9 +45,9 @@ internal object ArmeriaExtendedRegistrationCollectorRouteDecorator {
             PsiTreeUtil
                 .findChildrenOfType(lambdaBody, PsiMethodCallExpression::class.java)
                 .filter { it.methodExpression.referenceName == "build" }
-                .firstOrNull {
+                .filter {
                     ArmeriaExtendedRegistrationCollectorFluentRoute.extractFluentRouteChain(it, requireRouteAnchor = false) != null
-                }
+                }.firstOrNull { !ArmeriaJavaRouteValueExtractor.isServiceRouteArgument(it) }
                 ?: return
         ArmeriaExtendedRegistrationCollectorFluentRoute.addFluentRouteFromBuild(
             buildCall,

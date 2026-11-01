@@ -15,6 +15,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaBuilderCallHeuristics
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.java.ArmeriaExtendedRegistrationCollector
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.java.ArmeriaExtendedRegistrationCollectorFluentRoute
+import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.java.ArmeriaJavaRouteValueExtractor
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.CoreServiceRegistrationMethod
 import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
@@ -127,7 +128,7 @@ object ArmeriaRouteCollectorServiceRegistration {
         val registrationMethod = CoreServiceRegistrationMethod.fromMethodName(methodName) ?: return false
         val arguments = expression.argumentList.expressions
         if (registrationMethod == CoreServiceRegistrationMethod.SERVICE &&
-            tryCollectServiceFluentRouteArgument(arguments, routes, seenServiceRegistrations)
+            tryCollectServiceFluentRouteArgument(expression, arguments, routes, seenServiceRegistrations)
         ) {
             return true
         }
@@ -313,27 +314,44 @@ object ArmeriaRouteCollectorServiceRegistration {
     }
 
     /**
-     * `service(route()…build(), service)` — the first argument is a `Route`, not a
-     * path string, so delegate to the fluent-route collector with the service
-     * argument as the handler target.
+     * `service(Route, HttpService)` — the first argument is a `Route`, not a path
+     * string. Inline `build()` chains keep the build-call dedupe key. Other Route
+     * values (`Route.of`, a local initializer, a method return) are resolved when
+     * the path is constant; otherwise the registration is omitted.
+     *
+     * Decorators and timeouts are read from this `service()` call so a qualifier
+     * chain such as `decorator(…).service(route, svc)` is visible.
      */
     private fun tryCollectServiceFluentRouteArgument(
+        serviceCall: PsiMethodCallExpression,
         arguments: Array<PsiExpression>,
         routes: MutableList<ArmeriaRoute>,
         seenServiceRegistrations: MutableSet<String>,
     ): Boolean {
         val serviceArgument = arguments.getOrNull(1) ?: return false
         val firstArgument = arguments.getOrNull(0)?.let(ArmeriaRouteTargetExtractor::unwrapCast) ?: return false
-        val buildCall = firstArgument as? PsiMethodCallExpression ?: return false
-        if (!ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(buildCall)) {
-            return false
+        val handlerTarget = ArmeriaRouteTargetExtractor.extractTarget(serviceArgument)
+        val buildCall = firstArgument as? PsiMethodCallExpression
+        if (buildCall != null &&
+            buildCall.methodExpression.referenceName == "build" &&
+            ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(buildCall)
+        ) {
+            return ArmeriaExtendedRegistrationCollectorFluentRoute.addFluentRouteFromBuild(
+                buildCall,
+                routes,
+                seenServiceRegistrations,
+                requireRouteAnchor = true,
+                handlerTarget = handlerTarget,
+                metadataCall = serviceCall,
+            )
         }
-        return ArmeriaExtendedRegistrationCollectorFluentRoute.addFluentRouteFromBuild(
-            buildCall,
+        val chainInfo =
+            ArmeriaJavaRouteValueExtractor.extractResolvedRoute(firstArgument, handlerTarget) ?: return false
+        return ArmeriaExtendedRegistrationCollectorFluentRoute.addResolvedFluentRoute(
+            serviceCall,
+            chainInfo,
             routes,
             seenServiceRegistrations,
-            requireRouteAnchor = true,
-            handlerTarget = ArmeriaRouteTargetExtractor.extractTarget(serviceArgument),
         )
     }
 

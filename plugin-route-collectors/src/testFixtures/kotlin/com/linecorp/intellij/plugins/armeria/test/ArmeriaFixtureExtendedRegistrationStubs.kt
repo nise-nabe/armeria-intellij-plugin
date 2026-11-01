@@ -42,6 +42,14 @@ fun JavaCodeInsightTestFixture.registerExtendedRegistrationCollectorStubs() {
                 return this;
             }
 
+            public ServerBuilder decorator(Object decorator) {
+                return this;
+            }
+
+            public ServerBuilder requestTimeout(Object duration) {
+                return this;
+            }
+
             public ServerBuilder fileService(String path, java.io.File root) {
                 return this;
             }
@@ -144,8 +152,39 @@ fun JavaCodeInsightTestFixture.registerExtendedRegistrationCollectorStubs() {
         """
         package com.linecorp.armeria.server;
 
+        public final class Route {
+            public static RouteBuilder builder() {
+                return null;
+            }
+
+            public static Route of(String pathPattern) {
+                return null;
+            }
+
+            public static Route of(com.linecorp.armeria.common.HttpMethod method, String pathPattern) {
+                return null;
+            }
+
+            public static Route ofCatchAll() {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server;
+
         public final class RouteBuilder {
             public RouteBuilder route() {
+                return this;
+            }
+
+            public RouteBuilder path(String pathPattern) {
+                return this;
+            }
+
+            public RouteBuilder methods(Object... methods) {
                 return this;
             }
 
@@ -155,6 +194,10 @@ fun JavaCodeInsightTestFixture.registerExtendedRegistrationCollectorStubs() {
 
             public RouteBuilder build(Object handler) {
                 return this;
+            }
+
+            public Route build() {
+                return null;
             }
         }
         """.trimIndent(),
@@ -280,6 +323,14 @@ fun JavaCodeInsightTestFixture.registerKotlinExtendedRegistrationCollectorStubs(
                 return this;
             }
 
+            public ServerBuilder decorator(Object decorator) {
+                return this;
+            }
+
+            public ServerBuilder requestTimeout(Object duration) {
+                return this;
+            }
+
             public ServerBuilder fileService(String path, java.io.File root) {
                 return this;
             }
@@ -382,13 +433,52 @@ fun JavaCodeInsightTestFixture.registerKotlinExtendedRegistrationCollectorStubs(
         """
         package com.linecorp.armeria.server;
 
+        public final class Route {
+            public static RouteBuilder builder() {
+                return null;
+            }
+
+            public static Route of(String pathPattern) {
+                return null;
+            }
+
+            public static Route of(com.linecorp.armeria.common.HttpMethod method, String pathPattern) {
+                return null;
+            }
+
+            public static Route ofCatchAll() {
+                return null;
+            }
+        }
+        """.trimIndent(),
+    )
+    this.addClass(
+        """
+        package com.linecorp.armeria.server;
+
         public final class RouteBuilder {
+            public RouteBuilder route() {
+                return this;
+            }
+
+            public RouteBuilder path(String pathPattern) {
+                return this;
+            }
+
+            public RouteBuilder methods(Object... methods) {
+                return this;
+            }
+
             public RouteBuilder post(String path) {
                 return this;
             }
 
             public RouteBuilder build(Object handler) {
                 return this;
+            }
+
+            public Route build() {
+                return null;
             }
         }
         """.trimIndent(),
