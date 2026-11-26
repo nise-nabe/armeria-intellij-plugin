@@ -4,10 +4,8 @@ set -euo pipefail
 readonly INSTALL_DIR="${HOME}/.local/share/gradle-tapi-mcp-server"
 readonly STABLE_JAR_PATH="${INSTALL_DIR}/gradle-tapi-mcp-server.jar"
 
-if [[ ! -f "${STABLE_JAR_PATH}" ]]; then
-  repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-  bash "${repo_root}/.github/scripts/install-gradle-tapi-mcp.sh"
-fi
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+bash "${repo_root}/.github/scripts/install-gradle-tapi-mcp.sh"
 
 if [[ -z "${GRADLE_PROJECT_DIR:-}" ]]; then
   if git rev-parse --show-toplevel >/dev/null 2>&1; then
