@@ -5,6 +5,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import org.jetbrains.kotlin.asJava.KotlinAsJavaSupport
 import org.jetbrains.kotlin.asJava.classes.KtLightClass
 import org.jetbrains.kotlin.asJava.elements.KtLightMethod
+import org.jetbrains.kotlin.psi.KtClassBody
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
@@ -19,24 +20,29 @@ fun KtClassOrObject.toArmeriaLightClass(): KtLightClass? = KotlinAsJavaSupport.g
 fun KtFile.findArmeriaFacadeClass(): KtLightClass? = KotlinAsJavaSupport.getInstance(project).getLightFacade(this)
 
 fun KtNamedFunction.toArmeriaLightMethods(): List<PsiMethod> {
-    val containingClass = PsiTreeUtil.getParentOfType(this, KtClassOrObject::class.java)
+    val declaration = (originalElement as? KtNamedFunction) ?: this
     val lightClasses =
         buildList {
-            if (containingClass == null) {
-                containingKtFile.findArmeriaFacadeClass()?.let(::add)
-            } else {
-                containingClass.toArmeriaLightClass()?.let(::add)
-                if (containingClass is KtObjectDeclaration && containingClass.isCompanion()) {
-                    PsiTreeUtil
-                        .getParentOfType(containingClass, KtClassOrObject::class.java)
-                        ?.toArmeriaLightClass()
-                        ?.let(::add)
+            when (val parent = declaration.parent) {
+                is KtFile -> {
+                    parent.findArmeriaFacadeClass()?.let(::add)
+                }
+
+                is KtClassBody -> {
+                    val containingClass = parent.parent as? KtClassOrObject
+                    containingClass?.toArmeriaLightClass()?.let(::add)
+                    if (containingClass is KtObjectDeclaration && containingClass.isCompanion()) {
+                        PsiTreeUtil
+                            .getParentOfType(containingClass, KtClassOrObject::class.java)
+                            ?.toArmeriaLightClass()
+                            ?.let(::add)
+                    }
                 }
             }
         }
     return lightClasses
         .flatMap { it.methods.asSequence() }
         .filter { method ->
-            (method as? KtLightMethod)?.lightMemberOrigin?.isEquivalentTo(this) == true
-        }.distinct()
+            (method as? KtLightMethod)?.kotlinOrigin == declaration
+        }
 }
