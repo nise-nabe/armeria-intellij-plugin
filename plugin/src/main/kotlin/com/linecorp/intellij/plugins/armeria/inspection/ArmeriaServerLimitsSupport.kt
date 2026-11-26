@@ -44,10 +44,13 @@ internal object ArmeriaServerLimitsSupport {
         val variable = ArmeriaJavaInspectionCallChains.assignedVariable(call)
         val scope =
             when {
-                variable != null && ArmeriaJavaInspectionCallChains.isField(variable) ->
+                variable != null && ArmeriaJavaInspectionCallChains.isField(variable) -> {
                     ArmeriaJavaInspectionCallChains.containingClass(variable) ?: call.containingFile
-                else ->
+                }
+
+                else -> {
                     PsiTreeUtil.getParentOfType(call, PsiMethod::class.java) ?: call.containingFile
+                }
             }
         if (variable != null) {
             for (usage in ArmeriaJavaInspectionCallChains.methodCallsOnVariable(variable, scope)) {

@@ -270,8 +270,14 @@ internal object ArmeriaSpringMvcRouteCollector {
      */
     private fun extractRequestMethods(value: PsiAnnotationMemberValue?): List<String> =
         when (value) {
-            null -> emptyList()
-            is PsiArrayInitializerMemberValue -> value.initializers.flatMap(::extractRequestMethods)
+            null -> {
+                emptyList()
+            }
+
+            is PsiArrayInitializerMemberValue -> {
+                value.initializers.flatMap(::extractRequestMethods)
+            }
+
             else -> {
                 val resolved = value.reference?.resolve()
                 val name = (resolved as? PsiEnumConstant)?.name?.uppercase()

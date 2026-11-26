@@ -50,11 +50,15 @@ object ArmeriaKotlinExtendedRegistrationCollector {
                 ArmeriaKotlinExtendedRegistrationCollectorRouteDecorator.addWithRoute(call, routes, seenRegistrations)
                 return
             }
+
             ServiceRegistrationMethod.VIRTUAL_HOST -> {
                 ArmeriaKotlinExtendedRegistrationCollectorVirtualHost.addVirtualHost(call, routes, seenRegistrations)
                 return
             }
-            else -> Unit
+
+            else -> {
+                Unit
+            }
         }
         val key = ArmeriaKotlinRegistrationChainSupport.registrationKey(call) ?: return
         if (!seenRegistrations.add(key)) {
@@ -90,6 +94,7 @@ object ArmeriaKotlinExtendedRegistrationCollector {
                         fileServiceRoot = ArmeriaKotlinFileServiceRootSupport.extractFromFileServiceArguments(call.valueArguments),
                     )
             }
+
             ServiceRegistrationMethod.HEALTH_CHECK_SERVICE -> {
                 if (pathArg != null && ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(pathArg) == null) {
                     // A declared path argument that does not resolve must not fall
@@ -111,12 +116,14 @@ object ArmeriaKotlinExtendedRegistrationCollector {
                         timeoutHints = ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(call),
                     )
             }
+
             ServiceRegistrationMethod.ROUTE_DECORATOR -> {
                 val chainInfo =
                     ArmeriaKotlinExtendedRegistrationCollectorRouteDecorator.extractRouteDecoratorChain(call)
                         ?: return
                 routes += ArmeriaKotlinExtendedRegistrationCollectorRouteDecorator.createRouteDecoratorRoute(call, chainInfo)
             }
+
             ServiceRegistrationMethod.DECORATOR_UNDER -> {
                 val rawPath = ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(pathArg) ?: return
                 val (pathType, normalizedPath) = ArmeriaRouteSupport.parsePathType(rawPath)
@@ -137,7 +144,10 @@ object ArmeriaKotlinExtendedRegistrationCollector {
                         timeoutHints = ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(call),
                     )
             }
-            else -> Unit
+
+            else -> {
+                Unit
+            }
         }
     }
 }

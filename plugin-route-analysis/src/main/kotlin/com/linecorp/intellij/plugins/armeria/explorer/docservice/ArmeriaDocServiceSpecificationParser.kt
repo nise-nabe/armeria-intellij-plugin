@@ -233,12 +233,16 @@ object ArmeriaDocServiceSpecificationParser {
             return null
         }
         return when (val ch = json[startIndex]) {
-            '"' -> readJsonString(json, startIndex)?.endIndex
+            '"' -> {
+                readJsonString(json, startIndex)?.endIndex
+            }
+
             '{', '[' -> {
                 val closeChar = if (ch == '{') '}' else ']'
                 val balanced = extractBalanced(json, startIndex, ch, closeChar) ?: return null
                 skipWhitespace(json, startIndex + balanced.length)
             }
+
             else -> {
                 var index = startIndex
                 while (index < json.length && json[index] != ',' && json[index] != '}') {
@@ -312,20 +316,47 @@ object ArmeriaDocServiceSpecificationParser {
         var index = startIndex + 1
         while (index < json.length) {
             when (val ch = json[index]) {
-                '"' -> return ParsedJsonString(builder.toString(), index + 1)
+                '"' -> {
+                    return ParsedJsonString(builder.toString(), index + 1)
+                }
+
                 '\\' -> {
                     if (index + 1 >= json.length) {
                         return null
                     }
                     when (val escaped = json[index + 1]) {
-                        '"' -> builder.append('"')
-                        '\\' -> builder.append('\\')
-                        '/' -> builder.append('/')
-                        'b' -> builder.append('\b')
-                        'f' -> builder.append('\u000C')
-                        'n' -> builder.append('\n')
-                        'r' -> builder.append('\r')
-                        't' -> builder.append('\t')
+                        '"' -> {
+                            builder.append('"')
+                        }
+
+                        '\\' -> {
+                            builder.append('\\')
+                        }
+
+                        '/' -> {
+                            builder.append('/')
+                        }
+
+                        'b' -> {
+                            builder.append('\b')
+                        }
+
+                        'f' -> {
+                            builder.append('\u000C')
+                        }
+
+                        'n' -> {
+                            builder.append('\n')
+                        }
+
+                        'r' -> {
+                            builder.append('\r')
+                        }
+
+                        't' -> {
+                            builder.append('\t')
+                        }
+
                         'u' -> {
                             if (index + 5 >= json.length) {
                                 return null
@@ -338,10 +369,14 @@ object ArmeriaDocServiceSpecificationParser {
                             index += 6
                             continue
                         }
-                        else -> builder.append(escaped)
+
+                        else -> {
+                            builder.append(escaped)
+                        }
                     }
                     index += 2
                 }
+
                 else -> {
                     builder.append(ch)
                     index++
@@ -376,8 +411,14 @@ object ArmeriaDocServiceSpecificationParser {
                 continue
             }
             when (ch) {
-                '"' -> inString = true
-                openChar -> depth++
+                '"' -> {
+                    inString = true
+                }
+
+                openChar -> {
+                    depth++
+                }
+
                 closeChar -> {
                     depth--
                     if (depth == 0) {

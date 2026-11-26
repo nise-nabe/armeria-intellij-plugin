@@ -34,7 +34,11 @@ internal object ArmeriaMissingDocServiceKotlinSupport {
                         serverBuilder = serverBuilder ?: call
                     }
                 }
-                "annotatedService" -> annotatedOrRpc += call
+
+                "annotatedService" -> {
+                    annotatedOrRpc += call
+                }
+
                 "service", "serviceUnder" -> {
                     val implementation = serviceImplementation(call) ?: continue
                     val kind = classifyExpression(implementation)
@@ -110,7 +114,10 @@ internal object ArmeriaMissingDocServiceKotlinSupport {
                     val callee = unwrapped.calleeExpression
                     current =
                         when (callee) {
-                            is KtDotQualifiedExpression -> callee.receiverExpression
+                            is KtDotQualifiedExpression -> {
+                                callee.receiverExpression
+                            }
+
                             is KtNameReferenceExpression -> {
                                 val kind = ArmeriaKnownHttpServiceClassifier.classify(callee.getReferencedName())
                                 if (kind != KnownHttpServiceKind.HTTP) {
@@ -118,10 +125,17 @@ internal object ArmeriaMissingDocServiceKotlinSupport {
                                 }
                                 (unwrapped.parent as? KtDotQualifiedExpression)?.receiverExpression
                             }
-                            else -> null
+
+                            else -> {
+                                null
+                            }
                         }
                 }
-                is KtDotQualifiedExpression -> current = unwrapped.receiverExpression
+
+                is KtDotQualifiedExpression -> {
+                    current = unwrapped.receiverExpression
+                }
+
                 is KtNameReferenceExpression -> {
                     val kind = ArmeriaKnownHttpServiceClassifier.classify(unwrapped.getReferencedName())
                     if (kind != KnownHttpServiceKind.HTTP) {
@@ -131,12 +145,14 @@ internal object ArmeriaMissingDocServiceKotlinSupport {
                         is PsiClass -> {
                             return ArmeriaKnownHttpServiceClassifier.classify(resolved.qualifiedName.orEmpty())
                         }
+
                         is KtProperty -> {
                             if (!visited.add(resolved)) {
                                 return KnownHttpServiceKind.HTTP
                             }
                             current = resolved.initializer
                         }
+
                         is PsiVariable -> {
                             if (!visited.add(resolved)) {
                                 return KnownHttpServiceKind.HTTP
@@ -147,10 +163,16 @@ internal object ArmeriaMissingDocServiceKotlinSupport {
                                 return ArmeriaKnownHttpServiceClassifier.classify(resolved.type.canonicalText)
                             }
                         }
-                        else -> current = null
+
+                        else -> {
+                            current = null
+                        }
                     }
                 }
-                else -> current = null
+
+                else -> {
+                    current = null
+                }
             }
         }
         return KnownHttpServiceKind.HTTP

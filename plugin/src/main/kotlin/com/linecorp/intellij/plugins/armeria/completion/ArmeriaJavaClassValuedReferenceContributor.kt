@@ -145,7 +145,10 @@ internal fun resolveClassByName(
                 GlobalSearchScope.allScope(context.project),
             )
         when {
-            matches.size == 1 -> matches[0]
+            matches.size == 1 -> {
+                matches[0]
+            }
+
             else -> {
                 val filePackage = file.packageName
                 matches.firstOrNull { candidate ->

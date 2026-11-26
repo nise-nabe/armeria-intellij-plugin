@@ -114,15 +114,25 @@ internal object ArmeriaKotlinClientInvocationCollector {
             }
         for (reference in references) {
             when (val resolved = reference.resolve()) {
-                is PsiMethod -> resolved.containingClass?.qualifiedName?.let { return it }
-                is PsiClass -> resolved.qualifiedName?.let { return it }
-                is KtNamedFunction ->
+                is PsiMethod -> {
+                    resolved.containingClass?.qualifiedName?.let { return it }
+                }
+
+                is PsiClass -> {
+                    resolved.qualifiedName?.let { return it }
+                }
+
+                is KtNamedFunction -> {
                     PsiTreeUtil
                         .getParentOfType(resolved, KtClass::class.java)
                         ?.fqName
                         ?.asString()
                         ?.let { return it }
-                is KtClass -> resolved.fqName?.asString()?.let { return it }
+                }
+
+                is KtClass -> {
+                    resolved.fqName?.asString()?.let { return it }
+                }
             }
         }
         return null
@@ -248,6 +258,7 @@ internal object ArmeriaKotlinClientInvocationCollector {
                         headers += "$headerName: $headerValue"
                     }
                 }
+
                 "content" -> {
                     for (argument in args) {
                         extractMediaType(argument)?.let { contentType = it }
@@ -291,10 +302,17 @@ internal object ArmeriaKotlinClientInvocationCollector {
     private fun constantReferenceName(expression: KtExpression): String? {
         val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: expression
         return when (unwrapped) {
-            is KtNameReferenceExpression -> unwrapped.getReferencedName()
-            is KtDotQualifiedExpression ->
+            is KtNameReferenceExpression -> {
+                unwrapped.getReferencedName()
+            }
+
+            is KtDotQualifiedExpression -> {
                 (unwrapped.selectorExpression as? KtNameReferenceExpression)?.getReferencedName()
-            else -> null
+            }
+
+            else -> {
+                null
+            }
         } ?: run {
             val resolved = unwrapped.references.firstOrNull()?.resolve()
             when (resolved) {
@@ -338,6 +356,7 @@ internal object ArmeriaKotlinClientInvocationCollector {
                     }
                     return extractResolvedString(resolved.initializer, visited)
                 }
+
                 is PsiVariable -> {
                     if (!visited.add(resolved)) {
                         return null

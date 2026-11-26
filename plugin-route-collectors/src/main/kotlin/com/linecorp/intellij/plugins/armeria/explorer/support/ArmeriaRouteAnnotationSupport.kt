@@ -177,23 +177,42 @@ internal object ArmeriaRouteAnnotationSupport {
                         value.initializers.map(::renderMemberValue)
                     }
                 }
-                else -> extractStrings(value).ifEmpty { listOf(renderMemberValue(value)) }
+
+                else -> {
+                    extractStrings(value).ifEmpty { listOf(renderMemberValue(value)) }
+                }
             }
         return names.mapNotNull { it.takeIf(String::isNotBlank) }
     }
 
     fun extractStrings(value: PsiAnnotationMemberValue?): List<String> =
         when (value) {
-            null -> emptyList()
-            is PsiLiteralExpression -> listOfNotNull(value.value as? String)
-            is PsiLiteral -> listOfNotNull(value.value as? String)
-            is PsiArrayInitializerMemberValue -> value.initializers.flatMap(::extractStrings)
-            is PsiExpression ->
+            null -> {
+                emptyList()
+            }
+
+            is PsiLiteralExpression -> {
+                listOfNotNull(value.value as? String)
+            }
+
+            is PsiLiteral -> {
+                listOfNotNull(value.value as? String)
+            }
+
+            is PsiArrayInitializerMemberValue -> {
+                value.initializers.flatMap(::extractStrings)
+            }
+
+            is PsiExpression -> {
                 ArmeriaServerBuilderSupport
                     .extractJavaStringConstant(value)
                     ?.let { listOf(it) }
                     ?: emptyList()
-            else -> evaluateConstant(value)?.let { listOf(it) } ?: emptyList()
+            }
+
+            else -> {
+                evaluateConstant(value)?.let { listOf(it) } ?: emptyList()
+            }
         }
 
     fun renderMemberValue(value: PsiAnnotationMemberValue?): String =

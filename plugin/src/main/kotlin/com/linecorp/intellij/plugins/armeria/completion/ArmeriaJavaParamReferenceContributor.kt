@@ -265,12 +265,15 @@ private fun rewriteJavaPathVariableAnnotations(
     for (annotation in annotations) {
         val qualifiedName = annotation.qualifiedName ?: continue
         when {
-            isPathAnnotation(qualifiedName) ->
+            isPathAnnotation(qualifiedName) -> {
                 replaceJavaAnnotationStrings(annotation) {
                     ArmeriaPathVariableSupport.replacePathVariableName(it, oldName, newName)
                 }
-            qualifiedName == ArmeriaRouteSupport.PARAM_ANNOTATION ->
+            }
+
+            qualifiedName == ArmeriaRouteSupport.PARAM_ANNOTATION -> {
                 replaceJavaAnnotationStrings(annotation) { current -> if (current == oldName) newName else current }
+            }
         }
     }
 }
@@ -296,6 +299,9 @@ private fun replaceMemberValue(
                 ElementManipulators.handleContentChange(value, updated)
             }
         }
-        is PsiArrayInitializerMemberValue -> value.initializers.forEach { replaceMemberValue(it, transform) }
+
+        is PsiArrayInitializerMemberValue -> {
+            value.initializers.forEach { replaceMemberValue(it, transform) }
+        }
     }
 }

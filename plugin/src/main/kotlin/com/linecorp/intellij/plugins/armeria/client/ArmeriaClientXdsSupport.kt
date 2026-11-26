@@ -41,7 +41,10 @@ internal object ArmeriaClientXdsSupport {
         visited: MutableSet<PsiElement>,
     ): String? =
         when (expression) {
-            null -> null
+            null -> {
+                null
+            }
+
             is PsiMethodCallExpression -> {
                 val methodName = expression.methodExpression.referenceName
                 if (methodName !in XDS_FACTORY_METHOD_NAMES) {
@@ -68,7 +71,11 @@ internal object ArmeriaClientXdsSupport {
                         },
                 )
             }
-            is PsiParenthesizedExpression -> labelJavaXdsFactory(expression.expression, visited)
+
+            is PsiParenthesizedExpression -> {
+                labelJavaXdsFactory(expression.expression, visited)
+            }
+
             is PsiReferenceExpression -> {
                 val resolved = expression.resolve() as? PsiVariable ?: return null
                 if (!visited.add(resolved)) {
@@ -76,7 +83,10 @@ internal object ArmeriaClientXdsSupport {
                 }
                 labelJavaXdsFactory(resolved.initializer, visited)
             }
-            else -> null
+
+            else -> {
+                null
+            }
         }
 
     /** Prefer an overload whose arity matches the call so listenerName binds the right argument. */

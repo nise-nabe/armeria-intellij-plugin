@@ -40,6 +40,7 @@ internal object ArmeriaOpenApiFileWriter {
                                 LOG.warn("OpenAPI parent path exists but is not a directory: $parentDir")
                                 return@runWriteCommandAction
                             }
+
                             !parentDir.exists() && !parentDir.mkdirs() -> {
                                 LOG.warn("Failed to create OpenAPI directory: $parentDir")
                                 return@runWriteCommandAction

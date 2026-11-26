@@ -58,20 +58,26 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorListenPort {
         }
         val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: return null
         when (unwrapped) {
-            is KtConstantExpression ->
+            is KtConstantExpression -> {
                 return ArmeriaListenPortSupport
                     .parseIntLiteral(unwrapped.text)
                     ?.takeIf(ArmeriaListenPortSupport::isValidPort)
+            }
+
             is KtNameReferenceExpression -> {
                 val resolved = unwrapped.references.firstOrNull()?.resolve() ?: return null
                 return extractPortFromResolved(resolved, hops, visited)
             }
+
             is KtDotQualifiedExpression -> {
                 val selector = unwrapped.selectorExpression as? KtNameReferenceExpression ?: return null
                 val resolved = selector.references.firstOrNull()?.resolve() ?: return null
                 return extractPortFromResolved(resolved, hops, visited)
             }
-            else -> return null
+
+            else -> {
+                return null
+            }
         }
     }
 
@@ -84,27 +90,39 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorListenPort {
             return null
         }
         when (resolved) {
-            is KtProperty -> return extractPort(resolved.initializer, hops + 1, visited)
+            is KtProperty -> {
+                return extractPort(resolved.initializer, hops + 1, visited)
+            }
+
             is PsiVariable -> {
                 when (val constant = resolved.computeConstantValue()) {
                     is Number -> return constant.toInt().takeIf(ArmeriaListenPortSupport::isValidPort)
                 }
                 return ArmeriaListenPortSupport.extractJavaPort(resolved.initializer)
             }
-            else -> return null
+
+            else -> {
+                return null
+            }
         }
     }
 
     private fun resolveKotlinSessionProtocol(expression: KtExpression): String? {
         val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: return null
         when (unwrapped) {
-            is KtCallExpression -> return null
-            is KtStringTemplateExpression ->
+            is KtCallExpression -> {
+                return null
+            }
+
+            is KtStringTemplateExpression -> {
                 return ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(unwrapped)?.uppercase()
+            }
+
             is KtNameReferenceExpression -> {
                 val resolved = unwrapped.references.firstOrNull()?.resolve()
                 return sessionProtocolNameFromResolved(resolved)
             }
+
             is KtDotQualifiedExpression -> {
                 val selector = unwrapped.selectorExpression
                 if (selector is KtCallExpression) {
@@ -116,7 +134,10 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorListenPort {
                 }
                 return sessionProtocolNameFromResolved(nameRef.references.firstOrNull()?.resolve())
             }
-            else -> return null
+
+            else -> {
+                return null
+            }
         }
     }
 
@@ -124,23 +145,37 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorListenPort {
         val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(receiver) ?: receiver
         val name =
             when (unwrapped) {
-                is KtNameReferenceExpression -> unwrapped.getReferencedName()
-                is KtDotQualifiedExpression ->
+                is KtNameReferenceExpression -> {
+                    unwrapped.getReferencedName()
+                }
+
+                is KtDotQualifiedExpression -> {
                     (unwrapped.selectorExpression as? KtNameReferenceExpression)?.getReferencedName()
-                else -> null
+                }
+
+                else -> {
+                    null
+                }
             }
         if (name == ArmeriaListenPortSupport.SESSION_PROTOCOL_SIMPLE_NAME) {
             return true
         }
         val resolved =
             when (unwrapped) {
-                is KtNameReferenceExpression -> unwrapped.references.firstOrNull()?.resolve()
-                is KtDotQualifiedExpression ->
+                is KtNameReferenceExpression -> {
+                    unwrapped.references.firstOrNull()?.resolve()
+                }
+
+                is KtDotQualifiedExpression -> {
                     (unwrapped.selectorExpression as? KtNameReferenceExpression)
                         ?.references
                         ?.firstOrNull()
                         ?.resolve()
-                else -> null
+                }
+
+                else -> {
+                    null
+                }
             }
         return ArmeriaListenPortSupport.isSessionProtocolClass(resolved as? PsiClass)
     }

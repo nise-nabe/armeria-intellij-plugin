@@ -36,6 +36,7 @@ internal object ArmeriaHttpClientEnvironmentWriter {
                                 LOG.warn("HTTP Client env parent path exists but is not a directory: $parentDir")
                                 return@runWriteCommandAction
                             }
+
                             !parentDir.exists() && !parentDir.mkdirs() -> {
                                 LOG.warn("Failed to create HTTP Client env directory: $parentDir")
                                 return@runWriteCommandAction

@@ -84,6 +84,7 @@ internal object ArmeriaJavaRegistrationChainSupport {
                         return grandParent
                     }
                 }
+
                 is PsiMethodCallExpression -> {
                     if (parent.methodExpression.qualifierExpression == element && parent !== call) {
                         return parent
@@ -107,6 +108,7 @@ internal object ArmeriaJavaRegistrationChainSupport {
                         return parent
                     }
                 }
+
                 is PsiReferenceExpression -> {
                     val grandParent = parent.parent
                     if (grandParent is PsiMethodCallExpression &&

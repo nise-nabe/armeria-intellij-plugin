@@ -106,52 +106,93 @@ object ArmeriaRouteDetailFormatter {
 
     fun registrationSummary(route: ArmeriaRoute): String =
         when (route.routeMatch) {
-            RouteMatch.ANNOTATED_HTTP ->
+            RouteMatch.ANNOTATED_HTTP -> {
                 message(
                     "route.explorer.registration.annotatedMethod",
                     route.httpMethod,
                     route.path,
                 )
-            RouteMatch.ANNOTATED_SERVICE ->
+            }
+
+            RouteMatch.ANNOTATED_SERVICE -> {
                 if (route.annotatedServiceHasPathPrefix) {
                     message("route.explorer.registration.builderCall", "annotatedService", route.path)
                 } else {
                     message("route.explorer.registration.annotatedService")
                 }
-            RouteMatch.SERVICE -> message("route.explorer.registration.service", route.path)
-            RouteMatch.SERVICE_UNDER -> message("route.explorer.registration.serviceUnder", route.path)
-            RouteMatch.FILE_SERVICE -> message("route.explorer.registration.fileService", route.path)
-            RouteMatch.HEALTH_CHECK -> message("route.explorer.registration.healthCheck", route.path)
-            RouteMatch.VIRTUAL_HOST ->
+            }
+
+            RouteMatch.SERVICE -> {
+                message("route.explorer.registration.service", route.path)
+            }
+
+            RouteMatch.SERVICE_UNDER -> {
+                message("route.explorer.registration.serviceUnder", route.path)
+            }
+
+            RouteMatch.FILE_SERVICE -> {
+                message("route.explorer.registration.fileService", route.path)
+            }
+
+            RouteMatch.HEALTH_CHECK -> {
+                message("route.explorer.registration.healthCheck", route.path)
+            }
+
+            RouteMatch.VIRTUAL_HOST -> {
                 message(
                     "route.explorer.registration.virtualHost",
                     route.virtualHostName.ifBlank { route.target },
                 )
-            RouteMatch.LISTEN_PORT ->
+            }
+
+            RouteMatch.LISTEN_PORT -> {
                 message(
                     "route.explorer.registration.listenPort",
                     route.path.removePrefix(":"),
                     route.protocol,
                 )
-            RouteMatch.ROUTE_DECORATOR -> message("route.explorer.registration.routeDecorator", route.path)
-            RouteMatch.ROUTE_FLUENT ->
+            }
+
+            RouteMatch.ROUTE_DECORATOR -> {
+                message("route.explorer.registration.routeDecorator", route.path)
+            }
+
+            RouteMatch.ROUTE_FLUENT -> {
                 message(
                     "route.explorer.registration.fluentRoute",
                     route.httpMethod.ifBlank { message("route.explorer.method.allHttp") },
                     route.path,
                 )
-            RouteMatch.DECORATOR_UNDER -> message("route.explorer.registration.decoratorUnder", route.path)
-            RouteMatch.DELEGATED -> delegatedRegistrationSummary(route)
-            RouteMatch.NON_HTTP -> message("route.explorer.registration.nonHttp", route.protocol, route.path)
-            RouteMatch.DISCOVERY ->
+            }
+
+            RouteMatch.DECORATOR_UNDER -> {
+                message("route.explorer.registration.decoratorUnder", route.path)
+            }
+
+            RouteMatch.DELEGATED -> {
+                delegatedRegistrationSummary(route)
+            }
+
+            RouteMatch.NON_HTTP -> {
+                message("route.explorer.registration.nonHttp", route.protocol, route.path)
+            }
+
+            RouteMatch.DISCOVERY -> {
                 message(
                     "route.explorer.registration.discovery",
                     route.protocol,
                     route.path,
                     route.target,
                 )
-            RouteMatch.RUNTIME -> message("route.explorer.registration.runtime", route.httpMethod, route.path)
-            RouteMatch.CONFIG -> message("route.explorer.registration.config", route.httpMethod, route.path)
+            }
+
+            RouteMatch.RUNTIME -> {
+                message("route.explorer.registration.runtime", route.httpMethod, route.path)
+            }
+
+            RouteMatch.CONFIG -> {
+                message("route.explorer.registration.config", route.httpMethod, route.path)
+            }
         }
 
     private fun delegatedRegistrationSummary(route: ArmeriaRoute): String {

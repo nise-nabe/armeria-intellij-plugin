@@ -80,7 +80,10 @@ object ArmeriaEndpointUrlPath {
         var depth = 0
         for (index in start until path.length) {
             when (path[index]) {
-                '{' -> depth++
+                '{' -> {
+                    depth++
+                }
+
                 '}' -> {
                     depth--
                     if (depth == 0) {

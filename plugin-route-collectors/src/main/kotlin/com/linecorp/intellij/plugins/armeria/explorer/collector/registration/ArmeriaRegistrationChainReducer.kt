@@ -45,6 +45,7 @@ internal object ArmeriaRegistrationChainReducer {
                     foundRoute = true
                     break
                 }
+
                 in ServiceRegistrationMethod.FLUENT_ROUTE_HTTP_METHODS -> {
                     httpMethod = step.methodName.uppercase()
                     if (step.hasUnresolvedPathArg()) {
@@ -58,6 +59,7 @@ internal object ArmeriaRegistrationChainReducer {
                         foundPath = true
                     }
                 }
+
                 "path" -> {
                     if (step.hasUnresolvedPathArg()) {
                         return null
@@ -81,6 +83,7 @@ internal object ArmeriaRegistrationChainReducer {
                         foundPath = true
                     }
                 }
+
                 "pathPrefix" -> {
                     if (step.hasUnresolvedPathArg()) {
                         return null
@@ -92,6 +95,7 @@ internal object ArmeriaRegistrationChainReducer {
                     path = parsed.second
                     foundPath = true
                 }
+
                 "pathRegex" -> {
                     if (step.hasUnresolvedPathArg()) {
                         return null
@@ -102,6 +106,7 @@ internal object ArmeriaRegistrationChainReducer {
                     path = parsed.second
                     foundPath = true
                 }
+
                 "pathGlob" -> {
                     if (step.hasUnresolvedPathArg()) {
                         return null
@@ -112,6 +117,7 @@ internal object ArmeriaRegistrationChainReducer {
                     path = parsed.second
                     foundPath = true
                 }
+
                 "methods", "method" -> {
                     httpMethod =
                         step.rawMethodArgs.joinToString(", ") { argument ->
@@ -174,12 +180,14 @@ internal object ArmeriaRegistrationChainReducer {
                     pathType = parsed.first
                     pathPattern = parsed.second
                 }
+
                 "methods", "method" -> {
                     methods =
                         step.rawMethodArgs.joinToString(", ") { argument ->
                             formatHttpMethodArgument(argument)
                         }
                 }
+
                 "build" -> {
                     val decoratorArg = step.rawMethodArgs.firstOrNull()
                     if (decoratorArg != null) {

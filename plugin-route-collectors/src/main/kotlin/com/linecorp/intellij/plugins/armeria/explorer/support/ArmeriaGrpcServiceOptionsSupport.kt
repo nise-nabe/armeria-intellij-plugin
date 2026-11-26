@@ -116,6 +116,7 @@ object ArmeriaGrpcServiceOptionsSupport {
                 val fromQualifier = qualifier?.let { collectJava(it, visited) } ?: PartialOptions()
                 fromCall.mergeInner(fromQualifier)
             }
+
             is PsiReferenceExpression -> {
                 val resolved = unwrapped.resolve()
                 if (resolved is PsiVariable) {
@@ -125,9 +126,14 @@ object ArmeriaGrpcServiceOptionsSupport {
                     PartialOptions()
                 }
             }
-            is PsiNewExpression ->
+
+            is PsiNewExpression -> {
                 PartialOptions(reflection = looksLikeReflectionName(unwrapped.classReference?.referenceName))
-            else -> PartialOptions()
+            }
+
+            else -> {
+                PartialOptions()
+            }
         }
     }
 
@@ -190,6 +196,7 @@ object ArmeriaGrpcServiceOptionsSupport {
                     val initializer = resolved.initializer ?: return PartialOptions()
                     return collectKotlin(initializer, visited)
                 }
+
                 is PsiVariable -> {
                     val initializer = resolved.initializer ?: return PartialOptions()
                     return collectJava(initializer, visited)

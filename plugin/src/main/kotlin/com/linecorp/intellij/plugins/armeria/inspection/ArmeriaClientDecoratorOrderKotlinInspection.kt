@@ -121,6 +121,7 @@ class ArmeriaClientDecoratorOrderKotlinInspection : LocalInspectionTool() {
                         return ArmeriaKotlinExpressionSupport.resolveCallName(current).orEmpty()
                     }
                 }
+
                 is KtDotQualifiedExpression -> {
                     when (val selector = current.selectorExpression) {
                         is KtCallExpression -> current = selector
@@ -128,8 +129,14 @@ class ArmeriaClientDecoratorOrderKotlinInspection : LocalInspectionTool() {
                         else -> current = current.receiverExpression
                     }
                 }
-                is KtNameReferenceExpression -> return current.getReferencedName()
-                else -> return current.text.substringAfterLast('.').substringBefore('(')
+
+                is KtNameReferenceExpression -> {
+                    return current.getReferencedName()
+                }
+
+                else -> {
+                    return current.text.substringAfterLast('.').substringBefore('(')
+                }
             }
         }
     }
@@ -207,7 +214,10 @@ class ArmeriaClientDecoratorOrderKotlinInspection : LocalInspectionTool() {
     private fun chainReceiver(expression: KtExpression): KtExpression? {
         val receiver =
             when (expression) {
-                is KtDotQualifiedExpression -> expression.receiverExpression
+                is KtDotQualifiedExpression -> {
+                    expression.receiverExpression
+                }
+
                 is KtCallExpression -> {
                     val parent = expression.parent
                     if (parent is KtDotQualifiedExpression && parent.selectorExpression == expression) {
@@ -219,7 +229,10 @@ class ArmeriaClientDecoratorOrderKotlinInspection : LocalInspectionTool() {
                         }
                     }
                 }
-                else -> null
+
+                else -> {
+                    null
+                }
             } ?: return null
         return ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(receiver) ?: receiver
     }

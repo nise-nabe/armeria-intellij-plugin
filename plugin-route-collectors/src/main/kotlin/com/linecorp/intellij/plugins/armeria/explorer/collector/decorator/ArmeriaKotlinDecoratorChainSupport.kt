@@ -43,7 +43,10 @@ internal object ArmeriaKotlinDecoratorChainSupport {
 
     fun kotlinChainReceiver(expression: KtExpression): KtExpression? =
         when (expression) {
-            is KtDotQualifiedExpression -> expression.receiverExpression
+            is KtDotQualifiedExpression -> {
+                expression.receiverExpression
+            }
+
             is KtCallExpression -> {
                 val parent = expression.parent
                 if (parent is KtDotQualifiedExpression && parent.selectorExpression == expression) {
@@ -55,7 +58,10 @@ internal object ArmeriaKotlinDecoratorChainSupport {
                     }
                 }
             }
-            else -> null
+
+            else -> {
+                null
+            }
         }
 
     fun isKotlinArmeriaDecoratorCall(call: KtCallExpression): Boolean {
@@ -104,6 +110,7 @@ internal object ArmeriaKotlinDecoratorChainSupport {
                         return true
                     }
                 }
+
                 is KtProperty -> {
                     val typeText = resolveKotlinTypeReferenceText(resolved.typeReference)
                     if (typeText != null && ArmeriaRouteSupport.isServerBuilderType(typeText)) {
@@ -155,6 +162,7 @@ internal object ArmeriaKotlinDecoratorChainSupport {
             is KtParameter -> {
                 resolveKotlinTypeReferenceText(resolved.typeReference)?.let { return it }
             }
+
             is KtProperty -> {
                 resolveKotlinTypeReferenceText(resolved.typeReference)?.let { return it }
                 val initializer = resolved.initializer
@@ -162,7 +170,10 @@ internal object ArmeriaKotlinDecoratorChainSupport {
                     return resolveExpression(initializer, visitedProperties)
                 }
             }
-            is PsiVariable -> return resolved.type.presentableText
+
+            is PsiVariable -> {
+                return resolved.type.presentableText
+            }
         }
         return resolveQualifiedClassName(resolved)
     }

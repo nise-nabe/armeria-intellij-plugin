@@ -83,18 +83,25 @@ internal class ArmeriaKotlinRouteLineMarkerProvider : LineMarkerProvider {
         arguments: List<KtValueArgument>,
     ): String? =
         when (ServiceRegistrationMethod.fromMethodName(methodName)) {
-            ServiceRegistrationMethod.SERVICE ->
+            ServiceRegistrationMethod.SERVICE -> {
                 ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(arguments.firstOrNull()?.getArgumentExpression())
-            ServiceRegistrationMethod.SERVICE_UNDER ->
+            }
+
+            ServiceRegistrationMethod.SERVICE_UNDER -> {
                 ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(
                     arguments
                         .firstOrNull { it.getArgumentName()?.asName?.identifier == "pathPrefix" }
                         ?.getArgumentExpression()
                         ?: arguments.firstOrNull()?.getArgumentExpression(),
                 )
-            ServiceRegistrationMethod.ANNOTATED_SERVICE ->
+            }
+
+            ServiceRegistrationMethod.ANNOTATED_SERVICE -> {
                 when {
-                    arguments.size <= 1 -> "/"
+                    arguments.size <= 1 -> {
+                        "/"
+                    }
+
                     else -> {
                         val pathExpression =
                             arguments
@@ -111,6 +118,10 @@ internal class ArmeriaKotlinRouteLineMarkerProvider : LineMarkerProvider {
                         }
                     }
                 }
-            else -> null
+            }
+
+            else -> {
+                null
+            }
         }
 }

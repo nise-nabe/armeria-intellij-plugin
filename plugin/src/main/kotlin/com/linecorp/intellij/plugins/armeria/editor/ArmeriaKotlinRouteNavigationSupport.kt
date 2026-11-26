@@ -108,7 +108,10 @@ internal object ArmeriaKotlinRouteNavigationSupport {
                     }
                 classFromResolved(reference?.references?.firstOrNull()?.resolve())?.let { return it }
             }
-            is KtProperty -> return classFromKotlinProperty(expression)
+
+            is KtProperty -> {
+                return classFromKotlinProperty(expression)
+            }
         }
         return null
     }
@@ -216,20 +219,32 @@ internal object ArmeriaKotlinRouteNavigationSupport {
                     }
                 reference?.getReferencedName() ?: expression.text.trim()
             }
-            is KtNameReferenceExpression -> expression.getReferencedName()
-            else -> expression.text.trim()
+
+            is KtNameReferenceExpression -> {
+                expression.getReferencedName()
+            }
+
+            else -> {
+                expression.text.trim()
+            }
         }
 
     private fun kotlinServiceImplementationExpression(call: KtCallExpression): KtExpression? {
         val arguments = call.valueArguments
         val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: return null
         return when (ServiceRegistrationMethod.fromMethodName(methodName)) {
-            ServiceRegistrationMethod.ANNOTATED_SERVICE ->
+            ServiceRegistrationMethod.ANNOTATED_SERVICE -> {
                 ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 1)
                     ?: ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 0)
-            ServiceRegistrationMethod.SERVICE, ServiceRegistrationMethod.SERVICE_UNDER ->
+            }
+
+            ServiceRegistrationMethod.SERVICE, ServiceRegistrationMethod.SERVICE_UNDER -> {
                 ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 1)
-            else -> null
+            }
+
+            else -> {
+                null
+            }
         }
     }
 

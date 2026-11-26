@@ -112,7 +112,11 @@ internal object ArmeriaKotlinClientDecoratorSupport {
                     else -> expression.text
                 }
             }
-            is KtDotQualifiedExpression -> expression.receiverExpression.text
+
+            is KtDotQualifiedExpression -> {
+                expression.receiverExpression.text
+            }
+
             is KtNameReferenceExpression -> {
                 val resolved = expression.references.firstOrNull()?.resolve()
                 when (resolved) {
@@ -121,13 +125,19 @@ internal object ArmeriaKotlinClientDecoratorSupport {
                     else -> expression.text
                 }
             }
-            else -> expression.text
+
+            else -> {
+                expression.text
+            }
         }
 
     private fun kotlinChainReceiver(expression: KtExpression): KtExpression? {
         val receiver =
             when (expression) {
-                is KtDotQualifiedExpression -> expression.receiverExpression
+                is KtDotQualifiedExpression -> {
+                    expression.receiverExpression
+                }
+
                 is KtCallExpression -> {
                     val parent = expression.parent
                     if (parent is KtDotQualifiedExpression && parent.selectorExpression == expression) {
@@ -139,7 +149,10 @@ internal object ArmeriaKotlinClientDecoratorSupport {
                         }
                     }
                 }
-                else -> null
+
+                else -> {
+                    null
+                }
             } ?: return null
         return ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(receiver) ?: receiver
     }

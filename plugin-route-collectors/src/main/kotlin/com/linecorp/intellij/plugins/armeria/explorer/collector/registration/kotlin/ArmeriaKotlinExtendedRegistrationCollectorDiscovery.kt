@@ -73,15 +73,21 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorDiscovery {
                 val initializer = propertyInitializer(expression) ?: return null
                 extractRegistration(initializer, hops + 1)
             }
+
             is KtQualifiedExpression -> {
                 registrationFromCallChain(expression, hops)
                     ?: propertyInitializer(expression)?.let { extractRegistration(it, hops + 1) }
             }
-            is KtCallExpression -> registrationFromCallChain(expression, hops)
-            else ->
+
+            is KtCallExpression -> {
+                registrationFromCallChain(expression, hops)
+            }
+
+            else -> {
                 ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression)?.let {
                     if (it === expression) null else extractRegistration(it, hops + 1)
                 }
+            }
         }
     }
 
@@ -137,11 +143,15 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorDiscovery {
                     }
                     current = unwrapped.receiverExpression
                 }
+
                 is KtCallExpression -> {
                     result += unwrapped to null
                     current = null
                 }
-                else -> current = null
+
+                else -> {
+                    current = null
+                }
             }
         }
         return result
@@ -196,21 +206,29 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorDiscovery {
                 argument.getArgumentName()?.asName?.asString()
                     ?: parameterNames?.getOrNull(positionalIndex).also { positionalIndex++ }
             when {
-                parameterName != null ->
+                parameterName != null -> {
                     when (parameterName) {
-                        in ArmeriaServerRegistrationSupport.REGISTRY_URI_PARAMETER_NAMES ->
+                        in ArmeriaServerRegistrationSupport.REGISTRY_URI_PARAMETER_NAMES -> {
                             registryUri = extractTextLike(argumentExpression).orEmpty()
-                        in ArmeriaServerRegistrationSupport.SERVICE_NAME_PARAMETER_NAMES ->
+                        }
+
+                        in ArmeriaServerRegistrationSupport.SERVICE_NAME_PARAMETER_NAMES -> {
                             serviceName = extractTextLike(argumentExpression).orEmpty()
-                        in ArmeriaServerRegistrationSupport.SPEC_PARAMETER_NAMES ->
+                        }
+
+                        in ArmeriaServerRegistrationSupport.SPEC_PARAMETER_NAMES -> {
                             specName = extractTextLike(argumentExpression)
+                        }
                     }
-                parameterNames == null ->
+                }
+
+                parameterNames == null -> {
                     when (positionalIndex - 1) {
                         0 -> registryUri = extractTextLike(argumentExpression).orEmpty()
                         1 -> serviceName = extractTextLike(argumentExpression).orEmpty()
                         2 -> specName = extractTextLike(argumentExpression)
                     }
+                }
             }
         }
         // Builder-chain setters such as EurekaUpdatingListenerBuilder.appName("...") — the chain is
@@ -245,13 +263,20 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorDiscovery {
         ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(unwrapped)?.let { return it }
         val nested =
             when (unwrapped) {
-                is KtCallExpression -> unwrapped.valueArguments.singleOrNull()?.getArgumentExpression()
-                is KtQualifiedExpression ->
+                is KtCallExpression -> {
+                    unwrapped.valueArguments.singleOrNull()?.getArgumentExpression()
+                }
+
+                is KtQualifiedExpression -> {
                     (unwrapped.selectorExpression as? KtCallExpression)
                         ?.valueArguments
                         ?.singleOrNull()
                         ?.getArgumentExpression()
-                else -> null
+                }
+
+                else -> {
+                    null
+                }
             } ?: return null
         return extractTextLike(nested, hops + 1)
     }

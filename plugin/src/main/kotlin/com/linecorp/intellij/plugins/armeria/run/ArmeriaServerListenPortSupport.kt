@@ -58,14 +58,21 @@ internal object ArmeriaServerListenPortSupport {
             val port = ArmeriaJavaIntConstantSupport.extractPort(call.argumentList.expressions.firstOrNull()) ?: continue
             val https =
                 when (methodName) {
-                    "https" -> true
-                    "http" -> false
-                    else ->
+                    "https" -> {
+                        true
+                    }
+
+                    "http" -> {
+                        false
+                    }
+
+                    else -> {
                         ArmeriaSessionProtocols.extraArgsSuggestHttps(
                             call.argumentList.expressions
                                 .drop(1)
                                 .joinToString(" ") { it.text },
                         )
+                    }
                 }
             candidates +=
                 ListenCandidate(

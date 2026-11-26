@@ -55,7 +55,11 @@ internal object ArmeriaKotlinFileServiceRootSupport {
                     }
                     current = current.receiverExpression
                 }
-                is KtCallExpression -> return current.takeIf(::isFileServiceFactoryCall)
+
+                is KtCallExpression -> {
+                    return current.takeIf(::isFileServiceFactoryCall)
+                }
+
                 is KtNameReferenceExpression -> {
                     current =
                         when (val resolved = current.references.firstOrNull()?.resolve()) {
@@ -63,7 +67,10 @@ internal object ArmeriaKotlinFileServiceRootSupport {
                             else -> null
                         }
                 }
-                else -> current = null
+
+                else -> {
+                    current = null
+                }
             }
         }
         return null
@@ -100,7 +107,10 @@ internal object ArmeriaKotlinFileServiceRootSupport {
     private fun extractFactoryArguments(call: KtCallExpression): FileServiceRoot? {
         val arguments = call.valueArguments
         return when (arguments.size) {
-            1 -> fileSystemRootFromExpression(arguments[0].getArgumentExpression(), mutableSetOf())
+            1 -> {
+                fileSystemRootFromExpression(arguments[0].getArgumentExpression(), mutableSetOf())
+            }
+
             2 -> {
                 val path =
                     ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(arguments[1].getArgumentExpression())
@@ -112,7 +122,10 @@ internal object ArmeriaKotlinFileServiceRootSupport {
                     anchorPackageName(arguments[0].getArgumentExpression()),
                 )
             }
-            else -> null
+
+            else -> {
+                null
+            }
         }
     }
 
@@ -123,8 +136,14 @@ internal object ArmeriaKotlinFileServiceRootSupport {
         val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: return null
         val path =
             when (unwrapped) {
-                is KtCallExpression -> pathFromFileConstructor(unwrapped, visitedProperties)
-                is KtDotQualifiedExpression -> pathFromPathFactoryCall(unwrapped, visitedProperties)
+                is KtCallExpression -> {
+                    pathFromFileConstructor(unwrapped, visitedProperties)
+                }
+
+                is KtDotQualifiedExpression -> {
+                    pathFromPathFactoryCall(unwrapped, visitedProperties)
+                }
+
                 is KtNameReferenceExpression -> {
                     when (val resolved = unwrapped.references.firstOrNull()?.resolve()) {
                         is KtProperty -> {
@@ -133,11 +152,20 @@ internal object ArmeriaKotlinFileServiceRootSupport {
                             }
                             return fileSystemRootFromExpression(resolved.initializer, visitedProperties)
                         }
-                        is PsiVariable -> ArmeriaRouteSupport.evaluateJavaStringConstant(resolved)
-                        else -> null
+
+                        is PsiVariable -> {
+                            ArmeriaRouteSupport.evaluateJavaStringConstant(resolved)
+                        }
+
+                        else -> {
+                            null
+                        }
                     }
                 }
-                else -> ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(unwrapped)
+
+                else -> {
+                    ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(unwrapped)
+                }
             } ?: return null
         return FileServiceRoot(FileServiceRootKind.FILE_SYSTEM, path)
     }
@@ -156,7 +184,10 @@ internal object ArmeriaKotlinFileServiceRootSupport {
         }
         val arguments = call.valueArguments
         return when (arguments.size) {
-            1 -> ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(arguments[0].getArgumentExpression())
+            1 -> {
+                ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(arguments[0].getArgumentExpression())
+            }
+
             2 -> {
                 val parent =
                     fileSystemRootFromExpression(arguments[0].getArgumentExpression(), visitedProperties)?.path
@@ -167,7 +198,10 @@ internal object ArmeriaKotlinFileServiceRootSupport {
                         ?: return null
                 "$parent/$child"
             }
-            else -> null
+
+            else -> {
+                null
+            }
         }
     }
 
@@ -199,12 +233,18 @@ internal object ArmeriaKotlinFileServiceRootSupport {
     private fun anchorClassLiteral(expression: KtExpression?): KtClassLiteralExpression? {
         val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: return null
         return when (unwrapped) {
-            is KtClassLiteralExpression -> unwrapped
+            is KtClassLiteralExpression -> {
+                unwrapped
+            }
+
             is KtDotQualifiedExpression -> {
                 val selector = unwrapped.selectorExpression?.text?.substringBefore('(')
                 if (selector in JAVA_CLASS_SELECTOR_NAMES) findClassLiteral(unwrapped) else null
             }
-            else -> null
+
+            else -> {
+                null
+            }
         }
     }
 

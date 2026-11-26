@@ -119,10 +119,16 @@ class ArmeriaClientDecoratorOrderScalaInspection : LocalInspectionTool() {
                             return reference?.refName().orEmpty()
                         }
                     }
+
                     // A class reference's own refName is its last segment, which is the
                     // simple name whether or not the reference is package-qualified.
-                    is ScReferenceExpression -> return current.refName()
-                    else -> return current.text.substringAfterLast('.').substringBefore('(')
+                    is ScReferenceExpression -> {
+                        return current.refName()
+                    }
+
+                    else -> {
+                        return current.text.substringAfterLast('.').substringBefore('(')
+                    }
                 }
         }
     }
@@ -139,13 +145,18 @@ class ArmeriaClientDecoratorOrderScalaInspection : LocalInspectionTool() {
                     }
                     current = invokedQualifier(current)
                 }
+
                 is ScParenthesisedExpr -> {
                     current = current.innerElement().orNull()
                 }
+
                 is ScReferenceExpression -> {
                     current = resolvedInitializer(current)
                 }
-                else -> current = null
+
+                else -> {
+                    current = null
+                }
             }
         }
         val following = mutableListOf<ScMethodCall>()

@@ -282,16 +282,22 @@ object ArmeriaKotlinRouteCollector {
         arguments: List<KtValueArgument>,
     ): KtExpression? =
         when (CoreServiceRegistrationMethod.fromMethodName(methodName)) {
-            CoreServiceRegistrationMethod.ANNOTATED_SERVICE ->
+            CoreServiceRegistrationMethod.ANNOTATED_SERVICE -> {
                 if (annotatedServiceFirstArgIsPath(arguments)) {
                     ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 1)
                 } else {
                     // annotatedService(service[, decorators…]) — pathless overload.
                     ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 0)
                 }
-            CoreServiceRegistrationMethod.SERVICE, CoreServiceRegistrationMethod.SERVICE_UNDER ->
+            }
+
+            CoreServiceRegistrationMethod.SERVICE, CoreServiceRegistrationMethod.SERVICE_UNDER -> {
                 ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "service", 1)
-            null -> null
+            }
+
+            null -> {
+                null
+            }
         }
 
     private fun findPathPrefixArgument(
@@ -306,21 +312,35 @@ object ArmeriaKotlinRouteCollector {
         arguments: List<KtValueArgument>,
     ): String? =
         when (CoreServiceRegistrationMethod.fromMethodName(methodName)) {
-            CoreServiceRegistrationMethod.SERVICE ->
+            CoreServiceRegistrationMethod.SERVICE -> {
                 ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(
                     ArmeriaKotlinExpressionSupport.findArgumentExpression(arguments, "path", 0),
                 )
-            CoreServiceRegistrationMethod.SERVICE_UNDER ->
+            }
+
+            CoreServiceRegistrationMethod.SERVICE_UNDER -> {
                 ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(findPathPrefixArgument(arguments, 0))
+            }
+
             CoreServiceRegistrationMethod.ANNOTATED_SERVICE -> {
                 when {
-                    arguments.size <= 1 -> "/"
-                    annotatedServiceFirstArgIsPath(arguments) ->
+                    arguments.size <= 1 -> {
+                        "/"
+                    }
+
+                    annotatedServiceFirstArgIsPath(arguments) -> {
                         ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(findPathPrefixArgument(arguments, 0))
-                    else -> "/"
+                    }
+
+                    else -> {
+                        "/"
+                    }
                 }
             }
-            null -> null
+
+            null -> {
+                null
+            }
         }
 
     /**
@@ -405,6 +425,7 @@ object ArmeriaKotlinRouteCollector {
                     .resolveKotlinTypeReferenceText(resolved.typeReference)
                     ?.let(ArmeriaKnownHttpServiceClassifier::canonicalServiceTypeName)
             }
+
             is KtProperty -> {
                 val declaredType =
                     ArmeriaKotlinDecoratorChainSupport
@@ -419,6 +440,7 @@ object ArmeriaKotlinRouteCollector {
                 }
                 return declaredType
             }
+
             is PsiVariable -> {
                 val declaredType =
                     ArmeriaKnownHttpServiceClassifier.canonicalServiceTypeName(resolved.type.canonicalText)
@@ -429,7 +451,10 @@ object ArmeriaKotlinRouteCollector {
                     ?.let(ArmeriaKnownHttpServiceClassifier::knownServiceTypeNameOrNull)
                     ?: declaredType
             }
-            else -> return resolveQualifiedClassName(resolved)
+
+            else -> {
+                return resolveQualifiedClassName(resolved)
+            }
         }
     }
 
@@ -508,7 +533,10 @@ object ArmeriaKotlinRouteCollector {
                         }
                     val resolved = reference?.references?.firstOrNull()?.resolve()
                     when {
-                        isResolvedKotlinClass(resolved) -> false
+                        isResolvedKotlinClass(resolved) -> {
+                            false
+                        }
+
                         resolved is PsiMethod -> {
                             if (resolved.isConstructor) {
                                 false
@@ -517,16 +545,26 @@ object ArmeriaKotlinRouteCollector {
                                     extractedTarget == resolved.containingClass?.qualifiedName
                             }
                         }
-                        isResolvedKotlinConstructor(resolved) -> false
-                        else -> extractedTarget == rawTarget
+
+                        isResolvedKotlinConstructor(resolved) -> {
+                            false
+                        }
+
+                        else -> {
+                            extractedTarget == rawTarget
+                        }
                     }
                 }
             }
+
             is KtNameReferenceExpression -> {
                 ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
                 unwrapped.references.firstOrNull()?.resolve() == null
             }
-            else -> extractedTarget == rawTarget
+
+            else -> {
+                extractedTarget == rawTarget
+            }
         }
     }
 
@@ -535,11 +573,15 @@ object ArmeriaKotlinRouteCollector {
         expression: KtCallExpression,
     ): KtExpression? =
         when (callee) {
-            is KtDotQualifiedExpression -> callee.receiverExpression
-            else ->
+            is KtDotQualifiedExpression -> {
+                callee.receiverExpression
+            }
+
+            else -> {
                 (expression.parent as? KtDotQualifiedExpression)
                     ?.receiverExpression
                     ?.takeIf { it !== expression }
+            }
         }
 
     private fun resolveQualifiedClassName(resolved: PsiElement?): String? =

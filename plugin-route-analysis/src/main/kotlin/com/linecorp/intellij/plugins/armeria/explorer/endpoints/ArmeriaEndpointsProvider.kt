@@ -136,7 +136,7 @@ class ArmeriaEndpointsProvider : EndpointsUrlTargetProvider<ArmeriaEndpointGroup
                 .collect(project, includeProtoRoutes = true)
                 .filter(ArmeriaEndpointsSupport::isVisibleServerRoute)
         return when (filter) {
-            is SearchScopeEndpointsFilter ->
+            is SearchScopeEndpointsFilter -> {
                 routes.filter { route ->
                     val virtualFile =
                         route.pointer.virtualFile
@@ -145,7 +145,11 @@ class ArmeriaEndpointsProvider : EndpointsUrlTargetProvider<ArmeriaEndpointGroup
                                 ?.virtualFile
                     virtualFile != null && filter.transitiveSearchScope.contains(virtualFile)
                 }
-            else -> routes
+            }
+
+            else -> {
+                routes
+            }
         }
     }
 

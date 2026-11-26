@@ -36,7 +36,10 @@ internal object ArmeriaIdlRouteSupport {
         val start = openBraceIndex + 1
         for (index in openBraceIndex until text.length) {
             when (text[index]) {
-                '{' -> depth++
+                '{' -> {
+                    depth++
+                }
+
                 '}' -> {
                     depth--
                     if (depth == 0) {

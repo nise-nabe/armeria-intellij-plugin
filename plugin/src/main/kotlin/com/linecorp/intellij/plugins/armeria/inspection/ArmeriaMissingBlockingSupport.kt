@@ -164,6 +164,7 @@ internal object ArmeriaMissingBlockingSupport {
         val cls = method.containingClass ?: return false
         return when (ArmeriaGraphqlBlockingSupport.blockingExecutorCovers(cls)) {
             GraphqlBlockingCoverage.HAS_EVENT_LOOP_REGISTRATION -> true
+
             GraphqlBlockingCoverage.ALL_BLOCKING_EXECUTOR,
             GraphqlBlockingCoverage.NOT_REGISTERED,
             -> false

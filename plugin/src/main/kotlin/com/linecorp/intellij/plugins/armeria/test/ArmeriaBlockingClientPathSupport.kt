@@ -19,13 +19,20 @@ internal object ArmeriaBlockingClientPathSupport {
     fun extractJavaRequestPath(argument: PsiExpression?): String? {
         argument ?: return null
         return when (argument) {
-            is PsiLiteralExpression -> argument.value as? String
-            is PsiReferenceExpression -> resolveJavaStringConstant(argument)
-            else ->
+            is PsiLiteralExpression -> {
+                argument.value as? String
+            }
+
+            is PsiReferenceExpression -> {
+                resolveJavaStringConstant(argument)
+            }
+
+            else -> {
                 JavaPsiFacade
                     .getInstance(argument.project)
                     .constantEvaluationHelper
                     .computeConstantExpression(argument) as? String
+            }
         }
     }
 
@@ -49,17 +56,25 @@ internal object ArmeriaBlockingClientPathSupport {
     fun extractKotlinRequestPath(argument: KtExpression?): String? {
         argument ?: return null
         return when (argument) {
-            is KtStringTemplateExpression -> extractKotlinStringTemplatePath(argument)
-            is KtNameReferenceExpression -> resolveKotlinStringConstant(argument)
+            is KtStringTemplateExpression -> {
+                extractKotlinStringTemplatePath(argument)
+            }
+
+            is KtNameReferenceExpression -> {
+                resolveKotlinStringConstant(argument)
+            }
+
             is KtDotQualifiedExpression -> {
                 val reference = argument.selectorExpression as? KtNameReferenceExpression ?: return null
                 resolveKotlinStringConstant(reference)
             }
-            else ->
+
+            else -> {
                 JavaPsiFacade
                     .getInstance(argument.project)
                     .constantEvaluationHelper
                     .computeConstantExpression(argument) as? String
+            }
         }
     }
 
@@ -87,7 +102,10 @@ internal object ArmeriaBlockingClientPathSupport {
             .computeConstantExpression(reference)
             ?.let { return it as? String }
         when (val resolved = reference.reference?.resolve()) {
-            is PsiField -> return staticFinalStringLiteral(resolved)
+            is PsiField -> {
+                return staticFinalStringLiteral(resolved)
+            }
+
             is KtProperty -> {
                 if (!resolved.hasModifier(KtTokens.CONST_KEYWORD)) {
                     return null
@@ -101,7 +119,10 @@ internal object ArmeriaBlockingClientPathSupport {
                     .text
                     .removeSurrounding("\"")
             }
-            else -> return null
+
+            else -> {
+                return null
+            }
         }
     }
 }

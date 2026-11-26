@@ -46,17 +46,20 @@ internal object ArmeriaKotlinClientEndpointGroupSupport {
             }
         if (reference != null) {
             when (val resolved = reference.references.firstOrNull()?.resolve()) {
-                is KtProperty ->
+                is KtProperty -> {
                     if (visited.add(resolved)) {
                         return labelKotlinEndpointGroup(resolved.initializer, visited)
                     }
-                is PsiVariable ->
+                }
+
+                is PsiVariable -> {
                     if (visited.add(resolved)) {
                         return ArmeriaClientEndpointGroupSupport.labelJavaEndpointGroup(
                             resolved.initializer,
                             visited,
                         )
                     }
+                }
             }
         }
         return expression.text.takeIf { ArmeriaClientEndpointGroupSupport.looksLikeEndpointGroupText(it) }
@@ -96,20 +99,31 @@ internal object ArmeriaKotlinClientEndpointGroupSupport {
                     expression.text.trim('"')
                 }
             }
+
             is KtNameReferenceExpression -> {
                 val resolved = expression.references.firstOrNull()?.resolve()
                 when (resolved) {
-                    is KtProperty ->
+                    is KtProperty -> {
                         if (visited.add(resolved)) {
                             extractKotlinDetail(resolved.initializer ?: return null, visited)
                         } else {
                             null
                         }
-                    is PsiVariable -> ArmeriaRouteSupport.evaluateJavaStringConstant(resolved)
-                    else -> expression.text.trim('"').takeIf { it.isNotEmpty() }
+                    }
+
+                    is PsiVariable -> {
+                        ArmeriaRouteSupport.evaluateJavaStringConstant(resolved)
+                    }
+
+                    else -> {
+                        expression.text.trim('"').takeIf { it.isNotEmpty() }
+                    }
                 }
             }
-            else -> expression.text.trim('"').takeIf { it.isNotEmpty() }
+
+            else -> {
+                expression.text.trim('"').takeIf { it.isNotEmpty() }
+            }
         }
     }
 }

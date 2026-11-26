@@ -91,12 +91,19 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
                             else -> (unwrapped.parent as? KtDotQualifiedExpression)?.receiverExpression
                         }
                 }
-                is KtDotQualifiedExpression -> current = unwrapped.receiverExpression
+
+                is KtDotQualifiedExpression -> {
+                    current = unwrapped.receiverExpression
+                }
+
                 is KtNameReferenceExpression -> {
                     val name = unwrapped.getReferencedName()
                     return name == "DocService" || name == "DocServiceBuilder"
                 }
-                else -> return false
+
+                else -> {
+                    return false
+                }
             }
         }
         return false

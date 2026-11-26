@@ -29,6 +29,7 @@ internal object ArmeriaSpringBootYamlPsiSupport {
                         is YAMLKeyValue -> {
                             current = owner
                         }
+
                         is YAMLSequenceItem -> {
                             val sequence = owner.parent as? YAMLSequence
                             val index = sequence?.items?.indexOf(owner) ?: -1
@@ -44,10 +45,16 @@ internal object ArmeriaSpringBootYamlPsiSupport {
                                 current = null
                             }
                         }
-                        else -> current = null
+
+                        else -> {
+                            current = null
+                        }
                     }
                 }
-                else -> current = null
+
+                else -> {
+                    current = null
+                }
             }
         }
         return segments.joinToString(".")
@@ -90,12 +97,16 @@ internal object ArmeriaSpringBootYamlPsiSupport {
                         }
                     }
                 }
+
                 is YAMLScalar -> {
                     if (includeTokenMatches(value.textValue, includeId)) {
                         last = value
                     }
                 }
-                else -> last = highlightElement(keyValue)
+
+                else -> {
+                    last = highlightElement(keyValue)
+                }
             }
         }
         return last

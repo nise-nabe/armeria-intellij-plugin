@@ -86,10 +86,17 @@ internal object ArmeriaMissingBlockingKotlinSupport {
 
     fun problemMessageKey(function: KtNamedFunction): String =
         when {
-            honorsBlockingAnnotation(function) -> "inspection.missing.blocking.problem"
-            function.name == "get" && containingClass(function)?.let(::isDataFetcherHierarchy) == true ->
+            honorsBlockingAnnotation(function) -> {
+                "inspection.missing.blocking.problem"
+            }
+
+            function.name == "get" && containingClass(function)?.let(::isDataFetcherHierarchy) == true -> {
                 "inspection.missing.blocking.problem.graphql"
-            else -> "inspection.missing.blocking.problem.httpservice"
+            }
+
+            else -> {
+                "inspection.missing.blocking.problem.httpservice"
+            }
         }
 
     fun findings(function: KtNamedFunction): List<ArmeriaBlockingCallFinding> {
@@ -228,6 +235,7 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                         found = true
                     }
                 }
+
                 element is KtObjectDeclaration && element.isObjectLiteral() -> {
                     if (isDataFetcherHierarchy(element) &&
                         (looseClassRefs || isFetcherRegistrationPosition(element)) &&
@@ -236,6 +244,7 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                         found = true
                     }
                 }
+
                 element is KtCallExpression -> {
                     val className = ArmeriaKotlinExpressionSupport.resolveCallName(element) ?: return@forEachDescendant
                     if (className in DATA_FETCHER_METHODS) {
@@ -293,6 +302,7 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         }
         return when (blockingExecutorCovers(klass)) {
             GraphqlBlockingCoverage.HAS_EVENT_LOOP_REGISTRATION -> true
+
             GraphqlBlockingCoverage.ALL_BLOCKING_EXECUTOR,
             GraphqlBlockingCoverage.NOT_REGISTERED,
             -> false
@@ -378,7 +388,10 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         }
         val name = klass.name ?: return false
         return when (resolved) {
-            is KtClassOrObject -> resolved.name == name && resolved.containingFile == klass.containingFile
+            is KtClassOrObject -> {
+                resolved.name == name && resolved.containingFile == klass.containingFile
+            }
+
             is PsiClass -> {
                 val fqName = klass.fqName?.asString()
                 if (fqName != null && resolved.qualifiedName != null) {
@@ -387,7 +400,10 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                     resolved.name == name
                 }
             }
-            else -> false
+
+            else -> {
+                false
+            }
         }
     }
 
@@ -506,14 +522,27 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         var current = element.parent
         while (current != null) {
             when (current) {
-                is KtValueArgument, is KtValueArgumentList, is KtReturnExpression, is KtProperty -> return true
-                is KtBlockExpression ->
+                is KtValueArgument, is KtValueArgumentList, is KtReturnExpression, is KtProperty -> {
+                    return true
+                }
+
+                is KtBlockExpression -> {
                     return current.statements
                         .lastOrNull()
                         ?.let { PsiTreeUtil.isAncestor(it, element, false) } == true
-                is KtLambdaExpression -> return true
-                is KtNamedFunction -> return true
-                is KtClassOrObject, is KtFile -> return false
+                }
+
+                is KtLambdaExpression -> {
+                    return true
+                }
+
+                is KtNamedFunction -> {
+                    return true
+                }
+
+                is KtClassOrObject, is KtFile -> {
+                    return false
+                }
             }
             current = current.parent
         }
@@ -541,15 +570,31 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         while (current != null) {
             when {
                 current is KtCallExpression &&
-                    ArmeriaKotlinExpressionSupport.resolveCallName(current) in DATA_FETCHER_METHODS -> return true
-                current is KtTypeReference -> return false
-                current is KtProperty || current is KtReturnExpression -> return true
-                current is KtBlockExpression ->
+                    ArmeriaKotlinExpressionSupport.resolveCallName(current) in DATA_FETCHER_METHODS -> {
+                    return true
+                }
+
+                current is KtTypeReference -> {
+                    return false
+                }
+
+                current is KtProperty || current is KtReturnExpression -> {
+                    return true
+                }
+
+                current is KtBlockExpression -> {
                     return current.statements
                         .lastOrNull()
                         ?.let { PsiTreeUtil.isAncestor(it, element, false) } == true
-                current is KtLambdaExpression -> return true
-                current is KtNamedFunction || current is KtClassOrObject || current is KtFile -> return false
+                }
+
+                current is KtLambdaExpression -> {
+                    return true
+                }
+
+                current is KtNamedFunction || current is KtClassOrObject || current is KtFile -> {
+                    return false
+                }
             }
             current = current.parent
         }
@@ -616,14 +661,18 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                         ?.firstNotNullOfOrNull { it.resolve() }
                 wiringBody(resolved, queue)
             }
+
             is KtCallExpression -> {
                 val resolved = element.calleeExpression?.references?.firstNotNullOfOrNull { it.resolve() }
                 wiringBody(resolved, queue)
             }
-            is KtObjectDeclaration ->
+
+            is KtObjectDeclaration -> {
                 if (element.isObjectLiteral()) {
                     configurerBodies(element, queue)
                 }
+            }
+
             is KtNameReferenceExpression -> {
                 when (val resolved = element.references.firstOrNull()?.resolve()) {
                     is KtProperty -> resolved.initializer?.let(queue::add)
@@ -638,16 +687,25 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         queue: ArrayDeque<PsiElement>,
     ) {
         when (resolved) {
-            is KtNamedFunction -> resolved.bodyExpression?.let(queue::add)
-            is KtConstructor<*> ->
+            is KtNamedFunction -> {
+                resolved.bodyExpression?.let(queue::add)
+            }
+
+            is KtConstructor<*> -> {
                 configurerBodies(PsiTreeUtil.getParentOfType(resolved, KtClassOrObject::class.java), queue)
-            is KtClassOrObject -> configurerBodies(resolved, queue)
-            is PsiMethod ->
+            }
+
+            is KtClassOrObject -> {
+                configurerBodies(resolved, queue)
+            }
+
+            is PsiMethod -> {
                 if (resolved.isConstructor) {
                     configurerBodies(resolved.containingClass, queue)
                 } else {
                     resolved.takeIf(::isUserWiringMethod)?.body?.let(queue::add)
                 }
+            }
         }
     }
 
@@ -667,6 +725,7 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                     .filter { it.name in CONFIGURER_FUNCTION_NAMES }
                     .mapNotNullTo(queue) { it.bodyExpression }
             }
+
             is PsiClass -> {
                 val qualifiedName = target.qualifiedName
                 if (qualifiedName != null && LIBRARY_PACKAGE_PREFIXES.any(qualifiedName::startsWith)) {
@@ -714,6 +773,7 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                         found = true
                     }
                 }
+
                 is KtCallExpression -> {
                     if (strict && !isFetcherRegistrationPosition(element)) {
                         return@forEachDescendant
@@ -732,16 +792,32 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         className: String,
     ): Boolean =
         when (val resolved = reference.references.firstNotNullOfOrNull { it.resolve() }) {
-            is PsiClass -> resolved.name == className
-            is KtClassOrObject -> resolved.name == className
-            is PsiVariable -> (resolved.type as? PsiClassType)?.resolve()?.name == className
-            is KtProperty -> propertyRefersToClass(resolved, className)
-            is KtParameter ->
+            is PsiClass -> {
+                resolved.name == className
+            }
+
+            is KtClassOrObject -> {
+                resolved.name == className
+            }
+
+            is PsiVariable -> {
+                (resolved.type as? PsiClassType)?.resolve()?.name == className
+            }
+
+            is KtProperty -> {
+                propertyRefersToClass(resolved, className)
+            }
+
+            is KtParameter -> {
                 resolved.typeReference
                     ?.text
                     ?.substringBefore('<')
                     ?.trim() == className
-            else -> false
+            }
+
+            else -> {
+                false
+            }
         }
 
     private fun propertyRefersToClass(
@@ -795,12 +871,19 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                 }
                 resolveClassByName(unwrapped, className)?.takeIf(::isDataFetcherType)
             }
-            is KtNameReferenceExpression -> resolveFromNameReference(unwrapped, visited)
+
+            is KtNameReferenceExpression -> {
+                resolveFromNameReference(unwrapped, visited)
+            }
+
             is KtDotQualifiedExpression -> {
                 val selector = unwrapped.selectorExpression ?: return null
                 resolveDataFetcherFromExpression(selector, visited)
             }
-            else -> null
+
+            else -> {
+                null
+            }
         }
     }
 
@@ -809,7 +892,10 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         visited: MutableSet<PsiElement>,
     ): PsiElement? {
         when (val resolved = reference.references.firstNotNullOfOrNull { it.resolve() }) {
-            is KtProperty -> return propertyDataFetcher(resolved, visited)
+            is KtProperty -> {
+                return propertyDataFetcher(resolved, visited)
+            }
+
             is KtParameter -> {
                 resolved.defaultValue?.let { resolveDataFetcherFromExpression(it, visited) }?.let { return it }
                 val typeName =
@@ -819,6 +905,7 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                         ?.trim()
                 return typeName?.let { findDataFetcherClassInFile(reference, it) }
             }
+
             is PsiVariable -> {
                 val typeClass = (resolved.type as? PsiClassType)?.resolve()
                 if (typeClass != null &&
@@ -828,8 +915,14 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                     return typeClass
                 }
             }
-            is KtClassOrObject -> return resolved.takeIf(::isDataFetcherHierarchy)
-            is PsiClass -> return resolved.takeIf { ArmeriaMissingBlockingSupport.isDataFetcherClass(it) }
+
+            is KtClassOrObject -> {
+                return resolved.takeIf(::isDataFetcherHierarchy)
+            }
+
+            is PsiClass -> {
+                return resolved.takeIf { ArmeriaMissingBlockingSupport.isDataFetcherClass(it) }
+            }
         }
         return findPropertyDataFetcher(reference, reference.getReferencedName(), visited)
     }
@@ -913,14 +1006,19 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                     }
                 }
             }
-            is PsiClass ->
+
+            is PsiClass -> {
                 !ArmeriaMissingBlockingSupport.hasNonBlocking(klass) &&
                     klass.methods.any { method ->
                         ArmeriaMissingBlockingSupport.isDataFetcherGet(method) &&
                             !ArmeriaMissingBlockingSupport.hasNonBlocking(method) &&
                             ArmeriaMissingBlockingSupport.findings(method).isNotEmpty()
                     }
-            else -> false
+            }
+
+            else -> {
+                false
+            }
         }
 
     private fun isDirectLambdaArgument(
@@ -1049,7 +1147,10 @@ internal object ArmeriaMissingBlockingKotlinSupport {
     private fun chainReceiver(expression: KtExpression): KtExpression? {
         val receiver =
             when (expression) {
-                is KtDotQualifiedExpression -> expression.receiverExpression
+                is KtDotQualifiedExpression -> {
+                    expression.receiverExpression
+                }
+
                 is KtCallExpression -> {
                     val parent = expression.parent
                     if (parent is KtDotQualifiedExpression && parent.selectorExpression == expression) {
@@ -1061,7 +1162,10 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                         }
                     }
                 }
-                else -> null
+
+                else -> {
+                    null
+                }
             } ?: return null
         return ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(receiver) ?: receiver
     }
@@ -1144,14 +1248,21 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                         resolveSuperType(entry, current)?.let { queue.add(it) }
                     }
                 }
+
                 is PsiClass -> {
                     if (javaMatch(current)) {
                         return true
                     }
                     current.supers.forEach { queue.add(it) }
                 }
-                is PsiMethod -> current.containingClass?.let { queue.add(it) }
-                is KtConstructor<*> -> queue.add(current.getContainingClassOrObject())
+
+                is PsiMethod -> {
+                    current.containingClass?.let { queue.add(it) }
+                }
+
+                is KtConstructor<*> -> {
+                    queue.add(current.getContainingClassOrObject())
+                }
             }
         }
         return false

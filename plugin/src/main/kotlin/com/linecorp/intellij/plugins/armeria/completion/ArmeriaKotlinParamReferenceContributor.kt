@@ -257,12 +257,15 @@ private fun rewriteKotlinPathVariableEntries(
     for (entry in entries) {
         val qualifiedName = ArmeriaKotlinAnnotationSupport.qualifiedName(entry) ?: continue
         when {
-            isKotlinPathAnnotation(qualifiedName) ->
+            isKotlinPathAnnotation(qualifiedName) -> {
                 replaceKotlinAnnotationStrings(entry) {
                     ArmeriaPathVariableSupport.replacePathVariableName(it, oldName, newName)
                 }
-            qualifiedName == ArmeriaRouteSupport.PARAM_ANNOTATION ->
+            }
+
+            qualifiedName == ArmeriaRouteSupport.PARAM_ANNOTATION -> {
                 replaceKotlinAnnotationStrings(entry) { current -> if (current == oldName) newName else current }
+            }
         }
     }
 }
@@ -288,8 +291,10 @@ private fun replaceKotlinStringExpression(
                 ElementManipulators.handleContentChange(expression, updated)
             }
         }
-        is KtCollectionLiteralExpression ->
+
+        is KtCollectionLiteralExpression -> {
             expression.getInnerExpressions().forEach { replaceKotlinStringExpression(it, transform) }
+        }
     }
 }
 

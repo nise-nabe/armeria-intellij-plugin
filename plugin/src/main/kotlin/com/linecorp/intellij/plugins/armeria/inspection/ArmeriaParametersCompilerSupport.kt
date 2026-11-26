@@ -143,10 +143,14 @@ internal object ArmeriaParametersCompilerSupport {
         mode: ArmeriaParameterNameMode,
     ): Boolean =
         when (mode) {
-            ArmeriaParameterNameMode.JAVA -> containsToken(text, JAVA_FLAG_TOKEN)
-            ArmeriaParameterNameMode.KOTLIN ->
+            ArmeriaParameterNameMode.JAVA -> {
+                containsToken(text, JAVA_FLAG_TOKEN)
+            }
+
+            ArmeriaParameterNameMode.KOTLIN -> {
                 containsToken(text, KOTLIN_FLAG_TOKEN) ||
                     KOTLIN_JAVA_PARAMETERS_ENABLED.containsMatchIn(text)
+            }
         }
 
     private fun containsToken(

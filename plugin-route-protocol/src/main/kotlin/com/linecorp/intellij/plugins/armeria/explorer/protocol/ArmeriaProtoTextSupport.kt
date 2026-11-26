@@ -33,23 +33,27 @@ internal object ArmeriaProtoTextSupport {
                     result.append(text[index])
                     index++
                 }
+
                 text[index] == '\'' -> {
                     inSingleQuote = true
                     result.append(text[index])
                     index++
                 }
+
                 text.startsWith("//", index) -> {
                     val lineEnd = text.indexOf('\n', index)
                     val nextIndex = if (lineEnd < 0) text.length else lineEnd
                     ensureWhitespaceBetweenIdentifiers(result, text.getOrNull(nextIndex))
                     index = nextIndex
                 }
+
                 text.startsWith("/*", index) -> {
                     val blockEnd = text.indexOf("*/", index + 2)
                     val nextIndex = if (blockEnd < 0) text.length else blockEnd + 2
                     ensureWhitespaceBetweenIdentifiers(result, text.getOrNull(nextIndex))
                     index = nextIndex
                 }
+
                 else -> {
                     result.append(text[index])
                     index++
@@ -85,9 +89,18 @@ internal object ArmeriaProtoTextSupport {
                 continue
             }
             when (text[index]) {
-                '"' -> inDoubleQuote = true
-                '\'' -> inSingleQuote = true
-                '{' -> depth++
+                '"' -> {
+                    inDoubleQuote = true
+                }
+
+                '\'' -> {
+                    inSingleQuote = true
+                }
+
+                '{' -> {
+                    depth++
+                }
+
                 '}' -> {
                     depth--
                     if (depth == 0) {

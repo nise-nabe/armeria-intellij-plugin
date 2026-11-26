@@ -15,7 +15,10 @@ internal object ArmeriaJavaIntConstantSupport {
     private fun extractNumber(expression: PsiExpression?): Number? {
         expression ?: return null
         when (expression) {
-            is PsiLiteralExpression -> (expression.value as? Number)?.let { return it }
+            is PsiLiteralExpression -> {
+                (expression.value as? Number)?.let { return it }
+            }
+
             is PsiReferenceExpression -> {
                 val resolved = expression.resolve() as? PsiVariable
                 when (val value = resolved?.computeConstantValue()) {
@@ -23,6 +26,7 @@ internal object ArmeriaJavaIntConstantSupport {
                 }
                 resolved?.initializer?.let { initializer -> extractNumber(initializer)?.let { return it } }
             }
+
             else -> {
                 val constant =
                     JavaPsiFacade

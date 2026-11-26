@@ -32,8 +32,14 @@ object ArmeriaListenPortSupport {
         resolvedProtocolNames: List<String>,
     ): String? =
         when (methodName) {
-            HTTPS_METHOD -> canonicalHttps()
-            HTTP_METHOD -> canonicalHttp()
+            HTTPS_METHOD -> {
+                canonicalHttps()
+            }
+
+            HTTP_METHOD -> {
+                canonicalHttp()
+            }
+
             PORT_METHOD -> {
                 if (!extraArgsPresent) {
                     canonicalHttp()
@@ -46,7 +52,10 @@ object ArmeriaListenPortSupport {
                     }
                 }
             }
-            else -> null
+
+            else -> {
+                null
+            }
         }
 
     fun displayProtocols(protocolNames: List<String>): String =
@@ -96,6 +105,7 @@ object ArmeriaListenPortSupport {
                 val literal = unwrapped.value as? String ?: return null
                 return literal.uppercase()
             }
+
             is PsiReferenceExpression -> {
                 val resolved = unwrapped.resolve()
                 if (resolved is PsiField && isSessionProtocolClass(resolved.containingClass)) {
@@ -107,7 +117,10 @@ object ArmeriaListenPortSupport {
                 }
                 return null
             }
-            else -> return null
+
+            else -> {
+                return null
+            }
         }
     }
 
@@ -149,8 +162,14 @@ object ArmeriaListenPortSupport {
                         hasHttp = true
                     }
                 }
-                token in HTTPS_TOKENS -> hasHttps = true
-                token in HTTP_TOKENS -> hasHttp = true
+
+                token in HTTPS_TOKENS -> {
+                    hasHttps = true
+                }
+
+                token in HTTP_TOKENS -> {
+                    hasHttp = true
+                }
             }
         }
         return buildList {
@@ -192,7 +211,10 @@ object ArmeriaListenPortSupport {
         }
         val unwrapped = unwrapJavaExpression(expression) ?: return null
         when (unwrapped) {
-            is PsiLiteralExpression -> (unwrapped.value as? Number)?.let { return it }
+            is PsiLiteralExpression -> {
+                (unwrapped.value as? Number)?.let { return it }
+            }
+
             is PsiReferenceExpression -> {
                 val resolved = unwrapped.resolve() as? PsiVariable ?: return null
                 if (!visited.add(resolved)) {
@@ -203,6 +225,7 @@ object ArmeriaListenPortSupport {
                 }
                 return extractJavaNumber(resolved.initializer, hops + 1, visited)
             }
+
             else -> {
                 val constant =
                     JavaPsiFacade

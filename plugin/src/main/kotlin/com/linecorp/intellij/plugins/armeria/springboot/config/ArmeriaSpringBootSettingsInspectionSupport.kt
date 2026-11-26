@@ -37,14 +37,17 @@ internal object ArmeriaSpringBootSettingsInspectionSupport {
 
     fun problemMessage(finding: ArmeriaSpringBootSettingsConflict.Finding): String =
         when (finding.kind) {
-            ArmeriaSpringBootSettingsConflict.Kind.PORT_CONFLICT ->
+            ArmeriaSpringBootSettingsConflict.Kind.PORT_CONFLICT -> {
                 message("inspection.springboot.settings.port.conflict")
-            ArmeriaSpringBootSettingsConflict.Kind.MISSING_INTERNAL_SERVICE ->
+            }
+
+            ArmeriaSpringBootSettingsConflict.Kind.MISSING_INTERNAL_SERVICE -> {
                 message(
                     "inspection.springboot.settings.internal.missing",
                     finding.includeId.orEmpty(),
                     finding.pathKey.orEmpty(),
                 )
+            }
         }
 
     private fun highlightType(kind: ArmeriaSpringBootSettingsConflict.Kind): ProblemHighlightType =

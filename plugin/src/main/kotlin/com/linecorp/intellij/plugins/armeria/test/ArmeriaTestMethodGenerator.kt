@@ -59,6 +59,7 @@ internal object ArmeriaTestMethodGenerator {
                     """.trimIndent()
                 }
             }
+
             ArmeriaTestLanguage.KOTLIN -> {
                 val path = ArmeriaJUnitServerExtensionSupport.escapeKotlinStringLiteral(normalizedPath)
                 if (blocking) {

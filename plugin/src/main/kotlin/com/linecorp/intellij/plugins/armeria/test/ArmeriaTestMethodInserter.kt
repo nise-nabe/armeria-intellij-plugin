@@ -46,8 +46,14 @@ internal object ArmeriaTestMethodInserter {
             }
         val language =
             when {
-                targetClass.containingFile is PsiJavaFile -> ArmeriaTestLanguage.JAVA
-                isKotlinPluginAvailable() -> ArmeriaTestLanguage.KOTLIN
+                targetClass.containingFile is PsiJavaFile -> {
+                    ArmeriaTestLanguage.JAVA
+                }
+
+                isKotlinPluginAvailable() -> {
+                    ArmeriaTestLanguage.KOTLIN
+                }
+
                 else -> {
                     Messages.showWarningDialog(
                         project,
@@ -60,8 +66,11 @@ internal object ArmeriaTestMethodInserter {
         val classExtensions = ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, targetClass)
         val extension =
             when (classExtensions.size) {
-                1 -> classExtensions.single()
-                0 ->
+                1 -> {
+                    classExtensions.single()
+                }
+
+                0 -> {
                     run {
                         Messages.showWarningDialog(
                             project,
@@ -70,7 +79,9 @@ internal object ArmeriaTestMethodInserter {
                         )
                         return false
                     }
-                else ->
+                }
+
+                else -> {
                     run {
                         Messages.showWarningDialog(
                             project,
@@ -79,6 +90,7 @@ internal object ArmeriaTestMethodInserter {
                         )
                         return false
                     }
+                }
             }
         val methodName = ArmeriaTestMethodGenerator.suggestMethodName(route)
         if (targetClass.methods.any { it.name == methodName }) {
@@ -233,10 +245,17 @@ internal object ArmeriaTestMethodInserter {
         }
         val selectedClass =
             when {
-                selectedPsiFile is PsiJavaFile -> resolveJavaTargetClass(project, selectedPsiFile, elementAtCaret)
-                isKotlinPluginAvailable() ->
+                selectedPsiFile is PsiJavaFile -> {
+                    resolveJavaTargetClass(project, selectedPsiFile, elementAtCaret)
+                }
+
+                isKotlinPluginAvailable() -> {
                     (selectedPsiFile as? KtFile)?.singleTopLevelKotlinDeclaration()?.toLightClass()
-                else -> null
+                }
+
+                else -> {
+                    null
+                }
             }
         if (selectedClass != null &&
             ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, selectedClass).isNotEmpty()
@@ -300,13 +319,20 @@ internal object ArmeriaTestMethodInserter {
             }
         }
         return when {
-            selectedPsiFile is PsiJavaFile -> selectedPsiFile.classes.any { it.containingClass == null }
-            isKotlinPluginAvailable() && selectedPsiFile is KtFile ->
+            selectedPsiFile is PsiJavaFile -> {
+                selectedPsiFile.classes.any { it.containingClass == null }
+            }
+
+            isKotlinPluginAvailable() && selectedPsiFile is KtFile -> {
                 selectedPsiFile.declarations.any { declaration ->
                     declaration is KtClass ||
                         (declaration is KtObjectDeclaration && !declaration.isCompanion())
                 }
-            else -> false
+            }
+
+            else -> {
+                false
+            }
         }
     }
 

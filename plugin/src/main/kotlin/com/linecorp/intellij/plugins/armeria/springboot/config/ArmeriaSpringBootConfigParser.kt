@@ -125,6 +125,7 @@ object ArmeriaSpringBootConfigParser {
                             stack.removeLast()
                         }
                     }
+
                     else -> {
                         val ci = trimmed.indexOf(':')
                         if (ci < 0) {

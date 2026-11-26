@@ -57,16 +57,33 @@ object ArmeriaExtendedRegistrationCollector {
             return
         }
         when (ServiceRegistrationMethod.fromMethodName(methodName)) {
-            ServiceRegistrationMethod.FILE_SERVICE -> addFileService(expression, routes, seenRegistrations)
-            ServiceRegistrationMethod.HEALTH_CHECK_SERVICE -> addHealthCheck(expression, routes, seenRegistrations)
-            ServiceRegistrationMethod.VIRTUAL_HOST ->
+            ServiceRegistrationMethod.FILE_SERVICE -> {
+                addFileService(expression, routes, seenRegistrations)
+            }
+
+            ServiceRegistrationMethod.HEALTH_CHECK_SERVICE -> {
+                addHealthCheck(expression, routes, seenRegistrations)
+            }
+
+            ServiceRegistrationMethod.VIRTUAL_HOST -> {
                 ArmeriaExtendedRegistrationCollectorVirtualHost.addVirtualHost(expression, routes, seenRegistrations)
-            ServiceRegistrationMethod.ROUTE_DECORATOR ->
+            }
+
+            ServiceRegistrationMethod.ROUTE_DECORATOR -> {
                 ArmeriaExtendedRegistrationCollectorRouteDecorator.addRouteDecorator(expression, routes, seenRegistrations)
-            ServiceRegistrationMethod.WITH_ROUTE ->
+            }
+
+            ServiceRegistrationMethod.WITH_ROUTE -> {
                 ArmeriaExtendedRegistrationCollectorRouteDecorator.addWithRoute(expression, routes, seenRegistrations)
-            ServiceRegistrationMethod.DECORATOR_UNDER -> addDecoratorUnder(expression, routes, seenRegistrations)
-            else -> Unit
+            }
+
+            ServiceRegistrationMethod.DECORATOR_UNDER -> {
+                addDecoratorUnder(expression, routes, seenRegistrations)
+            }
+
+            else -> {
+                Unit
+            }
         }
     }
 

@@ -34,7 +34,10 @@ internal object ArmeriaKotlinInspectionCallChains {
     fun chainReceiver(expression: KtExpression): KtExpression? {
         val receiver =
             when (expression) {
-                is KtDotQualifiedExpression -> expression.receiverExpression
+                is KtDotQualifiedExpression -> {
+                    expression.receiverExpression
+                }
+
                 is KtCallExpression -> {
                     val parent = expression.parent
                     if (parent is KtDotQualifiedExpression && parent.selectorExpression == expression) {
@@ -46,7 +49,10 @@ internal object ArmeriaKotlinInspectionCallChains {
                         }
                     }
                 }
-                else -> null
+
+                else -> {
+                    null
+                }
             } ?: return null
         return ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(receiver) ?: receiver
     }
@@ -80,7 +86,10 @@ internal object ArmeriaKotlinInspectionCallChains {
         while (true) {
             val parent = current.parent ?: return null
             when (parent) {
-                is KtProperty -> return parent
+                is KtProperty -> {
+                    return parent
+                }
+
                 is KtBinaryExpression -> {
                     val right = parent.right
                     if (parent.operationToken == KtTokens.EQ &&
@@ -91,13 +100,17 @@ internal object ArmeriaKotlinInspectionCallChains {
                     }
                     return null
                 }
+
                 is KtQualifiedExpression,
                 is KtCallExpression,
                 is KtParenthesizedExpression,
                 -> {
                     current = parent
                 }
-                else -> return null
+
+                else -> {
+                    return null
+                }
             }
         }
     }
@@ -107,10 +120,17 @@ internal object ArmeriaKotlinInspectionCallChains {
             ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression ?: return null)
                 ?: expression
         return when (unwrapped) {
-            is KtNameReferenceExpression -> resolvedProperty(unwrapped)
-            is KtQualifiedExpression ->
+            is KtNameReferenceExpression -> {
+                resolvedProperty(unwrapped)
+            }
+
+            is KtQualifiedExpression -> {
                 (unwrapped.selectorExpression as? KtNameReferenceExpression)?.let(::resolvedProperty)
-            else -> null
+            }
+
+            else -> {
+                null
+            }
         }
     }
 
@@ -132,15 +152,25 @@ internal object ArmeriaKotlinInspectionCallChains {
         var current: KtExpression? = chainReceiver(call)
         while (current != null) {
             when (current) {
-                is KtNameReferenceExpression -> return resolvedProperty(current) == property
-                is KtCallExpression -> current = chainReceiver(current)
-                is KtQualifiedExpression ->
+                is KtNameReferenceExpression -> {
+                    return resolvedProperty(current) == property
+                }
+
+                is KtCallExpression -> {
+                    current = chainReceiver(current)
+                }
+
+                is KtQualifiedExpression -> {
                     when (val selector = current.selectorExpression) {
                         is KtCallExpression -> current = selector
                         is KtNameReferenceExpression -> return resolvedProperty(selector) == property
                         else -> current = current.receiverExpression
                     }
-                else -> return false
+                }
+
+                else -> {
+                    return false
+                }
             }
         }
         return false
@@ -157,12 +187,22 @@ internal object ArmeriaKotlinInspectionCallChains {
     fun qualifierSimpleName(call: KtCallExpression): String? {
         val receiver = chainReceiver(call) ?: return null
         return when (val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(receiver) ?: receiver) {
-            is KtNameReferenceExpression -> unwrapped.getReferencedName()
-            is KtCallExpression -> callName(unwrapped)
-            is KtDotQualifiedExpression ->
+            is KtNameReferenceExpression -> {
+                unwrapped.getReferencedName()
+            }
+
+            is KtCallExpression -> {
+                callName(unwrapped)
+            }
+
+            is KtDotQualifiedExpression -> {
                 (unwrapped.selectorExpression as? KtNameReferenceExpression)?.getReferencedName()
                     ?: unwrapped.selectorExpression?.text?.substringBefore('(')
-            else -> unwrapped.text.substringAfterLast('.').substringBefore('(')
+            }
+
+            else -> {
+                unwrapped.text.substringAfterLast('.').substringBefore('(')
+            }
         }
     }
 
@@ -219,6 +259,7 @@ internal object ArmeriaKotlinInspectionCallChains {
                         return callName(current).orEmpty()
                     }
                 }
+
                 is KtDotQualifiedExpression -> {
                     when (val selector = current.selectorExpression) {
                         is KtCallExpression -> current = selector
@@ -226,8 +267,14 @@ internal object ArmeriaKotlinInspectionCallChains {
                         else -> current = current.receiverExpression
                     }
                 }
-                is KtNameReferenceExpression -> return current.getReferencedName()
-                else -> return current.text.substringAfterLast('.').substringBefore('(')
+
+                is KtNameReferenceExpression -> {
+                    return current.getReferencedName()
+                }
+
+                else -> {
+                    return current.text.substringAfterLast('.').substringBefore('(')
+                }
             }
         }
     }

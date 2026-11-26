@@ -100,9 +100,18 @@ internal object ArmeriaScalaInspectionSupport {
 
     private fun memberStrings(value: PsiAnnotationMemberValue?): List<String> =
         when (value) {
-            null -> emptyList()
-            is PsiLiteral -> listOfNotNull(value.value as? String)
-            is PsiArrayInitializerMemberValue -> value.initializers.flatMap(::memberStrings)
+            null -> {
+                emptyList()
+            }
+
+            is PsiLiteral -> {
+                listOfNotNull(value.value as? String)
+            }
+
+            is PsiArrayInitializerMemberValue -> {
+                value.initializers.flatMap(::memberStrings)
+            }
+
             is MethodInvocation -> {
                 val strings = mutableListOf<String>()
                 val arguments = value.argumentExpressions().iterator()
@@ -111,7 +120,10 @@ internal object ArmeriaScalaInspectionSupport {
                 }
                 strings
             }
-            else -> emptyList()
+
+            else -> {
+                emptyList()
+            }
         }
 
     /**

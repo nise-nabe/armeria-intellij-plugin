@@ -51,6 +51,7 @@ internal object ArmeriaHttpRequestFileWriter {
                                 LOG.warn("HTTP request parent path exists but is not a directory: $parentDir")
                                 return@runWriteCommandAction
                             }
+
                             !parentDir.exists() && !parentDir.mkdirs() -> {
                                 LOG.warn("Failed to create HTTP request directory: $parentDir")
                                 return@runWriteCommandAction

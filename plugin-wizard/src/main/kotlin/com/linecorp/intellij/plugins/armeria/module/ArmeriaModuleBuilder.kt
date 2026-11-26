@@ -49,6 +49,7 @@ class ArmeriaModuleBuilder : StarterModuleBuilder() {
                     ),
                 )
             }
+
             GRADLE_GROOVY_PROJECT -> {
                 assets.add(
                     GeneratorTemplateFile(
@@ -69,6 +70,7 @@ class ArmeriaModuleBuilder : StarterModuleBuilder() {
                     ),
                 )
             }
+
             MAVEN_PROJECT -> {
                 assets.add(
                     GeneratorTemplateFile(

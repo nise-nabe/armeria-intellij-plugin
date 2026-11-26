@@ -134,11 +134,15 @@ object ArmeriaDocServiceExampleCollector {
                     }
                     current = qualifier
                 }
+
                 is PsiReferenceExpression -> {
                     val name = unwrapped.referenceName
                     return name == "DocService" || name == "DocServiceBuilder"
                 }
-                else -> return false
+
+                else -> {
+                    return false
+                }
             }
         }
         return false
@@ -182,13 +186,21 @@ object ArmeriaDocServiceExampleCollector {
                     ?.trim()
                     ?.takeIf { it.isNotEmpty() && it != "null" }
             }
-            is PsiLiteralExpression -> return unwrapped.value as? String
-            is PsiReferenceExpression -> return ArmeriaRouteSupport.extractJavaStringConstant(unwrapped)
-            else ->
+
+            is PsiLiteralExpression -> {
+                return unwrapped.value as? String
+            }
+
+            is PsiReferenceExpression -> {
+                return ArmeriaRouteSupport.extractJavaStringConstant(unwrapped)
+            }
+
+            else -> {
                 return JavaPsiFacade
                     .getInstance(unwrapped.project)
                     .constantEvaluationHelper
                     .computeConstantExpression(unwrapped) as? String
+            }
         }
     }
 
@@ -198,13 +210,20 @@ object ArmeriaDocServiceExampleCollector {
             return null
         }
         return when (unwrapped) {
-            is PsiLiteralExpression -> unwrapped.value as? String
-            is PsiReferenceExpression -> ArmeriaRouteSupport.extractJavaStringConstant(unwrapped)
-            else ->
+            is PsiLiteralExpression -> {
+                unwrapped.value as? String
+            }
+
+            is PsiReferenceExpression -> {
+                ArmeriaRouteSupport.extractJavaStringConstant(unwrapped)
+            }
+
+            else -> {
                 JavaPsiFacade
                     .getInstance(unwrapped.project)
                     .constantEvaluationHelper
                     .computeConstantExpression(unwrapped) as? String
+            }
         }
     }
 

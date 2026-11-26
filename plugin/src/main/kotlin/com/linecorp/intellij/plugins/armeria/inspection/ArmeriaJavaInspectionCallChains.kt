@@ -84,10 +84,17 @@ internal object ArmeriaJavaInspectionCallChains {
             parent = parent.parent
         }
         return when (parent) {
-            is PsiVariable -> parent
-            is PsiAssignmentExpression ->
+            is PsiVariable -> {
+                parent
+            }
+
+            is PsiAssignmentExpression -> {
                 (parent.lExpression as? PsiReferenceExpression)?.resolve() as? PsiVariable
-            else -> null
+            }
+
+            else -> {
+                null
+            }
         }
     }
 
@@ -107,10 +114,17 @@ internal object ArmeriaJavaInspectionCallChains {
         var current: PsiExpression? = unwrapOrNull(call.methodExpression.qualifierExpression)
         while (current != null) {
             when (current) {
-                is PsiReferenceExpression -> return current.resolve() == variable
-                is PsiMethodCallExpression ->
+                is PsiReferenceExpression -> {
+                    return current.resolve() == variable
+                }
+
+                is PsiMethodCallExpression -> {
                     current = unwrapOrNull(current.methodExpression.qualifierExpression)
-                else -> return false
+                }
+
+                else -> {
+                    return false
+                }
             }
         }
         return false
@@ -167,10 +181,17 @@ internal object ArmeriaJavaInspectionCallChains {
 
     private fun resolvedDecoratorClassName(expression: PsiExpression): String? =
         when (expression) {
-            is PsiMethodReferenceExpression ->
+            is PsiMethodReferenceExpression -> {
                 (expression.resolve() as? PsiMethod)?.containingClass?.name
-            is PsiMethodCallExpression -> expression.resolveMethod()?.containingClass?.name
-            else -> null
+            }
+
+            is PsiMethodCallExpression -> {
+                expression.resolveMethod()?.containingClass?.name
+            }
+
+            else -> {
+                null
+            }
         }
 
     fun containingClass(element: PsiElement): PsiClass? = PsiTreeUtil.getParentOfType(element, PsiClass::class.java)
