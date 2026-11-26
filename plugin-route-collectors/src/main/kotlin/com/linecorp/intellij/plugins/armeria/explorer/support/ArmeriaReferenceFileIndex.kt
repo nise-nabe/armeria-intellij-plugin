@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer.support
 
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
@@ -25,10 +26,13 @@ class ArmeriaReferenceFileIndex : ScalarIndexExtension<Int>() {
     override fun getIndexer(): DataIndexer<Int, Void, FileContent> =
         DataIndexer { input ->
             val contents = input.contentAsText
-            if (contents.contains(ArmeriaRouteSupport.ARMERIA_PACKAGE_PREFIX)) {
-                mapOf(ARMERIA_REFERENCE_KEY to null)
-            } else {
-                emptyMap()
+            buildMap {
+                if (contents.contains(ArmeriaRouteSupport.ARMERIA_PACKAGE_PREFIX)) {
+                    put(ARMERIA_REFERENCE_KEY, null)
+                }
+                if (ArmeriaRouteSupport.SPRING_BOOT_ARMERIA_FILE_INDICATORS.any(contents::contains)) {
+                    put(SPRING_BOOT_ARMERIA_REFERENCE_KEY, null)
+                }
             }
         }
 
@@ -38,10 +42,11 @@ class ArmeriaReferenceFileIndex : ScalarIndexExtension<Int>() {
 
     override fun dependsOnFileContent(): Boolean = true
 
-    override fun getVersion(): Int = 2
+    override fun getVersion(): Int = 1
 
     companion object {
         private const val ARMERIA_REFERENCE_KEY = 1
+        private const val SPRING_BOOT_ARMERIA_REFERENCE_KEY = 2
         private val SOURCE_EXTENSIONS = setOf("java", "kt", "kts", "scala")
 
         val NAME: ID<Int, Void> = ID.create("com.linecorp.intellij.plugins.armeria.reference.file")
@@ -54,14 +59,21 @@ class ArmeriaReferenceFileIndex : ScalarIndexExtension<Int>() {
         fun findFiles(
             project: Project,
             scope: GlobalSearchScope,
+            includeSpringBootArmeriaIndicators: Boolean = false,
         ): List<VirtualFile> {
             if (!isRegistered()) {
-                return fallbackFiles(project, scope)
+                return fallbackFiles(project, scope, includeSpringBootArmeriaIndicators)
             }
+            val keys =
+                if (includeSpringBootArmeriaIndicators) {
+                    setOf(ARMERIA_REFERENCE_KEY, SPRING_BOOT_ARMERIA_REFERENCE_KEY)
+                } else {
+                    setOf(ARMERIA_REFERENCE_KEY)
+                }
             val files = mutableListOf<VirtualFile>()
             FileBasedIndex.getInstance().getFilesWithKey(
                 NAME,
-                setOf(ARMERIA_REFERENCE_KEY),
+                keys,
                 { file ->
                     files += file
                     true
@@ -79,15 +91,23 @@ class ArmeriaReferenceFileIndex : ScalarIndexExtension<Int>() {
         private fun fallbackFiles(
             project: Project,
             scope: GlobalSearchScope,
+            includeSpringBootArmeriaIndicators: Boolean,
         ): List<VirtualFile> =
             SOURCE_EXTENSIONS
                 .flatMap { extension -> FilenameIndex.getAllFilesByExt(project, extension, scope) }
                 .distinct()
                 .filter { file ->
-                    loadText(file).contains(ArmeriaRouteSupport.ARMERIA_PACKAGE_PREFIX)
+                    val contents = loadText(file)
+                    contents.contains(ArmeriaRouteSupport.ARMERIA_PACKAGE_PREFIX) ||
+                        (
+                            includeSpringBootArmeriaIndicators &&
+                                ArmeriaRouteSupport.SPRING_BOOT_ARMERIA_FILE_INDICATORS.any(contents::contains)
+                        )
                 }.sortedWith(compareBy({ it.path }, { it.name }))
 
-        private fun loadText(file: VirtualFile): String =
+        private fun loadText(file: VirtualFile): String = FileDocumentManager.getInstance().getDocument(file)?.text ?: loadSavedText(file)
+
+        private fun loadSavedText(file: VirtualFile): String =
             try {
                 VfsUtilCore.loadText(file)
             } catch (_: IOException) {

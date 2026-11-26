@@ -15,7 +15,13 @@ import java.io.IOException
 
 object ArmeriaKotlinSpringBootRouteCollector {
     fun collect(context: RouteCollectContext) {
-        for (virtualFile in ArmeriaReferenceFileIndex.findFiles(context.project, context.scope)) {
+        val candidateFiles =
+            ArmeriaReferenceFileIndex.findFiles(
+                context.project,
+                context.scope,
+                includeSpringBootArmeriaIndicators = true,
+            )
+        for (virtualFile in candidateFiles) {
             if (virtualFile.fileType != KotlinFileType.INSTANCE || virtualFile in context.fallbackScannedFiles) {
                 continue
             }
