@@ -15,8 +15,8 @@ import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.testFramework.PlatformTestUtil
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.support.toArmeriaLightClass
 import com.linecorp.intellij.plugins.armeria.message
-import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
@@ -44,7 +44,7 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
                 """.trimIndent(),
             ) as KtFile
         val ktClass = psiFile.declarations.filterIsInstance<KtClass>().single()
-        val lightClass = ktClass.toLightClass()!!
+        val lightClass = ktClass.toArmeriaLightClass()!!
 
         assertEquals(ktClass, ArmeriaJUnitServerExtensionSupport.toKtClass(lightClass))
     }
