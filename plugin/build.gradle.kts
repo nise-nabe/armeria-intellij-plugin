@@ -11,13 +11,13 @@ import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 
 /**
- * IDEA 2026.3 Beta (build 263.7307.44, released 2026-10-22). Installer-only; there is no
- * Maven archive for this build. Pinned so a newer EAP does not replace the check.
+ * IDEA 2026.3.0.1 (build 263.7307.353, released 2026-11-24). Published in the IntelliJ
+ * Maven repository. Pinned so a newer release does not replace the check.
  *
  * https://www.jetbrains.com/idea/nextversion/
  * https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-extension.html#intellijPlatform-pluginVerification-ides
  */
-val idea20263BetaBuild = "263.7307.44"
+val idea20263Build = "263.7307.353"
 
 plugins {
     id("com.linecorp.intellij.platform-plugin")
@@ -117,16 +117,15 @@ intellijPlatform {
         ides {
             // 2026.2.4, the IDE this build compiles against.
             current()
-            // 2026.3 Beta. useInstaller is required: 263.7307.44 is published as an IDE installer,
-            // not as a com.jetbrains.intellij.idea:idea Maven artifact.
-            create(IntelliJPlatformType.IntellijIdeaUltimate, idea20263BetaBuild) {
-                useInstaller = true
+            // 2026.3 is published as a com.jetbrains.intellij.idea Maven archive.
+            create(IntelliJPlatformType.IntellijIdeaUltimate, idea20263Build) {
+                useInstaller = false
             }
         }
         // Gate the release IDE on unloadability and compatibility, not deprecated,
         // experimental, or internal API reports.
         // NOT_DYNAMIC is the restart-required finding.
-        // 2026.3 Beta findings are reported by verifyPlugin20263 and do not use this failure level.
+        // 2026.3 findings are reported by verifyPlugin20263 and do not use this failure level.
         failureLevel.set(
             EnumSet.of(
                 VerifyPluginTask.FailureLevel.COMPATIBILITY_PROBLEMS,
@@ -140,15 +139,15 @@ intellijPlatform {
 tasks.named<VerifyPluginTask>("verifyPlugin") {
     description =
         "Checks binary compatibility with the compile IDE (2026.2.4). " +
-        "Does not download or verify 2026.3 Beta."
+        "Does not download or verify 2026.3."
     ides.setFrom(project.pluginVerifierIdeFiles(include20263 = false))
 }
 
 tasks.register<VerifyPluginTask>("verifyPlugin20263") {
     group = "verification"
     description =
-        "Reports IntelliJ Plugin Verifier results for IDEA 2026.3 Beta $idea20263BetaBuild. " +
-        "Compatibility findings do not fail the build; 2026.3 is still Beta."
+        "Reports IntelliJ Plugin Verifier results for IDEA 2026.3 $idea20263Build. " +
+        "Compatibility findings do not fail the build."
     val buildPluginTask = tasks.named<BuildPluginTask>("buildPlugin")
     archiveFile.convention(buildPluginTask.flatMap { it.archiveFile })
     ides.setFrom(project.pluginVerifierIdeFiles(include20263 = true))
@@ -242,7 +241,7 @@ tasks.register("verifyPluginPackaging") {
 }
 
 tasks.named("check") {
-    // verifyPlugin reuses the compile IDE (2026.2.4) and does not download 2026.3 Beta.
+    // verifyPlugin reuses the compile IDE (2026.2.4) and does not download 2026.3.
     // verifyPlugin20263 is a separate task; CI runs it once on Ubuntu.
     dependsOn("verifyPluginPackaging", "verifyPlugin")
 }
@@ -264,25 +263,25 @@ private fun Project.pluginVerifierIdeFiles(include20263: Boolean) =
                             attributes.attribute(intellijPlatformExtracted, true)
                         }.resolve()
                 }.filter { file ->
-                    file.isIdea20263Beta() == include20263
+                    file.isIdea20263() == include20263
                 }
         },
     )
 
 private fun isIdea20263VerifierDependency(dependency: org.gradle.api.artifacts.Dependency): Boolean {
     val version = dependency.version.orEmpty()
-    if (version == idea20263BetaBuild || version.startsWith("263.")) {
+    if (version == idea20263Build || version.startsWith("263.")) {
         return true
     }
-    return idea20263BetaBuild in dependency.toString()
+    return idea20263Build in dependency.toString()
 }
 
-private fun File.isIdea20263Beta(): Boolean {
+private fun File.isIdea20263(): Boolean {
     val build = intellijPlatformBuildNumber()
     if (build != null) {
-        return build == idea20263BetaBuild || build.startsWith("263.")
+        return build == idea20263Build || build.startsWith("263.")
     }
-    return idea20263BetaBuild in path || name.contains("263.7307.44")
+    return idea20263Build in path || name.contains("263.7307.353")
 }
 
 private fun File.intellijPlatformBuildNumber(): String? {

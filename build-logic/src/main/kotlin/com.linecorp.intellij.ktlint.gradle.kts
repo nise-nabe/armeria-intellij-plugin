@@ -6,7 +6,7 @@ plugins {
 
 ktlint {
     // Keep in sync with gradle/libs.versions.toml [versions].ktlint
-    version.set("1.5.0")
+    version.set("1.8.0")
     reporters {
         reporter(ReporterType.PLAIN)
         reporter(ReporterType.CHECKSTYLE)

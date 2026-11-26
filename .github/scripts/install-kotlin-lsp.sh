@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-readonly KOTLIN_LSP_VERSION="263.7084.0"
+readonly KOTLIN_LSP_VERSION="271.2085.0"
 readonly INSTALL_DIR="${HOME}/.local/share/kotlin-lsp"
 readonly VERSIONED_DIR="${INSTALL_DIR}/${KOTLIN_LSP_VERSION}"
 readonly BIN_PATH="${HOME}/.local/bin/kotlin-lsp"
@@ -11,11 +11,11 @@ resolve_platform() {
   case "$(uname -s)-$(uname -m)" in
     Linux-x86_64)
       ARCHIVE_NAME="kotlin-server-${KOTLIN_LSP_VERSION}.tar.gz"
-      ARCHIVE_SHA256="ae0c4b01e17ab73a4a5227a78ea99e6dcbe3e499600315b22759a4e4cddd11df"
+      ARCHIVE_SHA256="e398e799027f41749ea33faa57470307d13d40f910961858c7e30adbd778ae08"
       ;;
     Linux-aarch64)
       ARCHIVE_NAME="kotlin-server-${KOTLIN_LSP_VERSION}-aarch64.tar.gz"
-      ARCHIVE_SHA256="450ab7c1d80e48106aa429b48cb4226d82ca12a8a2400447ae02386794780cac"
+      ARCHIVE_SHA256="877aee612a17dab48144466282a6414ec58ab428a10b97c7e13edd9b6b3dc96e"
       ;;
     *)
       echo "Unsupported platform for JetBrains kotlin-lsp: $(uname -s)-$(uname -m)" >&2
