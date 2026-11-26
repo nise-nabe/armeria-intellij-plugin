@@ -21,7 +21,7 @@ import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtQualifiedExpression
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 
-object ArmeriaKotlinClientInvocationCollector {
+internal object ArmeriaKotlinClientInvocationCollector {
     fun collect(
         call: KtCallExpression,
         endpoints: MutableList<ArmeriaClientEndpoint>,

@@ -10,7 +10,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteTreeLabel
 import com.linecorp.intellij.plugins.armeria.message
 import javax.swing.JTree
 
-class ArmeriaRouteExplorerTreeRenderer : ColoredTreeCellRenderer() {
+internal class ArmeriaRouteExplorerTreeRenderer : ColoredTreeCellRenderer() {
     override fun customizeCellRenderer(
         tree: JTree,
         value: Any?,

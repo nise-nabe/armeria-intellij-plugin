@@ -8,7 +8,7 @@ import com.linecorp.intellij.plugins.armeria.client.ArmeriaClientRouteNavigation
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.message
 
-class ArmeriaGotoMatchingClientAction(
+internal class ArmeriaGotoMatchingClientAction(
     private val selectedRouteProvider: () -> ArmeriaRoute?,
     private val parentDisposable: Disposable? = null,
 ) : DumbAwareAction(

@@ -12,7 +12,7 @@ import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtQualifiedExpression
 
-object ArmeriaKotlinClientXdsSupport {
+internal object ArmeriaKotlinClientXdsSupport {
     /** Receiver class FQN of a Kotlin static factory call, when resolvable. */
     fun resolveKotlinFactoryClass(call: KtCallExpression): String? = resolveKotlinFactoryMethod(call)?.containingClass?.qualifiedName
 

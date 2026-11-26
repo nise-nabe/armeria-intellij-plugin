@@ -10,7 +10,7 @@ import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiVariable
 import com.linecorp.intellij.plugins.armeria.message
 
-object ArmeriaClientXdsSupport {
+internal object ArmeriaClientXdsSupport {
     private val XDS_FACTORY_SIMPLE_NAMES =
         setOf(
             "XdsEndpointGroup",

@@ -12,7 +12,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.message
 import java.awt.datatransfer.StringSelection
 
-class ArmeriaOpenDocServiceDebugFormAction(
+internal class ArmeriaOpenDocServiceDebugFormAction(
     private val selectedRouteProvider: () -> ArmeriaRoute?,
     private val routesProvider: () -> List<ArmeriaRoute>,
     private val lastSyncedBaseUrlProvider: () -> String?,

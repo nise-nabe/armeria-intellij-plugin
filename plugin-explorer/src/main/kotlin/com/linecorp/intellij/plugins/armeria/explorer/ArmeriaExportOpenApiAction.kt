@@ -7,7 +7,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaOpenApiDocumentGenerator
 import com.linecorp.intellij.plugins.armeria.message
 
-class ArmeriaExportOpenApiAction(
+internal class ArmeriaExportOpenApiAction(
     private val routesProvider: () -> List<ArmeriaRoute>,
 ) : DumbAwareAction(
         message("route.explorer.action.exportOpenApi"),

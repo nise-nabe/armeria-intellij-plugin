@@ -9,7 +9,7 @@ import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiVariable
 import com.linecorp.intellij.plugins.armeria.message
 
-object ArmeriaClientDecoratorSupport {
+internal object ArmeriaClientDecoratorSupport {
     private val KNOWN_CLIENT_DECORATOR_BUNDLE_KEYS =
         mapOf(
             "LoggingClient" to "client.explorer.decorator.logging",

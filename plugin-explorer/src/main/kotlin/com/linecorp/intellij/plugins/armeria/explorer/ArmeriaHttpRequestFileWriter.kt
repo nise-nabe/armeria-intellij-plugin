@@ -14,7 +14,7 @@ import com.linecorp.intellij.plugins.armeria.run.ArmeriaHttpClientEnvironment
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 
-object ArmeriaHttpRequestFileWriter {
+internal object ArmeriaHttpRequestFileWriter {
     private val LOG = logger<ArmeriaHttpRequestFileWriter>()
 
     fun createOrUpdate(

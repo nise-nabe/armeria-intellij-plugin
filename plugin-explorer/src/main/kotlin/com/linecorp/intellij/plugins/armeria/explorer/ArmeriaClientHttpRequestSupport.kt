@@ -9,7 +9,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpRequestGenerator
 import com.linecorp.intellij.plugins.armeria.message
 
-object ArmeriaClientHttpRequestSupport {
+internal object ArmeriaClientHttpRequestSupport {
     fun supports(endpoint: ArmeriaClientEndpoint): Boolean = endpoint.isCallSite
 
     fun toRoute(endpoint: ArmeriaClientEndpoint): ArmeriaRoute? {

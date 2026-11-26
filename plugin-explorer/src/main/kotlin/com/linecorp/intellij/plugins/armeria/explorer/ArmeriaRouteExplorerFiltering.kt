@@ -11,7 +11,7 @@ import com.linecorp.intellij.plugins.armeria.message
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.TreePath
 
-object ArmeriaRouteExplorerFiltering {
+internal object ArmeriaRouteExplorerFiltering {
     fun filterRoutes(
         project: Project,
         routes: List<ArmeriaRoute>,

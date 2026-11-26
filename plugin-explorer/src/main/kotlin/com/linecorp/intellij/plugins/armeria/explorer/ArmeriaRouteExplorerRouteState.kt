@@ -7,7 +7,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
  *
  * [runtimeRoutes] survive [applyStatic] (Refresh) until [applyRuntime] replaces them.
  */
-class ArmeriaRouteExplorerRouteState {
+internal class ArmeriaRouteExplorerRouteState {
     var staticRoutes: List<ArmeriaRoute> = emptyList()
         private set
 

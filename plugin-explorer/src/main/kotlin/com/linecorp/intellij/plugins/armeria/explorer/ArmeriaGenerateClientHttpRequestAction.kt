@@ -6,7 +6,7 @@ import com.intellij.openapi.project.DumbAwareAction
 import com.linecorp.intellij.plugins.armeria.client.ArmeriaClientEndpoint
 import com.linecorp.intellij.plugins.armeria.message
 
-class ArmeriaGenerateClientHttpRequestAction(
+internal class ArmeriaGenerateClientHttpRequestAction(
     private val selectedEndpointProvider: () -> ArmeriaClientEndpoint?,
 ) : DumbAwareAction(
         message("route.explorer.action.generateHttpRequest"),

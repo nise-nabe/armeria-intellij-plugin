@@ -2,7 +2,7 @@ package com.linecorp.intellij.plugins.armeria.client
 
 import java.util.Locale
 
-object ArmeriaClientInvocationSupport {
+internal object ArmeriaClientInvocationSupport {
     const val REST_CLIENT_PREPARATION_CLASS = "com.linecorp.armeria.client.RestClientPreparation"
 
     private val HTTP_CLIENT_SIMPLE_NAMES = setOf("RestClient", "WebClient", "BlockingWebClient")

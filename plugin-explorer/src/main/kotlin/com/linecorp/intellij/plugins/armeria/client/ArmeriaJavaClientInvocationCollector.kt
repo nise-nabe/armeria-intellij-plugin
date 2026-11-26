@@ -7,7 +7,7 @@ import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiVariable
 
-object ArmeriaJavaClientInvocationCollector {
+internal object ArmeriaJavaClientInvocationCollector {
     fun collect(
         expression: PsiMethodCallExpression,
         endpoints: MutableList<ArmeriaClientEndpoint>,

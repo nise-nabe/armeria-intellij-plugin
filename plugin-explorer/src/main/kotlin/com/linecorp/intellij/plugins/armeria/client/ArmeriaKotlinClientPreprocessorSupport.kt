@@ -16,7 +16,7 @@ import org.jetbrains.kotlin.psi.KtQualifiedExpression
  * by an Armeria preprocessor factory call (`HttpPreprocessor.of(protocol, endpointGroup)` /
  * `RpcPreprocessor.of(...)`) passed as a client factory argument.
  */
-object ArmeriaKotlinClientPreprocessorSupport {
+internal object ArmeriaKotlinClientPreprocessorSupport {
     private const val FACTORY_METHOD = "of"
 
     fun labelKotlinPreprocessorFactory(expression: KtExpression?): String? = labelKotlinPreprocessorFactory(expression, mutableSetOf())

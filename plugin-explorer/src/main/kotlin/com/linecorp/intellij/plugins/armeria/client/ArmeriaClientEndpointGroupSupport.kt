@@ -7,7 +7,7 @@ import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiVariable
 import com.linecorp.intellij.plugins.armeria.message
 
-object ArmeriaClientEndpointGroupSupport {
+internal object ArmeriaClientEndpointGroupSupport {
     private val ENDPOINT_GROUP_SIMPLE_NAMES =
         setOf(
             "EndpointGroup",

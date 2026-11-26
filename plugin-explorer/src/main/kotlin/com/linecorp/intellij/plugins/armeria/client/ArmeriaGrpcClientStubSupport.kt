@@ -7,7 +7,7 @@ import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiType
 import com.intellij.psi.util.PsiUtil
 
-object ArmeriaGrpcClientStubSupport {
+internal object ArmeriaGrpcClientStubSupport {
     fun isJavaGrpcStubBuild(call: PsiMethodCallExpression): Boolean {
         if (call.methodExpression.referenceName != "build") {
             return false

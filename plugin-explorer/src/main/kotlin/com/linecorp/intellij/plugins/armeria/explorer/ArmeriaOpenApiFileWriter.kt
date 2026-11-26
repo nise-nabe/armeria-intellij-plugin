@@ -13,7 +13,7 @@ import com.linecorp.intellij.plugins.armeria.message
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 
-object ArmeriaOpenApiFileWriter {
+internal object ArmeriaOpenApiFileWriter {
     private val LOG = logger<ArmeriaOpenApiFileWriter>()
 
     fun createOrUpdate(

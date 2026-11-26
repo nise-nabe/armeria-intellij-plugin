@@ -7,7 +7,7 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaReferenceFileIndex
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaScalaTextSupport
 
-object ArmeriaScalaClientCollector {
+internal object ArmeriaScalaClientCollector {
     private val CLIENT_SIMPLE_NAMES_PATTERN =
         ArmeriaClientSupport.clientSimpleNames().joinToString("|") { Regex.escape(it) }
     private val FACTORY_METHODS_PATTERN =

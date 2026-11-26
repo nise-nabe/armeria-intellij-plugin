@@ -14,7 +14,7 @@ import com.intellij.psi.PsiVariable
  * (`HttpPreprocessor.of(protocol, endpointGroup)` / `RpcPreprocessor.of(...)`) when the
  * preprocessor call is passed as a client factory argument.
  */
-object ArmeriaClientPreprocessorSupport {
+internal object ArmeriaClientPreprocessorSupport {
     private val PREPROCESSOR_CLASS_NAMES =
         setOf(
             "com.linecorp.armeria.client.HttpPreprocessor",

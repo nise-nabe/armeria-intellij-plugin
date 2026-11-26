@@ -7,7 +7,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpRequestGenerator
 import com.linecorp.intellij.plugins.armeria.message
 
-class ArmeriaGenerateHttpRequestAction(
+internal class ArmeriaGenerateHttpRequestAction(
     private val selectedRouteProvider: () -> ArmeriaRoute?,
     private val routesProvider: () -> List<ArmeriaRoute> = { emptyList() },
     private val lastSyncedDocsBaseUrlProvider: () -> String? = { null },

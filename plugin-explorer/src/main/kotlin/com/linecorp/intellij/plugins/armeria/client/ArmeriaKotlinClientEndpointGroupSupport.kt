@@ -10,7 +10,7 @@ import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 
-object ArmeriaKotlinClientEndpointGroupSupport {
+internal object ArmeriaKotlinClientEndpointGroupSupport {
     fun labelKotlinEndpointGroup(expression: KtExpression?): String? = labelKotlinEndpointGroup(expression, mutableSetOf())
 
     private fun labelKotlinEndpointGroup(

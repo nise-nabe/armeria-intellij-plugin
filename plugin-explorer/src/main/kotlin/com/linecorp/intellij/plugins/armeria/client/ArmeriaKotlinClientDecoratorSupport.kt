@@ -9,7 +9,7 @@ import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
 import org.jetbrains.kotlin.psi.KtProperty
 
-object ArmeriaKotlinClientDecoratorSupport {
+internal object ArmeriaKotlinClientDecoratorSupport {
     fun collectKotlinClientDecorators(factoryCall: KtCallExpression): List<String> {
         val decorators = linkedSetOf<String>()
         collectKotlinDecoratorsOnForwardChain(factoryCall, decorators)

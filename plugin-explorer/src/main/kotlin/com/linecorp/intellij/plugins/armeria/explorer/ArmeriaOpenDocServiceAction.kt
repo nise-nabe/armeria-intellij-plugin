@@ -8,7 +8,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServi
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.message
 
-class ArmeriaOpenDocServiceAction(
+internal class ArmeriaOpenDocServiceAction(
     private val routesProvider: () -> List<ArmeriaRoute>,
     private val lastSyncedBaseUrlProvider: () -> String? = { null },
 ) : DumbAwareAction(

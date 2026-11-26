@@ -11,7 +11,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.endpoints.ArmeriaEndpointU
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import java.net.URI
 
-object ArmeriaClientEndpointsSupport {
+internal object ArmeriaClientEndpointsSupport {
     private val HTTP_SCHEMES = listOf("http", "https")
 
     fun isVisible(endpoint: ArmeriaClientEndpoint): Boolean {
