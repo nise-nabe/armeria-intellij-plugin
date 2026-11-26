@@ -5,7 +5,6 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiVariable
 import com.intellij.psi.search.GlobalSearchScope
-import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaBuilderCallHeuristics
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaServerRegistrationSupport
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaServerRegistrationSupport.DiscoveryRegistration
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaServerRegistrationSupport.DiscoveryRegistry
@@ -33,7 +32,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorDiscovery {
         if (methodName != ArmeriaServerRegistrationSupport.SERVER_LISTENER_METHOD) {
             return
         }
-        if (!ArmeriaBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)) {
+        if (!ArmeriaKotlinBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)) {
             return
         }
         val listenerArgument = call.valueArguments.firstOrNull()?.getArgumentExpression() ?: return

@@ -1,9 +1,9 @@
 package com.linecorp.intellij.plugins.armeria.explorer.support
 
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiMethodCallExpression
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
-import org.jetbrains.kotlin.psi.KtFile
 
 /**
  * Core service-registration helpers that Spring Boot collectors need without depending on
@@ -22,5 +22,6 @@ interface CoreServiceRegistrationSupport {
         seen: MutableSet<String>,
     )
 
-    fun referencesArmeriaKotlinContent(file: KtFile): Boolean
+    /** Returns false for non-Kotlin files or when the optional Kotlin plugin is unavailable. */
+    fun referencesArmeriaKotlinContent(file: PsiFile): Boolean
 }

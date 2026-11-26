@@ -2,7 +2,6 @@ package com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ko
 import com.linecorp.intellij.plugins.armeria.explorer.collector.annotation.ArmeriaKotlinTimeoutSupport
 import com.linecorp.intellij.plugins.armeria.explorer.collector.decorator.ArmeriaDecoratorSupport
 import com.linecorp.intellij.plugins.armeria.explorer.collector.decorator.ArmeriaKotlinDecoratorSupport
-import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaBuilderCallHeuristics
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
@@ -32,7 +31,7 @@ object ArmeriaKotlinExtendedRegistrationCollector {
             if (methodName !in ServiceRegistrationMethod.EXTENDED_METHOD_NAMES) {
                 return@forEachDescendant
             }
-            if (!ArmeriaBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)) {
+            if (!ArmeriaKotlinBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)) {
                 return@forEachDescendant
             }
             collectFromKotlinCall(call, methodName, routes, seenRegistrations)

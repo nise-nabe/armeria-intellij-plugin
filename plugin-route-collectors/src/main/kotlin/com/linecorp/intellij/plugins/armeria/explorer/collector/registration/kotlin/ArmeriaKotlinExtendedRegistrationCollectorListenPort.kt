@@ -4,7 +4,6 @@ import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiVariable
-import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaBuilderCallHeuristics
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaListenPortSupport
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
@@ -28,7 +27,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorListenPort {
         if (methodName !in ArmeriaListenPortSupport.METHOD_NAMES) {
             return
         }
-        if (!ArmeriaBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)) {
+        if (!ArmeriaKotlinBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)) {
             return
         }
         val key = ArmeriaKotlinRegistrationChainSupport.registrationKey(call) ?: return

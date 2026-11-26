@@ -6,7 +6,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiVariable
 import com.intellij.psi.util.InheritanceUtil
-import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaBuilderCallHeuristics
+import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.kotlin.ArmeriaKotlinBuilderCallHeuristics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKnownHttpServiceClassifier
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
@@ -133,7 +133,7 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         if (methodName != "service" && methodName != "serviceUnder") {
             return null
         }
-        if (!ArmeriaBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)) {
+        if (!ArmeriaKotlinBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)) {
             return null
         }
         val valueArguments = call.valueArguments
@@ -322,7 +322,7 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         if (methodName != "decorator" && methodName != "decoratorUnder") {
             return false
         }
-        if (!ArmeriaBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)) {
+        if (!ArmeriaKotlinBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)) {
             return false
         }
         val (pathExpression, decoratorExpression) = decoratorArguments(call, methodName) ?: return false
@@ -479,7 +479,7 @@ internal object ArmeriaServerDecoratorKotlinSupport {
         if (name != "decorator" && name != "decoratorUnder") {
             return false
         }
-        return ArmeriaBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)
+        return ArmeriaKotlinBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)
     }
 
     private fun isHttpServiceDecorateCall(call: KtCallExpression): Boolean {

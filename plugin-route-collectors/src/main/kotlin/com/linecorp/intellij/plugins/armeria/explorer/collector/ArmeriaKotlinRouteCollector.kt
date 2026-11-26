@@ -7,7 +7,7 @@ import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiVariable
 import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.explorer.collector.decorator.ArmeriaKotlinDecoratorChainSupport
-import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaBuilderCallHeuristics
+import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.kotlin.ArmeriaKotlinBuilderCallHeuristics
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.kotlin.ArmeriaKotlinExtendedRegistrationCollector
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.kotlin.ArmeriaKotlinExtendedRegistrationCollectorFluentRoute
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.kotlin.ArmeriaKotlinRouteValueExtractor
@@ -82,7 +82,7 @@ object ArmeriaKotlinRouteCollector {
             if (methodName !in CoreServiceRegistrationMethod.METHOD_NAMES) {
                 return@forEachDescendant
             }
-            if (!ArmeriaBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)) {
+            if (!ArmeriaKotlinBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)) {
                 return@forEachDescendant
             }
             addKotlinServiceRegistration(call, methodName, routes, seenServiceRegistrations)
@@ -98,7 +98,7 @@ object ArmeriaKotlinRouteCollector {
         ArmeriaKotlinExtendedRegistrationCollector.collectFromFile(file, routes, seenServiceRegistrations)
     }
 
-    fun looksLikeArmeriaBuilderCall(call: KtCallExpression): Boolean = ArmeriaBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)
+    fun looksLikeArmeriaBuilderCall(call: KtCallExpression): Boolean = ArmeriaKotlinBuilderCallHeuristics.looksLikeKotlinBuilderCall(call)
 
     fun addServiceRegistrationFromCall(
         call: KtCallExpression,
@@ -230,7 +230,7 @@ object ArmeriaKotlinRouteCollector {
             }
         if (buildCall != null &&
             ArmeriaKotlinExpressionSupport.resolveCallName(buildCall) == "build" &&
-            ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(buildCall)
+            ArmeriaKotlinBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(buildCall)
         ) {
             return ArmeriaKotlinExtendedRegistrationCollectorFluentRoute.addFluentRouteFromBuild(
                 buildCall,

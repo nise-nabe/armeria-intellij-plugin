@@ -6,6 +6,7 @@ import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMethodCallExpression
@@ -15,7 +16,6 @@ import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaBuilderCallHeuristics
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.java.ArmeriaExtendedRegistrationCollector
-import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.kotlin.ArmeriaKotlinExtendedRegistrationCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinPluginSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaProtoRouteDiscoverySupport
@@ -26,8 +26,6 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSuppor
 import com.linecorp.intellij.plugins.armeria.explorer.support.CoreServiceRegistrationSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.RouteCollectContext
 import com.linecorp.intellij.plugins.armeria.explorer.support.RouteContributor
-import org.jetbrains.kotlin.idea.KotlinFileType
-import org.jetbrains.kotlin.psi.KtFile
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -278,13 +276,13 @@ object ArmeriaRouteCollector {
             ArmeriaExtendedRegistrationCollector.collectFromJavaFile(psiFile, routes, seenRegistrations)
         }
         if (ArmeriaKotlinPluginSupport.isKotlinPluginAvailable()) {
-            for (virtualFile in candidateFiles) {
-                if (virtualFile.fileType != KotlinFileType.INSTANCE || virtualFile in alreadyScannedFiles) {
-                    continue
-                }
-                val ktFile = PsiManager.getInstance(project).findFile(virtualFile) as? KtFile ?: continue
-                ArmeriaKotlinExtendedRegistrationCollector.collectFromFile(ktFile, routes, seenRegistrations)
-            }
+            ArmeriaKotlinRuntimeSupport.collectExtendedRegistrations(
+                project,
+                candidateFiles,
+                routes,
+                seenRegistrations,
+                alreadyScannedFiles,
+            )
         }
     }
 
@@ -318,8 +316,8 @@ object ArmeriaRouteCollector {
             )
         }
 
-        override fun referencesArmeriaKotlinContent(file: KtFile): Boolean =
+        override fun referencesArmeriaKotlinContent(file: PsiFile): Boolean =
             ArmeriaKotlinPluginSupport.isKotlinPluginAvailable() &&
-                ArmeriaKotlinRouteCollector.referencesArmeriaKotlinContent(file)
+                ArmeriaKotlinRuntimeSupport.referencesArmeriaKotlinContent(file)
     }
 }

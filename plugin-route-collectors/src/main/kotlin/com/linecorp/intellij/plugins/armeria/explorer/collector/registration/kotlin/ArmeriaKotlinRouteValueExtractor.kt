@@ -6,7 +6,6 @@ import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiVariable
 import com.intellij.psi.util.PsiTreeUtil
-import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaBuilderCallHeuristics
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.FluentRouteChainInfo
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.RouteValueResolution
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.java.ArmeriaJavaRouteValueExtractor
@@ -125,7 +124,7 @@ internal object ArmeriaKotlinRouteValueExtractor {
             return extractRouteOf(call, target)
         }
         val name = ArmeriaKotlinRegistrationChainSupport.resolveCallName(call)
-        if (name == "build" && ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(call)) {
+        if (name == "build" && ArmeriaKotlinBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(call)) {
             return ArmeriaKotlinExtendedRegistrationCollectorFluentRoute.extractFluentRouteChain(
                 call,
                 requireRouteAnchor = true,
