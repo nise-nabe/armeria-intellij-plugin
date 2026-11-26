@@ -16,11 +16,10 @@ import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiVariable
-import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
-import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaReferenceFileIndex
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCacheSupport
 import com.linecorp.intellij.plugins.armeria.message
 
@@ -63,11 +62,11 @@ object ArmeriaClientCollector {
         endpoints: MutableList<ArmeriaClientEndpoint>,
         seenEndpoints: MutableSet<String>,
     ) {
-        for (virtualFile in FileTypeIndex.getFiles(JavaFileType.INSTANCE, scope)) {
-            val file = PsiManager.getInstance(project).findFile(virtualFile) as? PsiJavaFile ?: continue
-            if (!ArmeriaRouteCollector.referencesArmeriaJavaContent(file)) {
+        for (virtualFile in ArmeriaReferenceFileIndex.findFiles(project, scope)) {
+            if (virtualFile.fileType != JavaFileType.INSTANCE) {
                 continue
             }
+            val file = PsiManager.getInstance(project).findFile(virtualFile) as? PsiJavaFile ?: continue
             file.accept(
                 object : JavaRecursiveElementWalkingVisitor() {
                     override fun visitMethodCallExpression(expression: PsiMethodCallExpression) {

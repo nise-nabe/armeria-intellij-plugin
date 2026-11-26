@@ -8,7 +8,6 @@ import com.intellij.psi.PsiExpression
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMethodCallExpression
-import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.searches.ReferencesSearch
 import com.intellij.psi.util.PsiTreeUtil
@@ -27,6 +26,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaDelegationS
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaFileServiceRootSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaGrpcServiceOptionsSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKnownHttpServiceClassifier
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaReferenceFileIndex
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteTargetExtractor
@@ -67,15 +67,12 @@ object ArmeriaRouteCollectorServiceRegistration {
         fallbackScannedFiles: MutableSet<com.intellij.openapi.vfs.VirtualFile>,
         seenServiceRegistrations: MutableSet<String>,
     ) {
-        for (virtualFile in FileTypeIndex.getFiles(JavaFileType.INSTANCE, scope)) {
-            if (virtualFile in fallbackScannedFiles) {
+        for (virtualFile in ArmeriaReferenceFileIndex.findFiles(project, scope)) {
+            if (virtualFile.fileType != JavaFileType.INSTANCE || virtualFile in fallbackScannedFiles) {
                 continue
             }
             ArmeriaRouteCollectionMetrics.current()?.filesScanned?.incrementAndGet()
             val psiFile = PsiManager.getInstance(project).findFile(virtualFile) as? PsiJavaFile ?: continue
-            if (!ArmeriaRouteSupport.referencesArmeriaJavaContent(psiFile)) {
-                continue
-            }
             fallbackScannedFiles += virtualFile
             ArmeriaRouteCollectionMetrics.current()?.armeriaFiles?.incrementAndGet()
             collectServiceRegistrationsFromJavaFile(psiFile, routes, seenServiceRegistrations)

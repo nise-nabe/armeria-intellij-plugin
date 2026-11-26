@@ -6,11 +6,10 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiVariable
-import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
-import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaKotlinRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaReferenceFileIndex
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
 import org.jetbrains.kotlin.idea.KotlinFileType
@@ -33,11 +32,11 @@ internal object ArmeriaKotlinClientCollector {
         endpoints: MutableList<ArmeriaClientEndpoint>,
         seenEndpoints: MutableSet<String>,
     ) {
-        for (virtualFile in FileTypeIndex.getFiles(KotlinFileType.INSTANCE, scope)) {
-            val file = PsiManager.getInstance(project).findFile(virtualFile) as? KtFile ?: continue
-            if (!ArmeriaKotlinRouteCollector.referencesArmeriaKotlinContent(file)) {
+        for (virtualFile in ArmeriaReferenceFileIndex.findFiles(project, scope)) {
+            if (virtualFile.fileType != KotlinFileType.INSTANCE) {
                 continue
             }
+            val file = PsiManager.getInstance(project).findFile(virtualFile) as? KtFile ?: continue
             file.forEachDescendant { element ->
                 val call = element as? KtCallExpression ?: return@forEachDescendant
                 collectClientFromCall(call, endpoints, seenEndpoints)

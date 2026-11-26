@@ -3,9 +3,8 @@ package com.linecorp.intellij.plugins.armeria.client
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
-import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
-import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaReferenceFileIndex
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaScalaTextSupport
 
 internal object ArmeriaScalaClientCollector {
@@ -28,12 +27,12 @@ internal object ArmeriaScalaClientCollector {
         endpoints: MutableList<ArmeriaClientEndpoint>,
         seenEndpoints: MutableSet<String>,
     ) {
-        for (virtualFile in FilenameIndex.getAllFilesByExt(project, "scala", scope)) {
-            val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: continue
-            val contents = psiFile.text
-            if (!ArmeriaRouteSupport.referencesArmeriaSourceContent(contents)) {
+        for (virtualFile in ArmeriaReferenceFileIndex.findFiles(project, scope)) {
+            if (!virtualFile.extension.equals("scala", ignoreCase = true)) {
                 continue
             }
+            val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: continue
+            val contents = psiFile.text
             collectFromFile(psiFile, contents, endpoints, seenEndpoints)
         }
     }

@@ -125,11 +125,99 @@ object ArmeriaRouteDuplicateIndex {
             size[firstRoot] += size[secondRoot]
         }
 
-        for (first in routes.indices) {
-            for (second in first + 1 until routes.size) {
-                if (routesOverlap(routes[first], routes[second]) && httpMethodsOverlap(routes[first], routes[second])) {
-                    union(first, second)
+        fun connectIfOverlapping(
+            first: Int,
+            second: Int,
+        ) {
+            if (routesOverlap(routes[first], routes[second]) && httpMethodsOverlap(routes[first], routes[second])) {
+                union(first, second)
+            }
+        }
+
+        fun unionNonMountBucket(indices: List<Int>) {
+            if (indices.size < 2) {
+                return
+            }
+            val matchesAllRoutes = mutableListOf<Int>()
+            val methodBuckets = mutableMapOf<String, MutableList<Int>>()
+            for (index in indices) {
+                val route = routes[index]
+                if (matchesAllHttpMethods(route)) {
+                    matchesAllRoutes += index
+                    continue
                 }
+                val methods = parseHttpMethods(route.httpMethod)
+                if (methods.isEmpty()) {
+                    methodBuckets.getOrPut("text:${route.httpMethod.lowercase()}") { mutableListOf() } += index
+                } else {
+                    for (method in methods) {
+                        methodBuckets.getOrPut(method.lowercase()) { mutableListOf() } += index
+                    }
+                }
+            }
+            for (matchesAllIndex in matchesAllRoutes) {
+                for (index in indices) {
+                    if (index != matchesAllIndex) {
+                        union(matchesAllIndex, index)
+                    }
+                }
+            }
+            for ((_, methodIndices) in methodBuckets) {
+                for (index in methodIndices.drop(1)) {
+                    union(methodIndices.first(), index)
+                }
+            }
+        }
+
+        val nonMountRoutes = mutableMapOf<NonMountBucketKey, MutableList<Int>>()
+        val nonMountIndicesByRootSegment = mutableMapOf<String, MutableList<Int>>()
+        val prefixMountRoutes = mutableListOf<Int>()
+        val prefixMountIndicesByRootSegment = mutableMapOf<String, MutableList<Int>>()
+        for (index in routes.indices) {
+            val route = routes[index]
+            if (isPrefixMount(route)) {
+                prefixMountRoutes += index
+                prefixMountIndicesByRootSegment
+                    .getOrPut(rootPathSegment(prefixForMount(route))) { mutableListOf() } += index
+            } else {
+                nonMountRoutes.getOrPut(NonMountBucketKey.from(route)) { mutableListOf() } += index
+                nonMountIndicesByRootSegment.getOrPut(rootPathSegment(route.path)) { mutableListOf() } += index
+            }
+        }
+
+        for ((_, indices) in nonMountRoutes) {
+            unionNonMountBucket(indices)
+        }
+
+        val catchAllMountIndices = prefixMountIndicesByRootSegment[""].orEmpty()
+        for (catchAllIndex in catchAllMountIndices) {
+            for (mountIndex in prefixMountRoutes) {
+                if (mountIndex != catchAllIndex) {
+                    connectIfOverlapping(catchAllIndex, mountIndex)
+                }
+            }
+        }
+        for ((rootSegment, mountIndices) in prefixMountIndicesByRootSegment) {
+            if (rootSegment.isEmpty()) {
+                continue
+            }
+            for (firstPosition in mountIndices.indices) {
+                for (secondPosition in firstPosition + 1 until mountIndices.size) {
+                    connectIfOverlapping(mountIndices[firstPosition], mountIndices[secondPosition])
+                }
+            }
+        }
+
+        for (mountIndex in prefixMountRoutes) {
+            val mountPrefix = normalizePrefixMount(prefixForMount(routes[mountIndex]))
+            val candidateIndices =
+                if (mountPrefix == "/") {
+                    nonMountIndicesByRootSegment.values.flatten()
+                } else {
+                    nonMountIndicesByRootSegment[rootPathSegment(mountPrefix)].orEmpty()
+                }
+            for (routeIndex in candidateIndices) {
+                connectIfOverlapping(mountIndex, routeIndex)
             }
         }
 
@@ -137,6 +225,21 @@ object ArmeriaRouteDuplicateIndex {
             .groupBy(::find)
             .values
             .map { indices -> indices.map { routes[it] } }
+    }
+
+    private data class NonMountBucketKey(
+        val regex: Boolean,
+        val path: String,
+        val virtualHostName: String,
+    ) {
+        companion object {
+            fun from(route: ArmeriaRoute): NonMountBucketKey =
+                NonMountBucketKey(
+                    regex = route.pathType == PathType.REGEX,
+                    path = route.path,
+                    virtualHostName = route.virtualHostName,
+                )
+        }
     }
 
     private fun isInClassAnnotatedHttpOnly(routes: List<ArmeriaRoute>): Boolean {
@@ -219,6 +322,12 @@ object ArmeriaRouteDuplicateIndex {
         val normalized = ArmeriaRouteSupport.normalizePath(prefix)
         return if (normalized == "/") "/" else normalized.removeSuffix("/")
     }
+
+    private fun rootPathSegment(path: String): String =
+        ArmeriaRouteSupport
+            .normalizePath(path)
+            .removePrefix("/")
+            .substringBefore('/')
 
     private fun httpMethodsOverlap(
         first: ArmeriaRoute,
