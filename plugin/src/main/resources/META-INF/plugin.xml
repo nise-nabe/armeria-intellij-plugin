@@ -18,6 +18,10 @@
     <depends optional="true" config-file="properties-integration.xml">com.intellij.properties</depends>
     <depends optional="true" config-file="scala-integration.xml">org.intellij.scala</depends>
 
+    <extensions defaultExtensionNs="org.jetbrains.kotlin">
+        <supportsKotlinPluginMode supportsK2="true"/>
+    </extensions>
+
     <extensions defaultExtensionNs="com.intellij">
         <moduleBuilder builderClass="com.linecorp.intellij.plugins.armeria.module.ArmeriaModuleBuilder" />
         <framework.type implementation="com.linecorp.intellij.plugins.armeria.framework.ArmeriaFrameworkEx" />
