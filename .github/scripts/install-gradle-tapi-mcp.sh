@@ -9,10 +9,19 @@ readonly VERSIONED_JAR_PATH="${INSTALL_DIR}/${VERSIONED_JAR_NAME}"
 readonly STABLE_JAR_PATH="${INSTALL_DIR}/gradle-tapi-mcp-server.jar"
 readonly MAX_DOWNLOAD_ATTEMPTS=2
 
+if command -v sha256sum >/dev/null 2>&1; then
+  SHA256_COMMAND=(sha256sum)
+elif command -v shasum >/dev/null 2>&1; then
+  SHA256_COMMAND=(shasum -a 256)
+else
+  echo "sha256sum or shasum is required to verify the MCP server JAR" >&2
+  exit 1
+fi
+
 verify_jar_sha256() {
   local jar_path="$1"
   local actual
-  actual="$(sha256sum "${jar_path}" | awk '{print $1}')"
+  actual="$("${SHA256_COMMAND[@]}" "${jar_path}" | awk '{print $1}')"
   if [[ "${actual}" != "${GRADLE_TAPI_MCP_SHA256}" ]]; then
     echo "SHA-256 mismatch for ${jar_path}" >&2
     echo "Expected: ${GRADLE_TAPI_MCP_SHA256}" >&2
