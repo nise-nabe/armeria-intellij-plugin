@@ -27,7 +27,7 @@ class ArmeriaReferenceFileIndex : ScalarIndexExtension<Int>() {
         DataIndexer { input ->
             val contents = input.contentAsText
             buildMap {
-                if (contents.contains(ArmeriaRouteSupport.ARMERIA_PACKAGE_PREFIX)) {
+                if (referencesArmeriaPackage(contents)) {
                     put(ARMERIA_REFERENCE_KEY, null)
                 }
                 if (ArmeriaRouteSupport.SPRING_BOOT_ARMERIA_FILE_INDICATORS.any(contents::contains)) {
@@ -48,6 +48,7 @@ class ArmeriaReferenceFileIndex : ScalarIndexExtension<Int>() {
         private const val ARMERIA_REFERENCE_KEY = 1
         private const val SPRING_BOOT_ARMERIA_REFERENCE_KEY = 2
         private val SOURCE_EXTENSIONS = setOf("java", "kt", "kts", "scala")
+        private val ARMERIA_PACKAGE_PATTERN = Regex("""com\s*\.\s*linecorp\s*\.\s*armeria""")
 
         val NAME: ID<Int, Void> = ID.create("com.linecorp.intellij.plugins.armeria.reference.file")
 
@@ -85,6 +86,8 @@ class ArmeriaReferenceFileIndex : ScalarIndexExtension<Int>() {
             return files.sortedWith(compareBy({ it.path }, { it.name }))
         }
 
+        internal fun referencesArmeriaPackage(contents: CharSequence): Boolean = ARMERIA_PACKAGE_PATTERN.containsMatchIn(contents)
+
         private fun isRegistered(): Boolean =
             FileBasedIndexExtension.EXTENSION_POINT_NAME.extensionList.any { extension ->
                 extension.name.name == NAME.name
@@ -100,7 +103,7 @@ class ArmeriaReferenceFileIndex : ScalarIndexExtension<Int>() {
                 .distinct()
                 .filter { file ->
                     val contents = loadText(file)
-                    contents.contains(ArmeriaRouteSupport.ARMERIA_PACKAGE_PREFIX) ||
+                    referencesArmeriaPackage(contents) ||
                         (
                             includeSpringBootArmeriaIndicators &&
                                 ArmeriaRouteSupport.SPRING_BOOT_ARMERIA_FILE_INDICATORS.any(contents::contains)

@@ -8,6 +8,28 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ArmeriaReferenceFileIndexRegistrationTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
+    fun testIndexesWhitespaceSplitArmeriaImport() {
+        val file =
+            myFixture
+                .configureByText(
+                    "Main.java",
+                    """
+                    package example;
+
+                    import com.linecorp.
+                        armeria.client.WebClient;
+
+                    public class Main {
+                    }
+                    """.trimIndent(),
+                ).virtualFile
+        val scope = GlobalSearchScope.projectScope(project)
+        FileBasedIndex.getInstance().ensureUpToDate(ArmeriaReferenceFileIndex.NAME, project, scope)
+
+        val indexedFiles = ArmeriaReferenceFileIndex.findFiles(project, scope)
+        assertTrue(file in indexedFiles)
+    }
+
     fun testSpringIndicatorFilesAreIncludedOnlyWhenRequested() {
         val file =
             myFixture
