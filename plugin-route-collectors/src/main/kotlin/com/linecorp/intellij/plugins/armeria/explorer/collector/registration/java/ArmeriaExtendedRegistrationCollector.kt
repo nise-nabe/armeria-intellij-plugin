@@ -110,6 +110,7 @@ object ArmeriaExtendedRegistrationCollector {
             ArmeriaRoute.create(
                 element = expression,
                 protocol = RouteProtocol.HTTP.presentableName(),
+                protocolType = RouteProtocol.HTTP,
                 httpMethod = "",
                 path = normalizedPath,
                 target = target,
@@ -145,6 +146,7 @@ object ArmeriaExtendedRegistrationCollector {
             ArmeriaRoute.create(
                 element = expression,
                 protocol = RouteProtocol.HEALTH_CHECK.presentableName(),
+                protocolType = RouteProtocol.HEALTH_CHECK,
                 httpMethod = "GET",
                 path = path,
                 target = message("route.explorer.target.healthCheck"),
@@ -173,6 +175,7 @@ object ArmeriaExtendedRegistrationCollector {
             ArmeriaRoute.create(
                 element = expression,
                 protocol = RouteProtocol.HTTP.presentableName(),
+                protocolType = RouteProtocol.HTTP,
                 httpMethod = "",
                 path = normalizedPath,
                 target = decoratorLabel,

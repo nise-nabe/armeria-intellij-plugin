@@ -5,6 +5,7 @@ import com.linecorp.intellij.plugins.armeria.client.ArmeriaClientRouteLinkSuppor
 import com.linecorp.intellij.plugins.armeria.client.ClientProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpRequestGenerator
 import com.linecorp.intellij.plugins.armeria.message
 
@@ -24,6 +25,7 @@ internal object ArmeriaClientHttpRequestSupport {
         return ArmeriaRoute.create(
             element = element,
             protocol = ClientProtocol.HTTP.presentableName(),
+            protocolType = RouteProtocol.HTTP,
             httpMethod = method,
             path = path,
             target = endpoint.target,

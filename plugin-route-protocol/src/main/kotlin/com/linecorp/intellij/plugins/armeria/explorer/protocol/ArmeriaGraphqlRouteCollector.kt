@@ -46,6 +46,7 @@ object ArmeriaGraphqlRouteCollector {
                     ArmeriaRoute.create(
                         element = psiFile,
                         protocol = RouteProtocol.GRAPHQL.presentableName(),
+                        protocolType = RouteProtocol.GRAPHQL,
                         httpMethod = "",
                         path = ArmeriaIdlRouteSupport.DEFAULT_GRAPHQL_MOUNT_PATH,
                         target = target,

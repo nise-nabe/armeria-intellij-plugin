@@ -49,6 +49,7 @@ object ArmeriaDelegatedRouteCollector {
                     ArmeriaRoute.create(
                         element = springMvcRoute.element,
                         protocol = RouteProtocol.HTTP.presentableName(),
+                        protocolType = RouteProtocol.HTTP,
                         httpMethod = springMvcRoute.httpMethod,
                         path = combinedPath,
                         target = springMvcRoute.target,

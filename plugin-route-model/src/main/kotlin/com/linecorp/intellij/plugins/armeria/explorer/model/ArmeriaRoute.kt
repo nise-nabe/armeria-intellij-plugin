@@ -38,6 +38,8 @@ data class ArmeriaRoute(
      * Used by Explorer navigation to jump to the served directory instead of the call site.
      */
     val fileServiceRoot: FileServiceRoot? = null,
+    /** Stable protocol identity for known protocols; [protocol] remains the display/free-form label. */
+    val protocolType: RouteProtocol? = null,
 ) {
     fun resolveSourceHint(): String {
         val element = pointer.element ?: return ""
@@ -148,6 +150,10 @@ data class ArmeriaRoute(
     companion object {
         private const val TARGET_DISPLAY_LIMIT = 60
 
+        /**
+         * Pass [protocolType] whenever [protocol] is a known [RouteProtocol] display label.
+         * Leave it null only for free-form or composite labels such as listen-port and runtime routes.
+         */
         fun create(
             element: PsiElement,
             protocol: String,
@@ -174,6 +180,7 @@ data class ArmeriaRoute(
             exampleRequests: List<String> = emptyList(),
             exampleHeaders: List<String> = emptyList(),
             fileServiceRoot: FileServiceRoot? = null,
+            protocolType: RouteProtocol? = null,
         ): ArmeriaRoute =
             ArmeriaRoute(
                 protocol = protocol,
@@ -200,6 +207,7 @@ data class ArmeriaRoute(
                 exampleRequests = exampleRequests,
                 exampleHeaders = exampleHeaders,
                 fileServiceRoot = fileServiceRoot,
+                protocolType = protocolType,
             )
 
         fun createRuntime(

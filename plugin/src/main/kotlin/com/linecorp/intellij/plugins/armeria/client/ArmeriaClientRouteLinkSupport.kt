@@ -7,6 +7,7 @@ import com.intellij.openapi.util.text.StringUtil
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnalysisCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.message
 import java.net.URI
 
@@ -82,7 +83,7 @@ internal object ArmeriaClientRouteLinkSupport {
         matches(
             clientType = endpoint.clientType,
             uri = endpoint.uri,
-            routeProtocol = route.protocol,
+            routeProtocolType = route.protocolType,
             routePath = route.path,
             virtualHostName = route.virtualHostName,
             routeMatch = route.routeMatch,
@@ -94,7 +95,7 @@ internal object ArmeriaClientRouteLinkSupport {
     fun matches(
         clientType: String,
         uri: String,
-        routeProtocol: String,
+        routeProtocolType: RouteProtocol?,
         routePath: String,
         virtualHostName: String = "",
         routeMatch: RouteMatch = RouteMatch.ANNOTATED_HTTP,
@@ -106,7 +107,7 @@ internal object ArmeriaClientRouteLinkSupport {
             return false
         }
         val protocol = ClientProtocol.fromPresentableName(clientType) ?: return false
-        if (!protocol.matchesRouteProtocol(routeProtocol)) {
+        if (!protocol.matchesRouteProtocol(routeProtocolType)) {
             return false
         }
         if (httpMethod.isNotBlank() &&

@@ -111,6 +111,7 @@ object ArmeriaGrpcRouteCollector {
             ArmeriaRoute.create(
                 element = element,
                 protocol = message("route.explorer.protocol.grpc"),
+                protocolType = RouteProtocol.GRPC,
                 httpMethod = "",
                 path = path,
                 target = "$fqService.$methodName",
@@ -128,7 +129,7 @@ object ArmeriaGrpcRouteCollector {
         }
         val grpcServiceNodes =
             routes.filter { route ->
-                route.protocol.equals(RouteProtocol.GRPC.presentableName(), ignoreCase = true) &&
+                route.protocolType == RouteProtocol.GRPC &&
                     !GrpcRoutePath.isMethodPath(route.path)
             }
         if (grpcServiceNodes.isEmpty()) {
@@ -150,7 +151,7 @@ object ArmeriaGrpcRouteCollector {
 
     private fun isGrpcMethodRoute(route: ArmeriaRoute): Boolean =
         route.routeMatch == RouteMatch.NON_HTTP &&
-            route.protocol.equals(RouteProtocol.GRPC.presentableName(), ignoreCase = true) &&
+            route.protocolType == RouteProtocol.GRPC &&
             GrpcRoutePath.isMethodPath(route.path)
 
     fun isProtoRouteDiscoveryEnabled(): Boolean = ArmeriaProtoRouteDiscoverySupport.isEnabled()

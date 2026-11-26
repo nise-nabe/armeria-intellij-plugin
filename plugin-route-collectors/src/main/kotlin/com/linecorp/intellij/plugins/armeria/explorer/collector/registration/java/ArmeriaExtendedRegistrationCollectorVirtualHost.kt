@@ -30,6 +30,7 @@ internal object ArmeriaExtendedRegistrationCollectorVirtualHost {
                 ArmeriaRoute.create(
                     element = expression,
                     protocol = RouteProtocol.HTTP.presentableName(),
+                    protocolType = RouteProtocol.HTTP,
                     httpMethod = "",
                     path = "/",
                     target = hostname,

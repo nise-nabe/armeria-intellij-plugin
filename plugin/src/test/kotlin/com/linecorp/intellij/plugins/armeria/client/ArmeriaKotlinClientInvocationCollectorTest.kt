@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.client
 
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaClientFixtureTestBase
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -181,7 +182,7 @@ class ArmeriaKotlinClientInvocationCollectorTest : ArmeriaClientFixtureTestBase(
             ArmeriaClientRouteLinkSupport.matches(
                 clientType = callSite.clientType,
                 uri = callSite.uri,
-                routeProtocol = "HTTP",
+                routeProtocolType = RouteProtocol.HTTP,
                 routePath = "/users",
                 requestPath = callSite.requestPath,
                 httpMethod = callSite.httpMethod,

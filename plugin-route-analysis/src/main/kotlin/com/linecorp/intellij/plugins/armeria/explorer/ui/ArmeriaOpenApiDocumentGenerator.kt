@@ -264,7 +264,7 @@ object ArmeriaOpenApiDocumentGenerator {
         if (route.routeMatch != RouteMatch.NON_HTTP) {
             return false
         }
-        if (!route.protocol.equals(RouteProtocol.GRPC.presentableName(), ignoreCase = true)) {
+        if (route.protocolType != RouteProtocol.GRPC) {
             return false
         }
         if (!GrpcRoutePath.isMethodPath(route.path)) {

@@ -11,6 +11,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRouteHint
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpRequestGenerator
 import com.linecorp.intellij.plugins.armeria.message
 import org.junit.Test
@@ -728,10 +729,22 @@ class ArmeriaHttpRequestGeneratorTest {
         )
     }
 
+    private fun testProtocolType(protocol: String): RouteProtocol =
+        when (protocol) {
+            "gRPC" -> RouteProtocol.GRPC
+            "Thrift" -> RouteProtocol.THRIFT
+            "GraphQL" -> RouteProtocol.GRAPHQL
+            "WebSocket" -> RouteProtocol.WEBSOCKET
+            "SSE" -> RouteProtocol.SSE
+            "DocService" -> RouteProtocol.DOC_SERVICE
+            else -> RouteProtocol.HTTP
+        }
+
     private fun route(
         httpMethod: String = "GET",
         path: String = "/api",
         protocol: String = "HTTP",
+        protocolType: RouteProtocol? = testProtocolType(protocol),
         routeMatch: RouteMatch = RouteMatch.ANNOTATED_HTTP,
         pathType: PathType = PathType.EXACT,
         target: String = "Handler",
@@ -742,6 +755,7 @@ class ArmeriaHttpRequestGeneratorTest {
     ): ArmeriaRoute =
         ArmeriaRoute(
             protocol = protocol,
+            protocolType = protocolType,
             httpMethod = httpMethod,
             path = path,
             target = target,

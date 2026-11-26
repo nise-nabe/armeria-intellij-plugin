@@ -78,7 +78,7 @@ internal object ArmeriaEndpointsSupport {
         if (route.routeMatch != RouteMatch.NON_HTTP) {
             return false
         }
-        if (!route.protocol.equals(RouteProtocol.GRPC.presentableName(), ignoreCase = true)) {
+        if (route.protocolType != RouteProtocol.GRPC) {
             return false
         }
         return GRPC_METHOD_PATH.matches(route.path)

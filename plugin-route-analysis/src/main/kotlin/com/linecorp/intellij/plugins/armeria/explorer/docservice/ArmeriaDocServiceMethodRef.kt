@@ -100,6 +100,6 @@ data class ArmeriaDocServiceMethodRef(
         private fun isProtocol(
             route: ArmeriaRoute,
             protocol: RouteProtocol,
-        ): Boolean = route.protocol.equals(protocol.presentableName(), ignoreCase = true)
+        ): Boolean = route.protocolType == protocol
     }
 }

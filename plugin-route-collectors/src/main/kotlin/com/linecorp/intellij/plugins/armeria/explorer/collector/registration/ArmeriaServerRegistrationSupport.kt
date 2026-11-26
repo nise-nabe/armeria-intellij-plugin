@@ -74,6 +74,7 @@ object ArmeriaServerRegistrationSupport {
         ArmeriaRoute.create(
             element = element,
             protocol = registration.registry.presentableName(),
+            protocolType = registration.registry.protocol,
             httpMethod = "",
             path = registration.serviceName.ifBlank { message("route.explorer.discovery.unnamedService") },
             target =

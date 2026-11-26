@@ -275,6 +275,7 @@ object ArmeriaRouteCollectorServiceRegistration {
             ArmeriaRoute.create(
                 element = element,
                 protocol = protocol.presentableName(),
+                protocolType = protocol,
                 httpMethod = httpMethod,
                 path = normalizedPath,
                 target = target,

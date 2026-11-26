@@ -12,6 +12,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.endpoints.ArmeriaEndpoints
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -179,6 +180,16 @@ class ArmeriaEndpointsSupportTest {
                 ),
             ),
         )
+        assertFalse(
+            ArmeriaEndpointsSupport.isVisibleServerRoute(
+                route(
+                    protocol = "gRPC",
+                    protocolType = null,
+                    path = "/example.Echo/Ping",
+                    routeMatch = RouteMatch.NON_HTTP,
+                ),
+            ),
+        )
     }
 
     @Test
@@ -221,15 +232,25 @@ class ArmeriaEndpointsSupportTest {
         assertEquals("module:other", ArmeriaEndpointsSupport.groupKey(route(moduleName = "other")))
     }
 
+    private fun testProtocolType(protocol: String): RouteProtocol =
+        when (protocol) {
+            "gRPC" -> RouteProtocol.GRPC
+            "Thrift" -> RouteProtocol.THRIFT
+            "WebSocket" -> RouteProtocol.WEBSOCKET
+            else -> RouteProtocol.HTTP
+        }
+
     private fun route(
         httpMethod: String = "GET",
         path: String = "/api",
         protocol: String = "HTTP",
+        protocolType: RouteProtocol? = testProtocolType(protocol),
         routeMatch: RouteMatch = RouteMatch.ANNOTATED_HTTP,
         moduleName: String = "app",
     ): ArmeriaRoute =
         ArmeriaRoute(
             protocol = protocol,
+            protocolType = protocolType,
             httpMethod = httpMethod,
             path = path,
             target = "Handler",
