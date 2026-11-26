@@ -1,0 +1,42 @@
+package com.linecorp.intellij.plugins.armeria.explorer
+
+import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.project.DumbAwareAction
+import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpRequestGenerator
+import com.linecorp.intellij.plugins.armeria.message
+
+class ArmeriaGenerateHttpRequestAction(
+    private val selectedRouteProvider: () -> ArmeriaRoute?,
+    private val routesProvider: () -> List<ArmeriaRoute> = { emptyList() },
+    private val lastSyncedDocsBaseUrlProvider: () -> String? = { null },
+) : DumbAwareAction(
+        message("route.explorer.action.generateHttpRequest"),
+    ) {
+    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+    override fun update(e: AnActionEvent) {
+        val project = e.project
+        if (project == null || project.basePath == null) {
+            e.presentation.isEnabled = false
+            return
+        }
+        val route = selectedRouteProvider()
+        e.presentation.isEnabled = route != null && ArmeriaHttpRequestGenerator.supports(route)
+    }
+
+    override fun actionPerformed(e: AnActionEvent) {
+        val project = e.project ?: return
+        val route = selectedRouteProvider() ?: return
+        if (!ArmeriaHttpRequestGenerator.supports(route)) {
+            return
+        }
+        ArmeriaHttpRequestFileWriter.createOrUpdate(
+            project = project,
+            route = route,
+            routes = routesProvider(),
+            lastSyncedDocsBaseUrl = lastSyncedDocsBaseUrlProvider(),
+        )
+    }
+}

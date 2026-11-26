@@ -21,6 +21,8 @@ jobs:
             task: :plugin-wizard:test
           - name: Plugin test support tests
             task: :plugin-test-support:test
+          - name: Plugin explorer tests
+            task: :plugin-explorer:test
           - name: Route model + collectors fast tests
             task: :plugin-route-collectors:fastTest
           - name: Route spring fast tests

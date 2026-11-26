@@ -30,6 +30,7 @@ in this repository. Apply it **during implementation**, not only before opening 
 | `plugin-shared/` | Shared bundle helpers, cross-cutting PSI utilities, test fixtures |
 | `plugin-wizard/` | New-project/module wizard, file templates, starter resources |
 | `plugin-test-support/` | Test-support inspections, JUnit `ServerExtension` analysis, generated test-method insertion, and related line markers |
+| `plugin-explorer/` | Route/Client Explorer UI, client endpoint analysis, OpenAPI/HTTP request generation, and DocService actions |
 | `plugin/` | `plugin.xml` wiring, UI panels/actions, run configs, inspection registration |
 
 Do not put collector logic in `plugin/` when it belongs in one of the `plugin-route-*` modules.
@@ -45,7 +46,7 @@ Cross-module rules to keep the dependency graph acyclic:
   `plugin-route-analysis`.
 - `plugin-route-analysis` `api`s the four modules above so analysis can compile against them.
 - `plugin-test-support` may depend on `plugin-route-analysis` and `plugin-shared`.
-- `plugin/` composes `plugin-shared`, `plugin-wizard`, `plugin-test-support`, and all `plugin-route-*` modules into the
+- `plugin/` composes `plugin-shared`, `plugin-wizard`, `plugin-test-support`, `plugin-explorer`, and all `plugin-route-*` modules into the
   main plugin JAR via `pluginComposedModule`. Do not use bare `implementation(project(...))` for
   those modules — that ships extra JARs and can pull Kotlin stdlib into the ZIP. Test-side it
   consumes `testFixtures(project(":plugin-route-collectors"))`.
@@ -226,6 +227,7 @@ Match the Gradle task to the module that contains the test class:
 | `plugin-route-analysis/src/fastTest` | `:plugin-route-analysis:fastTest` |
 | `plugin/src/test` | `:plugin:test` |
 | `plugin-test-support/src/test` | `:plugin-test-support:test` |
+| `plugin-explorer/src/test` | `:plugin-explorer:test` |
 | `plugin-wizard/src/test` | `:plugin-wizard:test` |
 
 PSI fixture layout (`src/test/testData/`, `configureFixture()`, `ArmeriaRouteTestSupport`) is

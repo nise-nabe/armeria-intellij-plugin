@@ -6,6 +6,7 @@
 
 ### Changed
 - Extract test-support production code into the `plugin-test-support` composed module.
+- Extract Route/Client Explorer and client analysis production code into the `plugin-explorer` composed module.
 
 - Target IntelliJ IDEA Ultimate 2026.2.4.
 

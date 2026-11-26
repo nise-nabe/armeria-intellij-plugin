@@ -39,7 +39,7 @@ final pass before requesting review.
 
 ## Quick checklist by change type
 
-### Plugin feature code (`plugin/`, `plugin-shared/`, `plugin-wizard/`, `plugin-test-support/`)
+### Plugin feature code (`plugin/`, `plugin-shared/`, `plugin-wizard/`, `plugin-test-support/`, `plugin-explorer/`)
 
 - [ ] User-visible strings use `message(...)` + `ArmeriaBundle.properties` (no hard-coded English, including completion docs / tooltip maps)
 - [ ] No unused bundle keys; status copy lists every file type / profile variant actually scanned
