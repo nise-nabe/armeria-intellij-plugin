@@ -20,7 +20,7 @@ import com.intellij.psi.PsiType
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinPluginSupport
-import org.jetbrains.kotlin.asJava.toLightClass
+import com.linecorp.intellij.plugins.armeria.explorer.support.toArmeriaLightClass
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClass
@@ -457,7 +457,7 @@ internal object ArmeriaJUnitServerExtensionSupport {
                 }
 
                 is KtClass -> {
-                    return resolved.toLightClass()?.let { isServerExtensionClass(it, project) } == true
+                    return resolved.toArmeriaLightClass()?.let { isServerExtensionClass(it, project) } == true
                 }
             }
             if (typeReference.text.contains("ServerExtension")) {
@@ -479,7 +479,7 @@ internal object ArmeriaJUnitServerExtensionSupport {
                 }
 
                 is KtClass -> {
-                    return resolved.toLightClass()?.let { isServerExtensionClass(it, project) } == true
+                    return resolved.toArmeriaLightClass()?.let { isServerExtensionClass(it, project) } == true
                 }
             }
             if (typeReference.text.contains("ServerExtension")) {
@@ -561,7 +561,7 @@ internal object ArmeriaJUnitServerExtensionSupport {
         kotlinClass: KtClassOrObject,
         resolved: PsiClass,
     ): Boolean {
-        val light = kotlinClass.toLightClass()
+        val light = kotlinClass.toArmeriaLightClass()
         if (light != null && (light.isEquivalentTo(resolved) || light.isInheritor(resolved, true))) {
             return true
         }
@@ -600,7 +600,7 @@ internal object ArmeriaJUnitServerExtensionSupport {
                         ?.resolve()
             ) {
                 is PsiClass -> isServerExtensionClass(resolved, project)
-                is KtClass -> resolved.toLightClass()?.let { isServerExtensionClass(it, project) } == true
+                is KtClass -> resolved.toArmeriaLightClass()?.let { isServerExtensionClass(it, project) } == true
                 else -> entry.typeReference?.text?.contains("ServerExtension") == true
             }
         }
@@ -706,7 +706,7 @@ internal object ArmeriaJUnitServerExtensionSupport {
             }
 
             is KtClassOrObject -> {
-                val light = resolved.toLightClass()
+                val light = resolved.toArmeriaLightClass()
                 if (light != null && isSameOrEnclosingOrSuperClass(light, reference)) {
                     return true
                 }

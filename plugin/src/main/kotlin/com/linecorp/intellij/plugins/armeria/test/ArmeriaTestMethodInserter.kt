@@ -17,8 +17,8 @@ import com.intellij.psi.codeStyle.JavaCodeStyleManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinPluginSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.toArmeriaLightClass
 import com.linecorp.intellij.plugins.armeria.message
-import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.idea.base.psi.addMemberDeclaration
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtClass
@@ -250,7 +250,7 @@ internal object ArmeriaTestMethodInserter {
                 }
 
                 isKotlinPluginAvailable() -> {
-                    (selectedPsiFile as? KtFile)?.singleTopLevelKotlinDeclaration()?.toLightClass()
+                    (selectedPsiFile as? KtFile)?.singleTopLevelKotlinDeclaration()?.toArmeriaLightClass()
                 }
 
                 else -> {
@@ -356,11 +356,11 @@ internal object ArmeriaTestMethodInserter {
         if (elementAtCaret == null) {
             return null
         }
-        elementAtCaret.getParentOfType<KtClass>(true)?.toLightClass()?.let { return it }
+        elementAtCaret.getParentOfType<KtClass>(true)?.toArmeriaLightClass()?.let { return it }
         elementAtCaret
             .getParentOfType<KtObjectDeclaration>(true)
             ?.takeUnless { it.isCompanion() }
-            ?.toLightClass()
+            ?.toArmeriaLightClass()
             ?.let { return it }
         return null
     }

@@ -6,7 +6,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaReferenceFi
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.RouteCollectContext
-import org.jetbrains.kotlin.asJava.toLightMethods
+import com.linecorp.intellij.plugins.armeria.explorer.support.toArmeriaLightMethods
 import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
@@ -84,7 +84,7 @@ object ArmeriaKotlinSpringBootRouteCollector {
             if (!mayHaveSpringBeanAnnotation(function)) {
                 continue
             }
-            val lightMethods = function.toLightMethods()
+            val lightMethods = function.toArmeriaLightMethods()
             if (!lightMethods.any { it.hasAnnotation(ArmeriaRouteSupport.SPRING_BEAN_ANNOTATION) }) {
                 continue
             }
