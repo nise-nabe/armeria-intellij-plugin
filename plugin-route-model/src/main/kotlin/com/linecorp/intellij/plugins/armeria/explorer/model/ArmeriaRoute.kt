@@ -38,6 +38,8 @@ data class ArmeriaRoute(
      * Used by Explorer navigation to jump to the served directory instead of the call site.
      */
     val fileServiceRoot: FileServiceRoot? = null,
+    /** Stable protocol identity for known protocols; [protocol] remains the display/free-form label. */
+    val protocolType: RouteProtocol? = null,
 ) {
     fun resolveSourceHint(): String {
         val element = pointer.element ?: return ""
@@ -174,6 +176,7 @@ data class ArmeriaRoute(
             exampleRequests: List<String> = emptyList(),
             exampleHeaders: List<String> = emptyList(),
             fileServiceRoot: FileServiceRoot? = null,
+            protocolType: RouteProtocol? = null,
         ): ArmeriaRoute =
             ArmeriaRoute(
                 protocol = protocol,
@@ -200,6 +203,7 @@ data class ArmeriaRoute(
                 exampleRequests = exampleRequests,
                 exampleHeaders = exampleHeaders,
                 fileServiceRoot = fileServiceRoot,
+                protocolType = protocolType,
             )
 
         fun createRuntime(
@@ -212,6 +216,7 @@ data class ArmeriaRoute(
             delegationKind: DelegationKind? = null,
             exampleRequests: List<String> = emptyList(),
             exampleHeaders: List<String> = emptyList(),
+            protocolType: RouteProtocol? = null,
         ): ArmeriaRoute =
             ArmeriaRoute(
                 protocol = protocol,
@@ -228,6 +233,7 @@ data class ArmeriaRoute(
                 pointer = pointer,
                 exampleRequests = exampleRequests,
                 exampleHeaders = exampleHeaders,
+                protocolType = protocolType,
             )
 
         fun truncateTarget(

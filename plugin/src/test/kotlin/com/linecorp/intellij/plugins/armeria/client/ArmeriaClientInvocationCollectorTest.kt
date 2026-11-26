@@ -5,6 +5,7 @@ import com.intellij.microservices.endpoints.presentation.HttpMethodPresentation
 import com.intellij.microservices.url.UrlPath
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaClientHttpRequestSupport
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollector
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpRequestGenerator
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaClientFixtureTestBase
 import com.linecorp.intellij.plugins.armeria.test.registerArmeriaAnnotationStubs
@@ -470,7 +471,7 @@ class ArmeriaClientInvocationCollectorTest : ArmeriaClientFixtureTestBase() {
             ArmeriaClientRouteLinkSupport.matches(
                 clientType = callSite.clientType,
                 uri = callSite.uri,
-                routeProtocol = "HTTP",
+                routeProtocolType = RouteProtocol.HTTP,
                 routePath = "/armeria",
                 requestPath = callSite.requestPath,
                 httpMethod = callSite.httpMethod,

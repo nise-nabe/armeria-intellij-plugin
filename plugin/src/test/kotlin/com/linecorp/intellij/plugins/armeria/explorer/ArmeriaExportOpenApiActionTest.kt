@@ -31,6 +31,7 @@ class ArmeriaExportOpenApiActionTest : ArmeriaLightJavaCodeInsightFixtureTestCas
                 listOf(
                     route(
                         protocol = RouteProtocol.THRIFT.presentableName(),
+                        protocolType = RouteProtocol.THRIFT,
                         httpMethod = "",
                         path = "/HelloService",
                         routeMatch = RouteMatch.NON_HTTP,
@@ -69,9 +70,11 @@ class ArmeriaExportOpenApiActionTest : ArmeriaLightJavaCodeInsightFixtureTestCas
         routeMatch: RouteMatch = RouteMatch.ANNOTATED_HTTP,
         httpMethod: String = "GET",
         protocol: String = RouteProtocol.HTTP.presentableName(),
+        protocolType: RouteProtocol? = RouteProtocol.HTTP,
     ): ArmeriaRoute =
         ArmeriaRoute(
             protocol = protocol,
+            protocolType = protocolType,
             httpMethod = httpMethod,
             path = path,
             target = "example.UserService#getUser()",

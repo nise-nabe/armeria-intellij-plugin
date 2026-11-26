@@ -54,6 +54,7 @@ class ArmeriaOpenApiDocumentGeneratorTest {
             ArmeriaOpenApiDocumentGenerator.exportable(
                 route(
                     protocol = RouteProtocol.THRIFT.presentableName(),
+                    protocolType = RouteProtocol.THRIFT,
                     httpMethod = "",
                     path = "/HelloService",
                     routeMatch = RouteMatch.NON_HTTP,
@@ -64,6 +65,7 @@ class ArmeriaOpenApiDocumentGeneratorTest {
             ArmeriaOpenApiDocumentGenerator.exportable(
                 route(
                     protocol = RouteProtocol.GRPC.presentableName(),
+                    protocolType = RouteProtocol.GRPC,
                     httpMethod = "",
                     path = "/example.Echo/Ping",
                     routeMatch = RouteMatch.NON_HTTP,
@@ -211,12 +213,14 @@ class ArmeriaOpenApiDocumentGeneratorTest {
                     route(path = "/users/{id}"),
                     route(
                         protocol = RouteProtocol.THRIFT.presentableName(),
+                        protocolType = RouteProtocol.THRIFT,
                         httpMethod = "",
                         path = "/HelloService",
                         routeMatch = RouteMatch.NON_HTTP,
                     ),
                     route(
                         protocol = RouteProtocol.GRPC.presentableName(),
+                        protocolType = RouteProtocol.GRPC,
                         httpMethod = "",
                         path = "/example.Echo/Ping",
                         routeMatch = RouteMatch.NON_HTTP,
@@ -277,6 +281,7 @@ class ArmeriaOpenApiDocumentGeneratorTest {
                 listOf(
                     route(
                         protocol = RouteProtocol.SSE.presentableName(),
+                        protocolType = RouteProtocol.SSE,
                         path = "/events",
                         contentHints = listOf(message("route.explorer.hint.produces", "text/event-stream")),
                     ),
@@ -295,6 +300,7 @@ class ArmeriaOpenApiDocumentGeneratorTest {
                 listOf(
                     route(
                         protocol = RouteProtocol.THRIFT.presentableName(),
+                        protocolType = RouteProtocol.THRIFT,
                         httpMethod = "",
                         path = "/HelloService",
                         routeMatch = RouteMatch.NON_HTTP,
@@ -313,6 +319,7 @@ class ArmeriaOpenApiDocumentGeneratorTest {
     ): ArmeriaRoute =
         route(
             protocol = RouteProtocol.GRPC.presentableName(),
+            protocolType = RouteProtocol.GRPC,
             httpMethod = "",
             path = path,
             target = target,
@@ -324,6 +331,7 @@ class ArmeriaOpenApiDocumentGeneratorTest {
         httpMethod: String = "GET",
         path: String = "/api",
         protocol: String = RouteProtocol.HTTP.presentableName(),
+        protocolType: RouteProtocol? = RouteProtocol.HTTP,
         routeMatch: RouteMatch = RouteMatch.ANNOTATED_HTTP,
         pathType: PathType = PathType.EXACT,
         target: String = "Handler",
@@ -331,6 +339,7 @@ class ArmeriaOpenApiDocumentGeneratorTest {
     ): ArmeriaRoute =
         ArmeriaRoute(
             protocol = protocol,
+            protocolType = protocolType,
             httpMethod = httpMethod,
             path = path,
             target = target,

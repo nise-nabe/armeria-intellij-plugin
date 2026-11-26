@@ -70,6 +70,7 @@ object ArmeriaRouteCollectorAnnotatedRoutes {
                     ArmeriaRoute.create(
                         element = method,
                         protocol = ArmeriaAnnotatedMetadataSupport.protocol(method).presentableName(),
+                        protocolType = ArmeriaAnnotatedMetadataSupport.protocol(method),
                         httpMethod = httpMethod,
                         path = combinedPath,
                         target = target,

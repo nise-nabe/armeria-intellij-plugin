@@ -47,6 +47,7 @@ object ArmeriaThriftRouteCollector {
                     ArmeriaRoute.create(
                         element = psiFile,
                         protocol = RouteProtocol.THRIFT.presentableName(),
+                        protocolType = RouteProtocol.THRIFT,
                         httpMethod = "",
                         path = path,
                         target = target,

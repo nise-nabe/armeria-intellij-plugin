@@ -33,6 +33,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorVirtualHost {
                 ArmeriaRoute.create(
                     element = call,
                     protocol = RouteProtocol.HTTP.presentableName(),
+                    protocolType = RouteProtocol.HTTP,
                     httpMethod = "",
                     path = "/",
                     target = hostname,

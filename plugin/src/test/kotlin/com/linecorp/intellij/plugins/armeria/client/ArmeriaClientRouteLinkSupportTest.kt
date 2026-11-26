@@ -49,7 +49,7 @@ class ArmeriaClientRouteLinkSupportTest : ArmeriaClientFixtureTestBase() {
             ArmeriaClientRouteLinkSupport.matches(
                 clientType = "HTTP",
                 uri = "https://example.com",
-                routeProtocol = "HTTP",
+                routeProtocolType = RouteProtocol.HTTP,
                 routePath = "/hello",
             ),
         )
@@ -60,7 +60,7 @@ class ArmeriaClientRouteLinkSupportTest : ArmeriaClientFixtureTestBase() {
             ArmeriaClientRouteLinkSupport.matches(
                 clientType = "RestClient",
                 uri = "https://example.com/hello",
-                routeProtocol = "HTTP",
+                routeProtocolType = RouteProtocol.HTTP,
                 routePath = "/hello",
             ),
         )
@@ -71,7 +71,7 @@ class ArmeriaClientRouteLinkSupportTest : ArmeriaClientFixtureTestBase() {
             ArmeriaClientRouteLinkSupport.matches(
                 clientType = "gRPC",
                 uri = "https://example.com/hello",
-                routeProtocol = "HTTP",
+                routeProtocolType = RouteProtocol.HTTP,
                 routePath = "/hello",
             ),
         )
@@ -81,8 +81,8 @@ class ArmeriaClientRouteLinkSupportTest : ArmeriaClientFixtureTestBase() {
         val protocol = ClientProtocol.fromPresentableName("gRPC-Kotlin")
 
         kotlin.test.assertNotNull(protocol)
-        assertTrue(protocol.matchesRouteProtocol(RouteProtocol.GRPC.presentableName()))
-        assertFalse(protocol.matchesRouteProtocol("HTTP"))
+        assertTrue(protocol.matchesRouteProtocol(RouteProtocol.GRPC))
+        assertFalse(protocol.matchesRouteProtocol(RouteProtocol.HTTP))
     }
 
     fun testHttpClientMatchesSseHealthCheckAndWebSocketRoutes() {
@@ -90,7 +90,7 @@ class ArmeriaClientRouteLinkSupportTest : ArmeriaClientFixtureTestBase() {
             ArmeriaClientRouteLinkSupport.matches(
                 clientType = "HTTP",
                 uri = "https://example.com/events",
-                routeProtocol = RouteProtocol.SSE.presentableName(),
+                routeProtocolType = RouteProtocol.SSE,
                 routePath = "/events",
                 routeMatch = RouteMatch.SERVICE,
             ),
@@ -99,7 +99,7 @@ class ArmeriaClientRouteLinkSupportTest : ArmeriaClientFixtureTestBase() {
             ArmeriaClientRouteLinkSupport.matches(
                 clientType = "HTTP",
                 uri = "https://example.com/internal/healthcheck",
-                routeProtocol = RouteProtocol.HEALTH_CHECK.presentableName(),
+                routeProtocolType = RouteProtocol.HEALTH_CHECK,
                 routePath = "/internal/healthcheck",
                 routeMatch = RouteMatch.HEALTH_CHECK,
             ),
@@ -108,7 +108,7 @@ class ArmeriaClientRouteLinkSupportTest : ArmeriaClientFixtureTestBase() {
             ArmeriaClientRouteLinkSupport.matches(
                 clientType = "HTTP",
                 uri = "https://example.com/chat",
-                routeProtocol = RouteProtocol.WEBSOCKET.presentableName(),
+                routeProtocolType = RouteProtocol.WEBSOCKET,
                 routePath = "/chat",
                 routeMatch = RouteMatch.SERVICE,
             ),
@@ -120,7 +120,7 @@ class ArmeriaClientRouteLinkSupportTest : ArmeriaClientFixtureTestBase() {
             ArmeriaClientRouteLinkSupport.matches(
                 clientType = "HTTP",
                 uri = "https://example.com/hello",
-                routeProtocol = "HTTP",
+                routeProtocolType = RouteProtocol.HTTP,
                 routePath = "/hello",
                 routeMatch = RouteMatch.ROUTE_DECORATOR,
             ),
@@ -171,7 +171,7 @@ class ArmeriaClientRouteLinkSupportTest : ArmeriaClientFixtureTestBase() {
             ArmeriaClientRouteLinkSupport.matches(
                 clientType = "HTTP",
                 uri = "https://example.com",
-                routeProtocol = "HTTP",
+                routeProtocolType = RouteProtocol.HTTP,
                 routePath = "/users",
                 requestPath = "https://example.com/users",
                 httpMethod = "GET",
@@ -182,7 +182,7 @@ class ArmeriaClientRouteLinkSupportTest : ArmeriaClientFixtureTestBase() {
             ArmeriaClientRouteLinkSupport.matches(
                 clientType = "HTTP",
                 uri = "https://example.com",
-                routeProtocol = "HTTP",
+                routeProtocolType = RouteProtocol.HTTP,
                 routePath = "/https://example.com/users",
                 requestPath = "https://example.com/users",
                 httpMethod = "GET",
@@ -203,7 +203,7 @@ class ArmeriaClientRouteLinkSupportTest : ArmeriaClientFixtureTestBase() {
             ArmeriaClientRouteLinkSupport.matches(
                 clientType = "HTTP",
                 uri = "zk://zk.example.com/armeria",
-                routeProtocol = "HTTP",
+                routeProtocolType = RouteProtocol.HTTP,
                 routePath = "/armeria",
             ),
         )

@@ -13,6 +13,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServi
 import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceSupport
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -33,6 +34,23 @@ class ArmeriaDocServiceDebugFormUrlTest {
         val route =
             route(
                 protocol = "gRPC",
+                path = "/example.EchoService/Echo",
+                target = "example.EchoService.Echo",
+                routeMatch = RouteMatch.NON_HTTP,
+            )
+
+        assertEquals(
+            ArmeriaDocServiceMethodRef("example.EchoService", "Echo"),
+            ArmeriaDocServiceMethodRef.from(route),
+        )
+    }
+
+    @Test
+    fun from_grpcProtocolIdentityDoesNotDependOnDisplayLabel() {
+        val route =
+            route(
+                protocol = "Localized gRPC label",
+                protocolType = RouteProtocol.GRPC,
                 path = "/example.EchoService/Echo",
                 target = "example.EchoService.Echo",
                 routeMatch = RouteMatch.NON_HTTP,
@@ -151,15 +169,28 @@ class ArmeriaDocServiceDebugFormUrlTest {
         )
     }
 
+    private fun testProtocolType(protocol: String): RouteProtocol =
+        when (protocol) {
+            "gRPC" -> RouteProtocol.GRPC
+            "Thrift" -> RouteProtocol.THRIFT
+            "GraphQL" -> RouteProtocol.GRAPHQL
+            "WebSocket" -> RouteProtocol.WEBSOCKET
+            "SSE" -> RouteProtocol.SSE
+            "DocService" -> RouteProtocol.DOC_SERVICE
+            else -> RouteProtocol.HTTP
+        }
+
     private fun route(
         path: String = "/hello",
         protocol: String = "HTTP",
+        protocolType: RouteProtocol? = testProtocolType(protocol),
         target: String = "Handler",
         routeMatch: RouteMatch = RouteMatch.SERVICE,
         isDocService: Boolean = false,
     ): ArmeriaRoute =
         ArmeriaRoute(
             protocol = protocol,
+            protocolType = protocolType,
             httpMethod = "GET",
             path = path,
             target = target,

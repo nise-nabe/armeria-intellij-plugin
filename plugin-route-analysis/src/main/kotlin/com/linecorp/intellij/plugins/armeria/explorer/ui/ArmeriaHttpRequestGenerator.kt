@@ -157,14 +157,13 @@ object ArmeriaHttpRequestGenerator {
         }
     }
 
-    private fun isWebSocketRoute(route: ArmeriaRoute): Boolean =
-        route.protocol.equals(RouteProtocol.WEBSOCKET.presentableName(), ignoreCase = true)
+    private fun isWebSocketRoute(route: ArmeriaRoute): Boolean = route.protocolType == RouteProtocol.WEBSOCKET
 
     private fun isGrpcRoute(route: ArmeriaRoute): Boolean {
         if (route.routeMatch != RouteMatch.NON_HTTP) {
             return false
         }
-        if (!route.protocol.equals(RouteProtocol.GRPC.presentableName(), ignoreCase = true)) {
+        if (route.protocolType != RouteProtocol.GRPC) {
             return false
         }
         return GrpcRoutePath.isMethodPath(route.path)
@@ -176,7 +175,7 @@ object ArmeriaHttpRequestGenerator {
         if (route.routeMatch != RouteMatch.NON_HTTP) {
             return false
         }
-        if (!route.protocol.equals(RouteProtocol.GRAPHQL.presentableName(), ignoreCase = true)) {
+        if (route.protocolType != RouteProtocol.GRAPHQL) {
             return false
         }
         return GRAPHQL_OPERATION_TARGET.matches(route.target)

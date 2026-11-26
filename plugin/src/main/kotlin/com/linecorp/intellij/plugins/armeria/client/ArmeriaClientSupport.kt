@@ -17,21 +17,21 @@ internal enum class ClientProtocol(
 
     fun presentableName(): String = message(messageKey)
 
-    fun matchesRouteProtocol(routeProtocol: String): Boolean =
+    fun matchesRouteProtocol(routeProtocol: RouteProtocol?): Boolean =
         when (this) {
             HTTP, RETROFIT, REST, BLOCKING -> isHttpCompatibleRouteProtocol(routeProtocol)
-            GRPC, GRPC_KOTLIN -> routeProtocol == GRPC.presentableName()
-            THRIFT -> routeProtocol == THRIFT.presentableName()
+            GRPC, GRPC_KOTLIN -> routeProtocol == RouteProtocol.GRPC
+            THRIFT -> routeProtocol == RouteProtocol.THRIFT
         }
 
     companion object {
         fun fromPresentableName(name: String): ClientProtocol? = entries.firstOrNull { it.presentableName() == name }
 
-        private fun isHttpCompatibleRouteProtocol(routeProtocol: String): Boolean =
-            routeProtocol == HTTP.presentableName() ||
-                routeProtocol == RouteProtocol.SSE.presentableName() ||
-                routeProtocol == RouteProtocol.HEALTH_CHECK.presentableName() ||
-                routeProtocol == RouteProtocol.WEBSOCKET.presentableName()
+        private fun isHttpCompatibleRouteProtocol(routeProtocol: RouteProtocol?): Boolean =
+            routeProtocol == RouteProtocol.HTTP ||
+                routeProtocol == RouteProtocol.SSE ||
+                routeProtocol == RouteProtocol.HEALTH_CHECK ||
+                routeProtocol == RouteProtocol.WEBSOCKET
     }
 }
 

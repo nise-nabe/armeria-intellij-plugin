@@ -120,6 +120,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorFluentRoute {
         ArmeriaRoute.create(
             element = element,
             protocol = RouteProtocol.HTTP.presentableName(),
+            protocolType = RouteProtocol.HTTP,
             httpMethod = chainInfo.httpMethod,
             path = chainInfo.path,
             target = chainInfo.target,

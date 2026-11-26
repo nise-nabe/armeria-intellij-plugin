@@ -25,6 +25,7 @@ internal object ArmeriaExtendedRegistrationCollectorRouteDecorator {
             ArmeriaRoute.create(
                 element = expression,
                 protocol = RouteProtocol.HTTP.presentableName(),
+                protocolType = RouteProtocol.HTTP,
                 httpMethod = chainInfo.methods,
                 path = chainInfo.pathPattern,
                 target = chainInfo.decoratorLabel,

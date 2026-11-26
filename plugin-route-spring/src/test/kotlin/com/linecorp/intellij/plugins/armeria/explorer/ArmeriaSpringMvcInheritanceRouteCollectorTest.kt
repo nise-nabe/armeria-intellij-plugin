@@ -688,6 +688,7 @@ class ArmeriaSpringMvcInheritanceRouteCollectorTest : ArmeriaFixtureTestBase() {
             ArmeriaRoute.create(
                 element = helloRoute.controller,
                 protocol = RouteProtocol.HTTP.presentableName(),
+                protocolType = RouteProtocol.HTTP,
                 httpMethod = "",
                 path = "/spring/",
                 target = "TomcatService",
