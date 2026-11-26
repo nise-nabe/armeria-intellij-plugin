@@ -10,7 +10,7 @@ Automated coverage lives in:
 | # | Build | Language | Libraries | Expected in generated build file |
 |---|-------|----------|-----------|----------------------------------|
 | 1 | Gradle (Kotlin DSL) | Kotlin | `armeria-grpc`, JUnit 5 | `kotlin("jvm")`, `armeria-grpc`, `armeria-kotlin`, `armeria-junit5`, `useJUnitJupiter()` |
-| 2 | Gradle (Groovy) | Scala | `armeria-scala_2.13` | `id 'scala'`, `armeria-scala_2.13`, `scala-library:2.13.18` |
+| 2 | Gradle (Groovy) | Scala | `armeria-scala_2.13` | `id 'scala'`, `armeria-scala_2.13`, `scala-library` with the centralized `scala213.version` |
 | 3 | Maven | Kotlin | `armeria-tomcat8` | `<artifactId>armeria-tomcat8</artifactId>`, `armeria-kotlin`, `kotlin-maven-plugin` |
 | 4 | Gradle (Kotlin DSL) | Kotlin | `armeria-spring-boot3-starter` | `armeria-spring-boot3-starter`, `armeria-kotlin`, `application.yml`, `ArmeriaConfiguration` |
 | 5 | Gradle (Kotlin DSL) | Java | `armeria-grpc` | `armeria-grpc`, `src/main/proto/hello.proto`, `HelloServiceImpl` |
