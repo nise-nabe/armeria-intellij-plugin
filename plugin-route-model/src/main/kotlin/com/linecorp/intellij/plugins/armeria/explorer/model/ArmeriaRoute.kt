@@ -150,6 +150,10 @@ data class ArmeriaRoute(
     companion object {
         private const val TARGET_DISPLAY_LIMIT = 60
 
+        /**
+         * Pass [protocolType] whenever [protocol] is a known [RouteProtocol] display label.
+         * Leave it null only for free-form or composite labels such as listen-port and runtime routes.
+         */
         fun create(
             element: PsiElement,
             protocol: String,
@@ -216,7 +220,6 @@ data class ArmeriaRoute(
             delegationKind: DelegationKind? = null,
             exampleRequests: List<String> = emptyList(),
             exampleHeaders: List<String> = emptyList(),
-            protocolType: RouteProtocol? = null,
         ): ArmeriaRoute =
             ArmeriaRoute(
                 protocol = protocol,
@@ -233,7 +236,6 @@ data class ArmeriaRoute(
                 pointer = pointer,
                 exampleRequests = exampleRequests,
                 exampleHeaders = exampleHeaders,
-                protocolType = protocolType,
             )
 
         fun truncateTarget(

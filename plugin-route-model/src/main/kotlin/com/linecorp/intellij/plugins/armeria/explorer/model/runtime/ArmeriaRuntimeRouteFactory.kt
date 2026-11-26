@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.explorer.model.runtime
 import com.intellij.openapi.project.Project
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
-import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 
 object ArmeriaRuntimeRouteFactory {
     fun createRuntime(
@@ -16,7 +15,6 @@ object ArmeriaRuntimeRouteFactory {
         delegationKind: DelegationKind? = null,
         exampleRequests: List<String> = emptyList(),
         exampleHeaders: List<String> = emptyList(),
-        protocolType: RouteProtocol? = null,
     ): ArmeriaRoute =
         ArmeriaRoute.createRuntime(
             httpMethod = httpMethod,
@@ -28,6 +26,5 @@ object ArmeriaRuntimeRouteFactory {
             pointer = project?.let(::ArmeriaRuntimeRoutePointer) ?: ArmeriaRuntimeRoutePointer.withoutProject(),
             exampleRequests = exampleRequests,
             exampleHeaders = exampleHeaders,
-            protocolType = protocolType,
         )
 }

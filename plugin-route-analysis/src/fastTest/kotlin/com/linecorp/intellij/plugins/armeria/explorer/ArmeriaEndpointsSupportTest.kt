@@ -180,6 +180,16 @@ class ArmeriaEndpointsSupportTest {
                 ),
             ),
         )
+        assertFalse(
+            ArmeriaEndpointsSupport.isVisibleServerRoute(
+                route(
+                    protocol = "gRPC",
+                    protocolType = null,
+                    path = "/example.Echo/Ping",
+                    routeMatch = RouteMatch.NON_HTTP,
+                ),
+            ),
+        )
     }
 
     @Test
