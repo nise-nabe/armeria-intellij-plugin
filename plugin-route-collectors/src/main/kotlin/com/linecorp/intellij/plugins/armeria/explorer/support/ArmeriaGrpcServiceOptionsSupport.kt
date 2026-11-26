@@ -10,19 +10,14 @@ import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiTypeCastExpression
 import com.intellij.psi.PsiVariable
 import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRouteHint
-import org.jetbrains.kotlin.psi.KtCallExpression
-import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
-import org.jetbrains.kotlin.psi.KtExpression
-import org.jetbrains.kotlin.psi.KtNameReferenceExpression
-import org.jetbrains.kotlin.psi.KtProperty
 
 /**
  * Reads `GrpcService` builder options used as Route Explorer badges:
  * `enableUnframedRequests` and `ProtoReflectionService` registration.
  */
 object ArmeriaGrpcServiceOptionsSupport {
-    private const val ENABLE_UNFRAMED_REQUESTS = "enableUnframedRequests"
-    private val ADD_SERVICE_METHODS = setOf("addService", "addServices")
+    internal const val ENABLE_UNFRAMED_REQUESTS = "enableUnframedRequests"
+    internal val ADD_SERVICE_METHODS = setOf("addService", "addServices")
     private val REFLECTION_SIMPLE_NAMES = setOf("ProtoReflectionService", "ProtoReflectionServiceV1")
     private val NAME_TOKENS = Regex("[^A-Za-z0-9_]+")
 
@@ -90,10 +85,18 @@ object ArmeriaGrpcServiceOptionsSupport {
             return GrpcServiceOptions()
         }
         val partial =
-            when (element) {
-                is KtExpression -> collectKotlin(element, mutableSetOf())
-                is PsiExpression -> collectJava(element, mutableSetOf())
-                else -> PartialOptions()
+            when {
+                element is PsiExpression -> {
+                    collectJava(element, mutableSetOf())
+                }
+
+                ArmeriaKotlinPluginSupport.isKotlinPluginAvailable() -> {
+                    ArmeriaKotlinGrpcServiceOptionsSupport.collect(element, mutableSetOf())
+                }
+
+                else -> {
+                    PartialOptions()
+                }
             }
         return GrpcServiceOptions(
             unframed = partial.unframed == true,
@@ -101,7 +104,7 @@ object ArmeriaGrpcServiceOptionsSupport {
         )
     }
 
-    private fun collectJava(
+    internal fun collectJava(
         expression: PsiExpression,
         visited: MutableSet<PsiElement>,
     ): PartialOptions {
@@ -175,96 +178,6 @@ object ArmeriaGrpcServiceOptionsSupport {
         return looksLikeReflectionName(target.substringAfterLast('.'))
     }
 
-    private fun collectKotlin(
-        expression: KtExpression,
-        visited: MutableSet<PsiElement>,
-    ): PartialOptions {
-        val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: return PartialOptions()
-        if (!visited.add(unwrapped)) {
-            return PartialOptions()
-        }
-        val call = kotlinCall(unwrapped)
-        if (call != null) {
-            val fromCall = inspectKotlinCall(call)
-            val qualifier = kotlinQualifier(call)
-            val fromQualifier = qualifier?.let { collectKotlin(it, visited) } ?: PartialOptions()
-            return fromCall.mergeInner(fromQualifier)
-        }
-        if (unwrapped is KtNameReferenceExpression) {
-            when (val resolved = unwrapped.references.firstOrNull()?.resolve()) {
-                is KtProperty -> {
-                    val initializer = resolved.initializer ?: return PartialOptions()
-                    return collectKotlin(initializer, visited)
-                }
-
-                is PsiVariable -> {
-                    val initializer = resolved.initializer ?: return PartialOptions()
-                    return collectJava(initializer, visited)
-                }
-            }
-        }
-        return PartialOptions(reflection = looksLikeReflectionName(unwrapped.text))
-    }
-
-    private fun inspectKotlinCall(call: KtCallExpression): PartialOptions {
-        val methodName = ArmeriaKotlinExpressionSupport.resolveCallName(call)
-        if (methodName == ENABLE_UNFRAMED_REQUESTS) {
-            return PartialOptions(unframed = kotlinUnframedEnabled(call))
-        }
-        if (methodName in ADD_SERVICE_METHODS) {
-            val reflection =
-                call.valueArguments
-                    .mapNotNull { it.getArgumentExpression() }
-                    .any(::kotlinLooksLikeReflection)
-            return PartialOptions(reflection = reflection)
-        }
-        return PartialOptions()
-    }
-
-    private fun kotlinUnframedEnabled(call: KtCallExpression): Boolean {
-        val argument = call.valueArguments.firstOrNull()?.getArgumentExpression() ?: return false
-        val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(argument) ?: argument
-        return when (unwrapped.text) {
-            "true" -> true
-            "false" -> false
-            else -> true
-        }
-    }
-
-    private fun kotlinLooksLikeReflection(expression: KtExpression): Boolean {
-        if (looksLikeReflectionName(expression.text)) {
-            return true
-        }
-        val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: expression
-        val call = kotlinCall(unwrapped)
-        if (call != null) {
-            val callee = ArmeriaKotlinExpressionSupport.resolveCallName(call) ?: call.text
-            if (looksLikeReflectionName(callee)) {
-                return true
-            }
-            val qualifier = kotlinQualifier(call)
-            if (qualifier != null && looksLikeReflectionName(qualifier.text.substringAfterLast('.'))) {
-                return true
-            }
-        }
-        return looksLikeReflectionName(unwrapped.text.substringAfterLast('.'))
-    }
-
-    private fun kotlinCall(expression: KtExpression): KtCallExpression? =
-        when (val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: expression) {
-            is KtCallExpression -> unwrapped
-            is KtDotQualifiedExpression -> unwrapped.selectorExpression as? KtCallExpression
-            else -> null
-        }
-
-    private fun kotlinQualifier(call: KtCallExpression): KtExpression? {
-        val callee = call.calleeExpression
-        return when (callee) {
-            is KtDotQualifiedExpression -> callee.receiverExpression
-            else -> (call.parent as? KtDotQualifiedExpression)?.receiverExpression
-        }
-    }
-
     private fun unwrapJava(expression: PsiExpression?): PsiExpression? {
         var current = expression ?: return null
         while (true) {
@@ -277,7 +190,7 @@ object ArmeriaGrpcServiceOptionsSupport {
         }
     }
 
-    private fun looksLikeReflectionName(name: String?): Boolean {
+    internal fun looksLikeReflectionName(name: String?): Boolean {
         if (name.isNullOrBlank()) {
             return false
         }
@@ -289,7 +202,7 @@ object ArmeriaGrpcServiceOptionsSupport {
         val reflection: Boolean = false,
     )
 
-    private data class PartialOptions(
+    internal data class PartialOptions(
         val unframed: Boolean? = null,
         val reflection: Boolean = false,
     ) {

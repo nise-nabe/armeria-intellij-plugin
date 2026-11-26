@@ -22,5 +22,6 @@ interface CoreServiceRegistrationSupport {
         seen: MutableSet<String>,
     )
 
+    /** Returns false for non-Kotlin files or when the optional Kotlin plugin is unavailable. */
     fun referencesArmeriaKotlinContent(file: PsiFile): Boolean
 }
