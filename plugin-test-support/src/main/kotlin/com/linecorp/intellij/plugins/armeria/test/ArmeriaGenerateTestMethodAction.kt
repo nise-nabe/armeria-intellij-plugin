@@ -1,14 +1,12 @@
-package com.linecorp.intellij.plugins.armeria.explorer
+package com.linecorp.intellij.plugins.armeria.test
 
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAwareAction
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.message
-import com.linecorp.intellij.plugins.armeria.test.ArmeriaTestMethodGenerator
-import com.linecorp.intellij.plugins.armeria.test.ArmeriaTestMethodInserter
 
-internal class ArmeriaGenerateTestMethodAction(
+class ArmeriaGenerateTestMethodAction(
     private val selectedRouteProvider: () -> ArmeriaRoute?,
 ) : DumbAwareAction(
         message("route.explorer.action.generateTestMethod"),

@@ -2,7 +2,7 @@
 
 ## Cursor Cloud specific instructions
 
-IntelliJ Platform plugin for Armeria. Gradle multi-project build (`build-logic`, `plugin-shared`, `plugin-route-model`, `plugin-route-collectors`, `plugin-route-spring`, `plugin-route-protocol`, `plugin-route-analysis`, `plugin-wizard`, `plugin`). No web UI or Docker services.
+IntelliJ Platform plugin for Armeria. Gradle multi-project build (`build-logic`, `plugin-shared`, `plugin-route-model`, `plugin-route-collectors`, `plugin-route-spring`, `plugin-route-protocol`, `plugin-route-analysis`, `plugin-wizard`, `plugin-test-support`, `plugin`). No web UI or Docker services.
 
 ### Prerequisites
 
@@ -68,6 +68,7 @@ Prefer **Gradle MCP** for the tasks below. Use `background: true`, then poll `gr
 | Format Kotlin | `gradle_run_tasks` `["ktlintFormat"]` + background/poll | `./gradlew ktlintFormat` |
 | Compile plugin | `gradle_run_tasks` `[":plugin:compileKotlin"]` | `./gradlew :plugin:compileKotlin` |
 | Plugin fixture tests | `gradle_run_tasks` `[":plugin:test"]` (`background: true`); selected classes via `gradle_run_tests` `{ "taskPath": ":plugin:test", "testClasses": ["FQCN"] }` | `./gradlew :plugin:test` |
+| Test-support fixture tests | `gradle_run_tasks` `[":plugin-test-support:test"]` + background/poll | `./gradlew :plugin-test-support:test` |
 | Route collectors fixture tests | `gradle_run_tasks` `[":plugin-route-collectors:test"]` + background/poll | `./gradlew :plugin-route-collectors:test` |
 | Route spring fixture tests | `gradle_run_tasks` `[":plugin-route-spring:test"]` + background/poll | `./gradlew :plugin-route-spring:test` |
 | Route protocol fixture tests | `gradle_run_tasks` `[":plugin-route-protocol:test"]` + background/poll | `./gradlew :plugin-route-protocol:test` |
@@ -107,7 +108,7 @@ Root `ktlintCheck` does not cover the `includeBuild("build-logic")` composite or
 
 Commit-time ktlint catches style regressions early; pre-PR `build` remains the final gate (CI runs `build -x test`, which includes ktlint).
 
-**Isolated Projects status**: all production modules (`plugin-route-model`, `plugin-route-collectors`, `plugin-route-spring`, `plugin-route-protocol`, `plugin-route-analysis`, `plugin`) compile cleanly under `-Dorg.gradle.unsafe.isolated-projects=true` (verified via `./gradlew compileKotlin -Dorg.gradle.unsafe.isolated-projects=true`). Enabling it as a CI default (e.g. in `gradle.properties`) is a follow-up once test-task configuration-time access is also confirmed; see the commented line in `gradle.properties`.
+**Isolated Projects status**: all production modules (`plugin-route-model`, `plugin-route-collectors`, `plugin-route-spring`, `plugin-route-protocol`, `plugin-route-analysis`, `plugin`) compile cleanly; `plugin-test-support` has not yet been verified in that mode under `-Dorg.gradle.unsafe.isolated-projects=true` (verified via `./gradlew compileKotlin -Dorg.gradle.unsafe.isolated-projects=true`). Enabling it as a CI default (e.g. in `gradle.properties`) is a follow-up once test-task configuration-time access is also confirmed; see the commented line in `gradle.properties`.
 
 ### Project layout
 
@@ -120,11 +121,12 @@ Commit-time ktlint catches style regressions early; pre-PR `build` remains the f
 | `plugin-route-protocol/` | GraphQL / gRPC / Thrift / IDL / proto-text collectors |
 | `plugin-route-analysis/` | Route Explorer UI helpers, DocService support, jump-to-source navigation (`navigation/ArmeriaRouteNavigation` only), duplicate index, and `ArmeriaRouteAnalysisCollector` (production façade that always supplies Spring/protocol contributors) |
 | `plugin-wizard/` | New Project Wizard templates and verification |
+| `plugin-test-support/` | Armeria test-support inspections, JUnit `ServerExtension` analysis, generated test-method insertion, and related line markers |
 | `plugin/` | Aggregating plugin module, run config, Clients explorer, resources, `CHANGELOG.md` |
 | `build-logic/` | Shared IntelliJ Platform Gradle conventions |
 | `gradle/libs.versions.toml` | Version pins (Kotlin, IPGP, IDEA platform) |
 
-Main Kotlin packages live under each module's `src/main/kotlin/com/linecorp/intellij/plugins/armeria/`. User-visible strings go through `message(...)` and `ArmeriaBundle.properties`. CI (`.github/workflows/main.yml`) runs per-module test tasks (`:plugin-wizard:test`, `:plugin-route-collectors:fastTest`/`test`, `:plugin-route-spring:fastTest`/`test`, `:plugin-route-protocol:fastTest`/`test`, `:plugin-route-analysis:fastTest`/`test`, `:plugin:test`) then `./gradlew build -x test` on Java 25.
+Main Kotlin packages live under each module's `src/main/kotlin/com/linecorp/intellij/plugins/armeria/`. User-visible strings go through `message(...)` and `ArmeriaBundle.properties`. CI (`.github/workflows/main.yml`) runs per-module test tasks (`:plugin-wizard:test`, `:plugin-test-support:test`, `:plugin-route-collectors:fastTest`/`test`, `:plugin-route-spring:fastTest`/`test`, `:plugin-route-protocol:fastTest`/`test`, `:plugin-route-analysis:fastTest`/`test`, `:plugin:test`) then `./gradlew build -x test` on Java 25.
 
 ### Running the plugin (headless cloud caveat)
 

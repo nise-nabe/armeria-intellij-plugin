@@ -3,7 +3,7 @@ name: intellij-armeria-plugin
 description: >-
   IntelliJ Platform plugin conventions for this repository. Use when implementing
   or editing plugin UI, run configurations, tool windows, inspections, actions,
-  or any Kotlin code under plugin/, plugin-shared/, or plugin-wizard/.
+  or any Kotlin code under plugin/, plugin-shared/, plugin-wizard/, or plugin-test-support/.
 ---
 
 # IntelliJ Armeria plugin conventions
@@ -29,6 +29,7 @@ in this repository. Apply it **during implementation**, not only before opening 
 | `plugin-route-analysis/` | Route Explorer UI helpers (`ui/`), DocService support (`docservice/`), jump-to-source navigation (`navigation/ArmeriaRouteNavigation` only), duplicate index (`duplicate/`), and `ArmeriaRouteAnalysisCollector` (production façade that always supplies Spring/protocol contributors) |
 | `plugin-shared/` | Shared bundle helpers, cross-cutting PSI utilities, test fixtures |
 | `plugin-wizard/` | New-project/module wizard, file templates, starter resources |
+| `plugin-test-support/` | Test-support inspections, JUnit `ServerExtension` analysis, generated test-method insertion, and related line markers |
 | `plugin/` | `plugin.xml` wiring, UI panels/actions, run configs, inspection registration |
 
 Do not put collector logic in `plugin/` when it belongs in one of the `plugin-route-*` modules.
@@ -43,7 +44,8 @@ Cross-module rules to keep the dependency graph acyclic:
   (transitively `plugin-route-model` + `plugin-shared`). Neither may depend on the other or on
   `plugin-route-analysis`.
 - `plugin-route-analysis` `api`s the four modules above so analysis can compile against them.
-- `plugin/` composes `plugin-shared`, `plugin-wizard`, and all `plugin-route-*` modules into the
+- `plugin-test-support` may depend on `plugin-route-analysis` and `plugin-shared`.
+- `plugin/` composes `plugin-shared`, `plugin-wizard`, `plugin-test-support`, and all `plugin-route-*` modules into the
   main plugin JAR via `pluginComposedModule`. Do not use bare `implementation(project(...))` for
   those modules — that ships extra JARs and can pull Kotlin stdlib into the ZIP. Test-side it
   consumes `testFixtures(project(":plugin-route-collectors"))`.
@@ -223,6 +225,7 @@ Match the Gradle task to the module that contains the test class:
 | `plugin-route-analysis/src/test` | `:plugin-route-analysis:test` |
 | `plugin-route-analysis/src/fastTest` | `:plugin-route-analysis:fastTest` |
 | `plugin/src/test` | `:plugin:test` |
+| `plugin-test-support/src/test` | `:plugin-test-support:test` |
 | `plugin-wizard/src/test` | `:plugin-wizard:test` |
 
 PSI fixture layout (`src/test/testData/`, `configureFixture()`, `ArmeriaRouteTestSupport`) is
