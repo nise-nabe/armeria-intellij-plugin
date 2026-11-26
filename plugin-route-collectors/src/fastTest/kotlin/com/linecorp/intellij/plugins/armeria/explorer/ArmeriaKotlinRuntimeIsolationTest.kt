@@ -13,6 +13,7 @@ class ArmeriaKotlinRuntimeIsolationTest {
                 "com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaBuilderCallHeuristics",
                 "com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteCollectorServiceRegistration",
                 "com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaGrpcServiceOptionsSupport",
+                "com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteAnnotationSupport",
                 "com.linecorp.intellij.plugins.armeria.explorer.support.CoreServiceRegistrationSupport",
                 "com.linecorp.intellij.plugins.armeria.explorer.support.RouteCollectContext",
             )
