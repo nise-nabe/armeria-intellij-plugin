@@ -3,8 +3,8 @@ package com.linecorp.intellij.plugins.armeria.inspection
 import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.psi.PsiElementVisitor
+import com.linecorp.intellij.plugins.armeria.explorer.support.toArmeriaLightClass
 import com.linecorp.intellij.plugins.armeria.message
-import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtVisitorVoid
@@ -69,6 +69,6 @@ class ArmeriaDuplicateRouteKotlinInspection : LocalInspectionTool() {
             .filterIsInstance<KtClass>()
             .firstOrNull { it.name == superName }
             ?.let { return it }
-        return klass.toLightClass()?.superClass?.originalElement as? KtClass
+        return klass.toArmeriaLightClass()?.superClass?.originalElement as? KtClass
     }
 }

@@ -5,7 +5,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
-import org.jetbrains.kotlin.asJava.toLightClass
+import com.linecorp.intellij.plugins.armeria.explorer.support.toArmeriaLightClass
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtBinaryExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -312,5 +312,5 @@ internal object ArmeriaKotlinInspectionCallChains {
             entry.typeAsUserType?.referencedName ?: entry.typeReference?.text?.substringAfterLast('.')
         }
 
-    fun toPsiClass(declaration: KtClassOrObject): PsiClass? = declaration.toLightClass()
+    fun toPsiClass(declaration: KtClassOrObject): PsiClass? = declaration.toArmeriaLightClass()
 }

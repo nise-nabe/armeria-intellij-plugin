@@ -4,7 +4,6 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiType
 import com.intellij.psi.PsiVariable
-import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtBinaryExpression
 import org.jetbrains.kotlin.psi.KtBinaryExpressionWithTypeRHS
@@ -254,7 +253,7 @@ object ArmeriaKotlinExpressionSupport {
             val containing = receiver.references.firstNotNullOfOrNull { it.resolve() }
             val containingClass =
                 containing as? com.intellij.psi.PsiClass
-                    ?: (containing as? KtClassOrObject)?.toLightClass()
+                    ?: (containing as? KtClassOrObject)?.toArmeriaLightClass()
                     ?: return null
             val field = containingClass.findFieldByName(selector.getReferencedName(), true)
             if (field != null) {

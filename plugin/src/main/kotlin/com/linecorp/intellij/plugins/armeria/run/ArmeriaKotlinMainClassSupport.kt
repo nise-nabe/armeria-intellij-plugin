@@ -4,8 +4,8 @@ import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiMethodUtil
 import com.intellij.psi.util.PsiTreeUtil
-import org.jetbrains.kotlin.asJava.findFacadeClass
-import org.jetbrains.kotlin.asJava.toLightClass
+import com.linecorp.intellij.plugins.armeria.explorer.support.findArmeriaFacadeClass
+import com.linecorp.intellij.plugins.armeria.explorer.support.toArmeriaLightClass
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
@@ -20,14 +20,14 @@ internal object ArmeriaKotlinMainClassSupport {
 
         PsiTreeUtil
             .getParentOfType(element, false, KtClassOrObject::class.java)
-            ?.toLightClass()
+            ?.toArmeriaLightClass()
             ?.takeIf(PsiMethodUtil::hasMainInClass)
             ?.let { return it }
 
         if (!hasTopLevelMain(ktFile)) {
             return null
         }
-        val facade = ktFile.findFacadeClass() ?: return null
+        val facade = ktFile.findArmeriaFacadeClass() ?: return null
         return facade.takeIf { PsiMethodUtil.hasMainMethod(it) || PsiMethodUtil.hasMainInClass(it) }
     }
 

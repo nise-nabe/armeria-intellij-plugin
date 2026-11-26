@@ -10,8 +10,8 @@ import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaKotlinRouteCollector
 import com.linecorp.intellij.plugins.armeria.explorer.model.ServiceRegistrationMethod
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.toArmeriaLightClass
 import com.linecorp.intellij.plugins.armeria.inspection.ArmeriaKotlinMethodRoute
-import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtConstructor
@@ -51,7 +51,7 @@ internal object ArmeriaKotlinRouteNavigationSupport {
     fun relatedRegistrations(handler: PsiElement): List<PsiElement> {
         val function = handler as? KtNamedFunction ?: return emptyList()
         val serviceClass =
-            PsiTreeUtil.getParentOfType(function, KtClassOrObject::class.java)?.toLightClass()
+            PsiTreeUtil.getParentOfType(function, KtClassOrObject::class.java)?.toArmeriaLightClass()
                 ?: return emptyList()
         return ArmeriaRouteNavigationSupport.findRegistrationsForServiceClass(serviceClass, function.project)
     }
@@ -90,8 +90,8 @@ internal object ArmeriaKotlinRouteNavigationSupport {
             is PsiClass -> resolved
             is PsiMethod -> resolved.takeIf { it.isConstructor }?.containingClass
             is PsiVariable -> (resolved.type as? com.intellij.psi.PsiClassType)?.resolve()
-            is KtClassOrObject -> resolved.toLightClass()
-            is KtConstructor<*> -> resolved.getContainingClassOrObject().toLightClass()
+            is KtClassOrObject -> resolved.toArmeriaLightClass()
+            is KtConstructor<*> -> resolved.getContainingClassOrObject().toArmeriaLightClass()
             is KtProperty -> classFromKotlinProperty(resolved)
             else -> null
         }
@@ -188,7 +188,7 @@ internal object ArmeriaKotlinRouteNavigationSupport {
         property.typeReference?.references?.firstOrNull()?.resolve()?.let { typeResolved ->
             when (typeResolved) {
                 is PsiClass -> return typeResolved
-                is KtClassOrObject -> return typeResolved.toLightClass()
+                is KtClassOrObject -> return typeResolved.toArmeriaLightClass()
             }
         }
         val initializer = property.initializer ?: return null
