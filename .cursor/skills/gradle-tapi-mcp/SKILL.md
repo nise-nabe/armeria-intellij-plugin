@@ -193,7 +193,7 @@ For selected tests, use `gradle_run_tests` with the owning module's `taskPath` +
 
 ```json
 {
-  "taskPath": ":plugin-test:test",
+  "taskPath": ":plugin-test-support:test",
   "testClasses": ["com.linecorp.intellij.plugins.armeria.test.ArmeriaTestMethodInserterTest"],
   "background": true
 }
@@ -215,7 +215,7 @@ If you lose the `buildId`, use `gradle_list_builds` and poll the most recent ent
 ./gradlew :plugin:compileKotlin
 ./gradlew :plugin:test
 # or a single class (match the suite that contains it):
-./gradlew :plugin-test:test --tests 'com.linecorp.intellij.plugins.armeria.test.ArmeriaTestMethodInserterTest'
+./gradlew :plugin-test-support:test --tests 'com.linecorp.intellij.plugins.armeria.test.ArmeriaTestMethodInserterTest'
 ./gradlew :plugin-route-analysis:fastTest --tests 'com.linecorp.intellij.plugins.armeria.explorer.ArmeriaRouteTreeBuilderTest'
 ./gradlew build
 ```

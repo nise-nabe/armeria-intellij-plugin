@@ -5,7 +5,8 @@ plugins {
 }
 
 dependencies {
-    api(project(":plugin-route-analysis"))
+    implementation(project(":plugin-route-analysis"))
+    api(project(":plugin-route-model"))
     implementation(project(":plugin-shared"))
     intellijPlatform {
         intellijIdeaUltimate(

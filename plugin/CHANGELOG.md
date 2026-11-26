@@ -5,6 +5,7 @@
 ### Added
 
 ### Changed
+- Extract test-support production code into the `plugin-test-support` composed module.
 
 - Target IntelliJ IDEA Ultimate 2026.2.4.
 

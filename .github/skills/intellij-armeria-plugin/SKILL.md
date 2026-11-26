@@ -3,7 +3,7 @@ name: intellij-armeria-plugin
 description: >-
   IntelliJ Platform plugin conventions for this repository. Use when implementing
   or editing plugin UI, run configurations, tool windows, inspections, actions,
-  or any Kotlin code under plugin/, plugin-shared/, or plugin-wizard/.
+  or any Kotlin code under plugin/, plugin-shared/, plugin-wizard/, or plugin-test-support/.
 ---
 
 # IntelliJ Armeria plugin conventions
@@ -25,13 +25,14 @@ in this repository. Apply it **during implementation**, not only before opening 
 | `plugin-route-analysis/` | Route/Client collectors, PSI analysis, route-related unit/fixture tests |
 | `plugin-shared/` | Shared bundle helpers, cross-cutting PSI utilities, test fixtures |
 | `plugin-wizard/` | New-project/module wizard, file templates, starter resources |
+| `plugin-test-support/` | Test-support inspections, JUnit `ServerExtension` analysis, and generated test-method insertion |
 | `plugin/` | `plugin.xml` wiring, UI panels/actions, run configs, inspection registration |
 
 Do not put collector logic in `plugin/` when it belongs in `plugin-route-analysis/`.
 Do not add route-analysis tests under `plugin/src/test` when the class under test lives
 in `plugin-route-analysis/`.
 
-The `plugin` module composes `plugin-shared`, `plugin-wizard`, and route modules into the
+The `plugin` module composes `plugin-shared`, `plugin-wizard`, `plugin-test-support`, and route modules into the
 main plugin JAR via `pluginComposedModule`. Do not use bare `implementation(project(...))`
 for those modules — that ships extra JARs and can pull Kotlin stdlib into the ZIP.
 
@@ -204,7 +205,7 @@ Match the Gradle task to the module that contains the test class:
 | `plugin-route-analysis/src/test` | `:plugin-route-analysis:test` |
 | `plugin-route-analysis/src/fastTest` | `:plugin-route-analysis:fastTest` |
 | `plugin/src/test` | `:plugin:test` |
-| `plugin-test/src/test` | `:plugin-test:test` |
+| `plugin-test-support/src/test` | `:plugin-test-support:test` |
 | `plugin-wizard/src/test` | `:plugin-wizard:test` |
 
 PSI fixture layout (`src/test/testData/`, `configureFixture()`, `ArmeriaRouteTestSupport`) is

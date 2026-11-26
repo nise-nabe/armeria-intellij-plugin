@@ -30,7 +30,7 @@ dependencies {
     intellijPlatform {
         pluginComposedModule(implementation(project(":plugin-shared")))
         pluginComposedModule(implementation(project(":plugin-wizard")))
-        pluginComposedModule(implementation(project(":plugin-test")))
+        pluginComposedModule(implementation(project(":plugin-test-support")))
         pluginComposedModule(implementation(project(":plugin-route-model")))
         pluginComposedModule(implementation(project(":plugin-route-collectors")))
         pluginComposedModule(implementation(project(":plugin-route-spring")))
