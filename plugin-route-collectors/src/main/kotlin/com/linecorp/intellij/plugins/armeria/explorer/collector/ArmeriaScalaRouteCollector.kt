@@ -5,9 +5,9 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
-import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaReferenceFileIndex
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaScalaTextSupport
@@ -20,16 +20,13 @@ internal object ArmeriaScalaRouteCollector {
         fallbackScannedFiles: MutableSet<VirtualFile>,
         seenServiceRegistrations: MutableSet<String>,
     ) {
-        for (virtualFile in FilenameIndex.getAllFilesByExt(project, "scala", scope)) {
-            if (virtualFile in fallbackScannedFiles) {
+        for (virtualFile in ArmeriaReferenceFileIndex.findFiles(project, scope)) {
+            if (!virtualFile.extension.equals("scala", ignoreCase = true) || virtualFile in fallbackScannedFiles) {
                 continue
             }
             ArmeriaRouteCollectionMetrics.current()?.filesScanned?.incrementAndGet()
             val psiFile = PsiManager.getInstance(project).findFile(virtualFile) ?: continue
             val contents = psiFile.text
-            if (!ArmeriaRouteSupport.referencesArmeriaSourceContent(contents)) {
-                continue
-            }
             fallbackScannedFiles += virtualFile
             ArmeriaRouteCollectionMetrics.current()?.armeriaFiles?.incrementAndGet()
             collectServiceRegistrationsFromFile(psiFile, contents, routes, seenServiceRegistrations)

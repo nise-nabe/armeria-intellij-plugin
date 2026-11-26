@@ -9,7 +9,6 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMethodCallExpression
-import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.CachedValue
 import com.intellij.psi.util.CachedValueProvider
@@ -20,6 +19,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.kot
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinPluginSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaProtoRouteDiscoverySupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaReferenceFileIndex
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCacheSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
@@ -269,25 +269,20 @@ object ArmeriaRouteCollector {
         seenRegistrations: MutableSet<String>,
         alreadyScannedFiles: Set<VirtualFile>,
     ) {
-        for (virtualFile in FileTypeIndex.getFiles(JavaFileType.INSTANCE, scope)) {
-            if (virtualFile in alreadyScannedFiles) {
+        val candidateFiles = ArmeriaReferenceFileIndex.findFiles(project, scope)
+        for (virtualFile in candidateFiles) {
+            if (virtualFile.fileType != JavaFileType.INSTANCE || virtualFile in alreadyScannedFiles) {
                 continue
             }
             val psiFile = PsiManager.getInstance(project).findFile(virtualFile) as? PsiJavaFile ?: continue
-            if (!referencesArmeriaJavaContent(psiFile)) {
-                continue
-            }
             ArmeriaExtendedRegistrationCollector.collectFromJavaFile(psiFile, routes, seenRegistrations)
         }
         if (ArmeriaKotlinPluginSupport.isKotlinPluginAvailable()) {
-            for (virtualFile in FileTypeIndex.getFiles(KotlinFileType.INSTANCE, scope)) {
-                if (virtualFile in alreadyScannedFiles) {
+            for (virtualFile in candidateFiles) {
+                if (virtualFile.fileType != KotlinFileType.INSTANCE || virtualFile in alreadyScannedFiles) {
                     continue
                 }
                 val ktFile = PsiManager.getInstance(project).findFile(virtualFile) as? KtFile ?: continue
-                if (!ArmeriaKotlinRouteCollector.referencesArmeriaKotlinContent(ktFile)) {
-                    continue
-                }
                 ArmeriaKotlinExtendedRegistrationCollector.collectFromFile(ktFile, routes, seenRegistrations)
             }
         }

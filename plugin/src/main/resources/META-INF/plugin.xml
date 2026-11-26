@@ -191,6 +191,7 @@
                 implementation="com.linecorp.intellij.plugins.armeria.explorer.endpoints.ArmeriaEndpointsProvider"/>
         <microservices.endpointsProvider
                 implementation="com.linecorp.intellij.plugins.armeria.client.ArmeriaClientEndpointsProvider"/>
+        <fileBasedIndex implementation="com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaReferenceFileIndex"/>
 
         <!-- Debugger renderers (string FQCNs only; Armeria types load in the debuggee) -->
         <debugger.compoundRendererProvider

@@ -2,7 +2,7 @@ package com.linecorp.intellij.plugins.armeria.explorer.spring
 
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiManager
-import com.intellij.psi.search.FileTypeIndex
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaReferenceFileIndex
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.RouteCollectContext
@@ -15,8 +15,14 @@ import java.io.IOException
 
 object ArmeriaKotlinSpringBootRouteCollector {
     fun collect(context: RouteCollectContext) {
-        for (virtualFile in FileTypeIndex.getFiles(KotlinFileType.INSTANCE, context.scope)) {
-            if (virtualFile in context.fallbackScannedFiles) {
+        val candidateFiles =
+            ArmeriaReferenceFileIndex.findFiles(
+                context.project,
+                context.scope,
+                includeSpringBootArmeriaIndicators = true,
+            )
+        for (virtualFile in candidateFiles) {
+            if (virtualFile.fileType != KotlinFileType.INSTANCE || virtualFile in context.fallbackScannedFiles) {
                 continue
             }
             ArmeriaRouteCollectionMetrics.current()?.filesScanned?.incrementAndGet()

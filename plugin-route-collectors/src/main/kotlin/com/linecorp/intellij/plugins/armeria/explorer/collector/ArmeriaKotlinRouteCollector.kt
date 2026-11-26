@@ -5,7 +5,6 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiVariable
-import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.explorer.collector.decorator.ArmeriaKotlinDecoratorChainSupport
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaBuilderCallHeuristics
@@ -17,6 +16,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.CoreServiceRegistrat
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKnownHttpServiceClassifier
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinFileServiceRootSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaReferenceFileIndex
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteTargetExtractor
@@ -58,15 +58,12 @@ object ArmeriaKotlinRouteCollector {
         fallbackScannedFiles: MutableSet<VirtualFile>,
         seenServiceRegistrations: MutableSet<String>,
     ) {
-        for (virtualFile in FileTypeIndex.getFiles(KotlinFileType.INSTANCE, scope)) {
-            if (virtualFile in fallbackScannedFiles) {
+        for (virtualFile in ArmeriaReferenceFileIndex.findFiles(project, scope)) {
+            if (virtualFile.fileType != KotlinFileType.INSTANCE || virtualFile in fallbackScannedFiles) {
                 continue
             }
             ArmeriaRouteCollectionMetrics.current()?.filesScanned?.incrementAndGet()
             val ktFile = PsiManager.getInstance(project).findFile(virtualFile) as? KtFile ?: continue
-            if (!referencesArmeriaKotlinContent(ktFile)) {
-                continue
-            }
             fallbackScannedFiles += virtualFile
             ArmeriaRouteCollectionMetrics.current()?.armeriaFiles?.incrementAndGet()
             collectServiceRegistrationsFromFile(ktFile, routes, seenServiceRegistrations)

@@ -492,4 +492,51 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
         val subtypeRoutes = routes.filter { it.path == "/subtype" && it.routeMatch == RouteMatch.SERVICE }
         assertEquals(1, subtypeRoutes.size)
     }
+
+    fun testCollectServiceRegistrationThroughTypealiasWithoutDirectArmeriaImport() {
+        registerSpringBootRouteStubs()
+        myFixture.configureByText(
+            "Typealiases.kt",
+            """
+            package example
+
+            typealias ArmeriaServerConfigurator = com.linecorp.armeria.spring.ArmeriaServerConfigurator
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "ArmeriaConfig.kt",
+            """
+            package example
+
+            import org.springframework.context.annotation.Bean
+            import org.springframework.context.annotation.Configuration
+
+            @Configuration
+            class ArmeriaConfig {
+                @Bean
+                fun armeriaServerConfigurator(): ArmeriaServerConfigurator =
+                    ArmeriaServerConfigurator { serverBuilder ->
+                        serverBuilder.service("/alias-api", HelloService())
+                    }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
+
+        val apiRoutes = routes.filter { it.path == "/alias-api" && it.routeMatch == RouteMatch.SERVICE }
+        assertEquals(1, apiRoutes.size)
+    }
 }
