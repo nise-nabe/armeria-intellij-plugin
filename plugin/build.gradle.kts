@@ -57,18 +57,14 @@ dependencies {
                 .get(),
         )
         testFramework(TestFrameworkType.Plugin.Java)
-        testFramework(TestFrameworkType.Plugin.Java, configurationName = "testFixturesImplementation")
         testFramework(TestFrameworkType.JUnit5)
     }
-    testFixturesImplementation(testFixtures(project(":plugin-route-collectors")))
-    testFixturesImplementation(libs.junit4)
 }
 
 testing {
     suites {
         getByName<JvmTestSuite>("test") {
             dependencies {
-                implementation(testFixtures(project()))
                 implementation(testFixtures(project(":plugin-route-collectors")))
                 implementation(libs.velocity.engine.core)
                 implementation(libs.junit4)

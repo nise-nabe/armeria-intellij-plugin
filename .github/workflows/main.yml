@@ -39,7 +39,7 @@ jobs:
             task: :plugin-route-protocol:test
           - name: Route analysis platform tests
             task: :plugin-route-analysis:test
-          - name: Plugin client tests
+          - name: Plugin tests
             task: :plugin:test
 
     steps:

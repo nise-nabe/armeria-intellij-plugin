@@ -3,7 +3,7 @@ name: intellij-armeria-plugin
 description: >-
   IntelliJ Platform plugin conventions for this repository. Use when implementing
   or editing plugin UI, run configurations, tool windows, inspections, actions,
-  or any Kotlin code under plugin/, plugin-shared/, plugin-wizard/, or plugin-test-support/.
+  or any Kotlin code under plugin/, plugin-shared/, plugin-wizard/, plugin-test-support/, or plugin-explorer/.
 ---
 
 # IntelliJ Armeria plugin conventions
@@ -27,11 +27,11 @@ in this repository. Apply it **during implementation**, not only before opening 
 | `plugin-route-spring/` | `ArmeriaSpringBootRouteCollector`, `ArmeriaKotlinSpringBootRouteCollector`, `ArmeriaSpringMvcRouteCollector`, `ArmeriaSpringConfigRouteCollector`, `ArmeriaYamlSpringConfigReader`, `SpringArmeriaConfig*`, `ArmeriaDelegatedRouteCollector` |
 | `plugin-route-protocol/` | `ArmeriaGraphqlRouteCollector`, `ArmeriaGrpcRouteCollector`, `ArmeriaThriftRouteCollector`, `ArmeriaIdlRouteSupport`, `ArmeriaProtoTextSupport` |
 | `plugin-route-analysis/` | Route Explorer UI helpers (`ui/`), DocService support (`docservice/`), jump-to-source navigation (`navigation/ArmeriaRouteNavigation` only), duplicate index (`duplicate/`), and `ArmeriaRouteAnalysisCollector` (production façade that always supplies Spring/protocol contributors) |
-| `plugin-shared/` | Shared bundle helpers, cross-cutting PSI utilities, test fixtures |
+| `plugin-shared/` | Shared bundle helpers and cross-cutting PSI utilities |
 | `plugin-wizard/` | New-project/module wizard, file templates, starter resources |
 | `plugin-test-support/` | Test-support inspections, JUnit `ServerExtension` analysis, generated test-method insertion, and related line markers |
 | `plugin-explorer/` | Route/Client Explorer UI, client endpoint analysis, OpenAPI/HTTP request generation, and DocService actions |
-| `plugin/` | `plugin.xml` wiring, UI panels/actions, run configs, inspection registration |
+| `plugin/` | `plugin.xml` wiring, run configs, inspections/markers that consume explorer APIs, and inspection registration |
 
 Do not put collector logic in `plugin/` when it belongs in one of the `plugin-route-*` modules.
 Do not add route-analysis tests under `plugin/src/test` when the class under test lives in a
@@ -46,6 +46,8 @@ Cross-module rules to keep the dependency graph acyclic:
   `plugin-route-analysis`.
 - `plugin-route-analysis` `api`s the four modules above so analysis can compile against them.
 - `plugin-test-support` may depend on `plugin-route-analysis` and `plugin-shared`.
+- `plugin-explorer` may depend on `plugin-route-analysis`, `plugin-test-support`, and `plugin-shared`;
+  nothing except `plugin/` may depend on `plugin-explorer`.
 - `plugin/` composes `plugin-shared`, `plugin-wizard`, `plugin-test-support`, `plugin-explorer`, and all `plugin-route-*` modules into the
   main plugin JAR via `pluginComposedModule`. Do not use bare `implementation(project(...))` for
   those modules — that ships extra JARs and can pull Kotlin stdlib into the ZIP. Test-side it

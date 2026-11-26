@@ -109,7 +109,7 @@ Root `ktlintCheck` does not cover the `includeBuild("build-logic")` composite or
 
 Commit-time ktlint catches style regressions early; pre-PR `build` remains the final gate (CI runs `build -x test`, which includes ktlint).
 
-**Isolated Projects status**: all production modules (`plugin-route-model`, `plugin-route-collectors`, `plugin-route-spring`, `plugin-route-protocol`, `plugin-route-analysis`, `plugin`) compile cleanly; `plugin-test-support` has not yet been verified in that mode under `-Dorg.gradle.unsafe.isolated-projects=true` (verified via `./gradlew compileKotlin -Dorg.gradle.unsafe.isolated-projects=true`). Enabling it as a CI default (e.g. in `gradle.properties`) is a follow-up once test-task configuration-time access is also confirmed; see the commented line in `gradle.properties`.
+**Isolated Projects status**: production modules except `plugin-test-support` and `plugin-explorer` have been verified to compile cleanly under `-Dorg.gradle.unsafe.isolated-projects=true` (via `./gradlew compileKotlin -Dorg.gradle.unsafe.isolated-projects=true`); the two newer modules have not yet been verified in that mode. Enabling it as a CI default (e.g. in `gradle.properties`) is a follow-up once test-task configuration-time access is also confirmed; see the commented line in `gradle.properties`.
 
 ### Project layout
 
@@ -124,7 +124,7 @@ Commit-time ktlint catches style regressions early; pre-PR `build` remains the f
 | `plugin-wizard/` | New Project Wizard templates and verification |
 | `plugin-test-support/` | Armeria test-support inspections, JUnit `ServerExtension` analysis, generated test-method insertion, and related line markers |
 | `plugin-explorer/` | Route/Client Explorer UI, client endpoint analysis, OpenAPI/HTTP request generation, DocService actions, and runtime route sync |
-| `plugin/` | Aggregating plugin module, run config, Clients explorer, resources, `CHANGELOG.md` |
+| `plugin/` | Aggregating plugin module, run config, resources, `CHANGELOG.md` |
 | `build-logic/` | Shared IntelliJ Platform Gradle conventions |
 | `gradle/libs.versions.toml` | Version pins (Kotlin, IPGP, IDEA platform) |
 

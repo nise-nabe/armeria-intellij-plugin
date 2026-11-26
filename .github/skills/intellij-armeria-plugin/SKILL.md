@@ -3,7 +3,7 @@ name: intellij-armeria-plugin
 description: >-
   IntelliJ Platform plugin conventions for this repository. Use when implementing
   or editing plugin UI, run configurations, tool windows, inspections, actions,
-  or any Kotlin code under plugin/, plugin-shared/, plugin-wizard/, or plugin-test-support/.
+  or any Kotlin code under plugin/, plugin-shared/, plugin-wizard/, plugin-test-support/, or plugin-explorer/.
 ---
 
 # IntelliJ Armeria plugin conventions
@@ -22,16 +22,16 @@ in this repository. Apply it **during implementation**, not only before opening 
 
 | Module | Owns |
 |--------|------|
-| `plugin-route-analysis/` | Route/Client collectors, PSI analysis, route-related unit/fixture tests |
-| `plugin-shared/` | Shared bundle helpers, cross-cutting PSI utilities, test fixtures |
+| `plugin-route-analysis/` | Route analysis, PSI helpers, and route-related unit/fixture tests |
+| `plugin-shared/` | Shared bundle helpers and cross-cutting PSI utilities |
 | `plugin-wizard/` | New-project/module wizard, file templates, starter resources |
 | `plugin-test-support/` | Test-support inspections, JUnit `ServerExtension` analysis, and generated test-method insertion |
-| `plugin-explorer/` | Route/Client Explorer UI, client endpoint analysis, and OpenAPI/HTTP request generation |
-| `plugin/` | `plugin.xml` wiring, UI panels/actions, run configs, inspection registration |
+| `plugin-explorer/` | Route/Client Explorer UI, client endpoint analysis, OpenAPI/HTTP request generation, and DocService actions |
+| `plugin/` | `plugin.xml` wiring, run configs, inspections/markers that consume explorer APIs, and inspection registration |
 
-Do not put collector logic in `plugin/` when it belongs in `plugin-route-analysis/`.
+Do not put collector logic in `plugin/` when it belongs in one of the `plugin-route-*` modules.
 Do not add route-analysis tests under `plugin/src/test` when the class under test lives
-in `plugin-route-analysis/`.
+in a `plugin-route-*` module. Explorer/client UI belongs in `plugin-explorer`.
 
 The `plugin` module composes `plugin-shared`, `plugin-wizard`, `plugin-test-support`, `plugin-explorer`, and route modules into the
 main plugin JAR via `pluginComposedModule`. Do not use bare `implementation(project(...))`
