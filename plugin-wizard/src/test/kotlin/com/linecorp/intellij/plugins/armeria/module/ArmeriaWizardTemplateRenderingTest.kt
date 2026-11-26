@@ -38,7 +38,7 @@ class ArmeriaWizardTemplateRenderingTest {
 
         assertTrue(rendered.contains("id 'scala'"))
         assertTrue(rendered.contains("armeria-scala_2.13"))
-        assertTrue(rendered.contains("scala-library:2.13.18"))
+        assertTrue(rendered.contains("scala-library:${context.getBomProperty("scala213.version")}"))
     }
 
     @Test
@@ -70,6 +70,7 @@ class ArmeriaWizardTemplateRenderingTest {
         assertTrue(rendered.contains("armeria-spring-boot3-starter"))
         assertTrue(rendered.contains("armeria-kotlin"))
         assertTrue(rendered.contains("org.springframework.boot"))
+        assertTrue(rendered.contains("version \"${context.getBomProperty("spring-boot3.version")}\""))
         assertTrue(rendered.contains("kotlin(\"plugin.spring\")"))
     }
 
@@ -127,6 +128,9 @@ class ArmeriaWizardTemplateRenderingTest {
 
         assertTrue(rendered.contains("id(\"com.google.protobuf\")"))
         assertTrue(rendered.contains("protoc-gen-grpc-java"))
+        assertTrue(rendered.contains("version \"${context.getBomProperty("protobuf-gradle-plugin.version")}\""))
+        assertTrue(rendered.contains("protoc:${context.getBomProperty("protoc.version")}"))
+        assertTrue(rendered.contains("protoc-gen-grpc-java:${context.getBomProperty("grpc-java.version")}"))
         assertTrue(rendered.contains("protobuf {"))
     }
 
@@ -142,6 +146,8 @@ class ArmeriaWizardTemplateRenderingTest {
         assertTrue(rendered.contains("protobuf-maven-plugin"))
         assertTrue(rendered.contains("\${os.detected.classifier}"))
         assertTrue(rendered.contains("os-maven-plugin"))
+        assertTrue(rendered.contains("protoc:${context.getBomProperty("protoc.version")}"))
+        assertTrue(rendered.contains("protoc-gen-grpc-java:${context.getBomProperty("grpc-java.version")}"))
     }
 
     @Test
@@ -150,7 +156,7 @@ class ArmeriaWizardTemplateRenderingTest {
         val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-build.gradle.ft", context)
 
         assertTrue(rendered.contains("id 'scala'"))
-        assertTrue(rendered.contains("scala-library:2.13.18"))
+        assertTrue(rendered.contains("scala-library:${context.getBomProperty("scala213.version")}"))
     }
 
     @Test
@@ -390,6 +396,79 @@ class ArmeriaWizardTemplateRenderingTest {
         assertTrue(rendered.contains("DocService"))
         assertTrue(rendered.contains("serviceUnder(\"/docs\""))
     }
+
+    @Test
+    fun everyTemplateBomPropertyIsDefined() {
+        val propertyReference = Regex("""getBomProperty\("([^"]+)"\)""")
+        val missing =
+            buildTemplates()
+                .flatMap { template ->
+                    val text =
+                        requireNotNull(javaClass.classLoader.getResource(template)) { "Missing $template" }.readText()
+                    propertyReference.findAll(text).map { match -> template to match.groupValues[1] }
+                }.filterNot { (_, property) ->
+                    property in ArmeriaWizardTemplateTestContext.defaultBomProperties()
+                }
+
+        assertTrue(missing.isEmpty(), "Missing BOM properties: $missing")
+    }
+
+    @Test
+    fun centralizedVersionsFullyRenderForSupportedCombinations() {
+        val libraryCombinations =
+            listOf(
+                setOf("armeria-spring-boot3-starter", "armeria-grpc", "armeria-scala_3"),
+                setOf("armeria-spring-boot2-autoconfigure", "armeria-grpc", "armeria-scala_2.12"),
+                setOf("armeria-scala_2.13"),
+            )
+
+        for (template in buildTemplates()) {
+            for (libraries in libraryCombinations) {
+                val rendered =
+                    renderBuildTemplate(
+                        template,
+                        ArmeriaWizardTemplateTestContext(language = "scala", libraries = libraries),
+                    )
+                assertFalse(rendered.contains("UNVERSIONED"), "$template left UNVERSIONED for $libraries")
+                assertFalse(rendered.contains("getBomProperty"), "$template left an unresolved BOM property for $libraries")
+            }
+        }
+    }
+
+    @Test
+    fun centralizedVersionsRenderInBoot2AndScala212Templates() {
+        val bootContext =
+            ArmeriaWizardTemplateTestContext(
+                language = "java",
+                libraries = setOf("armeria-spring-boot2-autoconfigure"),
+            )
+        val bootRendered = renderBuildTemplate("fileTemplates/j2ee/armeria-build.gradle.ft", bootContext)
+        assertTrue(
+            bootRendered.contains(
+                "version '${bootContext.getBomProperty("spring-boot2.version")}'",
+            ),
+        )
+
+        val scalaContext =
+            ArmeriaWizardTemplateTestContext(
+                language = "scala",
+                libraries = setOf("armeria-scala_2.12"),
+            )
+        val scalaRendered = renderBuildTemplate("fileTemplates/j2ee/armeria-pom.xml.ft", scalaContext)
+        assertTrue(
+            scalaRendered.contains(
+                "<version>${scalaContext.getBomProperty("scala212.version")}</version>",
+            ),
+        )
+        assertFalse(scalaRendered.contains("UNVERSIONED"))
+    }
+
+    private fun buildTemplates(): List<String> =
+        listOf(
+            "fileTemplates/j2ee/armeria-build.gradle.ft",
+            "fileTemplates/j2ee/armeria-build.gradle.kts.ft",
+            "fileTemplates/j2ee/armeria-pom.xml.ft",
+        )
 
     private fun renderBuildTemplate(
         resourcePath: String,

@@ -4,6 +4,20 @@
     <artifactId>armeria</artifactId>
     <version>1.0</version>
 
+    <properties>
+        <spring-boot3.version>3.5.16</spring-boot3.version>
+        <spring-boot2.version>2.7.18</spring-boot2.version>
+        <scala212.version>2.12.21</scala212.version>
+        <scala213.version>2.13.18</scala213.version>
+        <scala3.version>3.7.4</scala3.version>
+        <protobuf-gradle-plugin.version>0.10.1</protobuf-gradle-plugin.version>
+        <protoc.version>3.25.9</protoc.version>
+        <grpc-java.version>1.85.1</grpc-java.version>
+        <protobuf-maven-plugin.version>0.6.1</protobuf-maven-plugin.version>
+        <os-maven-plugin.version>1.7.1</os-maven-plugin.version>
+        <scala-maven-plugin.version>4.10.0</scala-maven-plugin.version>
+    </properties>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
