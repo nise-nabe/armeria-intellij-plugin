@@ -204,6 +204,7 @@ Match the Gradle task to the module that contains the test class:
 | `plugin-route-analysis/src/test` | `:plugin-route-analysis:test` |
 | `plugin-route-analysis/src/fastTest` | `:plugin-route-analysis:fastTest` |
 | `plugin/src/test` | `:plugin:test` |
+| `plugin-test/src/test` | `:plugin-test:test` |
 | `plugin-wizard/src/test` | `:plugin-wizard:test` |
 
 PSI fixture layout (`src/test/testData/`, `configureFixture()`, `ArmeriaRouteTestSupport`) is

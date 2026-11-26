@@ -16,7 +16,8 @@ if ! (
     :plugin-route-spring:compileTestKotlin \
     :plugin-route-protocol:compileTestKotlin \
     :plugin-route-analysis:compileTestKotlin \
-    :plugin-wizard:compileTestKotlin
+    :plugin-wizard:compileTestKotlin \
+    :plugin-test:compileTestKotlin
 ); then
   echo "Warning: IntelliJ Platform warm failed; the first test run in this session may download the IDE." >&2
 fi

@@ -10,7 +10,6 @@ import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.SmartPsiElementPointer
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.TestActionEvent
-import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaGenerateTestMethodAction
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.message

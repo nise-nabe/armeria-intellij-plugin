@@ -190,6 +190,7 @@ Follow **`gradle-tapi-mcp`** constraints:
 | Changed code in | Compile | Tests |
 |-----------------|---------|-------|
 | `plugin/` | `:plugin:compileKotlin`, `:plugin:compileTestKotlin` | `:plugin:test` |
+| `plugin-test/` | `:plugin-test:compileKotlin`, `:plugin-test:compileTestKotlin` | `:plugin-test:test` |
 | `plugin-route-analysis/` (`src/test`) | `:plugin-route-analysis:compileKotlin`, `:plugin-route-analysis:compileTestKotlin` | `:plugin-route-analysis:test` |
 | `plugin-route-analysis/` (`src/fastTest`) | `:plugin-route-analysis:compileKotlin`, `:plugin-route-analysis:compileFastTestKotlin` | `:plugin-route-analysis:fastTest` |
 

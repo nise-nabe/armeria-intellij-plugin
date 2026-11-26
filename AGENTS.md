@@ -2,7 +2,7 @@
 
 ## Cursor Cloud specific instructions
 
-IntelliJ Platform plugin for Armeria. Gradle multi-project build (`build-logic`, `plugin-shared`, `plugin-route-model`, `plugin-route-collectors`, `plugin-route-spring`, `plugin-route-protocol`, `plugin-route-analysis`, `plugin-wizard`, `plugin`). No web UI or Docker services.
+IntelliJ Platform plugin for Armeria. Gradle multi-project build (`build-logic`, `plugin-shared`, `plugin-route-model`, `plugin-route-collectors`, `plugin-route-spring`, `plugin-route-protocol`, `plugin-route-analysis`, `plugin-wizard`, `plugin-test`, `plugin`). No web UI or Docker services.
 
 ### Prerequisites
 
@@ -120,11 +120,12 @@ Commit-time ktlint catches style regressions early; pre-PR `build` remains the f
 | `plugin-route-protocol/` | GraphQL / gRPC / Thrift / IDL / proto-text collectors |
 | `plugin-route-analysis/` | Route Explorer UI helpers, DocService support, jump-to-source navigation (`navigation/ArmeriaRouteNavigation` only), duplicate index, and `ArmeriaRouteAnalysisCollector` (production façade that always supplies Spring/protocol contributors) |
 | `plugin-wizard/` | New Project Wizard templates and verification |
+| `plugin-test/` | Armeria test-support inspections, JUnit `ServerExtension` analysis, generated test-method insertion, and related line markers |
 | `plugin/` | Aggregating plugin module, run config, Clients explorer, resources, `CHANGELOG.md` |
 | `build-logic/` | Shared IntelliJ Platform Gradle conventions |
 | `gradle/libs.versions.toml` | Version pins (Kotlin, IPGP, IDEA platform) |
 
-Main Kotlin packages live under each module's `src/main/kotlin/com/linecorp/intellij/plugins/armeria/`. User-visible strings go through `message(...)` and `ArmeriaBundle.properties`. CI (`.github/workflows/main.yml`) runs per-module test tasks (`:plugin-wizard:test`, `:plugin-route-collectors:fastTest`/`test`, `:plugin-route-spring:fastTest`/`test`, `:plugin-route-protocol:fastTest`/`test`, `:plugin-route-analysis:fastTest`/`test`, `:plugin:test`) then `./gradlew build -x test` on Java 25.
+Main Kotlin packages live under each module's `src/main/kotlin/com/linecorp/intellij/plugins/armeria/`. User-visible strings go through `message(...)` and `ArmeriaBundle.properties`. CI (`.github/workflows/main.yml`) runs per-module test tasks (`:plugin-wizard:test`, `:plugin-test:test`, `:plugin-route-collectors:fastTest`/`test`, `:plugin-route-spring:fastTest`/`test`, `:plugin-route-protocol:fastTest`/`test`, `:plugin-route-analysis:fastTest`/`test`, `:plugin:test`) then `./gradlew build -x test` on Java 25.
 
 ### Running the plugin (headless cloud caveat)
 
