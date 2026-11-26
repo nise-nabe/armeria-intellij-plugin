@@ -37,7 +37,7 @@ internal object ArmeriaClientEndpointGroupSupport {
 
     fun labelJavaEndpointGroup(expression: PsiExpression?): String? = labelJavaEndpointGroup(expression, mutableSetOf())
 
-    internal fun labelJavaEndpointGroup(
+    fun labelJavaEndpointGroup(
         expression: PsiExpression?,
         visited: MutableSet<PsiElement>,
     ): String? {
@@ -73,12 +73,12 @@ internal object ArmeriaClientEndpointGroupSupport {
         return extractUriFromLabel(label)
     }
 
-    internal fun looksLikeEndpointGroupText(text: String): Boolean {
+    fun looksLikeEndpointGroupText(text: String): Boolean {
         val simpleName = text.substringAfterLast('.')
         return simpleName in ENDPOINT_GROUP_SIMPLE_NAMES || simpleName.endsWith("EndpointGroup")
     }
 
-    internal fun extractUriFromLabel(label: String): String {
+    fun extractUriFromLabel(label: String): String {
         var current = label.trim()
         if (current.isEmpty()) {
             return label
@@ -100,7 +100,7 @@ internal object ArmeriaClientEndpointGroupSupport {
         }
     }
 
-    internal fun kindLabel(
+    fun kindLabel(
         simpleName: String,
         resolvedClassName: String? = null,
     ): String {

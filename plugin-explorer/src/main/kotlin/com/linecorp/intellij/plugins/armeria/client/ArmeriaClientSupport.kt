@@ -3,7 +3,7 @@ package com.linecorp.intellij.plugins.armeria.client
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.message
 
-internal enum class ClientProtocol(
+enum class ClientProtocol(
     private val messageKey: String,
 ) {
     HTTP("route.explorer.protocol.http"),
@@ -35,7 +35,7 @@ internal enum class ClientProtocol(
     }
 }
 
-internal object ArmeriaClientSupport {
+object ArmeriaClientSupport {
     const val ARMERIA_CLIENT_PACKAGE_PREFIX = "com.linecorp.armeria.client"
     const val WEB_CLIENT_CLASS = "com.linecorp.armeria.client.WebClient"
 

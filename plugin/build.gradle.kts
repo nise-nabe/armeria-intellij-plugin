@@ -31,6 +31,7 @@ dependencies {
         pluginComposedModule(implementation(project(":plugin-shared")))
         pluginComposedModule(implementation(project(":plugin-wizard")))
         pluginComposedModule(implementation(project(":plugin-test-support")))
+        pluginComposedModule(implementation(project(":plugin-explorer")))
         pluginComposedModule(implementation(project(":plugin-route-model")))
         pluginComposedModule(implementation(project(":plugin-route-collectors")))
         pluginComposedModule(implementation(project(":plugin-route-spring")))
@@ -56,18 +57,14 @@ dependencies {
                 .get(),
         )
         testFramework(TestFrameworkType.Plugin.Java)
-        testFramework(TestFrameworkType.Plugin.Java, configurationName = "testFixturesImplementation")
         testFramework(TestFrameworkType.JUnit5)
     }
-    testFixturesImplementation(testFixtures(project(":plugin-route-collectors")))
-    testFixturesImplementation(libs.junit4)
 }
 
 testing {
     suites {
         getByName<JvmTestSuite>("test") {
             dependencies {
-                implementation(testFixtures(project()))
                 implementation(testFixtures(project(":plugin-route-collectors")))
                 implementation(libs.velocity.engine.core)
                 implementation(libs.junit4)

@@ -5,7 +5,7 @@ import com.intellij.protobuf.lang.psi.PbServiceMethod
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRoutePath
 
-internal data class ResolvedProtoGrpcMethod(
+data class ResolvedProtoGrpcMethod(
     val fqService: String,
     val methodName: String,
 ) {
@@ -13,7 +13,7 @@ internal data class ResolvedProtoGrpcMethod(
         get() = GrpcRoutePath.path(fqService, methodName)
 }
 
-internal fun resolveProtoGrpcMethod(method: PbServiceMethod): ResolvedProtoGrpcMethod? {
+fun resolveProtoGrpcMethod(method: PbServiceMethod): ResolvedProtoGrpcMethod? {
     val methodName = method.name ?: return null
     val service = PsiTreeUtil.getParentOfType(method, PbServiceDefinition::class.java) ?: return null
     val fqService = service.qualifiedName?.toString()?.takeIf { it.isNotBlank() } ?: return null

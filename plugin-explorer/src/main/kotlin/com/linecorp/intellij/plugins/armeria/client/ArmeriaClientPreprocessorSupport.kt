@@ -25,7 +25,7 @@ internal object ArmeriaClientPreprocessorSupport {
 
     fun labelJavaPreprocessorFactory(expression: PsiExpression?): String? = labelJavaPreprocessorFactory(expression, mutableSetOf())
 
-    internal fun labelJavaPreprocessorFactory(
+    fun labelJavaPreprocessorFactory(
         expression: PsiExpression?,
         visited: MutableSet<PsiElement>,
     ): String? =
@@ -67,7 +67,7 @@ internal object ArmeriaClientPreprocessorSupport {
             }
         }
 
-    internal fun isArmeriaPreprocessorClass(qualifiedName: String?): Boolean = qualifiedName in PREPROCESSOR_CLASS_NAMES
+    fun isArmeriaPreprocessorClass(qualifiedName: String?): Boolean = qualifiedName in PREPROCESSOR_CLASS_NAMES
 
     private fun isArmeriaPreprocessorCall(call: PsiMethodCallExpression): Boolean {
         val resolvedClass = call.resolveMethod()?.containingClass?.qualifiedName

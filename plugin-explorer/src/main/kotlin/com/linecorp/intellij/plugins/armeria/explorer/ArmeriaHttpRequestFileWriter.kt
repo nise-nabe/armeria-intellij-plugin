@@ -82,7 +82,7 @@ internal object ArmeriaHttpRequestFileWriter {
         }
     }
 
-    internal fun resolveBaseUrl(
+    fun resolveBaseUrl(
         project: Project,
         requested: String,
     ): String {

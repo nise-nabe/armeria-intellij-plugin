@@ -20,7 +20,7 @@ import java.awt.event.MouseEvent
 import javax.swing.DefaultListCellRenderer
 import javax.swing.JList
 
-internal object ArmeriaClientRouteNavigation {
+object ArmeriaClientRouteNavigation {
     fun openMatchingRoutes(
         project: Project,
         endpoint: ArmeriaClientEndpoint,

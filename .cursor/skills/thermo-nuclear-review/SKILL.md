@@ -62,7 +62,7 @@ targeted `Read` on changed paths — not a subjective P0–P3 essay in the paren
 
 | Changed area | Preflight section |
 |--------------|-------------------|
-| `plugin/`, `plugin-shared/`, `plugin-wizard/`, `plugin-test-support/` | Plugin feature code |
+| `plugin/`, `plugin-shared/`, `plugin-wizard/`, `plugin-test-support/`, `plugin-explorer/` | Plugin feature code |
 | `plugin-route-*/` collectors | Route analysis |
 | `plugin-route-spring/` config | Spring Boot config |
 | `.cursor/`, `AGENTS.md`, scripts | Agent docs and shell scripts |

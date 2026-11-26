@@ -19,7 +19,8 @@ This plugin is evolving toward an Armeria cockpit inside IntelliJ IDEA:
 | `plugin-route-analysis/` | Route Explorer, inspections, and related analysis |
 | `plugin-wizard/` | New Project Wizard templates and verification |
 | `plugin-test-support/` | Armeria test-support inspections, generated test methods, and JUnit `ServerExtension` support |
-| `plugin/` | Aggregating plugin module, run config, Clients explorer, resources, and `CHANGELOG.md` |
+| `plugin-explorer/` | Route/Client Explorer UI, client endpoint analysis, OpenAPI/HTTP request generation, and DocService actions |
+| `plugin/` | Aggregating plugin module, run config, resources, and `CHANGELOG.md` |
 | `build-logic/` | Generic IntelliJ Platform convention (`com.linecorp.intellij.platform-plugin`) |
 | `gradle/libs.versions.toml` | Kotlin, IntelliJ Platform Gradle Plugin, and IDE version pins |
 

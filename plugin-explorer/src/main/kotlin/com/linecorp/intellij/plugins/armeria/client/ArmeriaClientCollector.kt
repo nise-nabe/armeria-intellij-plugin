@@ -78,7 +78,7 @@ object ArmeriaClientCollector {
         }
     }
 
-    internal fun collectClientFromMethodCall(
+    fun collectClientFromMethodCall(
         expression: PsiMethodCallExpression,
         endpoints: MutableList<ArmeriaClientEndpoint>,
         seenEndpoints: MutableSet<String>,
@@ -328,7 +328,7 @@ object ArmeriaClientCollector {
     private fun isEndpointGroupArgument(expression: PsiExpression): Boolean =
         ArmeriaClientEndpointGroupSupport.labelJavaEndpointGroup(expression) != null
 
-    internal fun addEndpoint(
+    fun addEndpoint(
         element: PsiElement,
         protocol: ClientProtocol,
         target: String,
@@ -388,7 +388,7 @@ object ArmeriaClientCollector {
      * Client URI label for `WebClient.of(...)`-style arguments. Falls back to the raw
      * expression text so dynamically computed URIs still appear in the Clients explorer.
      */
-    internal fun extractString(expression: PsiExpression?): String? =
+    fun extractString(expression: PsiExpression?): String? =
         when (expression) {
             null -> {
                 null
@@ -408,7 +408,7 @@ object ArmeriaClientCollector {
             }
         }
 
-    internal fun extractResolvedString(expression: PsiExpression?): String? = extractResolvedString(expression, mutableSetOf())
+    fun extractResolvedString(expression: PsiExpression?): String? = extractResolvedString(expression, mutableSetOf())
 
     private fun extractResolvedString(
         expression: PsiExpression?,
@@ -483,7 +483,7 @@ object ArmeriaClientCollector {
         }
     }
 
-    internal fun findEnclosingQualifierCall(expression: PsiExpression): PsiMethodCallExpression? {
+    fun findEnclosingQualifierCall(expression: PsiExpression): PsiMethodCallExpression? {
         var element: PsiElement? = expression.parent
         while (element != null) {
             if (element is PsiMethodCallExpression &&

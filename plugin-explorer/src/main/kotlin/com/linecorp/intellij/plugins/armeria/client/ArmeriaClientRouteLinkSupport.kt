@@ -11,7 +11,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.message
 import java.net.URI
 
-internal object ArmeriaClientRouteLinkSupport {
+object ArmeriaClientRouteLinkSupport {
     private val HTTP_LIKE_SCHEME_TOKENS =
         setOf("http", "https", "ws", "wss", "h1", "h1c", "h2", "h2c", "none")
 
@@ -208,7 +208,7 @@ internal object ArmeriaClientRouteLinkSupport {
         }
     }
 
-    internal fun isHttpLikeScheme(scheme: String?): Boolean {
+    fun isHttpLikeScheme(scheme: String?): Boolean {
         if (scheme.isNullOrBlank()) {
             return true
         }

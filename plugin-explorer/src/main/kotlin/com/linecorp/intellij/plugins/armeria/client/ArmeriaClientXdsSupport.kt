@@ -36,7 +36,7 @@ internal object ArmeriaClientXdsSupport {
 
     fun labelJavaXdsFactory(expression: PsiExpression?): String? = labelJavaXdsFactory(expression, mutableSetOf())
 
-    internal fun labelJavaXdsFactory(
+    fun labelJavaXdsFactory(
         expression: PsiExpression?,
         visited: MutableSet<PsiElement>,
     ): String? =
@@ -90,7 +90,7 @@ internal object ArmeriaClientXdsSupport {
         }
 
     /** Prefer an overload whose arity matches the call so listenerName binds the right argument. */
-    internal fun listenerNameMethod(
+    fun listenerNameMethod(
         containingClass: PsiClass,
         methodName: String?,
         argumentCount: Int,
@@ -119,5 +119,5 @@ internal object ArmeriaClientXdsSupport {
         return arguments.reversed().firstNotNullOfOrNull { ArmeriaClientCollector.extractResolvedString(it) }
     }
 
-    internal fun xdsLabel(detail: String?): String = if (detail != null) "${xdsKind()} ($detail)" else xdsKind()
+    fun xdsLabel(detail: String?): String = if (detail != null) "${xdsKind()} ($detail)" else xdsKind()
 }
