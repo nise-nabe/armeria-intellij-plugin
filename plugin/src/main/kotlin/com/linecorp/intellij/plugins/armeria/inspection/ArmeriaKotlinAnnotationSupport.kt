@@ -83,11 +83,18 @@ internal object ArmeriaKotlinAnnotationSupport {
     private fun beanParamBindings(parameter: KtParameter): List<ArmeriaParamBinding> {
         val resolved = resolveParameterType(parameter) ?: return emptyList()
         return when (resolved) {
-            is KtClass -> kotlinBeanParamBindings(resolved)
-            is PsiClass ->
+            is KtClass -> {
+                kotlinBeanParamBindings(resolved)
+            }
+
+            is PsiClass -> {
                 (resolved.navigationElement as? KtClass)?.let { kotlinBeanParamBindings(it) }
                     ?: ArmeriaParamPathVariableMismatch.beanParamBindings(resolved)
-            else -> emptyList()
+            }
+
+            else -> {
+                emptyList()
+            }
         }
     }
 

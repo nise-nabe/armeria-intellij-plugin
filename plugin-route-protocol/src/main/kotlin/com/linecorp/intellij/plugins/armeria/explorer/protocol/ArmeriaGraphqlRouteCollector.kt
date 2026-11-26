@@ -99,11 +99,15 @@ object ArmeriaGraphqlRouteCollector {
         var delta = 0
         for (character in line) {
             when (character) {
-                '(' -> delta++
-                ')' ->
+                '(' -> {
+                    delta++
+                }
+
+                ')' -> {
                     if (delta > 0) {
                         delta--
                     }
+                }
             }
         }
         return delta

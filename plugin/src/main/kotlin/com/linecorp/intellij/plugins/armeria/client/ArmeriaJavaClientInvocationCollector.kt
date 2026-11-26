@@ -201,12 +201,18 @@ internal object ArmeriaJavaClientInvocationCollector {
         val visited = mutableSetOf<PsiExpression>()
         while (current != null && visited.add(current)) {
             when (current) {
-                is PsiMethodCallExpression -> return current
+                is PsiMethodCallExpression -> {
+                    return current
+                }
+
                 is PsiReferenceExpression -> {
                     val resolved = current.resolve()
                     current = (resolved as? PsiVariable)?.initializer
                 }
-                else -> return null
+
+                else -> {
+                    return null
+                }
             }
         }
         return null
@@ -232,6 +238,7 @@ internal object ArmeriaJavaClientInvocationCollector {
                         headers += "$headerName: $headerValue"
                     }
                 }
+
                 "content" -> {
                     for (argument in args) {
                         extractMediaType(argument)?.let { contentType = it }
@@ -304,10 +311,14 @@ internal object ArmeriaJavaClientInvocationCollector {
                     }
                     current = expression.methodExpression.qualifierExpression
                 }
+
                 is PsiReferenceExpression -> {
                     current = (expression.resolve() as? PsiVariable)?.initializer
                 }
-                else -> return null
+
+                else -> {
+                    return null
+                }
             }
         }
         return null

@@ -104,6 +104,7 @@ class ArmeriaBlockingClientInspection : LocalInspectionTool() {
                     val receiver = initializer.methodExpression.qualifierExpression
                     return ArmeriaJUnitServerExtensionSupport.matchesServerReceiver(receiver ?: return false, serverVariableName)
                 }
+
                 "of" -> {
                     val ofArgument = initializer.argumentList.expressions.firstOrNull() ?: return false
                     return ArmeriaJUnitServerExtensionSupport.referencesServerHttpUri(ofArgument, serverVariableName)

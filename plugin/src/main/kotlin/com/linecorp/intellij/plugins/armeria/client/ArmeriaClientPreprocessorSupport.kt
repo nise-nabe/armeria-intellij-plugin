@@ -30,7 +30,10 @@ internal object ArmeriaClientPreprocessorSupport {
         visited: MutableSet<PsiElement>,
     ): String? =
         when (expression) {
-            null -> null
+            null -> {
+                null
+            }
+
             is PsiMethodCallExpression -> {
                 if (expression.methodExpression.referenceName != FACTORY_METHOD) {
                     return null
@@ -42,8 +45,15 @@ internal object ArmeriaClientPreprocessorSupport {
                     ArmeriaClientEndpointGroupSupport.labelJavaEndpointGroup(it)
                 }
             }
-            is PsiParenthesizedExpression -> labelJavaPreprocessorFactory(expression.expression, visited)
-            is PsiTypeCastExpression -> labelJavaPreprocessorFactory(expression.operand, visited)
+
+            is PsiParenthesizedExpression -> {
+                labelJavaPreprocessorFactory(expression.expression, visited)
+            }
+
+            is PsiTypeCastExpression -> {
+                labelJavaPreprocessorFactory(expression.operand, visited)
+            }
+
             is PsiReferenceExpression -> {
                 val resolved = expression.resolve() as? PsiVariable ?: return null
                 if (!visited.add(resolved)) {
@@ -51,7 +61,10 @@ internal object ArmeriaClientPreprocessorSupport {
                 }
                 labelJavaPreprocessorFactory(resolved.initializer, visited)
             }
-            else -> null
+
+            else -> {
+                null
+            }
         }
 
     internal fun isArmeriaPreprocessorClass(qualifiedName: String?): Boolean = qualifiedName in PREPROCESSOR_CLASS_NAMES

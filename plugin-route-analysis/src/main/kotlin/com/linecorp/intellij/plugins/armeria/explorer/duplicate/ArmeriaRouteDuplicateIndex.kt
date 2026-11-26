@@ -276,15 +276,27 @@ object ArmeriaRouteDuplicateIndex {
         val firstIsPrefixMount = isPrefixMount(first)
         val secondIsPrefixMount = isPrefixMount(second)
         return when {
-            firstIsPrefixMount && secondIsPrefixMount ->
+            firstIsPrefixMount && secondIsPrefixMount -> {
                 pathIsUnder(first.path, prefixForMount(second)) ||
                     pathIsUnder(second.path, prefixForMount(first)) ||
                     prefixForMount(first) == prefixForMount(second)
-            firstIsPrefixMount -> pathIsUnder(second.path, prefixForMount(first))
-            secondIsPrefixMount -> pathIsUnder(first.path, prefixForMount(second))
-            first.pathType == PathType.REGEX || second.pathType == PathType.REGEX ->
+            }
+
+            firstIsPrefixMount -> {
+                pathIsUnder(second.path, prefixForMount(first))
+            }
+
+            secondIsPrefixMount -> {
+                pathIsUnder(first.path, prefixForMount(second))
+            }
+
+            first.pathType == PathType.REGEX || second.pathType == PathType.REGEX -> {
                 first.path == second.path && first.pathType == second.pathType
-            else -> first.path == second.path
+            }
+
+            else -> {
+                first.path == second.path
+            }
         }
     }
 
@@ -296,11 +308,18 @@ object ArmeriaRouteDuplicateIndex {
 
     private fun isPrefixMount(route: ArmeriaRoute): Boolean =
         when (route.routeMatch) {
-            RouteMatch.SERVICE_UNDER -> true
-            RouteMatch.ANNOTATED_SERVICE -> route.annotatedServiceHasPathPrefix
-            else ->
+            RouteMatch.SERVICE_UNDER -> {
+                true
+            }
+
+            RouteMatch.ANNOTATED_SERVICE -> {
+                route.annotatedServiceHasPathPrefix
+            }
+
+            else -> {
                 route.pathType == PathType.PREFIX ||
                     (route.pathType == PathType.GLOB && route.path.endsWith("/**"))
+            }
         }
 
     private fun pathIsUnder(
@@ -356,7 +375,9 @@ object ArmeriaRouteDuplicateIndex {
     private fun matchesAllHttpMethods(route: ArmeriaRoute): Boolean =
         when (route.routeMatch) {
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.ANNOTATED_SERVICE -> true
+
             RouteMatch.ROUTE_FLUENT -> route.httpMethod.isBlank()
+
             // DELEGATED is intentionally outside CHECKED_MATCHES; keep arms unset until then.
             RouteMatch.ANNOTATED_HTTP, RouteMatch.NON_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG,
             RouteMatch.FILE_SERVICE, RouteMatch.HEALTH_CHECK, RouteMatch.DELEGATED,
@@ -367,9 +388,13 @@ object ArmeriaRouteDuplicateIndex {
 
     internal fun registrationLabel(route: ArmeriaRoute): String =
         when (route.routeMatch) {
-            RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG, RouteMatch.HEALTH_CHECK ->
+            RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG, RouteMatch.HEALTH_CHECK -> {
                 "${route.httpMethod} ${route.path}"
-            else -> route.path
+            }
+
+            else -> {
+                route.path
+            }
         }
 
     private fun buildHitsByVirtualFile(groups: List<DuplicateRegistrationGroup>): Map<VirtualFile, List<DuplicateRegistrationHit>> {

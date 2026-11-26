@@ -58,10 +58,12 @@ class ArmeriaDocServiceSyncDialog(
                 message("route.explorer.sync.error.hostEmpty"),
                 hostField,
             )
+
             "invalid" -> return com.intellij.openapi.ui.ValidationInfo(
                 message("route.explorer.sync.error.hostInvalid"),
                 hostField,
             )
+
             null -> Unit
         }
         if (ArmeriaDocServiceEndpointValidator.validatePort(portText) == null) {

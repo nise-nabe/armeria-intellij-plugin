@@ -56,14 +56,18 @@ internal object ArmeriaRouteNavigationSupport {
 
     fun httpMethod(handler: PsiElement): String? =
         when (handler) {
-            is PsiMethod ->
+            is PsiMethod -> {
                 ArmeriaRouteSupport
                     .findRouteAnnotations(handler)
                     .map { it.second }
                     .distinct()
                     .joinToString(",")
                     .ifEmpty { null }
-            else -> if (isKotlinPluginAvailable()) ArmeriaKotlinRouteNavigationSupport.httpMethod(handler) else null
+            }
+
+            else -> {
+                if (isKotlinPluginAvailable()) ArmeriaKotlinRouteNavigationSupport.httpMethod(handler) else null
+            }
         }
 
     fun routePath(handler: PsiElement): String =
@@ -78,17 +82,20 @@ internal object ArmeriaRouteNavigationSupport {
         }
         return try {
             when (handler) {
-                is PsiMethod ->
+                is PsiMethod -> {
                     findRegistrationsForServiceClass(
                         handler.containingClass ?: return emptyList(),
                         handler.project,
                     )
-                else ->
+                }
+
+                else -> {
                     if (isKotlinPluginAvailable()) {
                         ArmeriaKotlinRouteNavigationSupport.relatedRegistrations(handler)
                     } else {
                         emptyList()
                     }
+                }
             }
         } catch (_: IndexNotReadyException) {
             emptyList()
@@ -339,7 +346,7 @@ internal object ArmeriaRouteNavigationSupport {
     private fun javaServiceImplementationExpression(call: PsiMethodCallExpression): PsiExpression? {
         val args = call.argumentList.expressions
         return when (ServiceRegistrationMethod.fromMethodName(call.methodExpression.referenceName ?: return null)) {
-            ServiceRegistrationMethod.ANNOTATED_SERVICE ->
+            ServiceRegistrationMethod.ANNOTATED_SERVICE -> {
                 if (ArmeriaRouteSupport.isStringValuedJavaExpression(args.getOrNull(0))) {
                     // annotatedService(pathPattern, service[, decorators…])
                     args.getOrNull(1)
@@ -347,31 +354,46 @@ internal object ArmeriaRouteNavigationSupport {
                     // annotatedService(service[, decorators…]) — pathless overload.
                     args.getOrNull(0)
                 }
-            ServiceRegistrationMethod.SERVICE, ServiceRegistrationMethod.SERVICE_UNDER -> args.getOrNull(1)
-            else -> null
+            }
+
+            ServiceRegistrationMethod.SERVICE, ServiceRegistrationMethod.SERVICE_UNDER -> {
+                args.getOrNull(1)
+            }
+
+            else -> {
+                null
+            }
         }
     }
 
     private fun registrationNavigationElement(registration: PsiElement): PsiElement =
         when (registration) {
-            is PsiMethodCallExpression -> registration.methodExpression
-            else ->
+            is PsiMethodCallExpression -> {
+                registration.methodExpression
+            }
+
+            else -> {
                 if (isKotlinPluginAvailable()) {
                     ArmeriaKotlinRouteNavigationSupport.registrationNavigationElement(registration)
                 } else {
                     registration
                 }
+            }
         }
 
     private fun handlerNavigationElement(handler: PsiElement): PsiElement =
         when (handler) {
-            is PsiMethod -> handler.nameIdentifier ?: handler
-            else ->
+            is PsiMethod -> {
+                handler.nameIdentifier ?: handler
+            }
+
+            else -> {
                 if (isKotlinPluginAvailable()) {
                     ArmeriaKotlinRouteNavigationSupport.handlerNavigationElement(handler)
                 } else {
                     handler
                 }
+            }
         }
 
     private fun isKotlinPluginAvailable(): Boolean = PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)

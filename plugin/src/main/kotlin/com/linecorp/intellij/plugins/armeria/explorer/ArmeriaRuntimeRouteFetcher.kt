@@ -67,7 +67,10 @@ object ArmeriaRuntimeRouteFetcher {
                     }
                     errors += message("route.explorer.sync.error.noRoutesAtUrl", url)
                 }
-                is ReadResult.Failure -> errors += message("route.explorer.sync.error.urlFailed", url, readResult.message)
+
+                is ReadResult.Failure -> {
+                    errors += message("route.explorer.sync.error.urlFailed", url, readResult.message)
+                }
             }
         }
         return ArmeriaDocServiceFetchResult.Failure(

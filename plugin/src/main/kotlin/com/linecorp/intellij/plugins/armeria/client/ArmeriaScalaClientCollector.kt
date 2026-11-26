@@ -201,7 +201,10 @@ internal object ArmeriaScalaClientCollector {
         var index = openParenOffset
         while (index < text.length) {
             when (text[index]) {
-                '(' -> depth++
+                '(' -> {
+                    depth++
+                }
+
                 ')' -> {
                     depth--
                     if (depth == 0) {

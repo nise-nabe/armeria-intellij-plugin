@@ -155,8 +155,14 @@ internal object ArmeriaKotlinRouteValueExtractor {
         val body = function.bodyExpression
         val result =
             when {
-                body == null -> null
-                !function.hasBlockBody() -> extract(body, target, resolution, hops + 1)
+                body == null -> {
+                    null
+                }
+
+                !function.hasBlockBody() -> {
+                    extract(body, target, resolution, hops + 1)
+                }
+
                 else -> {
                     val returns =
                         PsiTreeUtil
@@ -192,7 +198,10 @@ internal object ArmeriaKotlinRouteValueExtractor {
         }
         val result =
             when (resolved) {
-                is KtProperty -> extract(resolved.initializer, target, resolution, hops + 1)
+                is KtProperty -> {
+                    extract(resolved.initializer, target, resolution, hops + 1)
+                }
+
                 is PsiVariable -> {
                     val initializer = resolved.initializer
                     if (initializer is PsiExpression) {
@@ -201,7 +210,10 @@ internal object ArmeriaKotlinRouteValueExtractor {
                         null
                     }
                 }
-                else -> null
+
+                else -> {
+                    null
+                }
             }
         resolution.exit(resolved, result)
         return result
@@ -219,11 +231,15 @@ internal object ArmeriaKotlinRouteValueExtractor {
                 httpMethod = ""
                 pathExpression = arguments[0]
             }
+
             2 -> {
                 httpMethod = httpMethodLabel(arguments[0]) ?: return null
                 pathExpression = arguments[1]
             }
-            else -> return null
+
+            else -> {
+                return null
+            }
         }
         val rawPath = ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(pathExpression) ?: return null
         val (pathType, path) = ArmeriaRouteSupport.parsePathType(rawPath)

@@ -227,6 +227,7 @@ internal object ArmeriaServerDecoratorSupport {
                     }
                     current = unwrapOrNull(current.methodExpression.qualifierExpression)
                 }
+
                 is PsiReferenceExpression -> {
                     val resolved = current.resolve()
                     current =
@@ -236,7 +237,10 @@ internal object ArmeriaServerDecoratorSupport {
                             null
                         }
                 }
-                else -> break
+
+                else -> {
+                    break
+                }
             }
         }
         var cursor: PsiExpression = anchor
@@ -284,15 +288,20 @@ internal object ArmeriaServerDecoratorSupport {
                 pathExpression = arguments.getOrNull(0)
                 decoratorExpression = arguments.getOrNull(1) ?: return false
             }
+
             arguments.size >= 2 -> {
                 pathExpression = arguments[0]
                 decoratorExpression = arguments[1]
             }
+
             arguments.isNotEmpty() -> {
                 pathExpression = null
                 decoratorExpression = arguments[0]
             }
-            else -> return false
+
+            else -> {
+                return false
+            }
         }
         if (decoratorKindFromExpression(decoratorExpression) != ArmeriaServerDecoratorKind.CORS) {
             return false
@@ -349,6 +358,7 @@ internal object ArmeriaServerDecoratorSupport {
                 knownServiceTypeName(resolvedClass)?.let { return it }
                 unwrapped.methodExpression.qualifierExpression?.let { resolveServiceTypeName(it, visited) }
             }
+
             is PsiReferenceExpression -> {
                 if (!visited.add(unwrapped)) {
                     return null
@@ -358,11 +368,20 @@ internal object ArmeriaServerDecoratorSupport {
                         knownServiceTypeName(resolved.type)?.let { return it }
                         resolved.initializer?.let { resolveServiceTypeName(it, visited) }
                     }
-                    is PsiClass -> knownServiceTypeName(resolved)
-                    else -> null
+
+                    is PsiClass -> {
+                        knownServiceTypeName(resolved)
+                    }
+
+                    else -> {
+                        null
+                    }
                 }
             }
-            else -> null
+
+            else -> {
+                null
+            }
         }
     }
 
@@ -463,6 +482,7 @@ internal object ArmeriaServerDecoratorSupport {
                     }
                     current = unwrapOrNull(current.methodExpression.qualifierExpression)
                 }
+
                 is PsiReferenceExpression -> {
                     val resolved = current.resolve()
                     current =
@@ -472,7 +492,10 @@ internal object ArmeriaServerDecoratorSupport {
                             null
                         }
                 }
-                else -> break
+
+                else -> {
+                    break
+                }
             }
         }
         val following = mutableListOf<PsiMethodCallExpression>()
@@ -533,15 +556,20 @@ internal object ArmeriaServerDecoratorSupport {
                 pathExpression = arguments.getOrNull(0)
                 decoratorExpression = arguments.getOrNull(1) ?: return null
             }
+
             arguments.size >= 2 -> {
                 pathExpression = arguments[0]
                 decoratorExpression = arguments[1]
             }
+
             arguments.isNotEmpty() -> {
                 pathExpression = null
                 decoratorExpression = arguments[0]
             }
-            else -> return null
+
+            else -> {
+                return null
+            }
         }
         val pathPattern =
             if (pathExpression == null) {
@@ -568,17 +596,24 @@ internal object ArmeriaServerDecoratorSupport {
             return true
         }
         return when {
-            left.decoratorUnder && right.decoratorUnder ->
+            left.decoratorUnder && right.decoratorUnder -> {
                 prefixPathCovers(leftPath, rightPath) || prefixPathCovers(rightPath, leftPath)
-            left.decoratorUnder ->
+            }
+
+            left.decoratorUnder -> {
                 prefixPathCovers(leftPath, rightPath) ||
                     ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(rightPath, leftPath)
-            right.decoratorUnder ->
+            }
+
+            right.decoratorUnder -> {
                 prefixPathCovers(rightPath, leftPath) ||
                     ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(leftPath, rightPath)
-            else ->
+            }
+
+            else -> {
                 ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(leftPath, rightPath) ||
                     ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(rightPath, leftPath)
+            }
         }
     }
 
@@ -611,12 +646,22 @@ internal object ArmeriaServerDecoratorSupport {
                 }
         }
         return when (current) {
-            is PsiClassObjectAccessExpression ->
+            is PsiClassObjectAccessExpression -> {
                 current.operand.type.presentableText
                     .substringAfterLast('.')
-            is PsiReferenceExpression -> current.referenceName.orEmpty()
-            is PsiMethodCallExpression -> current.methodExpression.referenceName.orEmpty()
-            else -> current.text.substringAfterLast('.').substringBefore('(')
+            }
+
+            is PsiReferenceExpression -> {
+                current.referenceName.orEmpty()
+            }
+
+            is PsiMethodCallExpression -> {
+                current.methodExpression.referenceName.orEmpty()
+            }
+
+            else -> {
+                current.text.substringAfterLast('.').substringBefore('(')
+            }
         }
     }
 

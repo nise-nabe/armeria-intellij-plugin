@@ -43,7 +43,10 @@ internal object ArmeriaKotlinTimeoutSupport {
     private fun kotlinChainReceiver(expression: KtExpression): KtExpression? {
         val unwrapped = ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(expression) ?: expression
         return when (unwrapped) {
-            is KtDotQualifiedExpression -> unwrapped.receiverExpression
+            is KtDotQualifiedExpression -> {
+                unwrapped.receiverExpression
+            }
+
             is KtCallExpression -> {
                 val parent = unwrapped.parent
                 if (parent is KtDotQualifiedExpression && parent.selectorExpression == unwrapped) {
@@ -55,7 +58,10 @@ internal object ArmeriaKotlinTimeoutSupport {
                     }
                 }
             }
-            else -> null
+
+            else -> {
+                null
+            }
         }
     }
 
@@ -110,6 +116,7 @@ internal object ArmeriaKotlinTimeoutSupport {
                         return true
                     }
                 }
+
                 is KtProperty -> {
                     val typeText = resolveKotlinTypeReferenceText(resolved.typeReference)
                     if (typeText != null && ArmeriaRouteSupport.isServerBuilderType(typeText)) {

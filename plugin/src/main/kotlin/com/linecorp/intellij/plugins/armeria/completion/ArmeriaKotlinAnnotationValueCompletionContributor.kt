@@ -41,7 +41,10 @@ class ArmeriaKotlinAnnotationValueCompletionContributor : CompletionContributor(
                             ?: return
                     val qualifiedName = ArmeriaKotlinAnnotationSupport.qualifiedName(entry) ?: return
                     when (qualifiedName) {
-                        ArmeriaRouteSupport.HEADER_ANNOTATION -> addHeaderCompletions(result)
+                        ArmeriaRouteSupport.HEADER_ANNOTATION -> {
+                            addHeaderCompletions(result)
+                        }
+
                         ArmeriaRouteSupport.COOKIE_ANNOTATION -> {
                             val owner = PsiTreeUtil.getParentOfType(entry, KtClassOrObject::class.java) ?: return
                             addNamedValueCompletions(
@@ -50,6 +53,7 @@ class ArmeriaKotlinAnnotationValueCompletionContributor : CompletionContributor(
                                 result = result,
                             )
                         }
+
                         ArmeriaRouteSupport.ATTRIBUTE_ANNOTATION -> {
                             val owner = PsiTreeUtil.getParentOfType(entry, KtClassOrObject::class.java) ?: return
                             addNamedValueCompletions(
@@ -58,9 +62,12 @@ class ArmeriaKotlinAnnotationValueCompletionContributor : CompletionContributor(
                                 result = result,
                             )
                         }
+
                         ArmeriaRouteSupport.PRODUCES_ANNOTATION,
                         ArmeriaRouteSupport.CONSUMES_ANNOTATION,
-                        -> addMediaTypeCompletions(result)
+                        -> {
+                            addMediaTypeCompletions(result)
+                        }
                     }
                 }
             },

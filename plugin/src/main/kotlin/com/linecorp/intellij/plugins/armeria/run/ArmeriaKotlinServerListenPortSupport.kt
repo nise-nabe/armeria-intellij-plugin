@@ -37,14 +37,21 @@ internal object ArmeriaKotlinServerListenPortSupport {
             val port = extractPort(call.valueArguments.firstOrNull()?.getArgumentExpression()) ?: continue
             val https =
                 when (methodName) {
-                    "https" -> true
-                    "http" -> false
-                    else ->
+                    "https" -> {
+                        true
+                    }
+
+                    "http" -> {
+                        false
+                    }
+
+                    else -> {
                         ArmeriaSessionProtocols.extraArgsSuggestHttps(
                             call.valueArguments
                                 .drop(1)
                                 .joinToString(" ") { it.getArgumentExpression()?.text.orEmpty() },
                         )
+                    }
                 }
             candidates +=
                 ArmeriaServerListenPortSupport.ListenCandidate(
@@ -75,14 +82,20 @@ internal object ArmeriaKotlinServerListenPortSupport {
             }
             receiver =
                 when (receiver) {
-                    is KtDotQualifiedExpression -> receiver.receiverExpression
+                    is KtDotQualifiedExpression -> {
+                        receiver.receiverExpression
+                    }
+
                     is KtNameReferenceExpression -> {
                         if (propertyInitializerLooksLikeServerBuilder(receiver)) {
                             return true
                         }
                         null
                     }
-                    else -> null
+
+                    else -> {
+                        null
+                    }
                 }
             hops++
         }
@@ -131,7 +144,10 @@ internal object ArmeriaKotlinServerListenPortSupport {
     private fun extractPort(expression: KtExpression?): Int? {
         val unwrapped = unwrap(expression) ?: return null
         when (unwrapped) {
-            is KtConstantExpression -> unwrapped.text.toIntOrNull()?.let { return it.takeIf(::isValidPort) }
+            is KtConstantExpression -> {
+                unwrapped.text.toIntOrNull()?.let { return it.takeIf(::isValidPort) }
+            }
+
             is KtNameReferenceExpression -> {
                 val resolved = unwrapped.references.firstOrNull()?.resolve()
                 if (resolved is KtProperty) {

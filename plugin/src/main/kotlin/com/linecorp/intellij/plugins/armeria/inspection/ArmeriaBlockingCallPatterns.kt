@@ -50,6 +50,7 @@ internal object ArmeriaBlockingCallPatterns {
                     return true
                 }
             }
+
             "join" -> {
                 if (ownerFqn != null && ownerFqn in JOIN_OWNERS) {
                     return true
@@ -58,16 +59,19 @@ internal object ArmeriaBlockingCallPatterns {
                     return true
                 }
             }
+
             "await" -> {
                 if (ownerFqn != null && ownerFqn in AWAIT_OWNERS) {
                     return true
                 }
             }
+
             "get" -> {
                 if (ownerFqn != null && ownerFqn in GET_OWNERS) {
                     return true
                 }
             }
+
             "getConnection" -> {
                 if (ownerFqn != null && ownerFqn in JDBC_OWNERS) {
                     return true
@@ -76,6 +80,7 @@ internal object ArmeriaBlockingCallPatterns {
                     return true
                 }
             }
+
             "runBlocking" -> {
                 if (ownerFqn?.startsWith("kotlinx.coroutines") == true) {
                     return true

@@ -82,7 +82,10 @@ object ArmeriaKotlinExpressionSupport {
     ): String? {
         val unwrapped = unwrapKotlinExpression(expression) ?: return null
         return when (unwrapped) {
-            is KtStringTemplateExpression -> kotlinStringTemplateWithoutInterpolation(unwrapped)
+            is KtStringTemplateExpression -> {
+                kotlinStringTemplateWithoutInterpolation(unwrapped)
+            }
+
             is KtBinaryExpression -> {
                 if (unwrapped.operationToken != KtTokens.PLUS) {
                     return null
@@ -95,9 +98,18 @@ object ArmeriaKotlinExpressionSupport {
                     null
                 }
             }
-            is KtDotQualifiedExpression -> extractKotlinStringConstantFromReference(unwrapped, visitedProperties)
-            is KtNameReferenceExpression -> extractKotlinStringConstantFromReference(unwrapped, visitedProperties)
-            else -> null
+
+            is KtDotQualifiedExpression -> {
+                extractKotlinStringConstantFromReference(unwrapped, visitedProperties)
+            }
+
+            is KtNameReferenceExpression -> {
+                extractKotlinStringConstantFromReference(unwrapped, visitedProperties)
+            }
+
+            else -> {
+                null
+            }
         }
     }
 
@@ -109,30 +121,60 @@ object ArmeriaKotlinExpressionSupport {
     fun isStringValuedExpression(expression: KtExpression?): Boolean {
         val unwrapped = unwrapKotlinExpression(expression) ?: return false
         return when (unwrapped) {
-            is KtStringTemplateExpression -> true
-            is KtNameReferenceExpression, is KtDotQualifiedExpression -> isStringReferenceTarget(unwrapped)
-            is KtBinaryExpression ->
+            is KtStringTemplateExpression -> {
+                true
+            }
+
+            is KtNameReferenceExpression, is KtDotQualifiedExpression -> {
+                isStringReferenceTarget(unwrapped)
+            }
+
+            is KtBinaryExpression -> {
                 unwrapped.operationToken == KtTokens.PLUS &&
                     (isStringValuedExpression(unwrapped.left) || isStringValuedExpression(unwrapped.right))
-            is KtBinaryExpressionWithTypeRHS -> unwrapped.right?.text == "String"
-            is KtIfExpression ->
+            }
+
+            is KtBinaryExpressionWithTypeRHS -> {
+                unwrapped.right?.text == "String"
+            }
+
+            is KtIfExpression -> {
                 isStringValuedExpression(unwrapped.then) && isStringValuedExpression(unwrapped.`else`)
-            is KtWhenExpression ->
+            }
+
+            is KtWhenExpression -> {
                 unwrapped.entries.isNotEmpty() &&
                     unwrapped.entries.all { isStringValuedExpression(it.expression) }
-            is KtCallExpression -> isStringReturningCall(unwrapped)
-            else -> false
+            }
+
+            is KtCallExpression -> {
+                isStringReturningCall(unwrapped)
+            }
+
+            else -> {
+                false
+            }
         }
     }
 
     private fun isStringReferenceTarget(expression: KtExpression): Boolean =
         when (val resolved = resolveStringReferenceTarget(expression)) {
-            is KtProperty ->
+            is KtProperty -> {
                 resolved.typeReference?.text == "String" ||
                     unwrapKotlinExpression(resolved.initializer) is KtStringTemplateExpression
-            is KtParameter -> resolved.typeReference?.text == "String"
-            is PsiVariable -> isJavaStringType(resolved.type)
-            else -> false
+            }
+
+            is KtParameter -> {
+                resolved.typeReference?.text == "String"
+            }
+
+            is PsiVariable -> {
+                isJavaStringType(resolved.type)
+            }
+
+            else -> {
+                false
+            }
         }
 
     private fun isStringReturningCall(call: KtCallExpression): Boolean =
@@ -143,14 +185,21 @@ object ArmeriaKotlinExpressionSupport {
                     ?.mapNotNull { it.resolve() }
                     ?.firstOrNull { it is KtNamedFunction || it is PsiMethod }
         ) {
-            is KtNamedFunction ->
+            is KtNamedFunction -> {
                 resolved.typeReference?.text == "String" ||
                     (
                         resolved.typeReference == null &&
                             unwrapKotlinExpression(resolved.bodyExpression) is KtStringTemplateExpression
                     )
-            is PsiMethod -> isJavaStringType(resolved.returnType)
-            else -> false
+            }
+
+            is PsiMethod -> {
+                isJavaStringType(resolved.returnType)
+            }
+
+            else -> {
+                false
+            }
         }
 
     private fun isJavaStringType(type: PsiType?): Boolean =
@@ -194,7 +243,10 @@ object ArmeriaKotlinExpressionSupport {
                 }
                 extractKotlinStringConstant(resolved.initializer, visitedProperties)?.let { return it }
             }
-            is PsiVariable -> ArmeriaRouteSupport.evaluateJavaStringConstant(resolved)?.let { return it }
+
+            is PsiVariable -> {
+                ArmeriaRouteSupport.evaluateJavaStringConstant(resolved)?.let { return it }
+            }
         }
         if (expression is KtDotQualifiedExpression) {
             val selector = expression.selectorExpression as? KtNameReferenceExpression ?: return null
@@ -217,15 +269,25 @@ object ArmeriaKotlinExpressionSupport {
         while (true) {
             current =
                 when (current) {
-                    is KtParenthesizedExpression -> current.expression ?: return null
-                    is KtBinaryExpressionWithTypeRHS -> current.left
-                    is KtUnaryExpression ->
+                    is KtParenthesizedExpression -> {
+                        current.expression ?: return null
+                    }
+
+                    is KtBinaryExpressionWithTypeRHS -> {
+                        current.left
+                    }
+
+                    is KtUnaryExpression -> {
                         if (current.operationToken == KtTokens.EXCLEXCL) {
                             current.baseExpression ?: return current
                         } else {
                             return current
                         }
-                    else -> return current
+                    }
+
+                    else -> {
+                        return current
+                    }
                 }
         }
     }

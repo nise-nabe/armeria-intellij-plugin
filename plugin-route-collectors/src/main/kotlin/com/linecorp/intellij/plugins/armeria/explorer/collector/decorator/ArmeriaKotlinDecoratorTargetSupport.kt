@@ -73,6 +73,7 @@ internal object ArmeriaKotlinDecoratorTargetSupport {
                     resolved.initializer?.let { return extractKotlinDecoratorTarget(it) }
                     ArmeriaKotlinDecoratorChainSupport.resolveKotlinTypeReferenceText(resolved.typeReference)?.let { return it }
                 }
+
                 is PsiVariable -> {
                     resolved.initializer?.let { initializer ->
                         if (initializer is KtExpression) {

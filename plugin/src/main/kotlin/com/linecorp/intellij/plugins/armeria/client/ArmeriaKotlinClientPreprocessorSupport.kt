@@ -37,19 +37,25 @@ internal object ArmeriaKotlinClientPreprocessorSupport {
                 else -> null
             } ?: return null
         return when (val resolved = reference.references.firstOrNull()?.resolve()) {
-            is KtProperty ->
+            is KtProperty -> {
                 if (visited.add(resolved)) {
                     labelKotlinPreprocessorFactory(resolved.initializer, visited)
                 } else {
                     null
                 }
-            is PsiVariable ->
+            }
+
+            is PsiVariable -> {
                 if (visited.add(resolved)) {
                     ArmeriaClientPreprocessorSupport.labelJavaPreprocessorFactory(resolved.initializer, visited)
                 } else {
                     null
                 }
-            else -> null
+            }
+
+            else -> {
+                null
+            }
         }
     }
 
@@ -66,12 +72,19 @@ internal object ArmeriaKotlinClientPreprocessorSupport {
             val receiver = (call.parent as? KtQualifiedExpression)?.receiverExpression ?: return null
             val resolvedName =
                 when (val resolved = lastNameReference(receiver)?.references?.firstOrNull()?.resolve()) {
-                    is PsiClass -> resolved.qualifiedName
-                    is KtClassOrObject -> resolved.fqName?.asString()
-                    else ->
+                    is PsiClass -> {
+                        resolved.qualifiedName
+                    }
+
+                    is KtClassOrObject -> {
+                        resolved.fqName?.asString()
+                    }
+
+                    else -> {
                         receiver.text.takeIf {
                             ArmeriaClientPreprocessorSupport.isArmeriaPreprocessorClass(it)
                         }
+                    }
                 }
             if (!ArmeriaClientPreprocessorSupport.isArmeriaPreprocessorClass(resolvedName)) {
                 return null

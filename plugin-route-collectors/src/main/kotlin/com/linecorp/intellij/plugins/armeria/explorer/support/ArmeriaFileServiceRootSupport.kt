@@ -53,7 +53,10 @@ internal object ArmeriaFileServiceRootSupport {
         val unwrapped = unwrap(expression) ?: return null
         val call =
             when (unwrapped) {
-                is PsiMethodCallExpression -> unwrapped
+                is PsiMethodCallExpression -> {
+                    unwrapped
+                }
+
                 is PsiReferenceExpression -> {
                     val variable = unwrapped.resolve() as? PsiVariable ?: return null
                     if (!visitedVariables.add(variable)) {
@@ -61,7 +64,10 @@ internal object ArmeriaFileServiceRootSupport {
                     }
                     return extractFromServiceExpression(variable.initializer, visitedVariables)
                 }
-                else -> return null
+
+                else -> {
+                    return null
+                }
             }
         var current: PsiMethodCallExpression = call
         while (true) {
@@ -70,7 +76,10 @@ internal object ArmeriaFileServiceRootSupport {
             }
             current =
                 when (val qualifier = current.methodExpression.qualifierExpression) {
-                    is PsiMethodCallExpression -> qualifier
+                    is PsiMethodCallExpression -> {
+                        qualifier
+                    }
+
                     is PsiReferenceExpression -> {
                         val variable = qualifier.resolve() as? PsiVariable ?: return null
                         if (!visitedVariables.add(variable)) {
@@ -78,7 +87,10 @@ internal object ArmeriaFileServiceRootSupport {
                         }
                         unwrap(variable.initializer) as? PsiMethodCallExpression ?: return null
                     }
-                    else -> return null
+
+                    else -> {
+                        return null
+                    }
                 }
         }
     }
@@ -99,7 +111,10 @@ internal object ArmeriaFileServiceRootSupport {
     private fun extractFactoryArguments(call: PsiMethodCallExpression): FileServiceRoot? {
         val arguments = call.argumentList.expressions
         return when (arguments.size) {
-            1 -> fileSystemRootFromExpression(arguments[0], mutableSetOf())
+            1 -> {
+                fileSystemRootFromExpression(arguments[0], mutableSetOf())
+            }
+
             2 -> {
                 val path = ArmeriaRouteSupport.extractJavaStringConstant(arguments[1]) ?: return null
                 FileServiceRoot(
@@ -109,7 +124,10 @@ internal object ArmeriaFileServiceRootSupport {
                     anchorPackageName(arguments[0]),
                 )
             }
-            else -> null
+
+            else -> {
+                null
+            }
         }
     }
 
@@ -124,8 +142,14 @@ internal object ArmeriaFileServiceRootSupport {
         val unwrapped = unwrap(expression) ?: return null
         val path =
             when (unwrapped) {
-                is PsiNewExpression -> pathFromNewExpression(unwrapped, visitedVariables)
-                is PsiMethodCallExpression -> pathFromPathFactoryCall(unwrapped, visitedVariables)
+                is PsiNewExpression -> {
+                    pathFromNewExpression(unwrapped, visitedVariables)
+                }
+
+                is PsiMethodCallExpression -> {
+                    pathFromPathFactoryCall(unwrapped, visitedVariables)
+                }
+
                 is PsiReferenceExpression -> {
                     val variable = unwrapped.resolve() as? PsiVariable ?: return null
                     if (!visitedVariables.add(variable)) {
@@ -133,7 +157,10 @@ internal object ArmeriaFileServiceRootSupport {
                     }
                     return fileSystemRootFromExpression(variable.initializer, visitedVariables)
                 }
-                else -> ArmeriaRouteSupport.extractJavaStringConstant(unwrapped)
+
+                else -> {
+                    ArmeriaRouteSupport.extractJavaStringConstant(unwrapped)
+                }
             } ?: return null
         return FileServiceRoot(FileServiceRootKind.FILE_SYSTEM, path)
     }
@@ -158,13 +185,19 @@ internal object ArmeriaFileServiceRootSupport {
         }
         val arguments = expression.argumentList?.expressions ?: return null
         return when (arguments.size) {
-            1 -> ArmeriaRouteSupport.extractJavaStringConstant(arguments[0])
+            1 -> {
+                ArmeriaRouteSupport.extractJavaStringConstant(arguments[0])
+            }
+
             2 -> {
                 val parent = parentPath(arguments[0], visitedVariables) ?: return null
                 val child = ArmeriaRouteSupport.extractJavaStringConstant(arguments[1]) ?: return null
                 "$parent/$child"
             }
-            else -> null
+
+            else -> {
+                null
+            }
         }
     }
 

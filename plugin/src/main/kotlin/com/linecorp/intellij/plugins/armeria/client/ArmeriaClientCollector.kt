@@ -134,7 +134,10 @@ object ArmeriaClientCollector {
             return webClientInfo.toMetadata(decorators)
         }
         return when (methodName) {
-            "newClient", "of" -> extractFactoryMetadata(arguments, protocol, decorators)
+            "newClient", "of" -> {
+                extractFactoryMetadata(arguments, protocol, decorators)
+            }
+
             "builder" -> {
                 if (arguments.isEmpty()) {
                     null
@@ -142,11 +145,15 @@ object ArmeriaClientCollector {
                     extractFactoryMetadata(arguments, protocol, decorators)
                 }
             }
+
             "build" -> {
                 val uri = ArmeriaGrpcClientStubSupport.extractJavaBuilderUri(expression) ?: return null
                 ClientMetadata(uri = uri, decorators = decorators)
             }
-            else -> null
+
+            else -> {
+                null
+            }
         }
     }
 
@@ -383,8 +390,14 @@ object ArmeriaClientCollector {
      */
     internal fun extractString(expression: PsiExpression?): String? =
         when (expression) {
-            null -> null
-            is PsiLiteralExpression -> expression.value as? String
+            null -> {
+                null
+            }
+
+            is PsiLiteralExpression -> {
+                expression.value as? String
+            }
+
             else -> {
                 val constantValue =
                     JavaPsiFacade
@@ -405,7 +418,10 @@ object ArmeriaClientCollector {
             return null
         }
         return when (expression) {
-            is PsiLiteralExpression -> expression.value as? String
+            is PsiLiteralExpression -> {
+                expression.value as? String
+            }
+
             is PsiReferenceExpression -> {
                 val resolved = expression.resolve() as? PsiVariable
                 if (resolved != null && !visited.add(resolved)) {
@@ -415,7 +431,10 @@ object ArmeriaClientCollector {
                     ?: extractResolvedString(resolved?.initializer, visited)
                     ?: constantString(expression)
             }
-            else -> constantString(expression)
+
+            else -> {
+                constantString(expression)
+            }
         }
     }
 

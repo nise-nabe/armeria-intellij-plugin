@@ -31,8 +31,10 @@ private object YamlSettingsHighlightLocator : SettingsHighlightLocator {
         file: PsiFile,
         finding: ArmeriaSpringBootSettingsConflict.Finding,
     ) = when (finding.kind) {
-        ArmeriaSpringBootSettingsConflict.Kind.PORT_CONFLICT ->
+        ArmeriaSpringBootSettingsConflict.Kind.PORT_CONFLICT -> {
             ArmeriaSpringBootYamlPsiSupport.highlightForPath(file, finding.highlightPath)
+        }
+
         ArmeriaSpringBootSettingsConflict.Kind.MISSING_INTERNAL_SERVICE -> {
             val includeId = finding.includeId
             if (includeId == null) {

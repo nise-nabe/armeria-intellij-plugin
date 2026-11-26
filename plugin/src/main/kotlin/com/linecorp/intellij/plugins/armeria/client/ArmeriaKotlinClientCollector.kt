@@ -125,7 +125,10 @@ internal object ArmeriaKotlinClientCollector {
             return webClientInfo.toMetadata(decorators)
         }
         return when (methodName) {
-            "newClient", "of" -> extractFactoryMetadata(arguments, protocol, decorators)
+            "newClient", "of" -> {
+                extractFactoryMetadata(arguments, protocol, decorators)
+            }
+
             "builder" -> {
                 if (arguments.isEmpty()) {
                     null
@@ -133,11 +136,15 @@ internal object ArmeriaKotlinClientCollector {
                     extractFactoryMetadata(arguments, protocol, decorators)
                 }
             }
+
             "build" -> {
                 val uri = extractKotlinBuilderUri(call) ?: return null
                 ClientMetadata(uri = uri, decorators = decorators)
             }
-            else -> null
+
+            else -> {
+                null
+            }
         }
     }
 
@@ -436,8 +443,14 @@ internal object ArmeriaKotlinClientCollector {
                     else -> (expression.parent as? KtQualifiedExpression)?.receiverExpression
                 }
             }
-            is KtQualifiedExpression -> expression.receiverExpression
-            else -> null
+
+            is KtQualifiedExpression -> {
+                expression.receiverExpression
+            }
+
+            else -> {
+                null
+            }
         }
 
     private fun isNestedInsideClientFactoryArgument(call: KtCallExpression): Boolean {
@@ -487,8 +500,14 @@ internal object ArmeriaKotlinClientCollector {
         while (true) {
             val parent = current.parent ?: return null
             when {
-                parent is KtParenthesizedExpression -> current = parent
-                parent is KtUnaryExpression && parent.operationToken == KtTokens.EXCLEXCL -> current = parent
+                parent is KtParenthesizedExpression -> {
+                    current = parent
+                }
+
+                parent is KtUnaryExpression && parent.operationToken == KtTokens.EXCLEXCL -> {
+                    current = parent
+                }
+
                 parent is KtQualifiedExpression -> {
                     val receiver = parent.receiverExpression
                     if (receiver == current || PsiTreeUtil.isAncestor(receiver, current, false)) {
@@ -497,7 +516,10 @@ internal object ArmeriaKotlinClientCollector {
                     }
                     current = parent
                 }
-                else -> return null
+
+                else -> {
+                    return null
+                }
             }
         }
     }

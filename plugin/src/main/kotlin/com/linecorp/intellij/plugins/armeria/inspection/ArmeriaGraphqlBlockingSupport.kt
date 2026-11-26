@@ -102,13 +102,17 @@ internal object ArmeriaGraphqlBlockingSupport {
         var found = false
         root.forEachDescendant { element ->
             when {
-                found -> return@forEachDescendant
+                found -> {
+                    return@forEachDescendant
+                }
+
                 element is PsiLambdaExpression && isDirectArgumentToDataFetcher(element) -> {
                     val body = element.body ?: return@forEachDescendant
                     if (ArmeriaMissingBlockingSupport.findingsIn(body, element).isNotEmpty()) {
                         found = true
                     }
                 }
+
                 element is PsiAnonymousClass && ArmeriaMissingBlockingSupport.isDataFetcherClass(element) -> {
                     if ((looseClassRefs || isFetcherRegistrationPosition(element)) &&
                         dataFetcherClassHasBlockingCall(element)
@@ -116,6 +120,7 @@ internal object ArmeriaGraphqlBlockingSupport {
                         found = true
                     }
                 }
+
                 element is PsiNewExpression && element.anonymousClass == null -> {
                     val cls = element.classOrAnonymousClassReference?.resolve() as? PsiClass
                     if (cls != null &&
@@ -126,6 +131,7 @@ internal object ArmeriaGraphqlBlockingSupport {
                         found = true
                     }
                 }
+
                 element is PsiMethodCallExpression &&
                     element.methodExpression.referenceName in DATA_FETCHER_METHODS -> {
                     if (dataFetcherCallHasBlockingTarget(element)) {
@@ -298,7 +304,9 @@ internal object ArmeriaGraphqlBlockingSupport {
             when {
                 current is PsiMethodCallExpression &&
                     current.methodExpression.referenceName in DATA_FETCHER_METHODS -> return true
+
                 current is PsiVariable || current is PsiReturnStatement -> return true
+
                 current is PsiStatement ||
                     current is PsiMethod ||
                     current is PsiClass ||
@@ -352,21 +360,28 @@ internal object ArmeriaGraphqlBlockingSupport {
             return
         }
         when (element) {
-            is PsiMethodReferenceExpression ->
+            is PsiMethodReferenceExpression -> {
                 (element.resolve() as? PsiMethod)
                     ?.takeIf(::isUserWiringMethod)
                     ?.body
                     ?.let(queue::add)
-            is PsiNewExpression ->
+            }
+
+            is PsiNewExpression -> {
                 configurerBodies(element).forEach(queue::add)
-            is PsiMethodCallExpression ->
+            }
+
+            is PsiMethodCallExpression -> {
                 element
                     .resolveMethod()
                     ?.takeIf(::isUserWiringMethod)
                     ?.body
                     ?.let(queue::add)
-            is PsiReferenceExpression ->
+            }
+
+            is PsiReferenceExpression -> {
                 (element.resolve() as? PsiVariable)?.initializer?.let(queue::add)
+            }
         }
     }
 
@@ -441,12 +456,16 @@ internal object ArmeriaGraphqlBlockingSupport {
                         found = true
                     }
                 }
+
                 is PsiReferenceExpression -> {
                     if (strict && !isFetcherRegistrationPosition(element)) {
                         return@forEachDescendant
                     }
                     when (val resolved = element.resolve()) {
-                        psiClass -> found = true
+                        psiClass -> {
+                            found = true
+                        }
+
                         is PsiVariable -> {
                             val typeClass = (resolved.type as? PsiClassType)?.resolve()
                             if (typeClass == psiClass) {
@@ -510,8 +529,10 @@ internal object ArmeriaGraphqlBlockingSupport {
         visited: MutableSet<PsiElement>,
     ): PsiClass? {
         when (val resolved = expression.resolve()) {
-            is PsiClass ->
+            is PsiClass -> {
                 return resolved.takeIf { ArmeriaMissingBlockingSupport.isDataFetcherClass(it) }
+            }
+
             is PsiVariable -> {
                 resolved.initializer?.let { resolveDataFetcherClass(it, visited) }?.let { return it }
                 val typeClass = (resolved.type as? PsiClassType)?.resolve()

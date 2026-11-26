@@ -59,7 +59,10 @@ internal object ArmeriaKotlinRegistrationChainSupport {
                     else -> null
                 }
             }
-            else -> null
+
+            else -> {
+                null
+            }
         }
     }
 

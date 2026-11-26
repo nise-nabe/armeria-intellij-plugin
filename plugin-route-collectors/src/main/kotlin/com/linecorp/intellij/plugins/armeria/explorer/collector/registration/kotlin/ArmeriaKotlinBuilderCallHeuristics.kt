@@ -130,6 +130,7 @@ internal object ArmeriaKotlinBuilderCallHeuristics {
                         return true
                     }
                 }
+
                 is KtProperty -> {
                     val typeText = resolveKotlinTypeReferenceText(resolved.typeReference)
                     if (typeText != null && ArmeriaRouteSupport.isServerBuilderType(typeText)) {
@@ -218,17 +219,27 @@ internal object ArmeriaKotlinBuilderCallHeuristics {
             }
             current =
                 when (current) {
-                    is KtDotQualifiedExpression -> current.receiverExpression
+                    is KtDotQualifiedExpression -> {
+                        current.receiverExpression
+                    }
+
                     is KtCallExpression -> {
                         when (val callee = current.calleeExpression) {
-                            is KtDotQualifiedExpression -> callee.receiverExpression
-                            else ->
+                            is KtDotQualifiedExpression -> {
+                                callee.receiverExpression
+                            }
+
+                            else -> {
                                 (current.parent as? KtDotQualifiedExpression)
                                     ?.receiverExpression
                                     ?.takeIf { it !== current }
+                            }
                         }
                     }
-                    else -> null
+
+                    else -> {
+                        null
+                    }
                 }
         }
         return false

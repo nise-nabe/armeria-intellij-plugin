@@ -18,13 +18,17 @@ internal object ArmeriaEndpointsSupport {
     fun isVisibleServerRoute(route: ArmeriaRoute): Boolean =
         when (route.routeMatch) {
             RouteMatch.ANNOTATED_HTTP -> route.httpMethod.isNotBlank()
+
             RouteMatch.SERVICE,
             RouteMatch.SERVICE_UNDER,
             RouteMatch.HEALTH_CHECK,
             RouteMatch.ROUTE_FLUENT,
             -> true
+
             RouteMatch.CONFIG -> route.httpMethod.isNotBlank()
+
             RouteMatch.NON_HTTP -> isGrpcMethodRoute(route)
+
             RouteMatch.DELEGATED,
             RouteMatch.RUNTIME,
             RouteMatch.ANNOTATED_SERVICE,

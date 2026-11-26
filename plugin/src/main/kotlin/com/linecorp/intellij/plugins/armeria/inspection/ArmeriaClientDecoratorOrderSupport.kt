@@ -110,6 +110,7 @@ internal object ArmeriaClientDecoratorOrderSupport {
                     }
                     current = unwrapExpressionOrNull(current.methodExpression.qualifierExpression)
                 }
+
                 is PsiReferenceExpression -> {
                     val resolved = current.resolve()
                     current =
@@ -119,7 +120,10 @@ internal object ArmeriaClientDecoratorOrderSupport {
                             null
                         }
                 }
-                else -> break
+
+                else -> {
+                    break
+                }
             }
         }
         val following = mutableListOf<PsiMethodCallExpression>()

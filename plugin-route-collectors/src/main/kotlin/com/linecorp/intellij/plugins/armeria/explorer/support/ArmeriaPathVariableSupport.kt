@@ -86,8 +86,11 @@ object ArmeriaPathVariableSupport {
         offsetInOriginal: Int = 0,
     ): List<PathVariableOccurrence> =
         when (pathType) {
-            PathType.GLOB -> globPathVariableOccurrences(path, offsetInOriginal)
-            PathType.REGEX ->
+            PathType.GLOB -> {
+                globPathVariableOccurrences(path, offsetInOriginal)
+            }
+
+            PathType.REGEX -> {
                 REGEX_NAMED_GROUP_PATTERN
                     .findAll(path)
                     .map { match ->
@@ -99,7 +102,11 @@ object ArmeriaPathVariableSupport {
                             endOffset = offsetInOriginal + nameStart + name.length,
                         )
                     }.toList()
-            PathType.EXACT, PathType.PREFIX -> exactPathVariableOccurrences(path, offsetInOriginal)
+            }
+
+            PathType.EXACT, PathType.PREFIX -> {
+                exactPathVariableOccurrences(path, offsetInOriginal)
+            }
         }
 
     private fun exactPathVariableOccurrences(
@@ -284,7 +291,10 @@ object ArmeriaPathVariableSupport {
         var depth = 0
         for (index in start until path.length) {
             when (path[index]) {
-                '{' -> depth++
+                '{' -> {
+                    depth++
+                }
+
                 '}' -> {
                     depth--
                     if (depth == 0) {

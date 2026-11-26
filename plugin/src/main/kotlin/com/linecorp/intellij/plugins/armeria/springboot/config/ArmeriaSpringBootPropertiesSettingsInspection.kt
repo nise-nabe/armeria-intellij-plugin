@@ -36,8 +36,10 @@ private object PropertiesSettingsHighlightLocator : SettingsHighlightLocator {
     ): PsiElement? {
         val propertiesFile = file as? PropertiesFile ?: return null
         return when (finding.kind) {
-            ArmeriaSpringBootSettingsConflict.Kind.PORT_CONFLICT ->
+            ArmeriaSpringBootSettingsConflict.Kind.PORT_CONFLICT -> {
                 highlightProperty(propertiesFile, finding.highlightPath)
+            }
+
             ArmeriaSpringBootSettingsConflict.Kind.MISSING_INTERNAL_SERVICE -> {
                 val includeId = finding.includeId
                 if (includeId == null) {

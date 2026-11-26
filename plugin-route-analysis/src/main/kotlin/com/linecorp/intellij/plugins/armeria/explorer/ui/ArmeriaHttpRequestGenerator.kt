@@ -24,12 +24,17 @@ object ArmeriaHttpRequestGenerator {
         }
         return when (route.routeMatch) {
             RouteMatch.ANNOTATED_HTTP -> route.httpMethod.isNotBlank()
+
             RouteMatch.DELEGATED -> true
+
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.HEALTH_CHECK, RouteMatch.ROUTE_FLUENT,
             RouteMatch.FILE_SERVICE,
             -> true
+
             RouteMatch.RUNTIME, RouteMatch.CONFIG -> route.httpMethod.isNotBlank()
+
             RouteMatch.NON_HTTP -> isGrpcRoute(route) || isGraphqlRoute(route)
+
             RouteMatch.ANNOTATED_SERVICE, RouteMatch.VIRTUAL_HOST,
             RouteMatch.LISTEN_PORT, RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
             RouteMatch.DISCOVERY,
@@ -39,21 +44,30 @@ object ArmeriaHttpRequestGenerator {
 
     fun httpMethod(route: ArmeriaRoute): String =
         when (route.routeMatch) {
-            RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG -> route.httpMethod
+            RouteMatch.ANNOTATED_HTTP, RouteMatch.RUNTIME, RouteMatch.CONFIG -> {
+                route.httpMethod
+            }
+
             RouteMatch.DELEGATED,
             RouteMatch.SERVICE, RouteMatch.SERVICE_UNDER, RouteMatch.HEALTH_CHECK, RouteMatch.ROUTE_FLUENT,
             RouteMatch.FILE_SERVICE,
-            -> route.httpMethod.ifBlank { "GET" }
+            -> {
+                route.httpMethod.ifBlank { "GET" }
+            }
+
             RouteMatch.NON_HTTP -> {
                 when {
                     isGrpcRoute(route) || isGraphqlRoute(route) -> "POST"
                     else -> error("Unsupported route match: ${route.routeMatch}")
                 }
             }
+
             RouteMatch.ANNOTATED_SERVICE, RouteMatch.VIRTUAL_HOST,
             RouteMatch.LISTEN_PORT, RouteMatch.ROUTE_DECORATOR, RouteMatch.DECORATOR_UNDER,
             RouteMatch.DISCOVERY,
-            -> error("Unsupported route match: ${route.routeMatch}")
+            -> {
+                error("Unsupported route match: ${route.routeMatch}")
+            }
         }
 
     fun fileName(route: ArmeriaRoute): String {
@@ -131,9 +145,13 @@ object ArmeriaHttpRequestGenerator {
             appendLine()
             if (ArmeriaRouteContentHintSupport.hasRequestBody(method)) {
                 when {
-                    resolvedContentType != null && ArmeriaRouteContentHintSupport.isJsonMediaType(resolvedContentType) ->
+                    resolvedContentType != null && ArmeriaRouteContentHintSupport.isJsonMediaType(resolvedContentType) -> {
                         appendLine(exampleBody ?: "{}")
-                    exampleBody != null -> appendLine(exampleBody)
+                    }
+
+                    exampleBody != null -> {
+                        appendLine(exampleBody)
+                    }
                 }
             }
         }

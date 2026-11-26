@@ -86,12 +86,14 @@ class ArmeriaSpringBootYamlCompletionContributor : CompletionContributor() {
                 val isKey = parent.key?.textRange?.contains(offset) == true
                 return YamlCompletionTarget(ArmeriaSpringBootYamlPsiSupport.yamlKeyPath(parent), isValue = !isKey)
             }
+
             is YAMLSequenceItem -> {
                 return YamlCompletionTarget(
                     ArmeriaSpringBootYamlPsiSupport.yamlSequenceItemPath(parent),
                     isValue = true,
                 )
             }
+
             else -> {
                 val keyValue = PsiTreeUtil.getParentOfType(position, YAMLKeyValue::class.java, false)
                 if (keyValue != null) {

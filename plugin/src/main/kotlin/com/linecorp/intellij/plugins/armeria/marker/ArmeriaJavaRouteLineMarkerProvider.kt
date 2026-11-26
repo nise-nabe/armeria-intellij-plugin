@@ -72,16 +72,27 @@ internal class ArmeriaJavaRouteLineMarkerProvider : LineMarkerProvider {
             expressions: List<PsiExpression>,
         ): String? =
             when (methodName) {
-                "annotatedService" ->
+                "annotatedService" -> {
                     when {
-                        expressions.size <= 1 -> "/"
+                        expressions.size <= 1 -> {
+                            "/"
+                        }
+
                         // Only a String-valued first argument is the pathPattern overload;
                         // annotatedService(service, decorators…) is pathless.
-                        ArmeriaRouteSupport.isStringValuedJavaExpression(expressions[0]) ->
+                        ArmeriaRouteSupport.isStringValuedJavaExpression(expressions[0]) -> {
                             ArmeriaRouteSupport.extractJavaStringConstant(expressions[0])
-                        else -> "/"
+                        }
+
+                        else -> {
+                            "/"
+                        }
                     }
-                else -> ArmeriaRouteSupport.extractJavaStringConstant(expressions.firstOrNull())
+                }
+
+                else -> {
+                    ArmeriaRouteSupport.extractJavaStringConstant(expressions.firstOrNull())
+                }
             }
     }
 }

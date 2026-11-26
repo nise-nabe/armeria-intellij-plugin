@@ -52,22 +52,65 @@ data class ArmeriaRoute(
     val methodLabel: String
         get() =
             when (routeMatch) {
-                RouteMatch.ANNOTATED_HTTP -> httpMethod
-                RouteMatch.ANNOTATED_SERVICE -> message("route.explorer.method.annotatedService")
-                RouteMatch.SERVICE -> message("route.explorer.method.allHttp")
-                RouteMatch.SERVICE_UNDER -> message("route.explorer.method.prefix")
-                RouteMatch.FILE_SERVICE -> message("route.explorer.method.fileService")
-                RouteMatch.HEALTH_CHECK -> message("route.explorer.method.healthCheck")
-                RouteMatch.VIRTUAL_HOST -> message("route.explorer.method.virtualHost")
-                RouteMatch.LISTEN_PORT -> message("route.explorer.method.listenPort")
-                RouteMatch.ROUTE_DECORATOR -> message("route.explorer.method.routeDecorator")
-                RouteMatch.ROUTE_FLUENT -> httpMethod.ifBlank { message("route.explorer.method.allHttp") }
-                RouteMatch.DECORATOR_UNDER -> message("route.explorer.method.decoratorUnder")
-                RouteMatch.DELEGATED ->
+                RouteMatch.ANNOTATED_HTTP -> {
+                    httpMethod
+                }
+
+                RouteMatch.ANNOTATED_SERVICE -> {
+                    message("route.explorer.method.annotatedService")
+                }
+
+                RouteMatch.SERVICE -> {
+                    message("route.explorer.method.allHttp")
+                }
+
+                RouteMatch.SERVICE_UNDER -> {
+                    message("route.explorer.method.prefix")
+                }
+
+                RouteMatch.FILE_SERVICE -> {
+                    message("route.explorer.method.fileService")
+                }
+
+                RouteMatch.HEALTH_CHECK -> {
+                    message("route.explorer.method.healthCheck")
+                }
+
+                RouteMatch.VIRTUAL_HOST -> {
+                    message("route.explorer.method.virtualHost")
+                }
+
+                RouteMatch.LISTEN_PORT -> {
+                    message("route.explorer.method.listenPort")
+                }
+
+                RouteMatch.ROUTE_DECORATOR -> {
+                    message("route.explorer.method.routeDecorator")
+                }
+
+                RouteMatch.ROUTE_FLUENT -> {
                     httpMethod.ifBlank { message("route.explorer.method.allHttp") }
-                RouteMatch.NON_HTTP -> protocol
-                RouteMatch.DISCOVERY -> protocol
-                RouteMatch.RUNTIME, RouteMatch.CONFIG -> httpMethod
+                }
+
+                RouteMatch.DECORATOR_UNDER -> {
+                    message("route.explorer.method.decoratorUnder")
+                }
+
+                RouteMatch.DELEGATED -> {
+                    httpMethod.ifBlank { message("route.explorer.method.allHttp") }
+                }
+
+                RouteMatch.NON_HTTP -> {
+                    protocol
+                }
+
+                RouteMatch.DISCOVERY -> {
+                    protocol
+                }
+
+                RouteMatch.RUNTIME, RouteMatch.CONFIG -> {
+                    httpMethod
+                }
             }
 
     val shortTarget: String

@@ -117,6 +117,7 @@ object ArmeriaDecoratorSupport {
                     }
                     current = current.methodExpression.qualifierExpression
                 }
+
                 is PsiReferenceExpression -> {
                     val resolved = current.resolve()
                     current =
@@ -126,7 +127,10 @@ object ArmeriaDecoratorSupport {
                             null
                         }
                 }
-                else -> break
+
+                else -> {
+                    break
+                }
             }
         }
     }
@@ -174,14 +178,20 @@ object ArmeriaDecoratorSupport {
 
     private fun extractJavaPathPattern(expression: PsiExpression): String? =
         when (expression) {
-            is PsiLiteralExpression -> expression.value as? String
+            is PsiLiteralExpression -> {
+                expression.value as? String
+            }
+
             is PsiReferenceExpression -> {
                 when (val resolved = expression.resolve()) {
                     is PsiVariable -> ArmeriaRouteSupport.evaluateJavaStringConstant(resolved)
                     else -> computeJavaPathPatternConstant(expression)
                 }
             }
-            else -> computeJavaPathPatternConstant(expression)
+
+            else -> {
+                computeJavaPathPatternConstant(expression)
+            }
         }
 
     private fun computeJavaPathPatternConstant(expression: PsiExpression): String? =

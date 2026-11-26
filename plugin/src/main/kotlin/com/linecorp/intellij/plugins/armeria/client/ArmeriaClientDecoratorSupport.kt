@@ -79,6 +79,7 @@ internal object ArmeriaClientDecoratorSupport {
                     }
                     current = current.methodExpression.qualifierExpression
                 }
+
                 is PsiReferenceExpression -> {
                     val resolved = current.resolve()
                     current =
@@ -88,7 +89,10 @@ internal object ArmeriaClientDecoratorSupport {
                             null
                         }
                 }
-                else -> break
+
+                else -> {
+                    break
+                }
             }
         }
     }
@@ -113,13 +117,22 @@ internal object ArmeriaClientDecoratorSupport {
         val decoratorArgument = expression.argumentList.expressions.firstOrNull() ?: return null
         val target =
             when (decoratorArgument) {
-                is PsiClassObjectAccessExpression -> decoratorArgument.text
-                is PsiLiteralExpression -> decoratorArgument.value?.toString().orEmpty()
+                is PsiClassObjectAccessExpression -> {
+                    decoratorArgument.text
+                }
+
+                is PsiLiteralExpression -> {
+                    decoratorArgument.value?.toString().orEmpty()
+                }
+
                 is PsiMethodCallExpression -> {
                     decoratorArgument.methodExpression.qualifierExpression?.text
                         ?: decoratorArgument.methodExpression.referenceName.orEmpty()
                 }
-                else -> decoratorArgument.text.trim()
+
+                else -> {
+                    decoratorArgument.text.trim()
+                }
             }
         return labelClientDecorator(target)
     }

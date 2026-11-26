@@ -15,14 +15,16 @@ internal object ArmeriaRouteMethodStub {
         path: String,
     ): String =
         when (kind) {
-            ArmeriaRouteStubKind.GET ->
+            ArmeriaRouteStubKind.GET -> {
                 """
                 @${ArmeriaRouteSupport.GET_ANNOTATION}("$path")
                 public String $methodName() {
                     return "";
                 }
                 """.trimIndent()
-            ArmeriaRouteStubKind.POST_JSON ->
+            }
+
+            ArmeriaRouteStubKind.POST_JSON -> {
                 """
                 @${ArmeriaRouteSupport.POST_ANNOTATION}("$path")
                 @${ArmeriaRouteSupport.CONSUMES_JSON_ANNOTATION}
@@ -31,6 +33,7 @@ internal object ArmeriaRouteMethodStub {
                     return "";
                 }
                 """.trimIndent()
+            }
         }
 
     fun kotlinFunctionText(
@@ -41,14 +44,16 @@ internal object ArmeriaRouteMethodStub {
     ): String {
         val modifier = if (suspend) "suspend " else ""
         return when (kind) {
-            ArmeriaRouteStubKind.GET ->
+            ArmeriaRouteStubKind.GET -> {
                 """
                 @Get("$path")
                 ${modifier}fun $methodName(): String {
                     return ""
                 }
                 """.trimIndent()
-            ArmeriaRouteStubKind.POST_JSON ->
+            }
+
+            ArmeriaRouteStubKind.POST_JSON -> {
                 """
                 @Post("$path")
                 @ConsumesJson
@@ -57,18 +62,23 @@ internal object ArmeriaRouteMethodStub {
                     return ""
                 }
                 """.trimIndent()
+            }
         }
     }
 
     fun kotlinImports(kind: ArmeriaRouteStubKind): List<String> =
         when (kind) {
-            ArmeriaRouteStubKind.GET -> listOf(ArmeriaRouteSupport.GET_ANNOTATION)
-            ArmeriaRouteStubKind.POST_JSON ->
+            ArmeriaRouteStubKind.GET -> {
+                listOf(ArmeriaRouteSupport.GET_ANNOTATION)
+            }
+
+            ArmeriaRouteStubKind.POST_JSON -> {
                 listOf(
                     ArmeriaRouteSupport.POST_ANNOTATION,
                     ArmeriaRouteSupport.CONSUMES_JSON_ANNOTATION,
                     ArmeriaRouteSupport.PRODUCES_JSON_ANNOTATION,
                 )
+            }
         }
 
     fun httpMethod(kind: ArmeriaRouteStubKind): String =

@@ -22,17 +22,23 @@ fun List<ArmeriaRoute>.route(
         }
     val criteria = routeCriteriaDescription(match, path, httpMethod, pathType)
     return when (filtered.size) {
-        1 -> filtered.single()
-        0 ->
+        1 -> {
+            filtered.single()
+        }
+
+        0 -> {
             fail(
                 "No route matching $criteria in " +
                     map { it.routeMatch to it.path },
             )
-        else ->
+        }
+
+        else -> {
             fail(
                 "Multiple routes matching $criteria: " +
                     filtered.map { it.routeMatch to it.path },
             )
+        }
     }
 }
 

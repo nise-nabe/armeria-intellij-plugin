@@ -246,6 +246,7 @@ object ArmeriaScalaTextSupport {
                         parenDepth++
                         hasOpenParen = true
                     }
+
                     ')' -> {
                         if (!hasOpenParen) {
                             return text.substring(expressionStart, index).trim() to index
@@ -255,6 +256,7 @@ object ArmeriaScalaTextSupport {
                             return text.substring(expressionStart, index + 1).trim() to (index + 1)
                         }
                     }
+
                     ',' -> {
                         if (!hasOpenParen && parenDepth == 0) {
                             return text.substring(expressionStart, index).trim() to index
@@ -281,7 +283,10 @@ object ArmeriaScalaTextSupport {
         while (index < text.length) {
             if (!scan.isInsideLiteral(index)) {
                 when (text[index]) {
-                    '(' -> depth++
+                    '(' -> {
+                        depth++
+                    }
+
                     ')' -> {
                         if (depth == 0) {
                             return index + 1
@@ -303,7 +308,10 @@ object ArmeriaScalaTextSupport {
         var index = closeParenOffset
         while (index >= 0) {
             when (text[index]) {
-                ')' -> depth++
+                ')' -> {
+                    depth++
+                }
+
                 '(' -> {
                     depth--
                     if (depth == 0) {

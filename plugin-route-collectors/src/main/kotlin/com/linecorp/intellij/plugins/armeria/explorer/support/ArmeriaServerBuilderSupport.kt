@@ -56,16 +56,24 @@ internal object ArmeriaServerBuilderSupport {
 
     fun extractJavaStringConstant(expression: PsiExpression?): String? =
         when (expression) {
-            null -> null
-            is PsiLiteralExpression -> expression.value as? String
+            null -> {
+                null
+            }
+
+            is PsiLiteralExpression -> {
+                expression.value as? String
+            }
+
             is PsiReferenceExpression -> {
                 (expression.resolve() as? PsiVariable)?.let(::evaluateJavaStringConstant)
             }
-            else ->
+
+            else -> {
                 JavaPsiFacade
                     .getInstance(expression.project)
                     .constantEvaluationHelper
                     .computeConstantExpression(expression) as? String
+            }
         }
 
     private fun isArmeriaServerBeanReturnType(
@@ -113,7 +121,10 @@ internal object ArmeriaServerBuilderSupport {
             var depth = 0
             while (index < remaining.length) {
                 when (val char = remaining[index]) {
-                    '(' -> depth++
+                    '(' -> {
+                        depth++
+                    }
+
                     ')' -> {
                         depth--
                         if (depth == 0) {
@@ -121,10 +132,12 @@ internal object ArmeriaServerBuilderSupport {
                             break
                         }
                     }
-                    ' ', '\t', '\n' ->
+
+                    ' ', '\t', '\n' -> {
                         if (depth == 0) {
                             break
                         }
+                    }
                 }
                 index++
             }

@@ -39,19 +39,25 @@ internal object ArmeriaKotlinClientXdsSupport {
                 else -> null
             } ?: return null
         return when (val resolved = reference.references.firstOrNull()?.resolve()) {
-            is KtProperty ->
+            is KtProperty -> {
                 if (visited.add(resolved)) {
                     labelKotlinXdsFactory(resolved.initializer, visited)
                 } else {
                     null
                 }
-            is PsiVariable ->
+            }
+
+            is PsiVariable -> {
                 if (visited.add(resolved)) {
                     ArmeriaClientXdsSupport.labelJavaXdsFactory(resolved.initializer, visited)
                 } else {
                     null
                 }
-            else -> null
+            }
+
+            else -> {
+                null
+            }
         }
     }
 

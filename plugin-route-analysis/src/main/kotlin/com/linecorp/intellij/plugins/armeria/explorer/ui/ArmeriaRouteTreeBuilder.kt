@@ -60,10 +60,12 @@ object ArmeriaRouteTreeBuilder {
         while (nodes.hasMoreElements()) {
             val node = nodes.nextElement() as? DefaultMutableTreeNode ?: continue
             when (val userObject = node.userObject) {
-                is RouteNode ->
+                is RouteNode -> {
                     if (routesMatch(userObject.route, route)) {
                         return node
                     }
+                }
+
                 is VirtualHostNode -> {
                     val navigation = userObject.navigationRoute ?: continue
                     if (routesMatch(navigation, route)) {
@@ -84,21 +86,33 @@ object ArmeriaRouteTreeBuilder {
 
     fun speedSearchText(userObject: Any?): String =
         when (userObject) {
-            is RouteNode ->
+            is RouteNode -> {
                 if (isPortBinding(userObject.route)) {
                     "${portDisplayLabel(userObject.route)} ${userObject.route.speedSearchText}"
                 } else {
                     userObject.route.speedSearchText
                 }
-            is ModuleNode -> userObject.name
-            is VirtualHostNode ->
+            }
+
+            is ModuleNode -> {
+                userObject.name
+            }
+
+            is VirtualHostNode -> {
                 if (userObject.hostname.isEmpty()) {
                     message("route.explorer.tree.virtualHost.default.search")
                 } else {
                     userObject.hostname
                 }
-            is DiscoveryNode -> message("route.explorer.tree.discovery.search")
-            else -> ""
+            }
+
+            is DiscoveryNode -> {
+                message("route.explorer.tree.discovery.search")
+            }
+
+            else -> {
+                ""
+            }
         }
 
     fun virtualHostDisplayLabel(node: VirtualHostNode): String =

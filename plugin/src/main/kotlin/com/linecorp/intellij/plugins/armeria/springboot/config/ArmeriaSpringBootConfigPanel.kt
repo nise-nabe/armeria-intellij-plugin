@@ -207,11 +207,18 @@ class ArmeriaSpringBootConfigPanel(
             toolTipText =
                 tableModel.rowAt(modelRow)?.let { row ->
                     when (c) {
-                        0 ->
+                        0 -> {
                             ArmeriaSpringBootConfigKeys.documentationFor(row.entry.key)
                                 ?: row.entry.externalUrl
-                        2 -> row.filePath
-                        else -> null
+                        }
+
+                        2 -> {
+                            row.filePath
+                        }
+
+                        else -> {
+                            null
+                        }
                     }
                 }
             font = if (c == 0) t.font.deriveFont(Font.BOLD) else t.font

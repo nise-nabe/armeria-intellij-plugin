@@ -70,6 +70,7 @@ internal object ArmeriaExtendedRegistrationCollectorDiscovery {
                 val factoryCall = findListenerFactoryCall(expression) ?: return null
                 registrationFromFactoryCall(factoryCall)
             }
+
             is PsiNewExpression -> {
                 val registry =
                     registryFromClassName(expression.classReference?.qualifiedName ?: expression.classReference?.referenceName)
@@ -83,12 +84,19 @@ internal object ArmeriaExtendedRegistrationCollectorDiscovery {
                     parameterNames(expression),
                 )
             }
-            is PsiParenthesizedExpression -> extractRegistration(expression.expression, hops + 1)
+
+            is PsiParenthesizedExpression -> {
+                extractRegistration(expression.expression, hops + 1)
+            }
+
             is PsiReferenceExpression -> {
                 val initializer = (expression.resolve() as? PsiVariable)?.initializer ?: return null
                 extractRegistration(initializer, hops + 1)
             }
-            else -> null
+
+            else -> {
+                null
+            }
         }
     }
 
@@ -166,21 +174,29 @@ internal object ArmeriaExtendedRegistrationCollectorDiscovery {
         arguments.forEachIndexed { index, argument ->
             val parameterName = parameterNames?.getOrNull(index)
             when {
-                parameterName != null ->
+                parameterName != null -> {
                     when (parameterName) {
-                        in ArmeriaServerRegistrationSupport.REGISTRY_URI_PARAMETER_NAMES ->
+                        in ArmeriaServerRegistrationSupport.REGISTRY_URI_PARAMETER_NAMES -> {
                             registryUri = extractTextLike(argument).orEmpty()
-                        in ArmeriaServerRegistrationSupport.SERVICE_NAME_PARAMETER_NAMES ->
+                        }
+
+                        in ArmeriaServerRegistrationSupport.SERVICE_NAME_PARAMETER_NAMES -> {
                             serviceName = extractTextLike(argument).orEmpty()
-                        in ArmeriaServerRegistrationSupport.SPEC_PARAMETER_NAMES ->
+                        }
+
+                        in ArmeriaServerRegistrationSupport.SPEC_PARAMETER_NAMES -> {
                             specName = extractTextLike(argument)
+                        }
                     }
-                parameterNames == null ->
+                }
+
+                parameterNames == null -> {
                     when (index) {
                         0 -> registryUri = extractTextLike(argument).orEmpty()
                         1 -> serviceName = extractTextLike(argument).orEmpty()
                         2 -> specName = extractTextLike(argument)
                     }
+                }
             }
         }
         // ZooKeeperRegistrationSpec.curator("name") overrides the znode path as the service name.

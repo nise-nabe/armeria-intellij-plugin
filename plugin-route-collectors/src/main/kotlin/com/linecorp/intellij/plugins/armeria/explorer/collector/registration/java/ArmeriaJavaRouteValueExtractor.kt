@@ -209,11 +209,15 @@ internal object ArmeriaJavaRouteValueExtractor {
                 httpMethod = ""
                 pathExpression = arguments[0]
             }
+
             2 -> {
                 httpMethod = httpMethodLabel(arguments[0]) ?: return null
                 pathExpression = arguments[1]
             }
-            else -> return null
+
+            else -> {
+                return null
+            }
         }
         val rawPath = ArmeriaJavaRegistrationChainSupport.extractString(pathExpression) ?: return null
         val (pathType, path) = ArmeriaRouteSupport.parsePathType(rawPath)

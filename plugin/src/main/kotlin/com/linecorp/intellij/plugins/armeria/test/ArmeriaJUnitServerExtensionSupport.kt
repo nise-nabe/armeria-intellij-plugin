@@ -58,19 +58,23 @@ internal object ArmeriaJUnitServerExtensionSupport {
             return false
         }
         when (val resolved = annotation.nameReferenceElement?.resolve()) {
-            is PsiClass ->
+            is PsiClass -> {
                 return resolved.qualifiedName == REGISTER_EXTENSION_ANNOTATION
+            }
         }
         val javaFile = annotation.containingFile as? PsiJavaFile ?: return false
         return javaFile.importList?.importStatements?.any { import ->
             when {
-                import.isOnDemand ->
+                import.isOnDemand -> {
                     import.qualifiedName?.let { packageName ->
                         REGISTER_EXTENSION_ANNOTATION == "$packageName.$REGISTER_EXTENSION_ANNOTATION_SHORT"
                     } == true
-                else ->
+                }
+
+                else -> {
                     import.qualifiedName == REGISTER_EXTENSION_ANNOTATION ||
                         import.qualifiedName?.endsWith(".$REGISTER_EXTENSION_ANNOTATION_SHORT") == true
+                }
             }
         } == true
     }
@@ -448,9 +452,13 @@ internal object ArmeriaJUnitServerExtensionSupport {
     ): Boolean {
         property.typeReference?.let { typeReference ->
             when (val resolved = typeReference.references.firstOrNull()?.resolve()) {
-                is PsiClass -> return isServerExtensionClass(resolved, project)
-                is KtClass ->
+                is PsiClass -> {
+                    return isServerExtensionClass(resolved, project)
+                }
+
+                is KtClass -> {
                     return resolved.toLightClass()?.let { isServerExtensionClass(it, project) } == true
+                }
             }
             if (typeReference.text.contains("ServerExtension")) {
                 return true
@@ -466,9 +474,13 @@ internal object ArmeriaJUnitServerExtensionSupport {
     ): Boolean {
         function.typeReference?.let { typeReference ->
             when (val resolved = typeReference.references.firstOrNull()?.resolve()) {
-                is PsiClass -> return isServerExtensionClass(resolved, project)
-                is KtClass ->
+                is PsiClass -> {
+                    return isServerExtensionClass(resolved, project)
+                }
+
+                is KtClass -> {
                     return resolved.toLightClass()?.let { isServerExtensionClass(it, project) } == true
+                }
             }
             if (typeReference.text.contains("ServerExtension")) {
                 return true
@@ -483,12 +495,19 @@ internal object ArmeriaJUnitServerExtensionSupport {
         serverVariableName: String,
     ): Boolean =
         when (expression) {
-            is PsiReferenceExpression -> expression.referenceName == serverVariableName
-            is PsiMethodCallExpression ->
+            is PsiReferenceExpression -> {
+                expression.referenceName == serverVariableName
+            }
+
+            is PsiMethodCallExpression -> {
                 expression.methodExpression.referenceName == serverVariableName &&
                     expression.argumentList.expressionCount == 0 &&
                     isValidFactoryQualifier(expression.methodExpression.qualifierExpression, expression)
-            else -> false
+            }
+
+            else -> {
+                false
+            }
         }
 
     private fun isValidFactoryQualifier(
@@ -627,8 +646,14 @@ internal object ArmeriaJUnitServerExtensionSupport {
         serverVariableName: String,
     ): Boolean =
         when (expression) {
-            is KtNameReferenceExpression -> expression.getReferencedName() == serverVariableName
-            is KtCallExpression -> matchesKotlinFactoryCall(expression, serverVariableName)
+            is KtNameReferenceExpression -> {
+                expression.getReferencedName() == serverVariableName
+            }
+
+            is KtCallExpression -> {
+                matchesKotlinFactoryCall(expression, serverVariableName)
+            }
+
             is KtDotQualifiedExpression -> {
                 val factoryCall = expression.selectorExpression as? KtCallExpression ?: return false
                 if (!matchesKotlinFactoryCall(factoryCall, serverVariableName)) {
@@ -636,7 +661,10 @@ internal object ArmeriaJUnitServerExtensionSupport {
                 }
                 isValidKotlinFactoryReceiver(expression.receiverExpression)
             }
-            else -> false
+
+            else -> {
+                false
+            }
         }
 
     private fun matchesKotlinFactoryCall(
@@ -671,10 +699,12 @@ internal object ArmeriaJUnitServerExtensionSupport {
 
     private fun isKotlinClassReference(reference: KtNameReferenceExpression): Boolean {
         when (val resolved = reference.reference?.resolve()) {
-            is PsiClass ->
+            is PsiClass -> {
                 if (isSameOrEnclosingOrSuperClass(resolved, reference)) {
                     return true
                 }
+            }
+
             is KtClassOrObject -> {
                 val light = resolved.toLightClass()
                 if (light != null && isSameOrEnclosingOrSuperClass(light, reference)) {
@@ -756,13 +786,17 @@ internal object ArmeriaJUnitServerExtensionSupport {
                     qualifier.referenceName?.let(names::add)
                     qualifier = null
                 }
+
                 is PsiMethodCallExpression -> {
                     (qualifier.methodExpression.qualifierExpression as? PsiReferenceExpression)
                         ?.referenceName
                         ?.let(names::add)
                     qualifier = qualifier.methodExpression.qualifierExpression
                 }
-                else -> break
+
+                else -> {
+                    break
+                }
             }
         }
         return names
@@ -787,7 +821,10 @@ internal object ArmeriaJUnitServerExtensionSupport {
         names: MutableSet<String>,
     ) {
         when (expression) {
-            is KtNameReferenceExpression -> expression.getReferencedName().let(names::add)
+            is KtNameReferenceExpression -> {
+                expression.getReferencedName().let(names::add)
+            }
+
             is KtCallExpression -> {
                 (expression.calleeExpression as? KtNameReferenceExpression)?.getReferencedName()?.let(names::add)
                 (expression.parent as? KtDotQualifiedExpression)
@@ -795,6 +832,7 @@ internal object ArmeriaJUnitServerExtensionSupport {
                     ?.receiverExpression
                     ?.let { collectKotlinReceiverChainNames(it, names) }
             }
+
             is KtDotQualifiedExpression -> {
                 expression.selectorExpression?.let { collectKotlinReceiverChainNames(it, names) }
                 collectKotlinReceiverChainNames(expression.receiverExpression, names)

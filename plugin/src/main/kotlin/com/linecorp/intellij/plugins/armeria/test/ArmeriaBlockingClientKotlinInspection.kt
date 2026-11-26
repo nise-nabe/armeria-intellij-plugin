@@ -75,17 +75,23 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
                 }
                 methodName in HTTP_METHOD_NAMES && isAsyncWebClientReference(qualifier, serverVariableName)
             }
-            is KtCallExpression ->
+
+            is KtCallExpression -> {
                 if (ArmeriaJUnitServerExtensionSupport.matchesKotlinServerReceiver(qualifier, serverVariableName)) {
                     methodName in setOf("webClient", "httpUri")
                 } else {
                     usesAsyncWebClientOnQualifier(qualifier, serverVariableName, methodName)
                 }
+            }
+
             is KtDotQualifiedExpression -> {
                 val factoryCall = qualifier.selectorExpression as? KtCallExpression ?: return false
                 usesAsyncWebClientOnQualifier(factoryCall, serverVariableName, methodName)
             }
-            else -> false
+
+            else -> {
+                false
+            }
         }
     }
 
@@ -128,6 +134,7 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
                 ofCall = call
                 webClientReceiver = host.receiverExpression
             }
+
             call.calleeExpression is KtDotQualifiedExpression -> {
                 val host = call.calleeExpression as KtDotQualifiedExpression
                 ofCall = host.selectorExpression as? KtCallExpression ?: return false
@@ -136,7 +143,10 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
                 }
                 webClientReceiver = host.receiverExpression
             }
-            else -> return false
+
+            else -> {
+                return false
+            }
         }
         if (!isWebClientReceiver(webClientReceiver)) {
             return false
@@ -147,12 +157,18 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
 
     private fun isWebClientReceiver(expression: KtExpression): Boolean =
         when (expression) {
-            is KtNameReferenceExpression -> isWebClientTypeReference(expression)
+            is KtNameReferenceExpression -> {
+                isWebClientTypeReference(expression)
+            }
+
             is KtDotQualifiedExpression -> {
                 val selector = expression.selectorExpression as? KtNameReferenceExpression ?: return false
                 selector.getReferencedName() == "WebClient"
             }
-            else -> false
+
+            else -> {
+                false
+            }
         }
 
     private fun isWebClientTypeReference(reference: KtNameReferenceExpression): Boolean {

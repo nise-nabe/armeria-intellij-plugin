@@ -30,20 +30,32 @@ internal object ArmeriaTimeoutSupport {
 
     private fun executionHint(element: PsiClass): String? =
         when {
-            element.hasAnnotation(ArmeriaRouteSupport.BLOCKING_ANNOTATION) ->
+            element.hasAnnotation(ArmeriaRouteSupport.BLOCKING_ANNOTATION) -> {
                 message("route.explorer.execution.blocking")
-            element.hasAnnotation(ArmeriaRouteSupport.NON_BLOCKING_ANNOTATION) ->
+            }
+
+            element.hasAnnotation(ArmeriaRouteSupport.NON_BLOCKING_ANNOTATION) -> {
                 message("route.explorer.execution.nonBlocking")
-            else -> null
+            }
+
+            else -> {
+                null
+            }
         }
 
     private fun executionHint(method: PsiMethod): String? =
         when {
-            method.hasAnnotation(ArmeriaRouteSupport.BLOCKING_ANNOTATION) ->
+            method.hasAnnotation(ArmeriaRouteSupport.BLOCKING_ANNOTATION) -> {
                 message("route.explorer.execution.blocking")
-            method.hasAnnotation(ArmeriaRouteSupport.NON_BLOCKING_ANNOTATION) ->
+            }
+
+            method.hasAnnotation(ArmeriaRouteSupport.NON_BLOCKING_ANNOTATION) -> {
                 message("route.explorer.execution.nonBlocking")
-            else -> null
+            }
+
+            else -> {
+                null
+            }
         }
 
     private fun collectTimeoutCallsFromQualifier(
@@ -56,21 +68,27 @@ internal object ArmeriaTimeoutSupport {
             when (current) {
                 is PsiMethodCallExpression -> {
                     when (current.methodExpression.referenceName) {
-                        "requestTimeout" ->
+                        "requestTimeout" -> {
                             if (resolvesToArmeriaServerBuilder(current)) {
                                 hints += formatTimeoutCall("route.explorer.timeout.request", current)
                             }
-                        "responseTimeout" ->
+                        }
+
+                        "responseTimeout" -> {
                             if (resolvesToArmeriaServerBuilder(current)) {
                                 hints += formatTimeoutCall("route.explorer.timeout.response", current)
                             }
-                        "idleTimeout" ->
+                        }
+
+                        "idleTimeout" -> {
                             if (resolvesToArmeriaServerBuilder(current)) {
                                 hints += formatTimeoutCall("route.explorer.timeout.idle", current)
                             }
+                        }
                     }
                     current = current.methodExpression.qualifierExpression
                 }
+
                 is PsiReferenceExpression -> {
                     val resolved = current.resolve()
                     current =
@@ -80,7 +98,10 @@ internal object ArmeriaTimeoutSupport {
                             null
                         }
                 }
-                else -> break
+
+                else -> {
+                    break
+                }
             }
         }
     }
@@ -102,14 +123,18 @@ internal object ArmeriaTimeoutSupport {
         val argument = call.argumentList.expressions.firstOrNull()
         val value =
             when (argument) {
-                null -> "…"
-                else ->
+                null -> {
+                    "…"
+                }
+
+                else -> {
                     JavaPsiFacade
                         .getInstance(call.project)
                         .constantEvaluationHelper
                         .computeConstantExpression(argument)
                         ?.toString()
                         ?: argument.text
+                }
             }
         return message(bundleKey, value)
     }

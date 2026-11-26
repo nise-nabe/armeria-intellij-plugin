@@ -106,13 +106,21 @@ object ArmeriaKnownHttpServiceClassifier {
     fun protocol(kind: KnownHttpServiceKind): RouteProtocol =
         when (kind) {
             KnownHttpServiceKind.DOC_SERVICE -> RouteProtocol.DOC_SERVICE
+
             KnownHttpServiceKind.GRPC -> RouteProtocol.GRPC
+
             KnownHttpServiceKind.GRAPHQL -> RouteProtocol.GRAPHQL
+
             KnownHttpServiceKind.THRIFT -> RouteProtocol.THRIFT
+
             KnownHttpServiceKind.WEBSOCKET -> RouteProtocol.WEBSOCKET
+
             KnownHttpServiceKind.SSE -> RouteProtocol.SSE
+
             KnownHttpServiceKind.HEALTH_CHECK -> RouteProtocol.HEALTH_CHECK
+
             KnownHttpServiceKind.SAML -> RouteProtocol.SAML
+
             KnownHttpServiceKind.METRICS,
             KnownHttpServiceKind.FILE,
             KnownHttpServiceKind.HTTP,

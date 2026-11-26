@@ -38,14 +38,21 @@ internal object ArmeriaClientRouteNavigation {
                 if (parentDisposable != null) coordinator.expireWith(parentDisposable) else coordinator
             }.finishOnUiThread(ModalityState.any()) { routes ->
                 when {
-                    routes.isEmpty() ->
+                    routes.isEmpty() -> {
                         showEmptyMatch(
                             project,
                             "client.explorer.matching.routes.empty",
                             "client.explorer.action.gotoRoute.popup",
                         )
-                    routes.size == 1 -> openRoute(project, routes.single(), parentDisposable)
-                    else -> showRouteChooser(project, routes, parentDisposable, mouseEvent)
+                    }
+
+                    routes.size == 1 -> {
+                        openRoute(project, routes.single(), parentDisposable)
+                    }
+
+                    else -> {
+                        showRouteChooser(project, routes, parentDisposable, mouseEvent)
+                    }
                 }
             }.submit(AppExecutorUtil.getAppExecutorService())
     }
@@ -67,14 +74,21 @@ internal object ArmeriaClientRouteNavigation {
                 if (parentDisposable != null) coordinator.expireWith(parentDisposable) else coordinator
             }.finishOnUiThread(ModalityState.any()) { endpoints ->
                 when {
-                    endpoints.isEmpty() ->
+                    endpoints.isEmpty() -> {
                         showEmptyMatch(
                             project,
                             "client.explorer.matching.clients.empty",
                             "route.explorer.action.gotoClient.popup",
                         )
-                    endpoints.size == 1 -> openClient(project, endpoints.single(), parentDisposable)
-                    else -> showClientChooser(project, endpoints, parentDisposable, mouseEvent)
+                    }
+
+                    endpoints.size == 1 -> {
+                        openClient(project, endpoints.single(), parentDisposable)
+                    }
+
+                    else -> {
+                        showClientChooser(project, endpoints, parentDisposable, mouseEvent)
+                    }
                 }
             }.submit(AppExecutorUtil.getAppExecutorService())
     }

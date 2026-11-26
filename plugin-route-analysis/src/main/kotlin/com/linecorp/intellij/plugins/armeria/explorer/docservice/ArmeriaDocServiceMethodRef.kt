@@ -17,19 +17,35 @@ data class ArmeriaDocServiceMethodRef(
     companion object {
         fun from(route: ArmeriaRoute): ArmeriaDocServiceMethodRef? =
             when (route.routeMatch) {
-                RouteMatch.ANNOTATED_HTTP -> fromAnnotatedTarget(route.target)
-                RouteMatch.RUNTIME ->
+                RouteMatch.ANNOTATED_HTTP -> {
+                    fromAnnotatedTarget(route.target)
+                }
+
+                RouteMatch.RUNTIME -> {
                     fromRuntimeTarget(route.target)
                         ?: fromGrpcPath(route.path)
                         ?: fromAnnotatedTarget(route.target)
-                RouteMatch.NON_HTTP ->
+                }
+
+                RouteMatch.NON_HTTP -> {
                     when {
-                        isProtocol(route, RouteProtocol.GRPC) ->
+                        isProtocol(route, RouteProtocol.GRPC) -> {
                             fromGrpcPath(route.path) ?: fromDottedTarget(route.target)
-                        isProtocol(route, RouteProtocol.THRIFT) -> fromDottedTarget(route.target)
-                        else -> null
+                        }
+
+                        isProtocol(route, RouteProtocol.THRIFT) -> {
+                            fromDottedTarget(route.target)
+                        }
+
+                        else -> {
+                            null
+                        }
                     }
-                else -> null
+                }
+
+                else -> {
+                    null
+                }
             }
 
         internal fun fromAnnotatedTarget(target: String): ArmeriaDocServiceMethodRef? {

@@ -305,7 +305,10 @@ internal object ArmeriaServerDecoratorKotlinSupport {
                         .firstNotNullOfOrNull { it.resolve() }
                         .takeIf { it is PsiVariable || it is KtProperty }
                 }
-                else -> current = chainReceiver(current)
+
+                else -> {
+                    current = chainReceiver(current)
+                }
             }
         }
         return null
@@ -416,13 +419,22 @@ internal object ArmeriaServerDecoratorKotlinSupport {
                 return null
             }
             return when (val resolved = unwrapped.references.firstNotNullOfOrNull { it.resolve() }) {
-                is KtProperty -> resolved.initializer?.let { resolveServiceTypeName(it, visited) }
+                is KtProperty -> {
+                    resolved.initializer?.let { resolveServiceTypeName(it, visited) }
+                }
+
                 is PsiVariable -> {
                     knownServiceTypeName(resolved.type.canonicalText)?.let { return it }
                     (resolved.initializer as? KtExpression)?.let { resolveServiceTypeName(it, visited) }
                 }
-                is PsiClass -> knownServiceTypeName(resolved)
-                else -> null
+
+                is PsiClass -> {
+                    knownServiceTypeName(resolved)
+                }
+
+                else -> {
+                    null
+                }
             }
         }
         return null
@@ -613,17 +625,24 @@ internal object ArmeriaServerDecoratorKotlinSupport {
             return true
         }
         return when {
-            left.decoratorUnder && right.decoratorUnder ->
+            left.decoratorUnder && right.decoratorUnder -> {
                 prefixPathCovers(leftPath, rightPath) || prefixPathCovers(rightPath, leftPath)
-            left.decoratorUnder ->
+            }
+
+            left.decoratorUnder -> {
                 prefixPathCovers(leftPath, rightPath) ||
                     ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(rightPath, leftPath)
-            right.decoratorUnder ->
+            }
+
+            right.decoratorUnder -> {
                 prefixPathCovers(rightPath, leftPath) ||
                     ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(leftPath, rightPath)
-            else ->
+            }
+
+            else -> {
                 ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(leftPath, rightPath) ||
                     ArmeriaServerDecoratorTypes.corsDecoratorAppliesToRoute(rightPath, leftPath)
+            }
         }
     }
 
@@ -656,9 +675,13 @@ internal object ArmeriaServerDecoratorKotlinSupport {
                         return ArmeriaKotlinExpressionSupport.resolveCallName(current).orEmpty()
                     }
                 }
+
                 is KtDotQualifiedExpression -> {
                     when (val selector = current.selectorExpression) {
-                        is KtCallExpression -> current = selector
+                        is KtCallExpression -> {
+                            current = selector
+                        }
+
                         is KtNameReferenceExpression -> {
                             val name = selector.getReferencedName()
                             if (name == "java" || name == "class") {
@@ -667,17 +690,28 @@ internal object ArmeriaServerDecoratorKotlinSupport {
                                 return name
                             }
                         }
+
                         is KtClassLiteralExpression -> {
                             current = unwrap(selector.receiverExpression ?: current.receiverExpression)
                         }
-                        else -> current = current.receiverExpression
+
+                        else -> {
+                            current = current.receiverExpression
+                        }
                     }
                 }
+
                 is KtClassLiteralExpression -> {
                     current = unwrap(current.receiverExpression ?: return current.text.substringAfterLast('.'))
                 }
-                is KtNameReferenceExpression -> return current.getReferencedName()
-                else -> return current.text.substringAfterLast('.').substringBefore('(')
+
+                is KtNameReferenceExpression -> {
+                    return current.getReferencedName()
+                }
+
+                else -> {
+                    return current.text.substringAfterLast('.').substringBefore('(')
+                }
             }
         }
     }
@@ -691,13 +725,18 @@ internal object ArmeriaServerDecoratorKotlinSupport {
             return false
         }
         return when (val resolved = unwrapped.references.firstNotNullOfOrNull { it.resolve() }) {
-            is KtProperty ->
+            is KtProperty -> {
                 unwrapOrNull(resolved.initializer) is KtStringTemplateExpression
+            }
+
             is PsiVariable -> {
                 val typeName = resolved.type.canonicalText
                 typeName == "java.lang.String" || typeName == "String"
             }
-            else -> false
+
+            else -> {
+                false
+            }
         }
     }
 
@@ -776,7 +815,10 @@ internal object ArmeriaServerDecoratorKotlinSupport {
     private fun chainReceiver(expression: KtExpression): KtExpression? {
         val receiver =
             when (expression) {
-                is KtDotQualifiedExpression -> expression.receiverExpression
+                is KtDotQualifiedExpression -> {
+                    expression.receiverExpression
+                }
+
                 is KtCallExpression -> {
                     val parent = expression.parent
                     if (parent is KtDotQualifiedExpression && parent.selectorExpression == expression) {
@@ -788,7 +830,10 @@ internal object ArmeriaServerDecoratorKotlinSupport {
                         }
                     }
                 }
-                else -> null
+
+                else -> {
+                    null
+                }
             } ?: return null
         return unwrap(receiver)
     }

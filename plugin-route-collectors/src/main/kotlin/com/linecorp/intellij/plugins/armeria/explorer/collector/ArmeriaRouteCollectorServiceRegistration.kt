@@ -135,15 +135,18 @@ object ArmeriaRouteCollectorServiceRegistration {
                 arguments.getOrNull(0)
             } else {
                 when (registrationMethod) {
-                    CoreServiceRegistrationMethod.ANNOTATED_SERVICE ->
+                    CoreServiceRegistrationMethod.ANNOTATED_SERVICE -> {
                         if (annotatedServiceFirstArgIsPath(arguments)) {
                             arguments.getOrNull(1)
                         } else {
                             // annotatedService(service[, decorators…]) — pathless overload.
                             arguments.getOrNull(0)
                         }
-                    CoreServiceRegistrationMethod.SERVICE, CoreServiceRegistrationMethod.SERVICE_UNDER ->
+                    }
+
+                    CoreServiceRegistrationMethod.SERVICE, CoreServiceRegistrationMethod.SERVICE_UNDER -> {
                         arguments.getOrNull(1)
+                    }
                 }
             } ?: return false
         val target = ArmeriaRouteTargetExtractor.extractTarget(implementationExpression)
@@ -357,16 +360,24 @@ object ArmeriaRouteCollectorServiceRegistration {
         arguments: Array<PsiExpression>,
     ): String? =
         when (CoreServiceRegistrationMethod.fromMethodName(methodName)) {
-            CoreServiceRegistrationMethod.SERVICE, CoreServiceRegistrationMethod.SERVICE_UNDER ->
+            CoreServiceRegistrationMethod.SERVICE, CoreServiceRegistrationMethod.SERVICE_UNDER -> {
                 extractString(arguments.getOrNull(0))
-            CoreServiceRegistrationMethod.ANNOTATED_SERVICE ->
+            }
+
+            CoreServiceRegistrationMethod.ANNOTATED_SERVICE -> {
                 when {
                     // annotatedService(service[, decorators…]) is the pathless overload.
                     arguments.size <= 1 -> "/"
+
                     annotatedServiceFirstArgIsPath(arguments) -> extractString(arguments.getOrNull(0))
+
                     else -> "/"
                 }
-            null -> null
+            }
+
+            null -> {
+                null
+            }
         }
 
     /**

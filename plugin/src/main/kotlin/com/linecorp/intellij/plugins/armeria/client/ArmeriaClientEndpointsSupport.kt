@@ -78,6 +78,7 @@ internal object ArmeriaClientEndpointsSupport {
             ClientProtocol.GRPC_KOTLIN,
             ClientProtocol.THRIFT,
             -> listOf("POST")
+
             ClientProtocol.HTTP,
             ClientProtocol.REST,
             ClientProtocol.BLOCKING,

@@ -72,9 +72,13 @@ class ArmeriaMissingBlockingScalaInspection : LocalInspectionTool() {
     private fun problemMessageKey(function: ScFunction): String =
         when {
             ArmeriaScalaInspectionSupport.routeAnnotation(function) != null ||
-                isGrpcServiceOverride(function) ->
+                isGrpcServiceOverride(function) -> {
                 "inspection.missing.blocking.problem"
-            else -> "inspection.missing.blocking.problem.httpservice"
+            }
+
+            else -> {
+                "inspection.missing.blocking.problem.httpservice"
+            }
         }
 
     // PsiMethod.findSuperMethods and PsiClass.getSupers are not wired for Scala PSI in a
@@ -152,15 +156,22 @@ class ArmeriaMissingBlockingScalaInspection : LocalInspectionTool() {
 
     private fun invocationReference(element: PsiElement): ScReferenceExpression? =
         when (element) {
-            is MethodInvocation -> element.invokedExpr as? ScReferenceExpression
-            is ScReferenceExpression ->
+            is MethodInvocation -> {
+                element.invokedExpr as? ScReferenceExpression
+            }
+
+            is ScReferenceExpression -> {
                 element.takeIf {
                     it.parent !is MethodInvocation &&
                         it.parent !is ScReferenceExpression &&
                         it.parent !is ScUnderscoreSection &&
                         it.resolve() is PsiMethod
                 }
-            else -> null
+            }
+
+            else -> {
+                null
+            }
         }
 
     private fun isOnInspectedPath(

@@ -287,13 +287,17 @@ private fun File.isIdea20263(): Boolean {
 private fun File.intellijPlatformBuildNumber(): String? {
     val root =
         when {
-            isDirectory -> this
-            else ->
+            isDirectory -> {
+                this
+            }
+
+            else -> {
                 runCatching { readText().trim() }
                     .getOrNull()
                     ?.let(::File)
                     ?.takeIf { it.isDirectory }
                     ?: return null
+            }
         }
     val info =
         root.resolve("product-info.json").takeIf { it.isFile }

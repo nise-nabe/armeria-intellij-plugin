@@ -29,18 +29,32 @@ internal object ArmeriaRouteTargetExtractor {
                         ?: unwrapped.classReference?.referenceName
                 classReference?.let(ArmeriaKnownHttpServiceClassifier::canonicalServiceTypeName)
             }
-            is PsiMethodCallExpression -> extractKnownServiceTypeFromCall(unwrapped, visitedVariables)
+
+            is PsiMethodCallExpression -> {
+                extractKnownServiceTypeFromCall(unwrapped, visitedVariables)
+            }
+
             is PsiReferenceExpression -> {
                 ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
                 when (val resolved = unwrapped.resolve()) {
-                    is PsiVariable -> extractKnownServiceTypeFromVariable(resolved, visitedVariables)
-                    is PsiClass ->
+                    is PsiVariable -> {
+                        extractKnownServiceTypeFromVariable(resolved, visitedVariables)
+                    }
+
+                    is PsiClass -> {
                         resolved.qualifiedName?.let(ArmeriaKnownHttpServiceClassifier::canonicalServiceTypeName)
                             ?: resolved.name
-                    else -> null
+                    }
+
+                    else -> {
+                        null
+                    }
                 }
             }
-            else -> null
+
+            else -> {
+                null
+            }
         }
     }
 
@@ -70,12 +84,19 @@ internal object ArmeriaRouteTargetExtractor {
                 ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
                 unwrapped.classReference?.resolve() == null
             }
+
             is PsiReferenceExpression -> {
                 ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
                 unwrapped.resolve() == null
             }
-            is PsiMethodCallExpression -> isUnresolvedMethodCallTarget(unwrapped, extractedTarget)
-            else -> extractedTarget == rawTarget
+
+            is PsiMethodCallExpression -> {
+                isUnresolvedMethodCallTarget(unwrapped, extractedTarget)
+            }
+
+            else -> {
+                extractedTarget == rawTarget
+            }
         }
     }
 
@@ -101,7 +122,10 @@ internal object ArmeriaRouteTargetExtractor {
                 classReference ?: expression.text
             }
 
-            is PsiMethodCallExpression -> extractMethodCallTarget(unwrapped, expression)
+            is PsiMethodCallExpression -> {
+                extractMethodCallTarget(unwrapped, expression)
+            }
+
             is PsiReferenceExpression -> {
                 ArmeriaRouteCollectionMetrics.current()?.resolveCount?.incrementAndGet()
                 when (val resolved = unwrapped.resolve()) {
@@ -111,7 +135,9 @@ internal object ArmeriaRouteTargetExtractor {
                 }
             }
 
-            else -> expression.text
+            else -> {
+                expression.text
+            }
         }
     }
 

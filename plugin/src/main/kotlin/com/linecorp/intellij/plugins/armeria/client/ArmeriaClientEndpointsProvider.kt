@@ -134,7 +134,7 @@ class ArmeriaClientEndpointsProvider : EndpointsUrlTargetProvider<ArmeriaClientE
                 .collect(project)
                 .filter(ArmeriaClientEndpointsSupport::isVisible)
         return when (filter) {
-            is SearchScopeEndpointsFilter ->
+            is SearchScopeEndpointsFilter -> {
                 clients.filter { client ->
                     val virtualFile =
                         client.pointer.virtualFile
@@ -143,7 +143,11 @@ class ArmeriaClientEndpointsProvider : EndpointsUrlTargetProvider<ArmeriaClientE
                                 ?.virtualFile
                     virtualFile != null && filter.transitiveSearchScope.contains(virtualFile)
                 }
-            else -> clients
+            }
+
+            else -> {
+                clients
+            }
         }
     }
 

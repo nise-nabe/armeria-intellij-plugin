@@ -54,13 +54,17 @@ internal object ArmeriaClientEndpointGroupSupport {
         val reference = expression as? PsiReferenceExpression ?: return null
         val resolved = reference.resolve()
         return when (resolved) {
-            is PsiVariable ->
+            is PsiVariable -> {
                 if (visited.add(resolved)) {
                     labelJavaEndpointGroup(resolved.initializer, visited)
                 } else {
                     null
                 }
-            else -> reference.text.takeIf { looksLikeEndpointGroupText(it) }
+            }
+
+            else -> {
+                reference.text.takeIf { looksLikeEndpointGroupText(it) }
+            }
         }
     }
 

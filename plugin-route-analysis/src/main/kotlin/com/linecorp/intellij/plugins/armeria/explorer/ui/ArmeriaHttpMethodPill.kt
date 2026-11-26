@@ -15,20 +15,34 @@ object ArmeriaHttpMethodPill {
     fun pillLabel(route: ArmeriaRoute): String =
         when (route.routeMatch) {
             RouteMatch.ANNOTATED_HTTP -> route.httpMethod
+
             RouteMatch.ANNOTATED_SERVICE -> "ANN"
+
             RouteMatch.SERVICE -> "ALL"
+
             RouteMatch.SERVICE_UNDER -> "PRE"
+
             RouteMatch.FILE_SERVICE -> "FIL"
+
             RouteMatch.HEALTH_CHECK -> "HLT"
+
             RouteMatch.VIRTUAL_HOST -> "VHS"
+
             RouteMatch.LISTEN_PORT -> "PORT"
+
             RouteMatch.ROUTE_DECORATOR -> "DEC"
+
             RouteMatch.ROUTE_FLUENT -> route.httpMethod.ifBlank { "ALL" }
+
             RouteMatch.DECORATOR_UNDER -> "UND"
+
             // Kind lives on the delegation badge; blank methods match methodLabel ("ALL").
             RouteMatch.DELEGATED -> route.httpMethod.ifBlank { "ALL" }
+
             RouteMatch.NON_HTTP -> route.protocol.uppercase()
+
             RouteMatch.DISCOVERY -> route.protocol.uppercase()
+
             RouteMatch.RUNTIME, RouteMatch.CONFIG -> route.httpMethod
         }
 

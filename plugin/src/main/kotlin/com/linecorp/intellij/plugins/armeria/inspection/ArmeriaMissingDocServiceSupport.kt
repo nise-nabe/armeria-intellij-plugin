@@ -33,7 +33,11 @@ internal object ArmeriaMissingDocServiceSupport {
                         serverBuilder = serverBuilder ?: call
                     }
                 }
-                "annotatedService" -> annotatedOrRpc += call
+
+                "annotatedService" -> {
+                    annotatedOrRpc += call
+                }
+
                 "service", "serviceUnder" -> {
                     val implementation = serviceImplementation(call) ?: continue
                     val kind = classifyExpression(implementation)
@@ -99,8 +103,14 @@ internal object ArmeriaMissingDocServiceSupport {
             }
         }
         return when (unwrapped) {
-            is PsiNewExpression -> classifyNew(unwrapped)
-            is PsiMethodCallExpression -> classifyCallChain(unwrapped)
+            is PsiNewExpression -> {
+                classifyNew(unwrapped)
+            }
+
+            is PsiMethodCallExpression -> {
+                classifyCallChain(unwrapped)
+            }
+
             is PsiReferenceExpression -> {
                 val resolved = unwrapped.resolve() as? PsiVariable ?: return KnownHttpServiceKind.HTTP
                 if (!visited.add(resolved)) {
@@ -109,7 +119,10 @@ internal object ArmeriaMissingDocServiceSupport {
                 val initializer = resolved.initializer ?: return KnownHttpServiceKind.HTTP
                 classifyExpression(initializer, visited)
             }
-            else -> KnownHttpServiceKind.HTTP
+
+            else -> {
+                KnownHttpServiceKind.HTTP
+            }
         }
     }
 
@@ -127,7 +140,11 @@ internal object ArmeriaMissingDocServiceSupport {
                     }
                     current = unwrapped.methodExpression.qualifierExpression
                 }
-                is PsiNewExpression -> return classifyNew(unwrapped)
+
+                is PsiNewExpression -> {
+                    return classifyNew(unwrapped)
+                }
+
                 is PsiReferenceExpression -> {
                     val name = unwrapped.qualifiedName ?: unwrapped.referenceName
                     current = null
@@ -135,7 +152,10 @@ internal object ArmeriaMissingDocServiceSupport {
                         return ArmeriaKnownHttpServiceClassifier.classify(name)
                     }
                 }
-                else -> current = null
+
+                else -> {
+                    current = null
+                }
             }
         }
         return KnownHttpServiceKind.HTTP

@@ -54,12 +54,18 @@ internal object ArmeriaMainClassResolver {
         }
         val parameters = method.parameterList.parameters
         return when (parameters.size) {
-            0 -> true
+            0 -> {
+                true
+            }
+
             1 -> {
                 val typeText = parameters[0].type.presentableText
                 typeText == "String[]" || typeText == "String..." || typeText.endsWith("String[]")
             }
-            else -> false
+
+            else -> {
+                false
+            }
         }
     }
 

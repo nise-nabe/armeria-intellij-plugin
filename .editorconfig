@@ -8,10 +8,6 @@ trim_trailing_whitespace = true
 
 [*.{kt,kts}]
 ktlint_code_style = ktlint_official
-# The existing codebase uses compact `when` entries. Keep that prevailing style
-# until a formatting-only migration revisits the ktlint 1.8 defaults.
-ktlint_standard_when-entry-bracing = disabled
-ktlint_standard_blank-line-between-when-conditions = disabled
 
 # IntelliJ fixture tests use testName_scenario style (JUnit3-style method names).
 [**/src/test/**/*.{kt,kts}]
