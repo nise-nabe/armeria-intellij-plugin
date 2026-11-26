@@ -2,7 +2,6 @@ package com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ko
 import com.intellij.psi.PsiElement
 import com.linecorp.intellij.plugins.armeria.explorer.collector.annotation.ArmeriaKotlinTimeoutSupport
 import com.linecorp.intellij.plugins.armeria.explorer.collector.decorator.ArmeriaKotlinDecoratorSupport
-import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaBuilderCallHeuristics
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.ArmeriaRegistrationChainReducer
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.FluentRouteChainInfo
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.RegistrationChainStep
@@ -30,7 +29,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorFluentRoute {
         if (buildCall.valueArguments.isEmpty()) {
             return
         }
-        if (requireBuilderCall && !ArmeriaBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(buildCall)) {
+        if (requireBuilderCall && !ArmeriaKotlinBuilderCallHeuristics.looksLikeArmeriaFluentRouteBuild(buildCall)) {
             return
         }
         addFluentRouteFromBuild(buildCall, routes, seenRegistrations, requireRouteAnchor = true)

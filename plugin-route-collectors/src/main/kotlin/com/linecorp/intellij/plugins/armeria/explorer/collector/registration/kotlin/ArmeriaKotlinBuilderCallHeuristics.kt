@@ -21,7 +21,7 @@ import org.jetbrains.kotlin.psi.KtUserType
 import org.jetbrains.kotlin.psi.KtValueArgument
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
-internal object ArmeriaKotlinBuilderCallHeuristics {
+object ArmeriaKotlinBuilderCallHeuristics {
     private val IMPLICIT_RECEIVER_SCOPE_METHODS = setOf("apply", "run")
     private val EXPLICIT_PARAMETER_SCOPE_METHODS = setOf("also", "let")
     private val BUILDER_SCOPE_METHOD_NAMES = IMPLICIT_RECEIVER_SCOPE_METHODS + EXPLICIT_PARAMETER_SCOPE_METHODS
