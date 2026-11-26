@@ -10,17 +10,17 @@ import com.intellij.psi.PsiParameter
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaPathVariableSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 
-internal data class ArmeriaParamBinding(
+data class ArmeriaParamBinding(
     val name: String,
 )
 
-internal data class ArmeriaParamPathVariableFinding(
+data class ArmeriaParamPathVariableFinding(
     val highlight: PsiElement,
     val messageKey: String,
     val messageArg: String,
 )
 
-internal object ArmeriaParamPathVariableMismatch {
+object ArmeriaParamPathVariableMismatch {
     private val FRAMEWORK_TYPE_PREFIXES =
         listOf(
             "java.",

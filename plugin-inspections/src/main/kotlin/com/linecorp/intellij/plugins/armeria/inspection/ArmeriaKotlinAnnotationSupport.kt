@@ -12,7 +12,7 @@ import org.jetbrains.kotlin.psi.KtParameter
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtUserType
 
-internal object ArmeriaKotlinAnnotationSupport {
+object ArmeriaKotlinAnnotationSupport {
     fun qualifiedName(entry: KtAnnotationEntry): String? {
         resolveAnnotationType(entry)?.let { return it }
         val shortName = entry.shortName?.asString() ?: return null

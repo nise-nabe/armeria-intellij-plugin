@@ -3,7 +3,7 @@ name: intellij-armeria-plugin
 description: >-
   IntelliJ Platform plugin conventions for this repository. Use when implementing
   or editing plugin UI, run configurations, tool windows, inspections, actions,
-  or any Kotlin code under plugin/, plugin-shared/, plugin-wizard/, plugin-test-support/, or plugin-explorer/.
+  or any Kotlin code under plugin/, plugin-shared/, plugin-wizard/, plugin-test-support/, plugin-explorer/, or plugin-inspections/.
 ---
 
 # IntelliJ Armeria plugin conventions
@@ -27,6 +27,7 @@ in this repository. Apply it **during implementation**, not only before opening 
 | `plugin-wizard/` | New-project/module wizard, file templates, starter resources |
 | `plugin-test-support/` | Test-support inspections, JUnit `ServerExtension` analysis, and generated test-method insertion |
 | `plugin-explorer/` | Route/Client Explorer UI, client endpoint analysis, OpenAPI/HTTP request generation, and DocService actions |
+| `plugin-inspections/` | Java/Kotlin/Scala inspections, quick fixes, and inspection support logic |
 | `plugin/` | `plugin.xml` wiring, run configs, inspections/markers that consume explorer APIs, and inspection registration |
 
 Do not put collector logic in `plugin/` when it belongs in one of the `plugin-route-*` modules.
@@ -208,6 +209,7 @@ Match the Gradle task to the module that contains the test class:
 | `plugin/src/test` | `:plugin:test` |
 | `plugin-test-support/src/test` | `:plugin-test-support:test` |
 | `plugin-explorer/src/test` | `:plugin-explorer:test` |
+| `plugin-inspections/src/test` | `:plugin-inspections:test` |
 | `plugin-wizard/src/test` | `:plugin-wizard:test` |
 
 PSI fixture layout (`src/test/testData/`, `configureFixture()`, `ArmeriaRouteTestSupport`) is
