@@ -557,5 +557,5 @@ object ArmeriaKotlinRouteCollector {
     private fun isResolvedKotlinClass(resolved: PsiElement?): Boolean = resolved is com.intellij.psi.PsiClass || resolved is KtClassOrObject
 
     private fun isResolvedKotlinConstructor(resolved: PsiElement?): Boolean =
-        resolved is PsiMethod && resolved.isConstructor || resolved is KtConstructor<*>
+        (resolved is PsiMethod && resolved.isConstructor) || resolved is KtConstructor<*>
 }

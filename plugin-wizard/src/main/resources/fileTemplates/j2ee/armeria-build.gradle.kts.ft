@@ -10,12 +10,12 @@ plugins {
     scala
 #end
 #if ($context.hasLibrary("armeria-spring-boot3-starter") || $context.hasLibrary("armeria-spring-boot3-autoconfigure"))
-    id("org.springframework.boot") version "3.4.5"
+    id("org.springframework.boot") version "3.5.16"
 #elseif ($context.hasLibrary("armeria-spring-boot2-autoconfigure"))
     id("org.springframework.boot") version "2.7.18"
 #end
 #if ($context.hasLibrary("armeria-grpc"))
-    id("com.google.protobuf") version "0.9.5"
+    id("com.google.protobuf") version "0.10.1"
 #end
 }
 
@@ -31,11 +31,11 @@ dependencies {
 #end
 #if ($context.hasLanguage("scala"))
 #if ($context.hasLibrary("armeria-scala_2.12"))
-    implementation("org.scala-lang:scala-library:2.12.15")
+    implementation("org.scala-lang:scala-library:2.12.21")
 #elseif ($context.hasLibrary("armeria-scala_3"))
-    implementation("org.scala-lang:scala3-library_3:3.1.2")
+    implementation("org.scala-lang:scala3-library_3:3.7.4")
 #else
-    implementation("org.scala-lang:scala-library:2.13.8")
+    implementation("org.scala-lang:scala-library:2.13.18")
 #end
 #end
     implementation(platform("com.linecorp.armeria:armeria-bom:${context.getVersion("com.linecorp.armeria", "armeria-bom")}"))
@@ -212,11 +212,11 @@ kotlin {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:4.29.3"
+        artifact = "com.google.protobuf:protoc:3.25.9"
     }
     plugins {
         create("grpc") {
-            artifact = "io.grpc:protoc-gen-grpc-java:1.70.0"
+            artifact = "io.grpc:protoc-gen-grpc-java:1.85.1"
         }
     }
     generateProtoTasks {

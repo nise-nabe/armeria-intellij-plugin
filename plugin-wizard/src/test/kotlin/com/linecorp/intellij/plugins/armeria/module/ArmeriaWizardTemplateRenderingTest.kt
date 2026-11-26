@@ -38,7 +38,7 @@ class ArmeriaWizardTemplateRenderingTest {
 
         assertTrue(rendered.contains("id 'scala'"))
         assertTrue(rendered.contains("armeria-scala_2.13"))
-        assertTrue(rendered.contains("scala-library:2.13.8"))
+        assertTrue(rendered.contains("scala-library:2.13.18"))
     }
 
     @Test
@@ -150,7 +150,7 @@ class ArmeriaWizardTemplateRenderingTest {
         val rendered = renderBuildTemplate("fileTemplates/j2ee/armeria-build.gradle.ft", context)
 
         assertTrue(rendered.contains("id 'scala'"))
-        assertTrue(rendered.contains("scala-library:2.13.8"))
+        assertTrue(rendered.contains("scala-library:2.13.18"))
     }
 
     @Test

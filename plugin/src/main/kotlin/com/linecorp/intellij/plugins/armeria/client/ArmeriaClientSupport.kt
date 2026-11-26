@@ -156,7 +156,6 @@ internal object ArmeriaClientSupport {
         val simpleName = text.substringAfterLast('.')
         return simpleName.endsWith("ClientBuilder") ||
             simpleName == "ArmeriaRetrofitBuilder" ||
-            simpleName.endsWith("Builder") &&
-            text.contains("armeria")
+            (simpleName.endsWith("Builder") && text.contains("armeria"))
     }
 }

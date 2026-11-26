@@ -31,11 +31,11 @@ class ArmeriaWizardTemplateTestContext(
     companion object {
         fun defaultVersions(): Map<Pair<String, String>, String> =
             mapOf(
-                "org.jetbrains.kotlin" to "kotlin-bom" to "2.1.21",
-                "com.linecorp.armeria" to "armeria-bom" to "1.38.0",
-                "ch.qos.logback" to "logback-classic" to "1.5.18",
-                "org.slf4j" to "log4j-over-slf4j" to "2.0.17",
-                "org.junit" to "junit-bom" to "5.14.0",
+                "org.jetbrains.kotlin" to "kotlin-bom" to "2.4.21",
+                "com.linecorp.armeria" to "armeria-bom" to "1.43.1",
+                "ch.qos.logback" to "logback-classic" to "1.6.8",
+                "org.slf4j" to "log4j-over-slf4j" to "2.0.20",
+                "org.junit" to "junit-bom" to "5.14.4",
                 "junit" to "junit" to "4.13.2",
             )
     }

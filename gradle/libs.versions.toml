@@ -1,7 +1,7 @@
 [versions]
 jdk = "21"
 kotlin = "2.4.21"
-intellij-platform-plugin = "2.19.0"
+intellij-platform-plugin = "2.20.1"
 idea-platform = "2026.2.4"
 scala-plugin = "2026.2.21"
 changelog = "2.5.0"
@@ -10,7 +10,7 @@ junit-jupiter = "6.1.3"
 junit-vintage = "6.1.3"
 velocity = "2.4.1"
 ktlint-gradle = "14.2.0"
-ktlint = "1.5.0"
+ktlint = "1.8.0"
 
 [libraries]
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
