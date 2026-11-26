@@ -70,16 +70,18 @@ class ArmeriaReferenceFileIndex : ScalarIndexExtension<Int>() {
                 } else {
                     setOf(ARMERIA_REFERENCE_KEY)
                 }
-            val files = mutableListOf<VirtualFile>()
-            FileBasedIndex.getInstance().getFilesWithKey(
-                NAME,
-                keys,
-                { file ->
-                    files += file
-                    true
-                },
-                scope,
-            )
+            val files = linkedSetOf<VirtualFile>()
+            for (key in keys) {
+                FileBasedIndex.getInstance().getFilesWithKey(
+                    NAME,
+                    setOf(key),
+                    { file ->
+                        files += file
+                        true
+                    },
+                    scope,
+                )
+            }
             return files.sortedWith(compareBy({ it.path }, { it.name }))
         }
 
