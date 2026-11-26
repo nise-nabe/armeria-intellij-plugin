@@ -59,7 +59,7 @@ jobs:
           java-version: 25
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
       # Report-only. Not part of check, so the ubuntu/windows/macos build matrix does not
-      # download the 2026.3 Beta installer.
+      # download the 2026.3 IDE archive.
       - run: ./gradlew :plugin:verifyPlugin20263
 
   build:
