@@ -10,6 +10,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinPlugi
 import com.linecorp.intellij.plugins.armeria.explorer.support.toArmeriaLightClass
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaJUnitServerExtensionSupport.REGISTER_EXTENSION_ANNOTATION
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaJUnitServerExtensionSupport.REGISTER_EXTENSION_ANNOTATION_SHORT
+import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClass
@@ -230,6 +231,23 @@ internal object ArmeriaKotlinJUnitServerExtensionSupport {
     fun kotlinClassQualifiedName(psiClass: PsiClass): String? = toKtClassOrObject(psiClass)?.fqName?.asString()
 
     fun kotlinClassPackageName(psiClass: PsiClass): String? = toKtClassOrObject(psiClass)?.containingKtFile?.packageFqName?.asString()
+
+    fun isKotlinStaticNestedClass(psiClass: PsiClass): Boolean {
+        val classOrObject = toKtClassOrObject(psiClass) ?: return false
+        var current = classOrObject.parent
+        while (current != null) {
+            if (current is KtClassOrObject) {
+                return classOrObject !is KtClass || !classOrObject.hasModifier(KtTokens.INNER_KEYWORD)
+            }
+            current = current.parent
+        }
+        return false
+    }
+
+    fun isStaticLikeKotlinExtension(element: PsiElement): Boolean {
+        val declaration = element as? KtDeclaration ?: return false
+        return kotlinClassBodyOwner(declaration) is KtObjectDeclaration
+    }
 
     fun serverExtensionsInKotlinClass(psiClass: PsiClass): List<ArmeriaJUnitServerExtension> {
         val classOrObject = toKtClassOrObject(psiClass) ?: return emptyList()

@@ -106,11 +106,22 @@ object ArmeriaJUnitServerExtensionCollector {
         psiClass: PsiClass,
         extension: ArmeriaJUnitServerExtension,
     ): Boolean {
-        if (!psiClass.hasModifierProperty(PsiModifier.STATIC)) {
+        val kotlinPluginLoaded = PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
+        val staticContext =
+            psiClass.hasModifierProperty(PsiModifier.STATIC) ||
+                (
+                    kotlinPluginLoaded &&
+                        ArmeriaKotlinJUnitServerExtensionSupport.isKotlinStaticNestedClass(psiClass)
+                )
+        if (!staticContext) {
             return true
         }
-        val owner = extension.pointer.element as? PsiModifierListOwner ?: return true
-        return owner.hasModifierProperty(PsiModifier.STATIC)
+        val element = extension.pointer.element ?: return true
+        val owner = element as? PsiModifierListOwner
+        if (owner != null && owner.hasModifierProperty(PsiModifier.STATIC)) {
+            return true
+        }
+        return kotlinPluginLoaded && ArmeriaKotlinJUnitServerExtensionSupport.isStaticLikeKotlinExtension(element)
     }
 
     private fun extensionsFromClassHierarchy(
