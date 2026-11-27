@@ -4,6 +4,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
@@ -62,7 +63,7 @@ internal object ArmeriaOpenApiFileWriter {
                         }
                         val virtualFile = existing ?: parent.createChildData(this, fileName)
                         virtualFile.setBinaryContent(content.toByteArray(StandardCharsets.UTF_8))
-                        FileEditorManager.getInstance(project).openFile(virtualFile, true)
+                        FileEditorManager.getInstance(project).openEditor(OpenFileDescriptor(project, virtualFile), true)
                     } catch (e: ProcessCanceledException) {
                         throw e
                     } catch (e: Exception) {
