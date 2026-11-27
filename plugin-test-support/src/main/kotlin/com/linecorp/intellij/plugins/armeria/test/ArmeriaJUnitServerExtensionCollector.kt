@@ -76,7 +76,7 @@ object ArmeriaJUnitServerExtensionCollector {
         val seen = mutableSetOf<String>()
         generateSequence(psiClass.containingClass) { it.containingClass }.forEach { outerClass ->
             for (extension in extensionsFromClassHierarchy(outerClass, psiClass, hiddenMembers)) {
-                if (!canAccessOuterExtension(psiClass, extension, outerClass)) {
+                if (!canAccessOuterExtension(psiClass, extension)) {
                     continue
                 }
                 val key = "${extension.containingClassName}#${extension.variableName}"
@@ -105,7 +105,6 @@ object ArmeriaJUnitServerExtensionCollector {
     private fun canAccessOuterExtension(
         psiClass: PsiClass,
         extension: ArmeriaJUnitServerExtension,
-        outerClass: PsiClass? = null,
     ): Boolean {
         val kotlinPluginLoaded = PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
         val staticContext =
@@ -122,13 +121,7 @@ object ArmeriaJUnitServerExtensionCollector {
         if (owner != null && owner.hasModifierProperty(PsiModifier.STATIC)) {
             return true
         }
-        if (!kotlinPluginLoaded) {
-            return false
-        }
-        if (ArmeriaKotlinJUnitServerExtensionSupport.isStaticLikeKotlinExtension(element)) {
-            return true
-        }
-        return outerClass != null && ArmeriaKotlinJUnitServerExtensionSupport.isKotlinObjectClass(outerClass)
+        return kotlinPluginLoaded && ArmeriaKotlinJUnitServerExtensionSupport.isStaticLikeKotlinExtension(element)
     }
 
     private fun extensionsFromClassHierarchy(

@@ -3,7 +3,6 @@ package com.linecorp.intellij.plugins.armeria.test
 import com.linecorp.intellij.plugins.armeria.explorer.support.toArmeriaLightClass
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 import org.jetbrains.kotlin.psi.KtClass
-import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -120,38 +119,6 @@ class ArmeriaKotlinJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsig
         val extensions = ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, nestedClass)
 
         assertEquals(listOf("nestedServer"), extensions.map { it.variableName })
-    }
-
-    fun testCollectsObjectInheritedExtensionFromNestedClass() {
-        val psiFile =
-            myFixture.configureByText(
-                "OuterTest.kt",
-                """
-                package example
-
-                import org.junit.jupiter.api.extension.RegisterExtension
-                import com.linecorp.armeria.testing.junit5.server.ServerExtension
-
-                open class BaseTest {
-                    @RegisterExtension
-                    val inheritedObjectServer: ServerExtension = object : ServerExtension() {}
-                }
-
-                object OuterTest : BaseTest() {
-                    class NestedTest
-                }
-                """.trimIndent(),
-            ) as KtFile
-        val outerClass = psiFile.declarations.filterIsInstance<KtClassOrObject>().single { it.name == "OuterTest" }
-        val nestedClass =
-            outerClass.declarations
-                .filterIsInstance<KtClass>()
-                .single()
-                .toArmeriaLightClass()!!
-
-        val extensions = ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, nestedClass)
-
-        assertEquals(listOf("inheritedObjectServer"), extensions.map { it.variableName })
     }
 
     fun testCollectsOnlyTestSourceFiles() {

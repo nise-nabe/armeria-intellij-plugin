@@ -249,8 +249,6 @@ internal object ArmeriaKotlinJUnitServerExtensionSupport {
         return kotlinClassBodyOwner(declaration) is KtObjectDeclaration
     }
 
-    fun isKotlinObjectClass(psiClass: PsiClass): Boolean = toKtClassOrObject(psiClass) is KtObjectDeclaration
-
     fun serverExtensionsInKotlinClass(psiClass: PsiClass): List<ArmeriaJUnitServerExtension> {
         val classOrObject = toKtClassOrObject(psiClass) ?: return emptyList()
         val extensions = mutableListOf<ArmeriaJUnitServerExtension>()
