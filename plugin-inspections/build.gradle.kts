@@ -5,8 +5,10 @@ plugins {
 }
 
 dependencies {
+    // Client protocol/classification helpers are owned by the explorer module.
     implementation(project(":plugin-explorer"))
     implementation(project(":plugin-route-analysis"))
+    implementation(project(":plugin-route-collectors"))
     implementation(project(":plugin-shared"))
     intellijPlatform {
         intellijIdeaUltimate(

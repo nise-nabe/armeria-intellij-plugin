@@ -10,11 +10,11 @@ import com.intellij.psi.PsiParameter
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaPathVariableSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 
-data class ArmeriaParamBinding(
+internal data class ArmeriaParamBinding(
     val name: String,
 )
 
-data class ArmeriaParamPathVariableFinding(
+internal data class ArmeriaParamPathVariableFinding(
     val highlight: PsiElement,
     val messageKey: String,
     val messageArg: String,
@@ -31,7 +31,7 @@ object ArmeriaParamPathVariableMismatch {
             "io.netty.",
         )
 
-    fun findings(
+    internal fun findings(
         pathVariables: Set<String>,
         bindings: List<ArmeriaParamBinding>,
         missingHighlight: PsiElement,
@@ -70,7 +70,7 @@ object ArmeriaParamPathVariableMismatch {
         }
     }
 
-    fun paramBindings(method: PsiMethod): List<ArmeriaParamBinding> =
+    internal fun paramBindings(method: PsiMethod): List<ArmeriaParamBinding> =
         buildList {
             method.parameterList.parameters.forEach { parameter ->
                 val annotation = parameter.getAnnotation(ArmeriaRouteSupport.PARAM_ANNOTATION)
@@ -87,7 +87,7 @@ object ArmeriaParamPathVariableMismatch {
             }
         }
 
-    fun beanParamBindings(type: PsiClass): List<ArmeriaParamBinding> {
+    internal fun beanParamBindings(type: PsiClass): List<ArmeriaParamBinding> {
         if (!isUserBeanType(type)) {
             return emptyList()
         }

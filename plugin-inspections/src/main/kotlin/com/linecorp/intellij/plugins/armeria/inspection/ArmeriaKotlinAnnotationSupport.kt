@@ -63,7 +63,7 @@ object ArmeriaKotlinAnnotationSupport {
         }
     }
 
-    fun paramBindings(function: KtNamedFunction): List<ArmeriaParamBinding> =
+    internal fun paramBindings(function: KtNamedFunction): List<ArmeriaParamBinding> =
         buildList {
             function.valueParameters.forEach { parameter ->
                 val entry =

@@ -125,8 +125,8 @@ Commit-time ktlint catches style regressions early; pre-PR `build` remains the f
 | `plugin-wizard/` | New Project Wizard templates and verification |
 | `plugin-test-support/` | Armeria test-support inspections, JUnit `ServerExtension` analysis, generated test-method insertion, and related line markers |
 | `plugin-explorer/` | Route/Client Explorer UI, client endpoint analysis, OpenAPI/HTTP request generation, DocService actions, and runtime route sync |
-| `plugin-inspections/` | Java/Kotlin/Scala inspections, quick fixes, and inspection support logic |
-| `plugin/` | Aggregating plugin module, run config, resources, `CHANGELOG.md` |
+| `plugin-inspections/` | Java/Kotlin/Scala production inspections (excluding test-support inspections), quick fixes, and inspection support logic |
+| `plugin/` | Aggregating plugin module, run config, inspection registration, resources, `CHANGELOG.md` |
 | `build-logic/` | Shared IntelliJ Platform Gradle conventions |
 | `gradle/libs.versions.toml` | Version pins (Kotlin, IPGP, IDEA platform) |
 
