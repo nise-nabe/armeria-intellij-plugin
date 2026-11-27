@@ -80,6 +80,7 @@ object ArmeriaDocServiceExampleCollector {
                 GlobalSearchScope.allScope(project),
             )
         val preciselyCollectedCalls = mutableSetOf<PsiMethodCallExpression>()
+        val preciseMethodsByFile = mutableMapOf<VirtualFile, MutableSet<String>>()
         if (builderClass != null) {
             for (methodName in EXAMPLE_METHOD_NAMES) {
                 for (method in builderClass.findMethodsByName(methodName, false)) {
@@ -91,12 +92,15 @@ object ArmeriaDocServiceExampleCollector {
                             return@forEach
                         }
                         preciselyCollectedCalls += call
+                        reference.element.containingFile
+                            ?.virtualFile
+                            ?.let { file -> preciseMethodsByFile.getOrPut(file) { mutableSetOf() } += methodName }
                         parseJavaCall(call, methodName, builder)
                     }
                 }
             }
         }
-        collectFromJavaFiles(project, exampleFiles, builder, preciselyCollectedCalls)
+        collectFromJavaFiles(project, exampleFiles, builder, preciselyCollectedCalls, preciseMethodsByFile)
     }
 
     private fun collectFromJavaFiles(
@@ -104,12 +108,14 @@ object ArmeriaDocServiceExampleCollector {
         exampleFiles: List<VirtualFile>,
         builder: ArmeriaDocServiceExampleIndex.Builder,
         preciselyCollectedCalls: Set<PsiMethodCallExpression>,
+        preciseMethodsByFile: Map<VirtualFile, Set<String>>,
     ) {
         for (virtualFile in exampleFiles) {
             if (virtualFile.extension != "java") continue
             val psiFile = PsiManager.getInstance(project).findFile(virtualFile) as? PsiJavaFile ?: continue
             val text = psiFile.viewProvider.contents
-            if (!text.contains("exampleRequests") && !text.contains("exampleHeaders")) {
+            val requiredMethodNames = EXAMPLE_METHOD_NAMES.filter(text::contains)
+            if (requiredMethodNames.isEmpty() || requiredMethodNames.all { it in preciseMethodsByFile[virtualFile].orEmpty() }) {
                 continue
             }
             psiFile.forEachDescendant { element ->

@@ -37,6 +37,7 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
                     GlobalSearchScope.allScope(project),
                 )
         val preciselyCollectedCalls = mutableSetOf<KtCallExpression>()
+        val preciseMethodsByFile = mutableMapOf<VirtualFile, MutableSet<String>>()
         if (builderClass != null) {
             for (methodName in listOf("exampleRequests", "exampleHeaders")) {
                 for (method in builderClass.findMethodsByName(methodName, false)) {
@@ -48,12 +49,15 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
                             return@forEach
                         }
                         preciselyCollectedCalls += call
+                        reference.element.containingFile
+                            ?.virtualFile
+                            ?.let { file -> preciseMethodsByFile.getOrPut(file) { mutableSetOf() } += methodName }
                         parseCall(call, methodName, builder)
                     }
                 }
             }
         }
-        collectFromKotlinFiles(project, exampleFiles, builder, preciselyCollectedCalls)
+        collectFromKotlinFiles(project, exampleFiles, builder, preciselyCollectedCalls, preciseMethodsByFile)
     }
 
     private fun collectFromKotlinFiles(
@@ -61,12 +65,14 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
         exampleFiles: List<VirtualFile>,
         builder: ArmeriaDocServiceExampleIndex.Builder,
         preciselyCollectedCalls: Set<KtCallExpression>,
+        preciseMethodsByFile: Map<VirtualFile, Set<String>>,
     ) {
         for (virtualFile in exampleFiles) {
             if (virtualFile.extension != "kt") continue
             val ktFile = PsiManager.getInstance(project).findFile(virtualFile) as? KtFile ?: continue
             val text = ktFile.viewProvider.contents
-            if (!text.contains("exampleRequests") && !text.contains("exampleHeaders")) {
+            val requiredMethodNames = listOf("exampleRequests", "exampleHeaders").filter(text::contains)
+            if (requiredMethodNames.isEmpty() || requiredMethodNames.all { it in preciseMethodsByFile[virtualFile].orEmpty() }) {
                 continue
             }
             ktFile.forEachDescendant { element ->
