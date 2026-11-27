@@ -38,21 +38,43 @@ object ArmeriaJUnitServerExtensionCollector {
                     }
                 )
                 ?: return emptyList()
+        val kotlinPluginLoaded = PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
         val directExtensions = extensionsFromClassHierarchy(psiClass)
-        val outerClassNames = outerClassNames(psiClass, PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID))
-        val accessibleExtensions =
-            collect(project)
-                .filter { extension ->
-                    ArmeriaJUnitServerExtensionSupport.canAccessServerExtension(
-                        testClassName,
-                        extension.containingClassName,
-                        project,
-                        scope,
-                    )
-                }.filter { extension ->
-                    extension.containingClassName !in outerClassNames || canAccessOuterExtension(psiClass, extension)
+        val outerExtensions = extensionsFromOuterClasses(psiClass)
+        val lexicalExtensions = (directExtensions + outerExtensions).distinctBy { "${it.containingClassName}#${it.variableName}" }
+        if (lexicalExtensions.isNotEmpty()) {
+            return lexicalExtensions
+        }
+
+        val outerClassNames = outerClassNames(psiClass, kotlinPluginLoaded)
+        return collect(project)
+            .filter { extension ->
+                ArmeriaJUnitServerExtensionSupport.canAccessServerExtension(
+                    testClassName,
+                    extension.containingClassName,
+                    project,
+                    scope,
+                )
+            }.filter { extension ->
+                extension.containingClassName !in outerClassNames || canAccessOuterExtension(psiClass, extension)
+            }.distinctBy { "${it.containingClassName}#${it.variableName}" }
+    }
+
+    private fun extensionsFromOuterClasses(psiClass: PsiClass): List<ArmeriaJUnitServerExtension> {
+        val extensions = mutableListOf<ArmeriaJUnitServerExtension>()
+        val seen = mutableSetOf<String>()
+        generateSequence(psiClass.containingClass) { it.containingClass }.forEach { outerClass ->
+            for (extension in extensionsFromClassHierarchy(outerClass)) {
+                if (!canAccessOuterExtension(psiClass, extension)) {
+                    continue
                 }
-        return (directExtensions + accessibleExtensions).distinctBy { "${it.containingClassName}#${it.variableName}" }
+                val key = "${extension.containingClassName}#${extension.variableName}"
+                if (seen.add(key)) {
+                    extensions += extension
+                }
+            }
+        }
+        return extensions
     }
 
     private fun outerClassNames(
