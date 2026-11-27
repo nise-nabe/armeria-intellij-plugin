@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.test
 
+import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaReferenceFileIndex
 import kotlin.test.assertEquals
@@ -78,6 +79,75 @@ class ArmeriaJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsightFixt
 
             assertEquals(listOf("testServer"), extensions.map { it.variableName })
         }
+    }
+
+    fun testKeepsOuterServerWithSameNameAsNestedServer() {
+        val javaFile =
+            myFixture.configureByText(
+                "OuterTest.java",
+                """
+                package example;
+
+                import org.junit.jupiter.api.extension.RegisterExtension;
+                import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+                public class OuterTest {
+                    @RegisterExtension
+                    static ServerExtension server = new ServerExtension() {};
+
+                    public static class NestedTest {
+                        @RegisterExtension
+                        static ServerExtension server = new ServerExtension() {};
+                    }
+                }
+                """.trimIndent(),
+            ) as PsiJavaFile
+        val nestedClass =
+            javaFile
+                .classes
+                .single()
+                .innerClasses
+                .single()
+
+        val extensions = ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, nestedClass)
+
+        assertEquals(2, extensions.size)
+        assertEquals(listOf("server", "server"), extensions.map { it.variableName })
+    }
+
+    fun testHidesSuperclassServerWithSameName() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import org.junit.jupiter.api.extension.RegisterExtension;
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+            public class BaseTest {
+                @RegisterExtension
+                static ServerExtension server = new ServerExtension() {};
+            }
+            """.trimIndent(),
+        )
+        val javaFile =
+            myFixture.configureByText(
+                "HidingTest.java",
+                """
+                package example;
+
+                import org.junit.jupiter.api.extension.RegisterExtension;
+                import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+                public class HidingTest extends BaseTest {
+                    @RegisterExtension
+                    static ServerExtension server = new ServerExtension() {};
+                }
+                """.trimIndent(),
+            ) as PsiJavaFile
+
+        val extensions = ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, javaFile.classes.single())
+
+        assertEquals(listOf("example.HidingTest"), extensions.map { it.containingClassName })
     }
 
     fun testCollectsRegisterExtensionWithStarImport() {

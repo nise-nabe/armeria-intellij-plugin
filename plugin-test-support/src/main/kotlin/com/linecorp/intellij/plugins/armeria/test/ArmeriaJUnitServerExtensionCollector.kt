@@ -57,12 +57,12 @@ object ArmeriaJUnitServerExtensionCollector {
         val kotlinPluginLoaded = PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
         var current: PsiClass? = psiClass
         while (current != null) {
-            addDirectExtensions(current, kotlinPluginLoaded, extensions, seen)
+            addDirectExtensions(current, kotlinPluginLoaded, extensions, seen, hideSameNameExtensions = true)
             current = current.superClass
         }
         var containing = psiClass.containingClass
         while (containing != null) {
-            addDirectExtensions(containing, kotlinPluginLoaded, extensions, seen)
+            addDirectExtensions(containing, kotlinPluginLoaded, extensions, seen, hideSameNameExtensions = false)
             containing = containing.containingClass
         }
         return extensions
@@ -73,6 +73,7 @@ object ArmeriaJUnitServerExtensionCollector {
         kotlinPluginLoaded: Boolean,
         extensions: MutableList<ArmeriaJUnitServerExtension>,
         seen: MutableSet<String>,
+        hideSameNameExtensions: Boolean,
     ) {
         val directExtensions = ArmeriaJUnitServerExtensionSupport.serverExtensionsInClass(psiClass)
         val classExtensions =
@@ -83,7 +84,8 @@ object ArmeriaJUnitServerExtensionCollector {
             }
         for (extension in classExtensions) {
             val key = "${extension.containingClassName}#${extension.variableName}"
-            if (extensions.none { it.variableName == extension.variableName } && seen.add(key)) {
+            val shadowed = hideSameNameExtensions && extensions.any { it.variableName == extension.variableName }
+            if (!shadowed && seen.add(key)) {
                 extensions += extension
             }
         }
