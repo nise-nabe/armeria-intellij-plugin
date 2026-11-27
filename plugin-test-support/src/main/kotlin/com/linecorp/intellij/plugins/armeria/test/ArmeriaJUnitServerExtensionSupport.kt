@@ -122,15 +122,17 @@ internal object ArmeriaJUnitServerExtensionSupport {
     }
 
     fun serverExtensionsInClass(psiClass: PsiClass): List<ArmeriaJUnitServerExtension> {
-        if (psiClass.containingFile
-                ?.language
-                ?.id
-                .equals("kotlin", ignoreCase = true)
-        ) {
+        if (isKotlinBackedClass(psiClass)) {
             return emptyList()
         }
         return psiClass.fields.mapNotNull(::serverExtensionFromField) +
             psiClass.methods.mapNotNull(::serverExtensionFromMethod)
+    }
+
+    private fun isKotlinBackedClass(psiClass: PsiClass): Boolean {
+        val containingFile = psiClass.containingFile ?: return false
+        val extension = containingFile.virtualFile?.extension ?: containingFile.name.substringAfterLast('.', "")
+        return extension.equals("kt", ignoreCase = true) || extension.equals("kts", ignoreCase = true)
     }
 
     fun fileMayContainRegisterExtension(fileText: String): Boolean =
