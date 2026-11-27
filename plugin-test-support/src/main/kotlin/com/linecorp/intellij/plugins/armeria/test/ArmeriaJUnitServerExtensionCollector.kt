@@ -83,7 +83,7 @@ object ArmeriaJUnitServerExtensionCollector {
             }
         for (extension in classExtensions) {
             val key = "${extension.containingClassName}#${extension.variableName}"
-            if (seen.add(key)) {
+            if (extensions.none { it.variableName == extension.variableName } && seen.add(key)) {
                 extensions += extension
             }
         }
