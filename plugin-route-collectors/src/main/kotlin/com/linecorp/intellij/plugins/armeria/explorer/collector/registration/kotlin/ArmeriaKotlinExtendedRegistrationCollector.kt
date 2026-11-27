@@ -56,7 +56,6 @@ object ArmeriaKotlinExtendedRegistrationCollector {
             }
 
             else -> {
-                Unit
             }
         }
         val key = ArmeriaKotlinRegistrationChainSupport.registrationKey(call) ?: return
@@ -148,7 +147,6 @@ object ArmeriaKotlinExtendedRegistrationCollector {
             }
 
             else -> {
-                Unit
             }
         }
     }

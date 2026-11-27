@@ -82,7 +82,6 @@ object ArmeriaExtendedRegistrationCollector {
             }
 
             else -> {
-                Unit
             }
         }
     }

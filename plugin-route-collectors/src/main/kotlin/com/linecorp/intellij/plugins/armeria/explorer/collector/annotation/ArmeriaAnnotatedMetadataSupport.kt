@@ -161,7 +161,7 @@ internal object ArmeriaAnnotatedMetadataSupport {
                     .extractStrings(annotation.findDeclaredAttributeValue("value"))
                     .firstOrNull { it.isNotBlank() }
             }
-        return named ?: parameter.name?.takeIf { it.isNotBlank() }
+        return named ?: parameter.name.takeIf { it.isNotBlank() }
     }
 
     private fun collectDescription(annotation: PsiAnnotation?): String? =
