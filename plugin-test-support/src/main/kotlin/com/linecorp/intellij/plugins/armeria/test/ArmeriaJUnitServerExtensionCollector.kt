@@ -30,7 +30,6 @@ object ArmeriaJUnitServerExtensionCollector {
         project: Project,
         psiClass: PsiClass,
     ): List<ArmeriaJUnitServerExtension> {
-        val scope = GlobalSearchScope.projectScope(project)
         val testClassName =
             psiClass.qualifiedName
                 ?: (
@@ -46,26 +45,7 @@ object ArmeriaJUnitServerExtensionCollector {
         val directExtensions = extensionsFromClassHierarchy(psiClass, hiddenMembers = hiddenMembers)
         val outerExtensions = extensionsFromOuterClasses(psiClass, hiddenMembers)
         val lexicalExtensions = (directExtensions + outerExtensions).distinctBy { "${it.containingClassName}#${it.variableName}" }
-        if (lexicalExtensions.isNotEmpty()) {
-            return lexicalExtensions
-        }
-
-        val outerClassNames = outerClassNames(psiClass, kotlinPluginLoaded)
-        return collect(project)
-            .filter { extension ->
-                ArmeriaJUnitServerExtensionSupport.canAccessServerExtension(
-                    psiClass,
-                    extension,
-                    project,
-                    scope,
-                )
-            }.filter { extension ->
-                extension.containingClassName !in outerClassNames || canAccessOuterExtension(psiClass, extension)
-            }.filter { extension ->
-                isAccessibleFromScan(extension, psiClass, kotlinPluginLoaded)
-            }.filter { extension ->
-                !isHidden(extension, hiddenMembers)
-            }.distinctBy { "${it.containingClassName}#${it.variableName}" }
+        return lexicalExtensions
     }
 
     private fun extensionsFromOuterClasses(
@@ -87,20 +67,6 @@ object ArmeriaJUnitServerExtensionCollector {
         }
         return extensions
     }
-
-    private fun outerClassNames(
-        psiClass: PsiClass,
-        kotlinPluginLoaded: Boolean,
-    ): Set<String> =
-        generateSequence(psiClass.containingClass) { it.containingClass }
-            .mapNotNull { outerClass ->
-                outerClass.qualifiedName
-                    ?: if (kotlinPluginLoaded) {
-                        ArmeriaKotlinJUnitServerExtensionSupport.kotlinClassQualifiedName(outerClass)
-                    } else {
-                        null
-                    }
-            }.toSet()
 
     private fun canAccessOuterExtension(
         psiClass: PsiClass,
