@@ -7,6 +7,7 @@ plugins {
 }
 
 dependencies {
+    add("armeriaTestFixtures", testFixtures(project(":plugin-route-collectors")))
     api(project(":plugin-route-model"))
     api(project(":plugin-route-collectors"))
     implementation(project(":plugin-shared"))
@@ -30,7 +31,6 @@ testing {
     suites {
         getByName<JvmTestSuite>("test") {
             dependencies {
-                implementation(testFixtures(project(":plugin-route-collectors")))
                 implementation(libs.junit4)
             }
         }
