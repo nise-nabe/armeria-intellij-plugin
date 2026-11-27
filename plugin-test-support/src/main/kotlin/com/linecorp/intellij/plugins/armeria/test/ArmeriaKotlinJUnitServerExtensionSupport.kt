@@ -200,6 +200,8 @@ internal object ArmeriaKotlinJUnitServerExtensionSupport {
 
     fun kotlinClassQualifiedName(psiClass: PsiClass): String? = toKtClassOrObject(psiClass)?.fqName?.asString()
 
+    fun kotlinClassPackageName(psiClass: PsiClass): String? = toKtClassOrObject(psiClass)?.containingKtFile?.packageFqName?.asString()
+
     fun serverExtensionsInKotlinClass(psiClass: PsiClass): List<ArmeriaJUnitServerExtension> {
         val classOrObject = toKtClassOrObject(psiClass) ?: return emptyList()
         val extensions = mutableListOf<ArmeriaJUnitServerExtension>()
