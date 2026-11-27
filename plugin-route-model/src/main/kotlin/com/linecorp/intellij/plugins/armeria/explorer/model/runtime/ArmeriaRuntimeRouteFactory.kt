@@ -11,7 +11,7 @@ object ArmeriaRuntimeRouteFactory {
         target: String,
         moduleName: String,
         protocol: String,
-        project: Project? = null,
+        project: Project,
         delegationKind: DelegationKind? = null,
         exampleRequests: List<String> = emptyList(),
         exampleHeaders: List<String> = emptyList(),
@@ -23,7 +23,7 @@ object ArmeriaRuntimeRouteFactory {
             moduleName = moduleName,
             protocol = protocol,
             delegationKind = delegationKind,
-            pointer = project?.let(::ArmeriaRuntimeRoutePointer) ?: ArmeriaRuntimeRoutePointer.withoutProject(),
+            pointer = ArmeriaRuntimeRoutePointer(project),
             exampleRequests = exampleRequests,
             exampleHeaders = exampleHeaders,
         )

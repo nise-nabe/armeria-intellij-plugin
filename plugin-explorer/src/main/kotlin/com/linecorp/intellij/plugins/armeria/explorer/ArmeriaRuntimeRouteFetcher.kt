@@ -86,7 +86,7 @@ object ArmeriaRuntimeRouteFetcher {
         specificationJson: String,
         moduleName: String,
         protocol: String,
-        project: Project? = null,
+        project: Project,
     ): List<ArmeriaRoute> =
         toArmeriaRoutes(
             ArmeriaDocServiceSpecificationParser.parse(specificationJson).routes,
@@ -99,7 +99,7 @@ object ArmeriaRuntimeRouteFetcher {
         routes: List<ArmeriaDocServiceSpecificationParser.ParsedRoute>,
         moduleName: String = message("route.explorer.module.runtime"),
         protocol: String = message("route.explorer.protocol.runtime"),
-        project: Project? = null,
+        project: Project,
     ): List<ArmeriaRoute> =
         routes.map { parsed ->
             ArmeriaRuntimeRouteFactory.createRuntime(
