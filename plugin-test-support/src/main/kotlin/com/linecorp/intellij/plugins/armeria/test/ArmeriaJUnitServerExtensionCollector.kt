@@ -42,9 +42,9 @@ object ArmeriaJUnitServerExtensionCollector {
                 )
                 ?: return emptyList()
         val kotlinPluginLoaded = PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
-        val hiddenMemberKeys = mutableSetOf<String>()
-        val directExtensions = extensionsFromClassHierarchy(psiClass, hiddenMemberKeys = hiddenMemberKeys)
-        val outerExtensions = extensionsFromOuterClasses(psiClass, hiddenMemberKeys)
+        val hiddenMembers = mutableListOf<HiddenMember>()
+        val directExtensions = extensionsFromClassHierarchy(psiClass, hiddenMembers = hiddenMembers)
+        val outerExtensions = extensionsFromOuterClasses(psiClass, hiddenMembers)
         val lexicalExtensions = (directExtensions + outerExtensions).distinctBy { "${it.containingClassName}#${it.variableName}" }
         if (lexicalExtensions.isNotEmpty()) {
             return lexicalExtensions
@@ -64,18 +64,18 @@ object ArmeriaJUnitServerExtensionCollector {
             }.filter { extension ->
                 isAccessibleFromScan(extension, psiClass, kotlinPluginLoaded)
             }.filter { extension ->
-                hiddenMemberKey(extension) !in hiddenMemberKeys
+                !isHidden(extension, hiddenMembers)
             }.distinctBy { "${it.containingClassName}#${it.variableName}" }
     }
 
     private fun extensionsFromOuterClasses(
         psiClass: PsiClass,
-        hiddenMemberKeys: MutableSet<String>,
+        hiddenMembers: MutableList<HiddenMember>,
     ): List<ArmeriaJUnitServerExtension> {
         val extensions = mutableListOf<ArmeriaJUnitServerExtension>()
         val seen = mutableSetOf<String>()
         generateSequence(psiClass.containingClass) { it.containingClass }.forEach { outerClass ->
-            for (extension in extensionsFromClassHierarchy(outerClass, psiClass, hiddenMemberKeys)) {
+            for (extension in extensionsFromClassHierarchy(outerClass, psiClass, hiddenMembers)) {
                 if (!canAccessOuterExtension(psiClass, extension)) {
                     continue
                 }
@@ -116,7 +116,7 @@ object ArmeriaJUnitServerExtensionCollector {
     private fun extensionsFromClassHierarchy(
         psiClass: PsiClass,
         accessContextClass: PsiClass = psiClass,
-        hiddenMemberKeys: MutableSet<String> = mutableSetOf(),
+        hiddenMembers: MutableList<HiddenMember> = mutableListOf(),
     ): List<ArmeriaJUnitServerExtension> {
         val extensions = mutableListOf<ArmeriaJUnitServerExtension>()
         val seen = mutableSetOf<String>()
@@ -130,7 +130,7 @@ object ArmeriaJUnitServerExtensionCollector {
                 continue
             }
             visited += current
-            addDirectExtensions(current, accessContextClass, kotlinPluginLoaded, extensions, seen, hiddenMemberKeys)
+            addDirectExtensions(current, accessContextClass, kotlinPluginLoaded, extensions, seen, hiddenMembers)
             pending.addAll(current.supers)
         }
         return extensions
@@ -142,7 +142,7 @@ object ArmeriaJUnitServerExtensionCollector {
         kotlinPluginLoaded: Boolean,
         extensions: MutableList<ArmeriaJUnitServerExtension>,
         seen: MutableSet<String>,
-        hiddenMemberKeys: MutableSet<String>,
+        hiddenMembers: MutableList<HiddenMember>,
     ) {
         val directExtensions = ArmeriaJUnitServerExtensionSupport.serverExtensionsInClass(psiClass)
         val classExtensions =
@@ -152,12 +152,12 @@ object ArmeriaJUnitServerExtensionCollector {
                 directExtensions
             }
         for (extension in classExtensions) {
-            val hiddenMemberKey = hiddenMemberKey(extension)
+            val memberKey = hiddenMemberKey(extension)
             if (!isAccessibleFromScan(extension, accessContextClass, kotlinPluginLoaded)) {
-                hiddenMemberKeys += hiddenMemberKey
+                hiddenMembers += HiddenMember(memberKey, psiClass)
                 continue
             }
-            if (hiddenMemberKey in hiddenMemberKeys) {
+            if (isHidden(memberKey, psiClass, hiddenMembers)) {
                 continue
             }
             val key = "${extension.containingClassName}#${extension.variableName}"
@@ -166,6 +166,28 @@ object ArmeriaJUnitServerExtensionCollector {
             }
         }
     }
+
+    private data class HiddenMember(
+        val key: String,
+        val hidingClass: PsiClass,
+    )
+
+    private fun isHidden(
+        extension: ArmeriaJUnitServerExtension,
+        hiddenMembers: List<HiddenMember>,
+    ): Boolean {
+        val ownerClass = (extension.pointer.element as? PsiMember)?.containingClass ?: return false
+        return isHidden(hiddenMemberKey(extension), ownerClass, hiddenMembers)
+    }
+
+    private fun isHidden(
+        memberKey: String,
+        ownerClass: PsiClass,
+        hiddenMembers: List<HiddenMember>,
+    ): Boolean =
+        hiddenMembers.any { hiddenMember ->
+            hiddenMember.key == memberKey && hiddenMember.hidingClass.isInheritor(ownerClass, true)
+        }
 
     private fun hiddenMemberKey(extension: ArmeriaJUnitServerExtension): String = "${extension.variableName}#${extension.isFactoryMethod}"
 

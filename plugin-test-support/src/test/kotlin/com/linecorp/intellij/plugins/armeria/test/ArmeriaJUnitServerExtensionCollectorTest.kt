@@ -300,6 +300,51 @@ class ArmeriaJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsightFixt
         assertEquals(listOf("server"), extensions.map { it.variableName })
     }
 
+    fun testCollectsAccessibleOuterServerDespiteHiddenInheritedMember() {
+        myFixture.addClass(
+            """
+            package serverbase;
+
+            import org.junit.jupiter.api.extension.RegisterExtension;
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+            public class ParentServerTest {
+                @RegisterExtension
+                static ServerExtension server = new ServerExtension() {};
+            }
+            """.trimIndent(),
+        )
+        val javaFile =
+            myFixture.configureByText(
+                "OuterAccessibleServerTest.java",
+                """
+                package example;
+
+                import org.junit.jupiter.api.extension.RegisterExtension;
+                import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+                import serverbase.ParentServerTest;
+
+                public class OuterAccessibleServerTest {
+                    @RegisterExtension
+                    public static ServerExtension server = new ServerExtension() {};
+
+                    public static class NestedTest extends ParentServerTest {
+                    }
+                }
+                """.trimIndent(),
+            ) as PsiJavaFile
+        val nestedClass =
+            javaFile
+                .classes
+                .single()
+                .innerClasses
+                .single()
+
+        val extensions = ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, nestedClass)
+
+        assertEquals(listOf("server"), extensions.map { it.variableName })
+    }
+
     fun testSkipsPublicSuperclassServerHiddenByInaccessibleMember() {
         myFixture.addClass(
             """
