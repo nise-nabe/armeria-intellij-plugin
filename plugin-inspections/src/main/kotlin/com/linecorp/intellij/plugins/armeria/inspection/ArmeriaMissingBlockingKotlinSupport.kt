@@ -165,7 +165,7 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         ) {
             return true
         }
-        val receiverText = chainReceiver(call)?.text ?: return false
+        val receiverText = ArmeriaKotlinCallChainSupport.chainReceiver(call)?.text ?: return false
         return receiverText == "GraphqlService" || receiverText.endsWith(".GraphqlService")
     }
 
@@ -201,13 +201,13 @@ internal object ArmeriaMissingBlockingKotlinSupport {
     /** First `useBlockingTaskExecutor(...)` in the GraphqlService builder chain, if any. */
     fun findUseBlockingTaskExecutorCall(element: PsiElement): KtCallExpression? {
         val builder = graphqlBuilderCall(element) ?: return null
-        return chainCalls(builder, outermostChainCall(builder)).firstOrNull {
+        return ArmeriaKotlinCallChainSupport.chainCalls(builder, ArmeriaKotlinCallChainSupport.outermostChainCall(builder)).firstOrNull {
             ArmeriaKotlinExpressionSupport.resolveCallName(it) == USE_BLOCKING_TASK_EXECUTOR
         }
     }
 
     fun hasBlockingDataFetcher(builderCall: KtCallExpression): Boolean {
-        val root = chainRoot(outermostChainCall(builderCall))
+        val root = ArmeriaKotlinCallChainSupport.chainRoot(ArmeriaKotlinCallChainSupport.outermostChainCall(builderCall))
         if (containsBlockingFetcher(root, looseClassRefs = true)) {
             return true
         }
@@ -312,7 +312,10 @@ internal object ArmeriaMissingBlockingKotlinSupport {
     private fun blockingExecutorCovers(klass: KtClassOrObject): GraphqlBlockingCoverage {
         if (klass is KtObjectDeclaration && klass.isObjectLiteral()) {
             val builder = graphqlBuilderCall(klass) ?: return GraphqlBlockingCoverage.NOT_REGISTERED
-            val usesExecutor = chainCalls(builder, outermostChainCall(builder)).any(::isUseBlockingTaskExecutorTrue)
+            val usesExecutor =
+                ArmeriaKotlinCallChainSupport
+                    .chainCalls(builder, ArmeriaKotlinCallChainSupport.outermostChainCall(builder))
+                    .any(::isUseBlockingTaskExecutorTrue)
             return if (usesExecutor) {
                 GraphqlBlockingCoverage.ALL_BLOCKING_EXECUTOR
             } else {
@@ -417,11 +420,11 @@ internal object ArmeriaMissingBlockingKotlinSupport {
             if (!isGraphqlServiceBuilderCall(call)) {
                 return@forEachDescendant
             }
-            val outermost = outermostChainCall(call)
-            if (!matches(chainRoot(outermost))) {
+            val outermost = ArmeriaKotlinCallChainSupport.outermostChainCall(call)
+            if (!matches(ArmeriaKotlinCallChainSupport.chainRoot(outermost))) {
                 return@forEachDescendant
             }
-            coverages += chainCalls(call, outermost).any(::isUseBlockingTaskExecutorTrue)
+            coverages += ArmeriaKotlinCallChainSupport.chainCalls(call, outermost).any(::isUseBlockingTaskExecutorTrue)
         }
         return coverages
     }
@@ -441,7 +444,9 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                     val builder = graphqlWiringBuilderCall(reference.element)
                     if (builder != null) {
                         coverages +=
-                            chainCalls(builder, outermostChainCall(builder)).any(::isUseBlockingTaskExecutorTrue)
+                            ArmeriaKotlinCallChainSupport
+                                .chainCalls(builder, ArmeriaKotlinCallChainSupport.outermostChainCall(builder))
+                                .any(::isUseBlockingTaskExecutorTrue)
                     } else if (isValuePosition(reference.element) && !isTypePosition(reference.element)) {
                         enclosingWiringHolder(reference.element)?.let(queue::add)
                     }
@@ -472,7 +477,7 @@ internal object ArmeriaMissingBlockingKotlinSupport {
      */
     private fun findGraphqlChain(element: PsiElement): List<KtCallExpression>? {
         graphqlBuilderCall(element)?.let { builder ->
-            return chainCalls(builder, outermostChainCall(builder))
+            return ArmeriaKotlinCallChainSupport.chainCalls(builder, ArmeriaKotlinCallChainSupport.outermostChainCall(builder))
         }
         return try {
             val searched = mutableSetOf<PsiElement>()
@@ -485,7 +490,7 @@ internal object ArmeriaMissingBlockingKotlinSupport {
                 }
                 for (reference in ReferencesSearch.search(holder, holder.useScope).findAll()) {
                     graphqlWiringBuilderCall(reference.element)?.let { builder ->
-                        return chainCalls(builder, outermostChainCall(builder))
+                        return ArmeriaKotlinCallChainSupport.chainCalls(builder, ArmeriaKotlinCallChainSupport.outermostChainCall(builder))
                     }
                     if (isValuePosition(reference.element) && !isTypePosition(reference.element)) {
                         enclosingWiringHolder(reference.element)?.let(queue::add)
@@ -1071,11 +1076,11 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         var current: KtExpression? = seed
         val visited = mutableSetOf<PsiElement>()
         while (current != null && visited.add(current)) {
-            val call = asCall(current)
+            val call = ArmeriaKotlinCallChainSupport.asCall(current)
             if (call != null && isGraphqlServiceBuilderCall(call)) {
                 return call
             }
-            current = chainReceiver(current)
+            current = ArmeriaKotlinCallChainSupport.chainReceiver(current)
         }
         return seed.takeIf(::isResolvedGraphqlBuilderCall)
     }
@@ -1087,87 +1092,6 @@ internal object ArmeriaMissingBlockingKotlinSupport {
         val resolved = resolvePsiMethod(call)?.containingClass?.qualifiedName
         return resolved == ArmeriaGraphqlBlockingSupport.GRAPHQL_SERVICE_CLASS ||
             resolved == ArmeriaGraphqlBlockingSupport.GRAPHQL_SERVICE_BUILDER_CLASS
-    }
-
-    private fun asCall(expression: KtExpression): KtCallExpression? =
-        when (expression) {
-            is KtCallExpression -> expression
-            is KtDotQualifiedExpression -> expression.selectorExpression as? KtCallExpression
-            else -> null
-        }
-
-    private fun chainRoot(call: KtCallExpression): PsiElement {
-        var current: PsiElement = call
-        while (current.parent is KtDotQualifiedExpression) {
-            current = current.parent
-        }
-        return current
-    }
-
-    private fun outermostChainCall(call: KtCallExpression): KtCallExpression {
-        var current = call
-        val visited = mutableSetOf<PsiElement>()
-        while (visited.add(current)) {
-            current = nextChainedCall(current) ?: break
-        }
-        return current
-    }
-
-    private fun chainCalls(
-        builder: KtCallExpression,
-        outermost: KtCallExpression,
-    ): List<KtCallExpression> {
-        val calls = mutableListOf<KtCallExpression>()
-        var current: KtCallExpression? = builder
-        val visited = mutableSetOf<PsiElement>()
-        while (current != null && visited.add(current)) {
-            calls += current
-            if (current == outermost) {
-                break
-            }
-            current = nextChainedCall(current)
-        }
-        return calls
-    }
-
-    private fun nextChainedCall(call: KtCallExpression): KtCallExpression? {
-        val parent = call.parent
-        if (parent is KtDotQualifiedExpression && parent.receiverExpression == call) {
-            return parent.selectorExpression as? KtCallExpression
-        }
-        if (parent is KtDotQualifiedExpression) {
-            val grandParent = parent.parent as? KtDotQualifiedExpression
-            if (grandParent != null && grandParent.receiverExpression == parent) {
-                return grandParent.selectorExpression as? KtCallExpression
-            }
-        }
-        return null
-    }
-
-    private fun chainReceiver(expression: KtExpression): KtExpression? {
-        val receiver =
-            when (expression) {
-                is KtDotQualifiedExpression -> {
-                    expression.receiverExpression
-                }
-
-                is KtCallExpression -> {
-                    val parent = expression.parent
-                    if (parent is KtDotQualifiedExpression && parent.selectorExpression == expression) {
-                        parent.receiverExpression
-                    } else {
-                        when (val callee = expression.calleeExpression) {
-                            is KtDotQualifiedExpression -> callee.receiverExpression
-                            else -> null
-                        }
-                    }
-                }
-
-                else -> {
-                    null
-                }
-            } ?: return null
-        return ArmeriaKotlinExpressionSupport.unwrapKotlinExpression(receiver) ?: receiver
     }
 
     private fun isUseBlockingTaskExecutorTrue(call: KtCallExpression): Boolean {
