@@ -1,9 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.test
 
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.psi.PsiClass
@@ -15,6 +13,7 @@ import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.codeStyle.JavaCodeStyleManager
 import com.intellij.psi.util.PsiTreeUtil
+import com.linecorp.intellij.plugins.armeria.editor.ArmeriaFileEditorOpenSupport
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinPluginSupport
 import com.linecorp.intellij.plugins.armeria.message
@@ -134,11 +133,9 @@ internal object ArmeriaTestMethodInserter {
                 anchor,
             ) as PsiMethod
         JavaCodeStyleManager.getInstance(project).shortenClassReferences(added)
-        val editor =
-            targetClass.containingFile.virtualFile
-                ?.let { FileEditorManager.getInstance(project).openTextEditor(OpenFileDescriptor(project, it), true) }
-        editor?.caretModel?.moveToOffset(added.textRange.startOffset)
-        editor?.scrollingModel?.scrollToCaret(ScrollType.CENTER)
+        targetClass.containingFile.virtualFile?.let { virtualFile ->
+            ArmeriaFileEditorOpenSupport.openFileAtOffset(project, virtualFile, added.textRange.startOffset)
+        }
     }
 
     private fun resolveTargetClass(
