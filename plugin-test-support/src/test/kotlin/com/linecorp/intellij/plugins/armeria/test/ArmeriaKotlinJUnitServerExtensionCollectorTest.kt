@@ -5,6 +5,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class ArmeriaKotlinJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
+    override fun setUp() {
+        super.setUp()
+        myFixture.registerArmeriaJUnitTestSupportStubs()
+    }
+
     fun testCollectsRegisterExtensionFromClassProperty() {
         myFixture.configureByText(
             "ExampleServiceTest.kt",
@@ -26,6 +31,53 @@ class ArmeriaKotlinJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsig
         assertEquals(1, extensions.size)
         assertEquals("server", extensions.single().variableName)
         assertEquals("example.ExampleServiceTest", extensions.single().containingClassName)
+    }
+
+    fun testSkipsKotlinServerHiddenByInaccessibleJavaMember() {
+        myFixture.addFileToProject(
+            "KotlinBaseTest.kt",
+            """
+            package serverbase
+
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension
+            import org.junit.jupiter.api.extension.RegisterExtension
+
+            abstract class KotlinBaseTest {
+                @field:RegisterExtension
+                @JvmField
+                val server: ServerExtension = object : ServerExtension() {}
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package serverbase;
+
+            import org.junit.jupiter.api.extension.RegisterExtension;
+            import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+            public class JavaParentTest extends KotlinBaseTest {
+                @RegisterExtension
+                ServerExtension server = new ServerExtension() {};
+            }
+            """.trimIndent(),
+        )
+        val javaFile =
+            myFixture.configureByText(
+                "HiddenKotlinServerTest.java",
+                """
+                package example;
+
+                import serverbase.JavaParentTest;
+
+                public class HiddenKotlinServerTest extends JavaParentTest {
+                }
+                """.trimIndent(),
+            ) as com.intellij.psi.PsiJavaFile
+
+        val extensions = ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, javaFile.classes.single())
+
+        assertTrue(extensions.isEmpty())
     }
 
     fun testCollectsOnlyTestSourceFiles() {
