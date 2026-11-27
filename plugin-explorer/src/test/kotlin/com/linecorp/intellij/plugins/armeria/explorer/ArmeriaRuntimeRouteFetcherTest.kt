@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.openapi.project.ProjectManager
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -15,6 +16,7 @@ class ArmeriaRuntimeRouteFetcherTest {
                 specificationJson = json,
                 moduleName = "Runtime (DocService)",
                 protocol = "DocService (runtime)",
+                project = ProjectManager.getInstance().defaultProject,
             )
 
         assertEquals(3, routes.size)

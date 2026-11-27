@@ -1,7 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.explorer.model.runtime
 
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
@@ -32,14 +31,6 @@ internal class ArmeriaRuntimeRoutePointer private constructor(
     override fun getPsiRange(): TextRange? = null
 
     companion object {
-        private val withoutProject =
-            ArmeriaRuntimeRoutePointer(
-                projectProvider = { ProjectManager.getInstance().defaultProject },
-                virtualFileProvider = { virtualFileForProject(ProjectManager.getInstance().defaultProject) },
-            )
-
-        fun withoutProject(): SmartPsiElementPointer<PsiElement> = withoutProject
-
         private fun virtualFileForProject(project: Project): VirtualFile {
             val basePath = project.basePath
             if (basePath != null) {
