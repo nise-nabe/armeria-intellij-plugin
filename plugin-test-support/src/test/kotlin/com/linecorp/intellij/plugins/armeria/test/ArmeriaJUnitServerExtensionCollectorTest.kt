@@ -1,7 +1,9 @@
 package com.linecorp.intellij.plugins.armeria.test
 
 import com.intellij.psi.PsiJavaFile
+import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaReferenceFileIndex
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -298,6 +300,48 @@ class ArmeriaJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsightFixt
         val extensions = ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, nestedClass)
 
         assertEquals(listOf("server"), extensions.map { it.variableName })
+    }
+
+    fun testEnclosingServerExtensionUsesConfiguredClassWithDuplicateFqn() {
+        myFixture.addClass(
+            """
+            package example;
+
+            public class DuplicateServerTest {
+            }
+            """.trimIndent(),
+        )
+        val javaFile =
+            myFixture.configureByText(
+                "DuplicateServerTest.java",
+                """
+                package example;
+
+                import org.junit.jupiter.api.extension.RegisterExtension;
+                import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+                public class DuplicateServerTest {
+                    @RegisterExtension
+                    static ServerExtension server = new ServerExtension() {};
+
+                    void testRoute() {
+                        server.webClient().get("/duplicate");
+                    }
+                }
+                """.trimIndent(),
+            ) as PsiJavaFile
+        val expression =
+            PsiTreeUtil
+                .findChildrenOfType(javaFile, PsiMethodCallExpression::class.java)
+                .single { it.methodExpression.referenceName == "get" }
+
+        val extension =
+            ArmeriaJUnitServerExtensionSupport.enclosingServerExtension(
+                expression,
+                GlobalSearchScope.projectScope(project),
+            )
+
+        assertEquals("server", extension?.variableName)
     }
 
     fun testCollectsAccessibleOuterServerDespiteHiddenInheritedMember() {

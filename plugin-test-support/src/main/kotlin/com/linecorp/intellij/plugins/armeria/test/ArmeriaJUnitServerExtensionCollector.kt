@@ -54,8 +54,8 @@ object ArmeriaJUnitServerExtensionCollector {
         return collect(project)
             .filter { extension ->
                 ArmeriaJUnitServerExtensionSupport.canAccessServerExtension(
-                    testClassName,
-                    extension.containingClassName,
+                    psiClass,
+                    extension,
                     project,
                     scope,
                 )

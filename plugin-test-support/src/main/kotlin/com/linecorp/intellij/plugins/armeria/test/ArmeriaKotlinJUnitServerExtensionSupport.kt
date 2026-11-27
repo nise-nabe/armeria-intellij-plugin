@@ -170,16 +170,33 @@ internal object ArmeriaKotlinJUnitServerExtensionSupport {
         scope: GlobalSearchScope,
         cachedExtensions: MutableMap<String, List<ArmeriaJUnitServerExtension>>? = null,
     ): ArmeriaJUnitServerExtension? {
-        val className = enclosingTestClassName(element) ?: return null
+        val testClass = enclosingTestClass(element) ?: return null
         val project = element.project
+        val cacheKey = ArmeriaJUnitServerExtensionSupport.serverExtensionCacheKey(testClass)
         val extensions =
-            cachedExtensions?.getOrPut(className) {
-                serverExtensionsAccessibleFrom(className, project, scope)
-            } ?: serverExtensionsAccessibleFrom(className, project, scope)
+            cachedExtensions?.getOrPut(cacheKey) {
+                ArmeriaJUnitServerExtensionSupport.serverExtensionsAccessibleFrom(testClass, project, scope)
+            } ?: ArmeriaJUnitServerExtensionSupport.serverExtensionsAccessibleFrom(testClass, project, scope)
         if (extensions.isEmpty()) {
             return null
         }
         return ArmeriaJUnitServerExtensionSupport.resolveScopedExtension(extensions)
+    }
+
+    fun enclosingTestClass(element: PsiElement): PsiClass? {
+        if (isKotlinPluginAvailable()) {
+            element.getParentOfType<KtObjectDeclaration>(true)?.let { objectDeclaration ->
+                val attributed =
+                    if (objectDeclaration.isCompanion()) {
+                        kotlinClassBodyOwner(objectDeclaration)
+                    } else {
+                        objectDeclaration
+                    }
+                return attributed?.toArmeriaLightClass()
+            }
+            element.getParentOfType<KtClass>(true)?.toArmeriaLightClass()?.let { return it }
+        }
+        return PsiTreeUtil.getParentOfType(element, PsiClass::class.java)
     }
 
     fun serverExtensionsAccessibleFrom(
@@ -197,6 +214,18 @@ internal object ArmeriaKotlinJUnitServerExtensionSupport {
                     scope,
                 )
             }
+
+    fun kotlinContainingLightClass(element: PsiElement): PsiClass? {
+        val declaration = element as? KtDeclaration ?: return null
+        val owner = kotlinClassBodyOwner(declaration) ?: return null
+        val attributed =
+            if (owner is KtObjectDeclaration && owner.isCompanion()) {
+                kotlinClassBodyOwner(owner)
+            } else {
+                owner
+            }
+        return attributed?.toArmeriaLightClass()
+    }
 
     fun kotlinClassQualifiedName(psiClass: PsiClass): String? = toKtClassOrObject(psiClass)?.fqName?.asString()
 
