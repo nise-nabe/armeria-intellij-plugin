@@ -4,6 +4,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceSupport
@@ -73,7 +74,7 @@ internal object ArmeriaHttpRequestFileWriter {
                         }
                         val virtualFile = existing ?: parent.createChildData(this, fileName)
                         virtualFile.setBinaryContent(content.toByteArray(StandardCharsets.UTF_8))
-                        FileEditorManager.getInstance(project).openFile(virtualFile)
+                        FileEditorManager.getInstance(project).openEditor(OpenFileDescriptor(project, virtualFile), true)
                     } catch (e: Exception) {
                         LOG.warn("Failed to create or update HTTP request file: $fileName", e)
                     }
