@@ -12,4 +12,13 @@ class ArmeriaRunProfileStateStartHintTest {
         assertFalse(ArmeriaRunProfileState.looksLikeServerStarted("Loading configuration"))
         assertFalse(ArmeriaRunProfileState.looksLikeServerStarted(null))
     }
+
+    @Test
+    fun appendStartupOutput_detectsMarkerSplitAcrossChunks() {
+        val buffer = StringBuilder()
+        assertFalse(ArmeriaRunProfileState.looksLikeServerStarted(ArmeriaRunProfileState.appendStartupOutput(buffer, "Serv")))
+        assertTrue(
+            ArmeriaRunProfileState.looksLikeServerStarted(ArmeriaRunProfileState.appendStartupOutput(buffer, "ing HTTP at /0.0.0.0:8080")),
+        )
+    }
 }

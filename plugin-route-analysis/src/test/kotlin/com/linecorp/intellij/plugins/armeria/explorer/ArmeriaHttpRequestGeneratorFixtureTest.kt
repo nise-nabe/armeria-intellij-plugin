@@ -70,6 +70,34 @@ class ArmeriaHttpRequestGeneratorFixtureTest : ArmeriaFixtureTestBase() {
         assertTrue(text.contains("{}"), text)
     }
 
+    fun testMatchParametersAreEncodedAndHeaderValuesAreSingleLine() {
+        myFixture.configureByText(
+            "SearchService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.MatchesHeader;
+            import com.linecorp.armeria.server.annotation.MatchesParam;
+
+            public class SearchService {
+                @Get("/search")
+                @MatchesParam("filter=a b&x=1")
+                @MatchesHeader("x-client=android")
+                public String search() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val route = ArmeriaRouteCollector.collect(project).single()
+        val text = ArmeriaHttpRequestGenerator.requestText(route)
+
+        assertTrue(text.contains("GET http://localhost:8080/search?filter=a%20b%26x%3D1"), text)
+        assertTrue(text.contains("x-client: android"), text)
+    }
+
     fun testDescriptionBecomesHttpComment() {
         myFixture.configureByText(
             "GreetService.java",

@@ -122,6 +122,40 @@ class ArmeriaRouteDuplicateIndexCoreTest : ArmeriaFixtureTestBase() {
         assertEquals(2, groups.single().routes.size)
     }
 
+    fun testCrossClassAnnotatedRoutesWithDifferentPathVariableNamesAreReported() {
+        myFixture.configureByText(
+            "First.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class First {
+                @Get("/users/{id}")
+                public String first() {
+                    return "first";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class Second {
+                @Get("/users/{name}")
+                public String second() {
+                    return "second";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertEquals(1, ArmeriaRouteDuplicateIndex.duplicateGroups(project).size)
+    }
+
     fun testConflictingRoutesExcludesCurrentRegistration() {
         myFixture.configureByText(
             "First.java",

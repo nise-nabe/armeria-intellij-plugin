@@ -11,4 +11,11 @@ class ArmeriaTestMethodGenerationServiceImpl : ArmeriaTestMethodGeneration {
         project: Project,
         route: ArmeriaRoute,
     ): Boolean = ArmeriaTestMethodInserter.insertFromRouteExplorer(project, route)
+
+    override fun insertFromRouteExplorerAsync(
+        project: Project,
+        route: ArmeriaRoute,
+    ) {
+        ArmeriaTestMethodInserter.insertFromRouteExplorerAsync(project, route)
+    }
 }

@@ -5,6 +5,7 @@ import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiMethod
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaPathVariableSupport
 import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.plugins.scala.lang.psi.api.ScalaElementVisitor
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.ScNamedElement
@@ -26,7 +27,7 @@ class ArmeriaDuplicateRouteScalaInspection : LocalInspectionTool() {
                 for (function in routeAnnotatedFunctions(definition)) {
                     for (route in ArmeriaScalaInspectionSupport.methodRoutes(function)) {
                         for (path in route.paths) {
-                            val key = route.httpMethod to path
+                            val key = route.httpMethod to ArmeriaPathVariableSupport.pathShapeForOverlap(path)
                             val previous = seen.putIfAbsent(key, function)
                             if (previous != null) {
                                 duplicateFunctions += previous

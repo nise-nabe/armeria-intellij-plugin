@@ -18,6 +18,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.util.Key
 import com.linecorp.intellij.plugins.armeria.message
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
@@ -58,13 +59,15 @@ class ArmeriaRunProfileState(
         val openedDocService = AtomicBoolean(false)
         val serverStarted = AtomicBoolean(false)
         val urlsRef = AtomicReference<ArmeriaRunServiceUrls?>(null)
+        val startupOutputs = ConcurrentHashMap<Key<*>, StringBuilder>()
         result.processHandler.addProcessListener(
             object : ProcessListener {
                 override fun onTextAvailable(
                     event: ProcessEvent,
                     outputType: Key<*>,
                 ) {
-                    if (!looksLikeServerStarted(event.text)) {
+                    val startupOutput = startupOutputs.computeIfAbsent(outputType) { StringBuilder() }
+                    if (!looksLikeServerStarted(appendStartupOutput(startupOutput, event.text))) {
                         return
                     }
                     if (!serverStarted.compareAndSet(false, true)) {
@@ -137,6 +140,23 @@ class ArmeriaRunProfileState(
     }
 
     companion object {
+        private const val SERVER_STARTED_MARKER_LENGTH = 14
+
+        internal fun appendStartupOutput(
+            buffer: StringBuilder,
+            text: String?,
+        ): String {
+            if (text.isNullOrEmpty()) {
+                return ""
+            }
+            synchronized(buffer) {
+                val combined = buffer.toString() + text
+                buffer.setLength(0)
+                buffer.append(combined.takeLast(SERVER_STARTED_MARKER_LENGTH - 1))
+                return combined
+            }
+        }
+
         internal fun looksLikeServerStarted(text: String?): Boolean {
             if (text.isNullOrBlank()) {
                 return false

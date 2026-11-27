@@ -46,9 +46,13 @@ class ArmeriaGenerateTestMethodActionTest : ArmeriaLightJavaCodeInsightFixtureTe
         override fun insertFromRouteExplorer(
             project: Project,
             route: ArmeriaRoute,
-        ): Boolean {
+        ): Boolean = error("Route Explorer actions must use asynchronous insertion")
+
+        override fun insertFromRouteExplorerAsync(
+            project: Project,
+            route: ArmeriaRoute,
+        ) {
             insertedPaths += route.path
-            return true
         }
     }
 

@@ -10,7 +10,8 @@ object ArmeriaRouteContentHintSupport {
     private val NEWLINE_CHARACTERS = Regex("[\\r\\n]+")
 
     // tchar minus a trailing '!' immediately before '=' so `name!=value` is not a header pair.
-    private val SIMPLE_EQUALITY_MATCH = Regex("""^([A-Za-z0-9_!#\$%&'*+.^`|~-]+)(?<!!)=([^=].*)$""")
+    private val SIMPLE_EQUALITY_MATCH =
+        Regex("""^([A-Za-z0-9_!#\$%&'*+.^`|~-]+)(?<!!)=([^=].*)$""", RegexOption.DOT_MATCHES_ALL)
 
     fun isHint(
         hint: String,

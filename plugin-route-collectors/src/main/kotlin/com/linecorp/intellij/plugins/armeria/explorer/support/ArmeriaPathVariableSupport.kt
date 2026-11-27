@@ -72,6 +72,47 @@ object ArmeriaPathVariableSupport {
         return replaceColonPathParameters(replaceBraceCapturesWithNames(path))
     }
 
+    /**
+     * Shape used when deciding whether two exact paths can match the same request.
+     * Variable names do not affect matching, so simple brace captures and colon parameters
+     * occupying a complete path segment are canonicalized. Capture constraints are kept
+     * because different constraints may match disjoint values. Explicit `exact:` paths
+     * remain literal except for the type prefix itself.
+     */
+    fun pathShapeForOverlap(path: String): String {
+        val typed = typedPath(path)
+        if (typed.pathType != PathType.EXACT) {
+            return path
+        }
+        val body = path.substring(typed.bodyStart)
+        if (!typed.bindVariables) {
+            return body
+        }
+        return body
+            .split('/')
+            .joinToString("/") { segment ->
+                when {
+                    segment.startsWith("{") && segment.endsWith("}") -> {
+                        val inner = segment.substring(1, segment.length - 1)
+                        val constraintIndex = inner.indexOf(':')
+                        if (constraintIndex < 0) {
+                            "{}"
+                        } else {
+                            "{:${inner.substring(constraintIndex + 1)}}"
+                        }
+                    }
+
+                    segment.startsWith(":") && segment.length > 1 -> {
+                        "{}"
+                    }
+
+                    else -> {
+                        segment
+                    }
+                }
+            }
+    }
+
     fun pathVariableOccurrences(path: String): List<PathVariableOccurrence> {
         val typed = typedPath(path)
         if (!typed.bindVariables) {

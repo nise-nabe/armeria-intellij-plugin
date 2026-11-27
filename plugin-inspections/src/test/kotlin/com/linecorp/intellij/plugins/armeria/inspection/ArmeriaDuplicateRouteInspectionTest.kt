@@ -41,6 +41,31 @@ class ArmeriaDuplicateRouteInspectionTest : ArmeriaFixtureTestBase() {
         assertDuplicateRouteHighlightsOnMethods("BadService", "first", "BadService", "second")
     }
 
+    fun testHighlightsDuplicateJavaRoutesWithDifferentPathVariableNames() {
+        myFixture.configureByText(
+            "BadService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class BadService {
+                @Get("/users/{id}")
+                public String first() {
+                    return "first";
+                }
+
+                @Get("/users/{name}")
+                public String second() {
+                    return "second";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertDuplicateRouteHighlightsOnMethods("BadService", "first", "BadService", "second")
+    }
+
     fun testAllowsDistinctPaths() {
         myFixture.configureByText(
             "HelloService.java",
