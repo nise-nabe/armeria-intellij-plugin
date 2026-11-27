@@ -1,13 +1,12 @@
 package com.linecorp.intellij.plugins.armeria.test
 
-import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
+import com.linecorp.intellij.plugins.armeria.editor.ArmeriaFileEditorOpenSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.toArmeriaLightClass
 import org.jetbrains.kotlin.idea.base.psi.addMemberDeclaration
 import org.jetbrains.kotlin.name.FqName
@@ -81,11 +80,9 @@ internal object ArmeriaKotlinTestMethodSupport {
         if (methodText.contains("WebClient")) {
             insertKotlinImport(project, ktFile, ArmeriaJUnitServerExtensionSupport.WEB_CLIENT_CLASS)
         }
-        val editor =
-            ktFile.virtualFile
-                ?.let { FileEditorManager.getInstance(project).openTextEditor(OpenFileDescriptor(project, it), true) }
-        editor?.caretModel?.moveToOffset(added.textRange.startOffset)
-        editor?.scrollingModel?.scrollToCaret(ScrollType.CENTER)
+        ktFile.virtualFile?.let { virtualFile ->
+            ArmeriaFileEditorOpenSupport.openFileAtOffset(project, virtualFile, added.textRange.startOffset)
+        }
     }
 
     private fun insertKotlinImport(
