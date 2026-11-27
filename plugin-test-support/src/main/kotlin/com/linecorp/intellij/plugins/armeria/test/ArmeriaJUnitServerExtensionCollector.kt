@@ -157,7 +157,14 @@ object ArmeriaJUnitServerExtensionCollector {
                 hiddenMembers += HiddenMember(memberKey, psiClass)
                 continue
             }
-            if (isHidden(memberKey, psiClass, hiddenMembers)) {
+            if (isHidden(
+                    memberKey,
+                    psiClass,
+                    qualifiedName(psiClass, kotlinPluginLoaded),
+                    hiddenMembers,
+                    kotlinPluginLoaded,
+                )
+            ) {
                 continue
             }
             val key = "${extension.containingClassName}#${extension.variableName}"
@@ -175,19 +182,63 @@ object ArmeriaJUnitServerExtensionCollector {
     private fun isHidden(
         extension: ArmeriaJUnitServerExtension,
         hiddenMembers: List<HiddenMember>,
-    ): Boolean {
-        val ownerClass = (extension.pointer.element as? PsiMember)?.containingClass ?: return false
-        return isHidden(hiddenMemberKey(extension), ownerClass, hiddenMembers)
-    }
+    ): Boolean =
+        isHidden(
+            hiddenMemberKey(extension),
+            (extension.pointer.element as? PsiMember)?.containingClass,
+            extension.containingClassName,
+            hiddenMembers,
+            PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID),
+        )
 
     private fun isHidden(
         memberKey: String,
-        ownerClass: PsiClass,
+        ownerClass: PsiClass?,
+        ownerClassName: String?,
         hiddenMembers: List<HiddenMember>,
+        kotlinPluginLoaded: Boolean,
     ): Boolean =
         hiddenMembers.any { hiddenMember ->
-            hiddenMember.key == memberKey && hiddenMember.hidingClass.isInheritor(ownerClass, true)
+            hiddenMember.key == memberKey &&
+                isSameOrSuperclass(hiddenMember.hidingClass, ownerClass, ownerClassName, kotlinPluginLoaded)
         }
+
+    private fun isSameOrSuperclass(
+        psiClass: PsiClass,
+        ownerClass: PsiClass?,
+        ownerClassName: String?,
+        kotlinPluginLoaded: Boolean,
+    ): Boolean {
+        val visited = mutableListOf<PsiClass>()
+        val pending = ArrayDeque<PsiClass>()
+        pending.add(psiClass)
+        while (pending.isNotEmpty()) {
+            val current = pending.removeFirst()
+            if (visited.any { it.isEquivalentTo(current) }) {
+                continue
+            }
+            visited += current
+            if (ownerClass != null && current.isEquivalentTo(ownerClass)) {
+                return true
+            }
+            if (!ownerClassName.isNullOrEmpty() && qualifiedName(current, kotlinPluginLoaded) == ownerClassName) {
+                return true
+            }
+            pending.addAll(current.supers)
+        }
+        return false
+    }
+
+    private fun qualifiedName(
+        psiClass: PsiClass,
+        kotlinPluginLoaded: Boolean,
+    ): String? =
+        psiClass.qualifiedName
+            ?: if (kotlinPluginLoaded) {
+                ArmeriaKotlinJUnitServerExtensionSupport.kotlinClassQualifiedName(psiClass)
+            } else {
+                null
+            }
 
     private fun hiddenMemberKey(extension: ArmeriaJUnitServerExtension): String = "${extension.variableName}#${extension.isFactoryMethod}"
 
