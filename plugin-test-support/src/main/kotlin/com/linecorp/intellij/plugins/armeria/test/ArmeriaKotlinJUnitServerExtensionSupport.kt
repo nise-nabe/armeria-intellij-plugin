@@ -39,108 +39,8 @@ import org.jetbrains.kotlin.psi.KtThisExpression
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 internal object ArmeriaKotlinJUnitServerExtensionSupport {
-    const val REGISTER_EXTENSION_ANNOTATION = "org.junit.jupiter.api.extension.RegisterExtension"
-    const val REGISTER_EXTENSION_ANNOTATION_SHORT = "RegisterExtension"
-    const val SERVER_EXTENSION_CLASS = "com.linecorp.armeria.testing.junit5.server.ServerExtension"
-    const val WEB_CLIENT_CLASS = "com.linecorp.armeria.client.WebClient"
-    const val BLOCKING_WEB_CLIENT_CLASS = "com.linecorp.armeria.client.blocking.BlockingWebClient"
-
-    fun hasRegisterExtensionAnnotation(owner: PsiModifierListOwner): Boolean = owner.annotations.any(::isRegisterExtensionAnnotation)
-
-    private fun isRegisterExtensionAnnotation(annotation: PsiAnnotation): Boolean {
-        annotation.qualifiedName?.let {
-            if (it == REGISTER_EXTENSION_ANNOTATION) {
-                return true
-            }
-        }
-        val shortName = annotation.nameReferenceElement?.referenceName ?: return false
-        if (shortName != REGISTER_EXTENSION_ANNOTATION_SHORT) {
-            return false
-        }
-        when (val resolved = annotation.nameReferenceElement?.resolve()) {
-            is PsiClass -> {
-                return resolved.qualifiedName == REGISTER_EXTENSION_ANNOTATION
-            }
-        }
-        val javaFile = annotation.containingFile as? PsiJavaFile ?: return false
-        return javaFile.importList?.importStatements?.any { import ->
-            when {
-                import.isOnDemand -> {
-                    import.qualifiedName?.let { packageName ->
-                        REGISTER_EXTENSION_ANNOTATION == "$packageName.$REGISTER_EXTENSION_ANNOTATION_SHORT"
-                    } == true
-                }
-
-                else -> {
-                    import.qualifiedName == REGISTER_EXTENSION_ANNOTATION ||
-                        import.qualifiedName?.endsWith(".$REGISTER_EXTENSION_ANNOTATION_SHORT") == true
-                }
-            }
-        } == true
-    }
-
-    fun isServerExtensionType(
-        type: PsiType?,
-        project: Project,
-    ): Boolean {
-        val resolvedClass = (type as? PsiClassType)?.resolve() ?: return false
-        return isServerExtensionClass(resolvedClass, project)
-    }
-
-    fun isServerExtensionClass(
-        psiClass: PsiClass,
-        project: Project,
-    ): Boolean {
-        val qualifiedName = psiClass.qualifiedName ?: return false
-        if (qualifiedName == SERVER_EXTENSION_CLASS) {
-            return true
-        }
-        // ServerExtension lives in a library jar — resolve with allScope.
-        val baseClass =
-            JavaPsiFacade.getInstance(project).findClass(SERVER_EXTENSION_CLASS, GlobalSearchScope.allScope(project)) ?: return false
-        return psiClass.isInheritor(baseClass, true)
-    }
-
-    fun serverExtensionFromField(field: PsiField): ArmeriaJUnitServerExtension? {
-        if (!hasRegisterExtensionAnnotation(field) || !isServerExtensionType(field.type, field.project)) {
-            return null
-        }
-        val variableName = field.name
-        val containingClass = field.containingClass ?: return null
-        return ArmeriaJUnitServerExtension.create(
-            element = field,
-            variableName = variableName,
-            containingClassName = containingClass.qualifiedName.orEmpty(),
-            moduleName = ArmeriaTestMetadata.moduleName(field),
-        )
-    }
-
-    fun serverExtensionFromMethod(method: PsiMethod): ArmeriaJUnitServerExtension? {
-        if (method.parameterList.parametersCount > 0) {
-            return null
-        }
-        if (!hasRegisterExtensionAnnotation(method) || !isServerExtensionType(method.returnType, method.project)) {
-            return null
-        }
-        val variableName = method.name
-        val containingClass = method.containingClass ?: return null
-        val containingClassName = containingClass.qualifiedName ?: return null
-        return ArmeriaJUnitServerExtension.create(
-            element = method,
-            variableName = variableName,
-            containingClassName = containingClassName,
-            moduleName = ArmeriaTestMetadata.moduleName(method),
-            isFactoryMethod = true,
-        )
-    }
-
-    fun serverExtensionsInClass(psiClass: PsiClass): List<ArmeriaJUnitServerExtension> {
-        if (isKotlinPluginAvailable() && toKtClass(psiClass) != null) {
-            return emptyList()
-        }
-        return psiClass.fields.mapNotNull(::serverExtensionFromField) +
-            psiClass.methods.mapNotNull(::serverExtensionFromMethod)
-    }
+    private val REGISTER_EXTENSION_ANNOTATION = ArmeriaJUnitServerExtensionSupport.REGISTER_EXTENSION_ANNOTATION
+    private val REGISTER_EXTENSION_ANNOTATION_SHORT = ArmeriaJUnitServerExtensionSupport.REGISTER_EXTENSION_ANNOTATION_SHORT
 
     fun serverExtensionFromKotlinFunction(function: KtNamedFunction): ArmeriaJUnitServerExtension? {
         if (function.valueParameters.isNotEmpty() || function.receiverTypeReference != null) {
@@ -187,45 +87,6 @@ internal object ArmeriaKotlinJUnitServerExtensionSupport {
             moduleName = ArmeriaTestMetadata.moduleName(property),
         )
     }
-
-    fun fileMayContainRegisterExtension(fileText: String): Boolean =
-        REGISTER_EXTENSION_ANNOTATION in fileText || "@$REGISTER_EXTENSION_ANNOTATION_SHORT" in fileText
-
-    /** True when [file] is under a test source root (IDE markers only; filename is not considered). */
-    fun isInTestSourceContent(file: PsiFile): Boolean {
-        val virtualFile = file.virtualFile ?: return false
-        val project = file.project
-        val fileIndex = ProjectRootManager.getInstance(project).fileIndex
-        return fileIndex.isInTestSourceContent(virtualFile) ||
-            TestSourcesFilter.isTestSources(virtualFile, project)
-    }
-
-    fun escapeStringLiteral(value: String): String =
-        buildString(value.length) {
-            value.forEach { character ->
-                when (character) {
-                    '\\' -> append("\\\\")
-                    '"' -> append("\\\"")
-                    '\n' -> append("\\n")
-                    '\r' -> append("\\r")
-                    '\t' -> append("\\t")
-                    '$' -> append("\\$")
-                    else -> append(character)
-                }
-            }
-        }
-
-    fun escapeKotlinStringLiteral(value: String): String =
-        buildString(value.length) {
-            value.forEach { character ->
-                when (character) {
-                    '\\' -> append("\\\\")
-                    '"' -> append("\\\"")
-                    '$' -> append("\\$")
-                    else -> append(character)
-                }
-            }
-        }
 
     private fun KtAnnotationEntry.isRegisterExtensionAnnotation(): Boolean =
         when (qualifiedName()) {
@@ -332,7 +193,7 @@ internal object ArmeriaKotlinJUnitServerExtensionSupport {
         if (extensions.isEmpty()) {
             return null
         }
-        return resolveScopedExtension(element, extensions)
+        return ArmeriaJUnitServerExtensionSupport.resolveScopedExtension(extensions)
     }
 
     fun serverExtensionsAccessibleFrom(
@@ -342,47 +203,14 @@ internal object ArmeriaKotlinJUnitServerExtensionSupport {
     ): List<ArmeriaJUnitServerExtension> =
         ArmeriaJUnitServerExtensionCollector
             .collect(project)
-            .filter { extension -> canAccessServerExtension(testClassName, extension.containingClassName, project, scope) }
-
-    fun classHierarchyQualifiedNames(psiClass: PsiClass): Set<String> {
-        val names = linkedSetOf<String>()
-        val kotlinAvailable = isKotlinPluginAvailable()
-        var current: PsiClass? = psiClass
-        while (current != null) {
-            current.qualifiedName?.let(names::add)
-            if (kotlinAvailable) {
-                toKtClass(current)?.let { addKotlinSuperTypeNames(it, names) }
+            .filter { extension ->
+                ArmeriaJUnitServerExtensionSupport.canAccessServerExtension(
+                    testClassName,
+                    extension.containingClassName,
+                    project,
+                    scope,
+                )
             }
-            current = current.superClass
-        }
-        return names
-    }
-
-    internal fun canAccessServerExtension(
-        testClassName: String,
-        extensionClassName: String,
-        project: Project,
-        scope: GlobalSearchScope,
-    ): Boolean {
-        if (isEnclosingOrNestedTestClass(testClassName, extensionClassName)) {
-            return true
-        }
-        if (extensionClassName.isEmpty()) {
-            return false
-        }
-        val testClass = JavaPsiFacade.getInstance(project).findClass(testClassName, scope)
-        val extensionClass = JavaPsiFacade.getInstance(project).findClass(extensionClassName, scope)
-        if (testClass != null && extensionClass != null && testClass.isInheritor(extensionClass, true)) {
-            return true
-        }
-        val kotlinSupertypes =
-            if (isKotlinPluginAvailable()) {
-                findKtClass(testClassName, project, scope)?.let { collectKotlinSuperTypeNames(it) } ?: emptySet()
-            } else {
-                emptySet()
-            }
-        return extensionClassName in kotlinSupertypes
-    }
 
     fun kotlinClassQualifiedName(psiClass: PsiClass): String? = toKtClassOrObject(psiClass)?.fqName?.asString()
 
@@ -435,14 +263,6 @@ internal object ArmeriaKotlinJUnitServerExtensionSupport {
         return names
     }
 
-    private fun isEnclosingOrNestedTestClass(
-        testClassName: String,
-        extensionClassName: String,
-    ): Boolean =
-        testClassName == extensionClassName ||
-            testClassName.startsWith("$extensionClassName.") ||
-            testClassName.startsWith("$extensionClassName$")
-
     fun toKtClass(psiClass: PsiClass): KtClass? = toKtClassOrObject(psiClass) as? KtClass
 
     fun toKtClassOrObject(psiClass: PsiClass): KtClassOrObject? {
@@ -461,11 +281,11 @@ internal object ArmeriaKotlinJUnitServerExtensionSupport {
         property.typeReference?.let { typeReference ->
             when (val resolved = typeReference.references.firstOrNull()?.resolve()) {
                 is PsiClass -> {
-                    return isServerExtensionClass(resolved, project)
+                    return ArmeriaJUnitServerExtensionSupport.isServerExtensionClass(resolved, project)
                 }
 
                 is KtClass -> {
-                    return resolved.toArmeriaLightClass()?.let { isServerExtensionClass(it, project) } == true
+                    return isKotlinServerExtensionClass(resolved, project)
                 }
             }
             if (typeReference.text.contains("ServerExtension")) {
@@ -483,11 +303,11 @@ internal object ArmeriaKotlinJUnitServerExtensionSupport {
         function.typeReference?.let { typeReference ->
             when (val resolved = typeReference.references.firstOrNull()?.resolve()) {
                 is PsiClass -> {
-                    return isServerExtensionClass(resolved, project)
+                    return ArmeriaJUnitServerExtensionSupport.isServerExtensionClass(resolved, project)
                 }
 
                 is KtClass -> {
-                    return resolved.toArmeriaLightClass()?.let { isServerExtensionClass(it, project) } == true
+                    return isKotlinServerExtensionClass(resolved, project)
                 }
             }
             if (typeReference.text.contains("ServerExtension")) {
@@ -496,44 +316,6 @@ internal object ArmeriaKotlinJUnitServerExtensionSupport {
         }
         val bodyExpression = function.bodyExpression ?: return false
         return isKotlinServerExtensionInitializer(bodyExpression, project)
-    }
-
-    fun matchesServerReceiver(
-        expression: PsiElement,
-        serverVariableName: String,
-    ): Boolean =
-        when (expression) {
-            is PsiReferenceExpression -> {
-                expression.referenceName == serverVariableName
-            }
-
-            is PsiMethodCallExpression -> {
-                expression.methodExpression.referenceName == serverVariableName &&
-                    expression.argumentList.expressionCount == 0 &&
-                    isValidFactoryQualifier(expression.methodExpression.qualifierExpression, expression)
-            }
-
-            else -> {
-                false
-            }
-        }
-
-    private fun isValidFactoryQualifier(
-        qualifier: PsiElement?,
-        expression: PsiElement,
-    ): Boolean {
-        qualifier ?: return true
-        if (qualifier is PsiThisExpression) {
-            return true
-        }
-        if (qualifier is PsiReferenceExpression) {
-            if (qualifier.referenceName == "this") {
-                return true
-            }
-            val resolved = qualifier.resolve() as? PsiClass ?: return false
-            return isSameOrEnclosingOrSuperClass(resolved, expression)
-        }
-        return false
     }
 
     private fun isSameOrEnclosingOrSuperClass(
@@ -590,6 +372,14 @@ internal object ArmeriaKotlinJUnitServerExtensionSupport {
             }
     }
 
+    private fun isKotlinServerExtensionClass(
+        ktClass: KtClass,
+        project: Project,
+    ): Boolean =
+        ktClass.toArmeriaLightClass()?.let {
+            ArmeriaJUnitServerExtensionSupport.isServerExtensionClass(it, project)
+        } == true
+
     private fun isKotlinServerExtensionInitializer(
         initializer: KtExpression,
         project: Project,
@@ -607,9 +397,17 @@ internal object ArmeriaKotlinJUnitServerExtensionSupport {
                         ?.firstOrNull()
                         ?.resolve()
             ) {
-                is PsiClass -> isServerExtensionClass(resolved, project)
-                is KtClass -> resolved.toArmeriaLightClass()?.let { isServerExtensionClass(it, project) } == true
-                else -> entry.typeReference?.text?.contains("ServerExtension") == true
+                is PsiClass -> {
+                    ArmeriaJUnitServerExtensionSupport.isServerExtensionClass(resolved, project)
+                }
+
+                is KtClass -> {
+                    isKotlinServerExtensionClass(resolved, project)
+                }
+
+                else -> {
+                    entry.typeReference?.text?.contains("ServerExtension") == true
+                }
             }
         }
     }
@@ -618,14 +416,6 @@ internal object ArmeriaKotlinJUnitServerExtensionSupport {
         expression: PsiElement,
         serverVariableName: String,
     ): Boolean {
-        (expression as? PsiMethodCallExpression)?.let { call ->
-            val receiver = call.methodExpression.qualifierExpression ?: return@let
-            if (matchesServerReceiver(receiver, serverVariableName) &&
-                call.methodExpression.referenceName == "httpUri"
-            ) {
-                return true
-            }
-        }
         if (!isKotlinPluginAvailable()) {
             return false
         }
@@ -756,58 +546,15 @@ internal object ArmeriaKotlinJUnitServerExtensionSupport {
 
     private fun KtNamedFunction.hasJvmStaticAnnotation(): Boolean = annotationEntries.any { it.shortName?.asString() == "JvmStatic" }
 
-    private fun resolveScopedExtension(
-        element: PsiElement,
-        extensions: List<ArmeriaJUnitServerExtension>,
-    ): ArmeriaJUnitServerExtension? {
-        // When multiple ServerExtension fields exist in scope, do not guess which server a call
-        // targets — inspection and test generation treat the scope as ambiguous.
-        if (extensions.size != 1) {
-            return null
-        }
-        return extensions.single()
-    }
-
     internal fun referencesServerVariable(
         element: PsiElement,
         serverVariableName: String,
-    ): Boolean = serverVariableName in referencedServerVariableNames(element)
-
-    private fun referencedServerVariableNames(element: PsiElement): Set<String> {
-        if (isKotlinPluginAvailable()) {
-            PsiTreeUtil.getParentOfType(element, KtCallExpression::class.java, false)?.let { call ->
-                return referencedServerVariableNamesFromKotlinCall(call)
-            }
+    ): Boolean {
+        if (!isKotlinPluginAvailable()) {
+            return false
         }
-        PsiTreeUtil.getParentOfType(element, PsiMethodCallExpression::class.java, false)?.let { call ->
-            return referencedServerVariableNamesFromJavaCall(call)
-        }
-        return emptySet()
-    }
-
-    private fun referencedServerVariableNamesFromJavaCall(call: PsiMethodCallExpression): Set<String> {
-        val names = linkedSetOf<String>()
-        var qualifier: PsiElement? = call.methodExpression.qualifierExpression
-        while (qualifier != null) {
-            when (qualifier) {
-                is PsiReferenceExpression -> {
-                    qualifier.referenceName?.let(names::add)
-                    qualifier = null
-                }
-
-                is PsiMethodCallExpression -> {
-                    (qualifier.methodExpression.qualifierExpression as? PsiReferenceExpression)
-                        ?.referenceName
-                        ?.let(names::add)
-                    qualifier = qualifier.methodExpression.qualifierExpression
-                }
-
-                else -> {
-                    break
-                }
-            }
-        }
-        return names
+        val call = PsiTreeUtil.getParentOfType(element, KtCallExpression::class.java, false) ?: return false
+        return serverVariableName in referencedServerVariableNamesFromKotlinCall(call)
     }
 
     private fun referencedServerVariableNamesFromKotlinCall(call: KtCallExpression): Set<String> {

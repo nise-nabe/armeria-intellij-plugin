@@ -56,4 +56,43 @@ class ArmeriaReferenceFileIndexRegistrationTest : ArmeriaLightJavaCodeInsightFix
             )
         assertTrue(file in springIndicatorFiles)
     }
+
+    fun testDocServiceExampleFilesUseRegisteredIndex() {
+        val file =
+            myFixture
+                .configureByText(
+                    "DocExample.java",
+                    """
+                    package example;
+
+                    public class DocExample {
+                        Object examples = ".exampleRequests(\"{}\")";
+                    }
+                    """.trimIndent(),
+                ).virtualFile
+        val scope = GlobalSearchScope.projectScope(project)
+        FileBasedIndex.getInstance().ensureUpToDate(ArmeriaReferenceFileIndex.NAME, project, scope)
+
+        assertTrue(file in ArmeriaReferenceFileIndex.findDocServiceExampleFiles(project, scope))
+    }
+
+    fun testJUnitServerExtensionFilesUseRegisteredIndex() {
+        val file =
+            myFixture
+                .configureByText(
+                    "ServerTest.kt",
+                    """
+                    package example
+
+                    class ServerTest {
+                        @RegisterExtension
+                        val server: Any? = null
+                    }
+                    """.trimIndent(),
+                ).virtualFile
+        val scope = GlobalSearchScope.projectScope(project)
+        FileBasedIndex.getInstance().ensureUpToDate(ArmeriaReferenceFileIndex.NAME, project, scope)
+
+        assertTrue(file in ArmeriaReferenceFileIndex.findJUnitServerExtensionFiles(project, scope))
+    }
 }

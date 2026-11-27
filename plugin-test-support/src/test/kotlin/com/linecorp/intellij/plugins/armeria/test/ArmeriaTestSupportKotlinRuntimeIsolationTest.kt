@@ -8,14 +8,24 @@ class ArmeriaTestSupportKotlinRuntimeIsolationTest {
     fun javaEntryPointsDoNotReferenceKotlinPluginClassesInBytecode() {
         val isolatedClassNames =
             listOf(
-                "com.linecorp.intellij.plugins.armeria.test.ArmeriaJUnitServerExtensionSupport",
-                "com.linecorp.intellij.plugins.armeria.test.ArmeriaJUnitServerExtensionCollector",
-                "com.linecorp.intellij.plugins.armeria.test.ArmeriaBlockingClientInspection",
-                "com.linecorp.intellij.plugins.armeria.test.ArmeriaJUnitServerExtensionLineMarkerProvider",
-                "com.linecorp.intellij.plugins.armeria.test.ArmeriaBlockingClientPathSupport",
-                "com.linecorp.intellij.plugins.armeria.test.ArmeriaTestMethodInserter",
-                "com.linecorp.intellij.plugins.armeria.test.ArmeriaGenerateTestMethodAction",
-            )
+                "ArmeriaJUnitServerExtensionSupport",
+                "ArmeriaJUnitServerExtensionCollector",
+                "ArmeriaJUnitServerExtensionCollector\$compute\$1",
+                "ArmeriaBlockingClientInspection",
+                "ArmeriaBlockingClientInspection\$Companion",
+                "ArmeriaBlockingClientInspection\$buildVisitor\$1",
+                "ArmeriaJUnitServerExtensionLineMarkerProvider",
+                "ArmeriaBlockingClientPathSupport",
+                "ArmeriaBlockingClientInspectionPaths",
+                "ArmeriaTestMethodInserter",
+                "ArmeriaGenerateTestMethodAction",
+                "ArmeriaJUnitServerExtension",
+                "ArmeriaJUnitServerExtension\$Companion",
+                "ArmeriaTestMethodGenerator",
+                "ArmeriaTestMethodGenerator\$WhenMappings",
+                "ArmeriaTestMetadata",
+                "ArmeriaTestLanguage",
+            ).map { "com.linecorp.intellij.plugins.armeria.test.$it" }
 
         for (className in isolatedClassNames) {
             assertFalse(
