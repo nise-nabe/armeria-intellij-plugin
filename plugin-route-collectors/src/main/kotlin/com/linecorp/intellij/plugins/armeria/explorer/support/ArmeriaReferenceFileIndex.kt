@@ -142,7 +142,7 @@ class ArmeriaReferenceFileIndex : ScalarIndexExtension<Int>() {
 
         private fun isRegistered(): Boolean =
             FileBasedIndexExtension.EXTENSION_POINT_NAME.extensionList.any { extension ->
-                extension.name.name == NAME.name
+                extension is ArmeriaReferenceFileIndex
             }
 
         private fun fallbackFiles(
