@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer.docservice
 
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiField
@@ -25,7 +26,7 @@ import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 internal object ArmeriaKotlinDocServiceExampleCollector {
     fun collect(
         project: Project,
-        scope: GlobalSearchScope,
+        exampleFiles: List<VirtualFile>,
         builder: ArmeriaDocServiceExampleIndex.Builder,
     ) {
         val builderClass =
@@ -38,7 +39,7 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
         if (builderClass != null) {
             for (methodName in listOf("exampleRequests", "exampleHeaders")) {
                 for (method in builderClass.findMethodsByName(methodName, false)) {
-                    ReferencesSearch.search(method, scope).forEach { reference ->
+                    ReferencesSearch.search(method, GlobalSearchScope.filesScope(project, exampleFiles)).forEach { reference ->
                         val call =
                             PsiTreeUtil.getParentOfType(reference.element, KtCallExpression::class.java)
                                 ?: return@forEach
@@ -50,15 +51,15 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
                 }
             }
         }
-        collectFromKotlinFiles(project, scope, builder)
+        collectFromKotlinFiles(project, exampleFiles, builder)
     }
 
     private fun collectFromKotlinFiles(
         project: Project,
-        scope: GlobalSearchScope,
+        exampleFiles: List<VirtualFile>,
         builder: ArmeriaDocServiceExampleIndex.Builder,
     ) {
-        for (virtualFile in ArmeriaReferenceFileIndex.findDocServiceExampleFiles(project, scope)) {
+        for (virtualFile in exampleFiles) {
             if (virtualFile.extension != "kt") continue
             val ktFile = PsiManager.getInstance(project).findFile(virtualFile) as? KtFile ?: continue
             val text = ktFile.viewProvider.contents

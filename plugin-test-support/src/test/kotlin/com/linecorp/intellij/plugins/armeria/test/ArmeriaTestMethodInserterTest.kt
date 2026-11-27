@@ -508,51 +508,53 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
     }
 
     fun testNestedJavaTestInheritingKotlinServerKeepsOuterServerCandidate() {
-        myFixture.addFileToProject(
-            "KotlinBaseTest.kt",
-            """
-            package example
-
-            import com.linecorp.armeria.testing.junit5.server.ServerExtension
-            import org.junit.jupiter.api.extension.RegisterExtension
-
-            abstract class KotlinBaseTest {
-                @field:RegisterExtension
-                val inheritedServer: ServerExtension = object : ServerExtension() {}
-            }
-            """.trimIndent(),
-        )
-        val javaFile =
-            myFixture.configureByText(
-                "OuterTest.java",
+        myFixture.withTemporaryMainSourceRoot {
+            myFixture.addFileToProject(
+                "main/KotlinBaseTest.kt",
                 """
-                package example;
+                package example
 
-                import org.junit.jupiter.api.extension.RegisterExtension;
-                import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+                import com.linecorp.armeria.testing.junit5.server.ServerExtension
+                import org.junit.jupiter.api.extension.RegisterExtension
 
-                public class OuterTest {
-                    @RegisterExtension
-                    static ServerExtension outerServer = new ServerExtension() {};
-
-                    public static class NestedTest extends KotlinBaseTest {
-                    }
+                abstract class KotlinBaseTest {
+                    @field:RegisterExtension
+                    val inheritedServer: ServerExtension = object : ServerExtension() {}
                 }
                 """.trimIndent(),
-            ) as PsiJavaFile
-        val nestedClass =
-            javaFile
-                .classes
-                .single()
-                .innerClasses
-                .single { it.name == "NestedTest" }
+            )
+            val javaFile =
+                myFixture.configureByText(
+                    "OuterTest.java",
+                    """
+                    package example;
 
-        val extensions = ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, nestedClass)
+                    import org.junit.jupiter.api.extension.RegisterExtension;
+                    import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-        assertEquals(
-            setOf("outerServer", "inheritedServer"),
-            extensions.map { it.variableName }.toSet(),
-        )
+                    public class OuterTest {
+                        @RegisterExtension
+                        static ServerExtension outerServer = new ServerExtension() {};
+
+                        public static class NestedTest extends KotlinBaseTest {
+                        }
+                    }
+                    """.trimIndent(),
+                ) as PsiJavaFile
+            val nestedClass =
+                javaFile
+                    .classes
+                    .single()
+                    .innerClasses
+                    .single { it.name == "NestedTest" }
+
+            val extensions = ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, nestedClass)
+
+            assertEquals(
+                setOf("outerServer", "inheritedServer"),
+                extensions.map { it.variableName }.toSet(),
+            )
+        }
     }
 
     fun testRejectsMultipleRegisterExtensionsInJavaClass() {

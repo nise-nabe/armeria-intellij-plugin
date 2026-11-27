@@ -61,7 +61,7 @@ class ArmeriaDocServiceExampleCollectorTest : ArmeriaFixtureTestBase() {
         assertTrue(routes.any { it.isDocService && it.path == "/docs" })
     }
 
-    fun testSkipsExampleCollectionWhenNoDocServiceRouteExists() {
+    fun testAppliesExamplesWhenNoDocServiceRouteIsDetected() {
         myFixture.addClass(
             """
             package example;
@@ -97,7 +97,7 @@ class ArmeriaDocServiceExampleCollectorTest : ArmeriaFixtureTestBase() {
         val hello = routes.single { it.path == "/hello" && it.httpMethod == "GET" }
 
         assertTrue(routes.none { it.isDocService })
-        assertEquals(emptyList<String>(), hello.exampleRequests)
+        assertEquals(listOf("{\"name\":\"Armeria\"}"), hello.exampleRequests)
     }
 
     fun testExampleRequestsMatchByServiceNameString() {

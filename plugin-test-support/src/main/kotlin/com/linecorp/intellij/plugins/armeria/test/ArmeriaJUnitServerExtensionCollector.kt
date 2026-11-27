@@ -54,17 +54,39 @@ object ArmeriaJUnitServerExtensionCollector {
     private fun extensionsFromClassHierarchy(psiClass: PsiClass): List<ArmeriaJUnitServerExtension> {
         val extensions = mutableListOf<ArmeriaJUnitServerExtension>()
         val seen = mutableSetOf<String>()
+        val kotlinPluginLoaded = PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
         var current: PsiClass? = psiClass
         while (current != null) {
-            for (extension in ArmeriaJUnitServerExtensionSupport.serverExtensionsInClass(current)) {
-                val key = "${extension.containingClassName}#${extension.variableName}"
-                if (seen.add(key)) {
-                    extensions += extension
-                }
+            addDirectExtensions(current, kotlinPluginLoaded, extensions, seen)
+            var containing = current.containingClass
+            while (containing != null) {
+                addDirectExtensions(containing, kotlinPluginLoaded, extensions, seen)
+                containing = containing.containingClass
             }
             current = current.superClass
         }
         return extensions
+    }
+
+    private fun addDirectExtensions(
+        psiClass: PsiClass,
+        kotlinPluginLoaded: Boolean,
+        extensions: MutableList<ArmeriaJUnitServerExtension>,
+        seen: MutableSet<String>,
+    ) {
+        val directExtensions = ArmeriaJUnitServerExtensionSupport.serverExtensionsInClass(psiClass)
+        val classExtensions =
+            if (directExtensions.isEmpty() && kotlinPluginLoaded) {
+                ArmeriaKotlinJUnitServerExtensionSupport.serverExtensionsInKotlinClass(psiClass)
+            } else {
+                directExtensions
+            }
+        for (extension in classExtensions) {
+            val key = "${extension.containingClassName}#${extension.variableName}"
+            if (seen.add(key)) {
+                extensions += extension
+            }
+        }
     }
 
     private fun compute(project: Project): CachedValueProvider.Result<List<ArmeriaJUnitServerExtension>> {

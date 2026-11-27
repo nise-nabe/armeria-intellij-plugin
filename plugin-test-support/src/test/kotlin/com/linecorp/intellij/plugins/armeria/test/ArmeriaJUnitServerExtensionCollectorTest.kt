@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.test
 import com.intellij.psi.search.GlobalSearchScope
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaReferenceFileIndex
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ArmeriaJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
@@ -67,7 +68,7 @@ class ArmeriaJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsightFixt
                     """.trimIndent(),
                 )
             assertTrue(ArmeriaJUnitServerExtensionSupport.isInTestSourceContent(testFile))
-            assertTrue(!ArmeriaJUnitServerExtensionSupport.isInTestSourceContent(productionFile))
+            assertFalse(ArmeriaJUnitServerExtensionSupport.isInTestSourceContent(productionFile))
             val scope = GlobalSearchScope.projectScope(project)
             val candidates = ArmeriaReferenceFileIndex.findJUnitServerExtensionFiles(project, scope)
             assertTrue(productionFile.virtualFile in candidates)

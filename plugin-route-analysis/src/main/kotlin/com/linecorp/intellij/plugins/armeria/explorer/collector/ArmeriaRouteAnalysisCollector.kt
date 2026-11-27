@@ -26,9 +26,6 @@ object ArmeriaRouteAnalysisCollector {
                 includeProtoRoutes = includeProtoRoutes,
                 contributors = CONTRIBUTORS,
             )
-        if (routes.none { it.isDocService }) {
-            return routes
-        }
         return ArmeriaDocServiceExampleApplicator.apply(
             routes,
             ArmeriaDocServiceExampleCollector.collect(project),
