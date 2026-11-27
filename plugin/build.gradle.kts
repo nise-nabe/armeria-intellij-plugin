@@ -27,17 +27,28 @@ group = "com.linecorp.intellij"
 version = providers.gradleProperty("pluginVersion").get()
 
 dependencies {
+    implementation(project(":plugin-shared"))
+    implementation(project(":plugin-wizard"))
+    implementation(project(":plugin-test-support"))
+    implementation(project(":plugin-explorer"))
+    implementation(project(":plugin-inspections"))
+    implementation(project(":plugin-route-model"))
+    implementation(project(":plugin-route-collectors"))
+    implementation(project(":plugin-route-spring"))
+    implementation(project(":plugin-route-protocol"))
+    implementation(project(":plugin-route-analysis"))
+
     intellijPlatform {
-        pluginComposedModule(implementation(project(":plugin-shared")))
-        pluginComposedModule(implementation(project(":plugin-wizard")))
-        pluginComposedModule(implementation(project(":plugin-test-support")))
-        pluginComposedModule(implementation(project(":plugin-explorer")))
-        pluginComposedModule(implementation(project(":plugin-inspections")))
-        pluginComposedModule(implementation(project(":plugin-route-model")))
-        pluginComposedModule(implementation(project(":plugin-route-collectors")))
-        pluginComposedModule(implementation(project(":plugin-route-spring")))
-        pluginComposedModule(implementation(project(":plugin-route-protocol")))
-        pluginComposedModule(implementation(project(":plugin-route-analysis")))
+        pluginComposedModule(project(":plugin-shared"))
+        pluginComposedModule(project(":plugin-wizard"))
+        pluginComposedModule(project(":plugin-test-support"))
+        pluginComposedModule(project(":plugin-explorer"))
+        pluginComposedModule(project(":plugin-inspections"))
+        pluginComposedModule(project(":plugin-route-model"))
+        pluginComposedModule(project(":plugin-route-collectors"))
+        pluginComposedModule(project(":plugin-route-spring"))
+        pluginComposedModule(project(":plugin-route-protocol"))
+        pluginComposedModule(project(":plugin-route-analysis"))
         intellijIdeaUltimate(
             libs.versions.idea.platform
                 .get(),
