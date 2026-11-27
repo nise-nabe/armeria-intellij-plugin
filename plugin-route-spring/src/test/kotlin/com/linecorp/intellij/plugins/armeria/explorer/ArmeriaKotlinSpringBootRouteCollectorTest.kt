@@ -227,6 +227,49 @@ class ArmeriaKotlinSpringBootRouteCollectorTest : ArmeriaFixtureTestBase() {
         assertTrue(routes.isEmpty())
     }
 
+    fun testCollectsRoutesWhenArmeriaReferenceIsBelowHeaderScanLimit() {
+        registerSpringBootRouteStubs()
+        val longCommentPrefix = "// filler comment\n".repeat(2_000)
+        myFixture.configureByText(
+            "ArmeriaConfig.kt",
+            longCommentPrefix +
+                """
+                package example
+
+                import com.linecorp.armeria.spring.ArmeriaServerConfigurator
+                import org.springframework.context.annotation.Bean
+                import org.springframework.context.annotation.Configuration
+
+                @Configuration
+                class ArmeriaConfig {
+                    @Bean
+                    fun armeriaServerConfigurator(): ArmeriaServerConfigurator =
+                        ArmeriaServerConfigurator { serverBuilder ->
+                            serverBuilder.service("/below-header", HelloService())
+                        }
+                }
+                """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val routes =
+            ArmeriaRouteCollector.collect(
+                project,
+                contributors = listOf(ArmeriaSpringRouteContributor),
+            )
+
+        val belowHeaderRoutes = routes.filter { it.path == "/below-header" && it.routeMatch == RouteMatch.SERVICE }
+        assertEquals(1, belowHeaderRoutes.size)
+        assertEquals("example.HelloService", belowHeaderRoutes.single().target)
+    }
+
     fun testKotlinSpringBootCollectorCollectsRoutesDirectly() {
         registerSpringBootRouteStubs()
         myFixture.configureByText(
