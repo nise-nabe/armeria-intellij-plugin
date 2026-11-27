@@ -1,5 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer.support
 
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VfsUtilCore
@@ -14,6 +16,7 @@ import com.intellij.util.indexing.ID
 import com.intellij.util.indexing.ScalarIndexExtension
 import com.intellij.util.io.EnumeratorIntegerDescriptor
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Incrementally tracks source files whose text can contain an Armeria reference.
@@ -139,6 +142,8 @@ class ArmeriaReferenceFileIndex : ScalarIndexExtension<Int>() {
             contents.contains(REGISTER_EXTENSION_REFERENCE)
 
         private const val REGISTER_EXTENSION_REFERENCE = "RegisterExtension"
+        private val LOG = logger<ArmeriaReferenceFileIndex>()
+        private val productionFallbackWarningEmitted = AtomicBoolean()
 
         private fun isRegistered(): Boolean =
             FileBasedIndexExtension.EXTENSION_POINT_NAME.extensionList.any { extension ->
@@ -162,12 +167,19 @@ class ArmeriaReferenceFileIndex : ScalarIndexExtension<Int>() {
             project: Project,
             scope: GlobalSearchScope,
             predicate: (String) -> Boolean,
-        ): List<VirtualFile> =
-            SOURCE_EXTENSIONS
+        ): List<VirtualFile> {
+            if (!ApplicationManager.getApplication().isUnitTestMode) {
+                if (productionFallbackWarningEmitted.compareAndSet(false, true)) {
+                    LOG.warn("Armeria reference index is unavailable; skipping exhaustive fallback scan")
+                }
+                return emptyList()
+            }
+            return SOURCE_EXTENSIONS
                 .flatMap { extension -> FilenameIndex.getAllFilesByExt(project, extension, scope) }
                 .distinct()
                 .filter { file -> predicate(loadText(file)) }
                 .sortedWith(compareBy({ it.path }, { it.name }))
+        }
 
         private fun loadText(file: VirtualFile): String = FileDocumentManager.getInstance().getDocument(file)?.text ?: loadSavedText(file)
 
