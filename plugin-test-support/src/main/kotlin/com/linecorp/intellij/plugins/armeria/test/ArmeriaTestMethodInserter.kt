@@ -1,5 +1,6 @@
 package com.linecorp.intellij.plugins.armeria.test
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.command.WriteCommandAction
@@ -45,6 +46,7 @@ internal object ArmeriaTestMethodInserter {
             .nonBlocking<PreparedInsertion> { prepareInsertion(project, route, editorContext) }
             .inSmartMode(project)
             .expireWith(project)
+            .coalesceBy(this, route.httpMethod, route.path, route.target, route.moduleName)
             .finishOnUiThread(ModalityState.defaultModalityState()) { prepared ->
                 completeInsertion(project, prepared)
             }.submit(AppExecutorUtil.getAppExecutorService())
@@ -134,9 +136,22 @@ internal object ArmeriaTestMethodInserter {
             Messages.showInfoMessage(project, it, message("test.support.insert.title"))
             return false
         }
-        val targetClass = prepared.targetClassPointer?.element ?: return false
+        val (targetClass, methodExists) =
+            ApplicationManager.getApplication().runReadAction<Pair<PsiClass?, Boolean>> {
+                val resolvedClass = prepared.targetClassPointer?.element
+                val javaMethodExists = resolvedClass?.methods?.any { it.name == prepared.methodName } == true
+                val kotlinMethodExists =
+                    resolvedClass != null &&
+                        prepared.language == ArmeriaTestLanguage.KOTLIN &&
+                        isKotlinPluginAvailable() &&
+                        ArmeriaKotlinTestMethodSupport.hasKotlinMethod(project, resolvedClass, prepared.methodName)
+                resolvedClass to (javaMethodExists || kotlinMethodExists)
+            }
+        if (targetClass == null) {
+            return false
+        }
         val language = prepared.language ?: return false
-        if (targetClass.methods.any { it.name == prepared.methodName }) {
+        if (methodExists) {
             Messages.showInfoMessage(
                 project,
                 message("test.support.insert.methodExists", prepared.methodName),

@@ -76,8 +76,8 @@ object ArmeriaPathVariableSupport {
      * Shape used when deciding whether two exact paths can match the same request.
      * Variable names do not affect matching, so simple brace captures and colon parameters
      * occupying a complete path segment are canonicalized. Capture constraints are kept
-     * because different constraints may match disjoint values. Explicit `exact:` paths
-     * remain literal except for the type prefix itself.
+     * because different constraints may match disjoint values. The `exact:` type prefix
+     * is stripped because its concrete path can still overlap a parameterized route.
      */
     fun pathShapeForOverlap(path: String): String {
         val typed = typedPath(path)
@@ -85,9 +85,6 @@ object ArmeriaPathVariableSupport {
             return path
         }
         val body = path.substring(typed.bodyStart)
-        if (!typed.bindVariables) {
-            return body
-        }
         return body
             .split('/')
             .joinToString("/") { segment ->

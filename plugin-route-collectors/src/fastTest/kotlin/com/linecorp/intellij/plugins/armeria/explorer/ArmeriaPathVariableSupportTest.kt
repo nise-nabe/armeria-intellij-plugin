@@ -5,7 +5,6 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaPathVariabl
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class ArmeriaPathVariableSupportTest {
@@ -178,9 +177,9 @@ class ArmeriaPathVariableSupportTest {
     }
 
     @Test
-    fun pathShapeForOverlapKeepsExactTypedLiteralsAndConstraintsDistinct() {
+    fun pathShapeForOverlapCanonicalizesExactTypedPathsAndKeepsConstraintsDistinct() {
         assertEquals(
-            "/users/{id}",
+            "/users/{}",
             ArmeriaPathVariableSupport.pathShapeForOverlap("exact:/users/{id}"),
         )
         assertEquals(
@@ -191,7 +190,7 @@ class ArmeriaPathVariableSupportTest {
             "/users/{:[0-9]+}",
             ArmeriaPathVariableSupport.pathShapeForOverlap("/users/{id:[0-9]+}"),
         )
-        assertNotEquals(
+        assertEquals(
             ArmeriaPathVariableSupport.pathShapeForOverlap("exact:/users/{id}"),
             ArmeriaPathVariableSupport.pathShapeForOverlap("/users/{name}"),
         )
