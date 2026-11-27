@@ -80,7 +80,7 @@ object ArmeriaDocServiceExampleCollector {
                 GlobalSearchScope.allScope(project),
             )
         val preciselyCollectedCalls = mutableSetOf<PsiMethodCallExpression>()
-        val preciseMethodsByFile = mutableMapOf<VirtualFile, MutableSet<String>>()
+        val preciseMethodCountsByFile = mutableMapOf<VirtualFile, MutableMap<String, Int>>()
         if (builderClass != null) {
             for (methodName in EXAMPLE_METHOD_NAMES) {
                 for (method in builderClass.findMethodsByName(methodName, false)) {
@@ -91,16 +91,20 @@ object ArmeriaDocServiceExampleCollector {
                         if (call.methodExpression.referenceName != methodName) {
                             return@forEach
                         }
-                        preciselyCollectedCalls += call
-                        reference.element.containingFile
-                            ?.virtualFile
-                            ?.let { file -> preciseMethodsByFile.getOrPut(file) { mutableSetOf() } += methodName }
+                        if (preciselyCollectedCalls.add(call)) {
+                            reference.element.containingFile
+                                ?.virtualFile
+                                ?.let { file ->
+                                    val counts = preciseMethodCountsByFile.getOrPut(file) { mutableMapOf() }
+                                    counts[methodName] = counts.getOrDefault(methodName, 0) + 1
+                                }
+                        }
                         parseJavaCall(call, methodName, builder)
                     }
                 }
             }
         }
-        collectFromJavaFiles(project, exampleFiles, builder, preciselyCollectedCalls, preciseMethodsByFile)
+        collectFromJavaFiles(project, exampleFiles, builder, preciselyCollectedCalls, preciseMethodCountsByFile)
     }
 
     private fun collectFromJavaFiles(
@@ -108,14 +112,17 @@ object ArmeriaDocServiceExampleCollector {
         exampleFiles: List<VirtualFile>,
         builder: ArmeriaDocServiceExampleIndex.Builder,
         preciselyCollectedCalls: Set<PsiMethodCallExpression>,
-        preciseMethodsByFile: Map<VirtualFile, Set<String>>,
+        preciseMethodCountsByFile: Map<VirtualFile, Map<String, Int>>,
     ) {
         for (virtualFile in exampleFiles) {
             if (virtualFile.extension != "java") continue
             val psiFile = PsiManager.getInstance(project).findFile(virtualFile) as? PsiJavaFile ?: continue
             val text = psiFile.viewProvider.contents
-            val requiredMethodNames = EXAMPLE_METHOD_NAMES.filter(text::contains)
-            if (requiredMethodNames.isEmpty() || requiredMethodNames.all { it in preciseMethodsByFile[virtualFile].orEmpty() }) {
+            val hasUnresolvedMethods =
+                EXAMPLE_METHOD_NAMES.any { methodName ->
+                    countOccurrences(text, methodName) > preciseMethodCountsByFile[virtualFile]?.get(methodName).orZero()
+                }
+            if (!hasUnresolvedMethods) {
                 continue
             }
             psiFile.forEachDescendant { element ->
@@ -131,6 +138,24 @@ object ArmeriaDocServiceExampleCollector {
             }
         }
     }
+
+    private fun countOccurrences(
+        text: CharSequence,
+        value: String,
+    ): Int {
+        var count = 0
+        var index = 0
+        while (index >= 0) {
+            index = text.indexOf(value, index)
+            if (index >= 0) {
+                count++
+                index += value.length
+            }
+        }
+        return count
+    }
+
+    private fun Int?.orZero(): Int = this ?: 0
 
     private fun looksLikeDocServiceBuilder(call: PsiMethodCallExpression): Boolean {
         val resolvedClass = call.resolveMethod()?.containingClass?.qualifiedName

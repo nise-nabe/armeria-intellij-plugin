@@ -37,7 +37,7 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
                     GlobalSearchScope.allScope(project),
                 )
         val preciselyCollectedCalls = mutableSetOf<KtCallExpression>()
-        val preciseMethodsByFile = mutableMapOf<VirtualFile, MutableSet<String>>()
+        val preciseMethodCountsByFile = mutableMapOf<VirtualFile, MutableMap<String, Int>>()
         if (builderClass != null) {
             for (methodName in listOf("exampleRequests", "exampleHeaders")) {
                 for (method in builderClass.findMethodsByName(methodName, false)) {
@@ -48,16 +48,20 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
                         if (ArmeriaKotlinExpressionSupport.resolveCallName(call) != methodName) {
                             return@forEach
                         }
-                        preciselyCollectedCalls += call
-                        reference.element.containingFile
-                            ?.virtualFile
-                            ?.let { file -> preciseMethodsByFile.getOrPut(file) { mutableSetOf() } += methodName }
+                        if (preciselyCollectedCalls.add(call)) {
+                            reference.element.containingFile
+                                ?.virtualFile
+                                ?.let { file ->
+                                    val counts = preciseMethodCountsByFile.getOrPut(file) { mutableMapOf() }
+                                    counts[methodName] = counts.getOrDefault(methodName, 0) + 1
+                                }
+                        }
                         parseCall(call, methodName, builder)
                     }
                 }
             }
         }
-        collectFromKotlinFiles(project, exampleFiles, builder, preciselyCollectedCalls, preciseMethodsByFile)
+        collectFromKotlinFiles(project, exampleFiles, builder, preciselyCollectedCalls, preciseMethodCountsByFile)
     }
 
     private fun collectFromKotlinFiles(
@@ -65,14 +69,17 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
         exampleFiles: List<VirtualFile>,
         builder: ArmeriaDocServiceExampleIndex.Builder,
         preciselyCollectedCalls: Set<KtCallExpression>,
-        preciseMethodsByFile: Map<VirtualFile, Set<String>>,
+        preciseMethodCountsByFile: Map<VirtualFile, Map<String, Int>>,
     ) {
         for (virtualFile in exampleFiles) {
             if (virtualFile.extension != "kt") continue
             val ktFile = PsiManager.getInstance(project).findFile(virtualFile) as? KtFile ?: continue
             val text = ktFile.viewProvider.contents
-            val requiredMethodNames = listOf("exampleRequests", "exampleHeaders").filter(text::contains)
-            if (requiredMethodNames.isEmpty() || requiredMethodNames.all { it in preciseMethodsByFile[virtualFile].orEmpty() }) {
+            val hasUnresolvedMethods =
+                listOf("exampleRequests", "exampleHeaders").any { methodName ->
+                    countOccurrences(text, methodName) > preciseMethodCountsByFile[virtualFile]?.get(methodName).orZero()
+                }
+            if (!hasUnresolvedMethods) {
                 continue
             }
             ktFile.forEachDescendant { element ->
@@ -88,6 +95,24 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
             }
         }
     }
+
+    private fun countOccurrences(
+        text: CharSequence,
+        value: String,
+    ): Int {
+        var count = 0
+        var index = 0
+        while (index >= 0) {
+            index = text.indexOf(value, index)
+            if (index >= 0) {
+                count++
+                index += value.length
+            }
+        }
+        return count
+    }
+
+    private fun Int?.orZero(): Int = this ?: 0
 
     private fun looksLikeDocServiceBuilder(call: KtCallExpression): Boolean {
         var current: KtExpression? = call
