@@ -189,10 +189,9 @@ object ArmeriaDocServiceExampleCollector {
                 if (!fromReference.isNullOrBlank()) {
                     return fromReference
                 }
-                return typeElement.type
-                    ?.canonicalText
-                    ?.trim()
-                    ?.takeIf { it.isNotEmpty() && it != "null" }
+                return typeElement.type.canonicalText
+                    .trim()
+                    .takeIf { it.isNotEmpty() && it != "null" }
             }
 
             is PsiLiteralExpression -> {
@@ -269,7 +268,6 @@ object ArmeriaDocServiceExampleCollector {
         if (constant is CharSequence && constant.isNotEmpty()) {
             return constant.toString()
         }
-        val name = field.name ?: return null
-        return name.lowercase().replace('_', '-')
+        return field.name.lowercase().replace('_', '-')
     }
 }
