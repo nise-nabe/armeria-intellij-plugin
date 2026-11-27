@@ -136,8 +136,9 @@ class ArmeriaReferenceFileIndex : ScalarIndexExtension<Int>() {
             contents.contains("exampleRequests") || contents.contains("exampleHeaders")
 
         internal fun containsJUnitServerExtensionReference(contents: CharSequence): Boolean =
-            contents.contains("org.junit.jupiter.api.extension.RegisterExtension") ||
-                contents.contains("@RegisterExtension")
+            contents.contains(REGISTER_EXTENSION_REFERENCE)
+
+        private const val REGISTER_EXTENSION_REFERENCE = "RegisterExtension"
 
         private fun isRegistered(): Boolean =
             FileBasedIndexExtension.EXTENSION_POINT_NAME.extensionList.any { extension ->

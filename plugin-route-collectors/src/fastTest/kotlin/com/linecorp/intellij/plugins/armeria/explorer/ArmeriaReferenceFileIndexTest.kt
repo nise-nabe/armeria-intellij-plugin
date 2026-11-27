@@ -30,6 +30,7 @@ class ArmeriaReferenceFileIndexTest {
             ArmeriaReferenceFileIndex.containsJUnitServerExtensionReference("import org.junit.jupiter.api.extension.RegisterExtension;"),
         )
         assertTrue(ArmeriaReferenceFileIndex.containsJUnitServerExtensionReference("@RegisterExtension"))
+        assertTrue(ArmeriaReferenceFileIndex.containsJUnitServerExtensionReference("@field:RegisterExtension"))
         assertFalse(ArmeriaReferenceFileIndex.containsJUnitServerExtensionReference("@ExtendWith"))
     }
 }
