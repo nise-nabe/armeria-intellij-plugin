@@ -27,7 +27,6 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaRouteNavigation
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteTreeBuilder
 import com.linecorp.intellij.plugins.armeria.message
-import com.linecorp.intellij.plugins.armeria.test.ArmeriaGenerateTestMethodAction
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.event.KeyEvent
@@ -99,7 +98,7 @@ class ArmeriaRouteExplorerPanel(
                     ),
                 )
                 add(ArmeriaExportOpenApiAction { filterRoutes(allRoutes()) })
-                add(ArmeriaGenerateTestMethodAction { selectedRouteFromTree() })
+                add(ArmeriaGenerateTestMethodAction(selectedRouteProvider = { selectedRouteFromTree() }))
                 add(
                     ArmeriaGotoMatchingClientAction(
                         selectedRouteProvider = { selectedRouteFromTree() },

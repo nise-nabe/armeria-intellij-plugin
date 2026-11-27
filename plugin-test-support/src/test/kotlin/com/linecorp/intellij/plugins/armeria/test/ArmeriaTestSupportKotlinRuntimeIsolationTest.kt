@@ -18,7 +18,6 @@ class ArmeriaTestSupportKotlinRuntimeIsolationTest {
                 "ArmeriaBlockingClientPathSupport",
                 "ArmeriaBlockingClientInspectionPaths",
                 "ArmeriaTestMethodInserter",
-                "ArmeriaGenerateTestMethodAction",
                 "ArmeriaJUnitServerExtension",
                 "ArmeriaJUnitServerExtension\$Companion",
                 "ArmeriaTestMethodGenerator",
