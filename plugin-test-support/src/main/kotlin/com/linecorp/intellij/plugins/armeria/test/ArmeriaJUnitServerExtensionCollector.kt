@@ -58,12 +58,12 @@ object ArmeriaJUnitServerExtensionCollector {
         var current: PsiClass? = psiClass
         while (current != null) {
             addDirectExtensions(current, kotlinPluginLoaded, extensions, seen)
-            var containing = current.containingClass
-            while (containing != null) {
-                addDirectExtensions(containing, kotlinPluginLoaded, extensions, seen)
-                containing = containing.containingClass
-            }
             current = current.superClass
+        }
+        var containing = psiClass.containingClass
+        while (containing != null) {
+            addDirectExtensions(containing, kotlinPluginLoaded, extensions, seen)
+            containing = containing.containingClass
         }
         return extensions
     }

@@ -205,10 +205,20 @@ internal object ArmeriaJUnitServerExtensionSupport {
         testClassName: String,
         project: Project,
         scope: GlobalSearchScope,
-    ): List<ArmeriaJUnitServerExtension> =
-        ArmeriaJUnitServerExtensionCollector
-            .collect(project)
-            .filter { extension -> canAccessServerExtension(testClassName, extension.containingClassName, project, scope) }
+    ): List<ArmeriaJUnitServerExtension> {
+        val testClass = JavaPsiFacade.getInstance(project).findClass(testClassName, scope)
+        val directExtensions =
+            if (testClass != null) {
+                ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, testClass)
+            } else {
+                emptyList()
+            }
+        val accessibleExtensions =
+            ArmeriaJUnitServerExtensionCollector
+                .collect(project)
+                .filter { extension -> canAccessServerExtension(testClassName, extension.containingClassName, project, scope) }
+        return (directExtensions + accessibleExtensions).distinctBy { "${it.containingClassName}#${it.variableName}" }
+    }
 
     internal fun canAccessServerExtension(
         testClassName: String,
