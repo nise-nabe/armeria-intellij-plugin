@@ -19,17 +19,18 @@ import java.lang.reflect.Method
 object ArmeriaFileEditorOpenSupport {
     private val LOG = logger<ArmeriaFileEditorOpenSupport>()
 
-    private val asyncOpenMethods: Pair<Method, Method>? by lazy {
+    private val asyncOpenMethods: Triple<Method, Method, Method>? by lazy {
         runCatching {
             val requestClass = Class.forName("com.intellij.openapi.fileEditor.FileEditorOpenRequest")
-            val withFocus = requestClass.getMethod("withFocus", Boolean::class.javaPrimitiveType)
+            val fromDescriptor = requestClass.getMethod("fromDescriptor", FileEditorNavigatable::class.java)
+            val withRequestFocus = requestClass.getMethod("withRequestFocus", Boolean::class.javaPrimitiveType)
             val requestOpenEditor =
                 FileEditorManager::class.java.getMethod(
                     "requestOpenEditor",
                     FileEditorNavigatable::class.java,
                     requestClass,
                 )
-            requestOpenEditor to withFocus
+            Triple(requestOpenEditor, fromDescriptor, withRequestFocus)
         }.getOrNull()
     }
 
@@ -76,9 +77,12 @@ object ArmeriaFileEditorOpenSupport {
         manager: FileEditorManager,
         descriptor: OpenFileDescriptor,
     ): Boolean {
-        val (requestOpenEditor, withFocus) = asyncOpenMethods ?: return false
+        val (requestOpenEditor, fromDescriptor, withRequestFocus) =
+            asyncOpenMethods ?: return false
         return runCatching {
-            val request = withFocus.invoke(null, true)
+            // fromDescriptor preserves reuse/preview behavior; withFocus forces reuseOpen off.
+            val descriptorRequest = fromDescriptor.invoke(null, descriptor)
+            val request = withRequestFocus.invoke(descriptorRequest, true)
             requestOpenEditor.invoke(manager, descriptor, request)
         }.isSuccess
     }
