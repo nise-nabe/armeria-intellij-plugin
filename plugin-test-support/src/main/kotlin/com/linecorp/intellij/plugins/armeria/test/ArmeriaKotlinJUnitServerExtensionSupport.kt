@@ -1,26 +1,15 @@
 package com.linecorp.intellij.plugins.armeria.test
 
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.roots.ProjectRootManager
-import com.intellij.openapi.roots.TestSourcesFilter
 import com.intellij.psi.JavaPsiFacade
-import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
-import com.intellij.psi.PsiClassType
 import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiField
-import com.intellij.psi.PsiFile
-import com.intellij.psi.PsiJavaFile
-import com.intellij.psi.PsiMethod
-import com.intellij.psi.PsiMethodCallExpression
-import com.intellij.psi.PsiModifierListOwner
-import com.intellij.psi.PsiReferenceExpression
-import com.intellij.psi.PsiThisExpression
-import com.intellij.psi.PsiType
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinPluginSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.toArmeriaLightClass
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaJUnitServerExtensionSupport.REGISTER_EXTENSION_ANNOTATION
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaJUnitServerExtensionSupport.REGISTER_EXTENSION_ANNOTATION_SHORT
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClass
@@ -39,9 +28,6 @@ import org.jetbrains.kotlin.psi.KtThisExpression
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
 internal object ArmeriaKotlinJUnitServerExtensionSupport {
-    private val REGISTER_EXTENSION_ANNOTATION = ArmeriaJUnitServerExtensionSupport.REGISTER_EXTENSION_ANNOTATION
-    private val REGISTER_EXTENSION_ANNOTATION_SHORT = ArmeriaJUnitServerExtensionSupport.REGISTER_EXTENSION_ANNOTATION_SHORT
-
     fun serverExtensionFromKotlinFunction(function: KtNamedFunction): ArmeriaJUnitServerExtension? {
         if (function.valueParameters.isNotEmpty() || function.receiverTypeReference != null) {
             return null
