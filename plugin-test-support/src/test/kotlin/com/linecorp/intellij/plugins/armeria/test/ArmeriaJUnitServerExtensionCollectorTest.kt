@@ -1,6 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.test
 
-import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
+import com.intellij.psi.search.GlobalSearchScope
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaReferenceFileIndex
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -31,6 +32,51 @@ class ArmeriaJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsightFixt
         assertEquals(1, extensions.size)
         assertEquals("server", extensions.single().variableName)
         assertEquals("example.ExampleServiceTest", extensions.single().containingClassName)
+    }
+
+    fun testCollectsOnlyTestSourceFiles() {
+        myFixture.withTemporaryMainSourceRoot {
+            val productionFile =
+                myFixture.addFileToProject(
+                    "main/Production.java",
+                    """
+                    package example;
+
+                    import org.junit.jupiter.api.extension.RegisterExtension;
+                    import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+                    public class Production {
+                        @RegisterExtension
+                        static ServerExtension productionServer = new ServerExtension() {};
+                    }
+                    """.trimIndent(),
+                )
+            val testFile =
+                myFixture.addFileToProject(
+                    "ExampleServiceTest.java",
+                    """
+                    package example;
+
+                    import org.junit.jupiter.api.extension.RegisterExtension;
+                    import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+                    public class ExampleServiceTest {
+                        @RegisterExtension
+                        static ServerExtension testServer = new ServerExtension() {};
+                    }
+                    """.trimIndent(),
+                )
+            assertTrue(ArmeriaJUnitServerExtensionSupport.isInTestSourceContent(testFile))
+            assertTrue(!ArmeriaJUnitServerExtensionSupport.isInTestSourceContent(productionFile))
+            val scope = GlobalSearchScope.projectScope(project)
+            val candidates = ArmeriaReferenceFileIndex.findJUnitServerExtensionFiles(project, scope)
+            assertTrue(productionFile.virtualFile in candidates)
+            assertTrue(testFile.virtualFile in candidates)
+
+            val extensions = ArmeriaJUnitServerExtensionCollector.collect(project)
+
+            assertEquals(listOf("testServer"), extensions.map { it.variableName })
+        }
     }
 
     fun testCollectsRegisterExtensionWithStarImport() {

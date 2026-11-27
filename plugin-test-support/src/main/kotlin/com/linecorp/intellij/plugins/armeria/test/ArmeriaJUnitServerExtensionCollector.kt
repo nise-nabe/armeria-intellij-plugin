@@ -73,6 +73,7 @@ object ArmeriaJUnitServerExtensionCollector {
         val seen = mutableSetOf<String>()
         for (virtualFile in ArmeriaReferenceFileIndex.findJUnitServerExtensionFiles(project, scope)) {
             if (virtualFile.extension != "java") continue
+            if (!ArmeriaJUnitServerExtensionSupport.isInTestSourceContent(virtualFile, project)) continue
             val file = PsiManager.getInstance(project).findFile(virtualFile) as? PsiJavaFile ?: continue
             if (!ArmeriaJUnitServerExtensionSupport.fileMayContainRegisterExtension(file.text)) {
                 continue
