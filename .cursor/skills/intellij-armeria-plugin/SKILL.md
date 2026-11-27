@@ -3,7 +3,7 @@ name: intellij-armeria-plugin
 description: >-
   IntelliJ Platform plugin conventions for this repository. Use when implementing
   or editing plugin UI, run configurations, tool windows, inspections, actions,
-  or any Kotlin code under plugin/, plugin-shared/, plugin-wizard/, plugin-test-support/, or plugin-explorer/.
+  or any Kotlin code under plugin/, plugin-shared/, plugin-wizard/, plugin-test-support/, plugin-explorer/, or plugin-inspections/.
 ---
 
 # IntelliJ Armeria plugin conventions
@@ -31,7 +31,8 @@ in this repository. Apply it **during implementation**, not only before opening 
 | `plugin-wizard/` | New-project/module wizard, file templates, starter resources |
 | `plugin-test-support/` | Test-support inspections, JUnit `ServerExtension` analysis, generated test-method insertion, and related line markers |
 | `plugin-explorer/` | Route/Client Explorer UI, client endpoint analysis, OpenAPI/HTTP request generation, and DocService actions |
-| `plugin/` | `plugin.xml` wiring, run configs, inspections/markers that consume explorer APIs, and inspection registration |
+| `plugin-inspections/` | Java/Kotlin/Scala production inspections (excluding test-support inspections), quick fixes, and inspection support logic |
+| `plugin/` | `plugin.xml` wiring, run configs, inspection registration (`plugin.xml` and `*-integration.xml`) plus markers/integrations that consume explorer or inspection APIs |
 
 Do not put collector logic in `plugin/` when it belongs in one of the `plugin-route-*` modules.
 Do not add route-analysis tests under `plugin/src/test` when the class under test lives in a
@@ -47,8 +48,10 @@ Cross-module rules to keep the dependency graph acyclic:
 - `plugin-route-analysis` `api`s the four modules above so analysis can compile against them.
 - `plugin-test-support` may depend on `plugin-route-analysis` and `plugin-shared`.
 - `plugin-explorer` may depend on `plugin-route-analysis`, `plugin-test-support`, and `plugin-shared`;
-  nothing except `plugin/` may depend on `plugin-explorer`.
-- `plugin/` composes `plugin-shared`, `plugin-wizard`, `plugin-test-support`, `plugin-explorer`, and all `plugin-route-*` modules into the
+  only `plugin-inspections` and `plugin/` may depend on `plugin-explorer`.
+- `plugin-inspections` may depend on `plugin-explorer`, `plugin-route-analysis`, and `plugin-shared`;
+  nothing except `plugin/` may depend on `plugin-inspections`.
+- `plugin/` composes `plugin-shared`, `plugin-wizard`, `plugin-test-support`, `plugin-explorer`, `plugin-inspections`, and all `plugin-route-*` modules into the
   main plugin JAR via `pluginComposedModule`. Do not use bare `implementation(project(...))` for
   those modules — that ships extra JARs and can pull Kotlin stdlib into the ZIP. Test-side it
   consumes `testFixtures(project(":plugin-route-collectors"))`.
@@ -230,6 +233,7 @@ Match the Gradle task to the module that contains the test class:
 | `plugin/src/test` | `:plugin:test` |
 | `plugin-test-support/src/test` | `:plugin-test-support:test` |
 | `plugin-explorer/src/test` | `:plugin-explorer:test` |
+| `plugin-inspections/src/test` | `:plugin-inspections:test` |
 | `plugin-wizard/src/test` | `:plugin-wizard:test` |
 
 PSI fixture layout (`src/test/testData/`, `configureFixture()`, `ArmeriaRouteTestSupport`) is

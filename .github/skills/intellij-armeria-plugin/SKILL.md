@@ -3,7 +3,7 @@ name: intellij-armeria-plugin
 description: >-
   IntelliJ Platform plugin conventions for this repository. Use when implementing
   or editing plugin UI, run configurations, tool windows, inspections, actions,
-  or any Kotlin code under plugin/, plugin-shared/, plugin-wizard/, plugin-test-support/, or plugin-explorer/.
+  or any Kotlin code under plugin/, plugin-shared/, plugin-wizard/, plugin-test-support/, plugin-explorer/, or plugin-inspections/.
 ---
 
 # IntelliJ Armeria plugin conventions
@@ -27,13 +27,16 @@ in this repository. Apply it **during implementation**, not only before opening 
 | `plugin-wizard/` | New-project/module wizard, file templates, starter resources |
 | `plugin-test-support/` | Test-support inspections, JUnit `ServerExtension` analysis, and generated test-method insertion |
 | `plugin-explorer/` | Route/Client Explorer UI, client endpoint analysis, OpenAPI/HTTP request generation, and DocService actions |
-| `plugin/` | `plugin.xml` wiring, run configs, inspections/markers that consume explorer APIs, and inspection registration |
+| `plugin-inspections/` | Java/Kotlin/Scala production inspections (excluding test-support inspections), quick fixes, and inspection support logic |
+| `plugin/` | `plugin.xml` wiring, run configs, inspection registration (`plugin.xml` and `*-integration.xml`) plus markers/integrations that consume explorer or inspection APIs |
 
 Do not put collector logic in `plugin/` when it belongs in one of the `plugin-route-*` modules.
 Do not add route-analysis tests under `plugin/src/test` when the class under test lives
 in a `plugin-route-*` module. Explorer/client UI belongs in `plugin-explorer`.
 
-The `plugin` module composes `plugin-shared`, `plugin-wizard`, `plugin-test-support`, `plugin-explorer`, and route modules into the
+`plugin-inspections` may depend on `plugin-explorer`, `plugin-route-analysis`, `plugin-route-collectors`, and `plugin-shared`; nothing except `plugin/` may depend on it. `plugin-completion`/editor/intention code currently uses a small public inspection-helper API as a documented exception pending further extraction.
+
+The `plugin` module composes `plugin-shared`, `plugin-wizard`, `plugin-test-support`, `plugin-explorer`, `plugin-inspections`, and route modules into the
 main plugin JAR via `pluginComposedModule`. Do not use bare `implementation(project(...))`
 for those modules — that ships extra JARs and can pull Kotlin stdlib into the ZIP.
 
@@ -208,6 +211,7 @@ Match the Gradle task to the module that contains the test class:
 | `plugin/src/test` | `:plugin:test` |
 | `plugin-test-support/src/test` | `:plugin-test-support:test` |
 | `plugin-explorer/src/test` | `:plugin-explorer:test` |
+| `plugin-inspections/src/test` | `:plugin-inspections:test` |
 | `plugin-wizard/src/test` | `:plugin-wizard:test` |
 
 PSI fixture layout (`src/test/testData/`, `configureFixture()`, `ArmeriaRouteTestSupport`) is

@@ -20,7 +20,7 @@ internal data class ArmeriaParamPathVariableFinding(
     val messageArg: String,
 )
 
-internal object ArmeriaParamPathVariableMismatch {
+object ArmeriaParamPathVariableMismatch {
     private val FRAMEWORK_TYPE_PREFIXES =
         listOf(
             "java.",
@@ -31,7 +31,7 @@ internal object ArmeriaParamPathVariableMismatch {
             "io.netty.",
         )
 
-    fun findings(
+    internal fun findings(
         pathVariables: Set<String>,
         bindings: List<ArmeriaParamBinding>,
         missingHighlight: PsiElement,
@@ -70,7 +70,7 @@ internal object ArmeriaParamPathVariableMismatch {
         }
     }
 
-    fun paramBindings(method: PsiMethod): List<ArmeriaParamBinding> =
+    internal fun paramBindings(method: PsiMethod): List<ArmeriaParamBinding> =
         buildList {
             method.parameterList.parameters.forEach { parameter ->
                 val annotation = parameter.getAnnotation(ArmeriaRouteSupport.PARAM_ANNOTATION)
@@ -87,7 +87,7 @@ internal object ArmeriaParamPathVariableMismatch {
             }
         }
 
-    fun beanParamBindings(type: PsiClass): List<ArmeriaParamBinding> {
+    internal fun beanParamBindings(type: PsiClass): List<ArmeriaParamBinding> {
         if (!isUserBeanType(type)) {
             return emptyList()
         }

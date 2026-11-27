@@ -192,6 +192,7 @@ Follow **`gradle-tapi-mcp`** constraints:
 | `plugin/` | `:plugin:compileKotlin`, `:plugin:compileTestKotlin` | `:plugin:test` |
 | `plugin-test-support/` | `:plugin-test-support:compileKotlin`, `:plugin-test-support:compileTestKotlin` | `:plugin-test-support:test` |
 | `plugin-explorer/` | `:plugin-explorer:compileKotlin`, `:plugin-explorer:compileTestKotlin` | `:plugin-explorer:test` |
+| `plugin-inspections/` | `:plugin-inspections:compileKotlin`, `:plugin-inspections:compileTestKotlin` | `:plugin-inspections:test` |
 | `plugin-route-analysis/` (`src/test`) | `:plugin-route-analysis:compileKotlin`, `:plugin-route-analysis:compileTestKotlin` | `:plugin-route-analysis:test` |
 | `plugin-route-analysis/` (`src/fastTest`) | `:plugin-route-analysis:compileKotlin`, `:plugin-route-analysis:compileFastTestKotlin` | `:plugin-route-analysis:fastTest` |
 

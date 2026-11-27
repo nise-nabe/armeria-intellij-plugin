@@ -7,7 +7,7 @@ import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtNamedFunction
 
-internal data class ArmeriaKotlinMethodRoute(
+data class ArmeriaKotlinMethodRoute(
     val httpMethod: String,
     val paths: List<String>,
     val rawPaths: List<String>,

@@ -9,7 +9,7 @@ import com.intellij.psi.PsiElement
  * Detects the `armeria-kotlin` module on a classpath by resolving a published API type,
  * with the internal [ARMERIA_KOTLIN_UTIL] marker as a fallback (issue #406).
  */
-internal object ArmeriaKotlinClasspath {
+object ArmeriaKotlinClasspath {
     private const val COROUTINE_CONTEXT_SERVICE = "com.linecorp.armeria.server.kotlin.CoroutineContextService"
     private const val ARMERIA_KOTLIN_UTIL = "com.linecorp.armeria.internal.common.kotlin.ArmeriaKotlinUtil"
 

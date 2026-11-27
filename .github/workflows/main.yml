@@ -23,6 +23,8 @@ jobs:
             task: :plugin-test-support:test
           - name: Plugin explorer tests
             task: :plugin-explorer:test
+          - name: Plugin inspection tests
+            task: :plugin-inspections:test
           - name: Route model + collectors fast tests
             task: :plugin-route-collectors:fastTest
           - name: Route spring fast tests
