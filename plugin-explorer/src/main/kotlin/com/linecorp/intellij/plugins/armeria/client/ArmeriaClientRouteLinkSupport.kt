@@ -81,7 +81,7 @@ object ArmeriaClientRouteLinkSupport {
         route: ArmeriaRoute,
     ): Boolean =
         matches(
-            clientType = endpoint.clientType,
+            protocol = endpoint.protocol,
             uri = endpoint.uri,
             routeProtocolType = route.protocolType,
             routePath = route.path,
@@ -103,10 +103,34 @@ object ArmeriaClientRouteLinkSupport {
         httpMethod: String = "",
         routeHttpMethod: String = "",
     ): Boolean {
+        val protocol = ClientProtocol.fromPresentableName(clientType) ?: return false
+        return matches(
+            protocol = protocol,
+            uri = uri,
+            routeProtocolType = routeProtocolType,
+            routePath = routePath,
+            virtualHostName = virtualHostName,
+            routeMatch = routeMatch,
+            requestPath = requestPath,
+            httpMethod = httpMethod,
+            routeHttpMethod = routeHttpMethod,
+        )
+    }
+
+    fun matches(
+        protocol: ClientProtocol,
+        uri: String,
+        routeProtocolType: RouteProtocol?,
+        routePath: String,
+        virtualHostName: String = "",
+        routeMatch: RouteMatch = RouteMatch.ANNOTATED_HTTP,
+        requestPath: String? = null,
+        httpMethod: String = "",
+        routeHttpMethod: String = "",
+    ): Boolean {
         if (routeMatch !in MATCHABLE_ROUTE_MATCHES) {
             return false
         }
-        val protocol = ClientProtocol.fromPresentableName(clientType) ?: return false
         if (!protocol.matchesRouteProtocol(routeProtocolType)) {
             return false
         }

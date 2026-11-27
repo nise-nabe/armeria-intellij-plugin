@@ -72,7 +72,7 @@ internal object ArmeriaClientEndpointsSupport {
         if (endpoint.httpMethod.isNotBlank()) {
             return listOf(endpoint.httpMethod)
         }
-        val protocol = ClientProtocol.fromPresentableName(endpoint.clientType) ?: return emptyList()
+        val protocol = endpoint.protocol
         return when (protocol) {
             ClientProtocol.GRPC,
             ClientProtocol.GRPC_KOTLIN,

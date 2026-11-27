@@ -358,7 +358,7 @@ object ArmeriaClientCollector {
         endpoints +=
             ArmeriaClientEndpoint.create(
                 element = element,
-                clientType = protocol.presentableName(),
+                protocol = protocol,
                 target = target,
                 uri = uri,
                 decorators = decorators,
