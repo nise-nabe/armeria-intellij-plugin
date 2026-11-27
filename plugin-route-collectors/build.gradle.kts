@@ -7,6 +7,7 @@ plugins {
 }
 
 dependencies {
+    add("armeriaTestFixtures", testFixtures(project()))
     api(project(":plugin-route-model"))
     implementation(project(":plugin-shared"))
     intellijPlatform {
@@ -34,7 +35,6 @@ testing {
     suites {
         getByName<JvmTestSuite>("test") {
             dependencies {
-                implementation(testFixtures(project()))
                 implementation(libs.junit4)
             }
             targets.all {
@@ -48,7 +48,6 @@ testing {
             useJUnit(libs.versions.junit4.get())
             dependencies {
                 implementation(project())
-                implementation(testFixtures(project()))
                 implementation(libs.junit4)
             }
             sources {

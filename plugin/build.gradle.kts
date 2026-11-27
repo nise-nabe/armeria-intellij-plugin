@@ -27,6 +27,7 @@ group = "com.linecorp.intellij"
 version = providers.gradleProperty("pluginVersion").get()
 
 dependencies {
+    add("armeriaTestFixtures", testFixtures(project(":plugin-route-collectors")))
     implementation(project(":plugin-shared"))
     implementation(project(":plugin-wizard"))
     implementation(project(":plugin-test-support"))
@@ -77,7 +78,6 @@ testing {
     suites {
         getByName<JvmTestSuite>("test") {
             dependencies {
-                implementation(testFixtures(project(":plugin-route-collectors")))
                 implementation(libs.velocity.engine.core)
                 implementation(libs.junit4)
             }
