@@ -1,8 +1,8 @@
 package com.linecorp.intellij.plugins.armeria.test
 
-import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
@@ -83,7 +83,7 @@ internal object ArmeriaKotlinTestMethodSupport {
         }
         val editor =
             ktFile.virtualFile
-                ?.let { FileEditorManager.getInstance(project).openFile(it, true).firstOrNull() as? Editor }
+                ?.let { FileEditorManager.getInstance(project).openTextEditor(OpenFileDescriptor(project, it), true) }
         editor?.caretModel?.moveToOffset(added.textRange.startOffset)
         editor?.scrollingModel?.scrollToCaret(ScrollType.CENTER)
     }

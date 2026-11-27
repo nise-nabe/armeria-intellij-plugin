@@ -62,7 +62,7 @@ internal object ArmeriaOpenApiFileWriter {
                         }
                         val virtualFile = existing ?: parent.createChildData(this, fileName)
                         virtualFile.setBinaryContent(content.toByteArray(StandardCharsets.UTF_8))
-                        FileEditorManager.getInstance(project).openFile(virtualFile, true)
+                        FileEditorManager.getInstance(project).openFile(virtualFile)
                     } catch (e: ProcessCanceledException) {
                         throw e
                     } catch (e: Exception) {

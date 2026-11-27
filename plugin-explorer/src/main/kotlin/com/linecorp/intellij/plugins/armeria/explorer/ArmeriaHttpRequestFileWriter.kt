@@ -73,7 +73,7 @@ internal object ArmeriaHttpRequestFileWriter {
                         }
                         val virtualFile = existing ?: parent.createChildData(this, fileName)
                         virtualFile.setBinaryContent(content.toByteArray(StandardCharsets.UTF_8))
-                        FileEditorManager.getInstance(project).openFile(virtualFile, true)
+                        FileEditorManager.getInstance(project).openFile(virtualFile)
                     } catch (e: Exception) {
                         LOG.warn("Failed to create or update HTTP request file: $fileName", e)
                     }
