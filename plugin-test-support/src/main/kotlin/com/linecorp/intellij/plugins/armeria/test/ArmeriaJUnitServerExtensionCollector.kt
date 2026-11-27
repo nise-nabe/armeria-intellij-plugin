@@ -1,6 +1,5 @@
 package com.linecorp.intellij.plugins.armeria.test
 
-import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.project.Project
@@ -8,10 +7,10 @@ import com.intellij.psi.JavaRecursiveElementWalkingVisitor
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiManager
-import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaReferenceFileIndex
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCacheSupport
 
 object ArmeriaJUnitServerExtensionCollector {
@@ -31,7 +30,7 @@ object ArmeriaJUnitServerExtensionCollector {
             psiClass.qualifiedName
                 ?: (
                     if (PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)) {
-                        ArmeriaJUnitServerExtensionSupport.toKtClassOrObject(psiClass)?.fqName?.asString()
+                        ArmeriaKotlinJUnitServerExtensionSupport.kotlinClassQualifiedName(psiClass)
                     } else {
                         null
                     }
@@ -72,7 +71,8 @@ object ArmeriaJUnitServerExtensionCollector {
         val scope = GlobalSearchScope.projectScope(project)
         val extensions = mutableListOf<ArmeriaJUnitServerExtension>()
         val seen = mutableSetOf<String>()
-        for (virtualFile in FileTypeIndex.getFiles(JavaFileType.INSTANCE, scope)) {
+        for (virtualFile in ArmeriaReferenceFileIndex.findJUnitServerExtensionFiles(project, scope)) {
+            if (virtualFile.extension != "java") continue
             val file = PsiManager.getInstance(project).findFile(virtualFile) as? PsiJavaFile ?: continue
             if (!ArmeriaJUnitServerExtensionSupport.fileMayContainRegisterExtension(file.text)) {
                 continue

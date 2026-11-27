@@ -2,9 +2,8 @@ package com.linecorp.intellij.plugins.armeria.test
 
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiManager
-import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
-import org.jetbrains.kotlin.idea.KotlinFileType
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaReferenceFileIndex
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
@@ -18,7 +17,8 @@ internal object ArmeriaKotlinJUnitServerExtensionCollector {
         extensions: MutableList<ArmeriaJUnitServerExtension>,
         seen: MutableSet<String>,
     ) {
-        for (virtualFile in FileTypeIndex.getFiles(KotlinFileType.INSTANCE, scope)) {
+        for (virtualFile in ArmeriaReferenceFileIndex.findJUnitServerExtensionFiles(project, scope)) {
+            if (virtualFile.extension != "kt") continue
             val file = PsiManager.getInstance(project).findFile(virtualFile) as? KtFile ?: continue
             if (!ArmeriaJUnitServerExtensionSupport.fileMayContainRegisterExtension(file.text)) {
                 continue
@@ -75,8 +75,8 @@ internal object ArmeriaKotlinJUnitServerExtensionCollector {
     }
 
     private fun from(property: KtProperty): ArmeriaJUnitServerExtension? =
-        ArmeriaJUnitServerExtensionSupport.serverExtensionFromKotlinProperty(property)
+        ArmeriaKotlinJUnitServerExtensionSupport.serverExtensionFromKotlinProperty(property)
 
     private fun fromFunction(function: KtNamedFunction): ArmeriaJUnitServerExtension? =
-        ArmeriaJUnitServerExtensionSupport.serverExtensionFromKotlinFunction(function)
+        ArmeriaKotlinJUnitServerExtensionSupport.serverExtensionFromKotlinFunction(function)
 }

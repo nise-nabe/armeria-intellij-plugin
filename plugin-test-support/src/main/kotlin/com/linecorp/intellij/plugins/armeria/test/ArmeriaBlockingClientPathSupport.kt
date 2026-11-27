@@ -6,14 +6,6 @@ import com.intellij.psi.PsiField
 import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiReferenceExpression
-import org.jetbrains.kotlin.lexer.KtTokens
-import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
-import org.jetbrains.kotlin.psi.KtEscapeStringTemplateEntry
-import org.jetbrains.kotlin.psi.KtExpression
-import org.jetbrains.kotlin.psi.KtLiteralStringTemplateEntry
-import org.jetbrains.kotlin.psi.KtNameReferenceExpression
-import org.jetbrains.kotlin.psi.KtProperty
-import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 
 internal object ArmeriaBlockingClientPathSupport {
     fun extractJavaRequestPath(argument: PsiExpression?): String? {
@@ -51,78 +43,5 @@ internal object ArmeriaBlockingClientPathSupport {
             return null
         }
         return (field.initializer as? PsiLiteralExpression)?.value as? String
-    }
-
-    fun extractKotlinRequestPath(argument: KtExpression?): String? {
-        argument ?: return null
-        return when (argument) {
-            is KtStringTemplateExpression -> {
-                extractKotlinStringTemplatePath(argument)
-            }
-
-            is KtNameReferenceExpression -> {
-                resolveKotlinStringConstant(argument)
-            }
-
-            is KtDotQualifiedExpression -> {
-                val reference = argument.selectorExpression as? KtNameReferenceExpression ?: return null
-                resolveKotlinStringConstant(reference)
-            }
-
-            else -> {
-                JavaPsiFacade
-                    .getInstance(argument.project)
-                    .constantEvaluationHelper
-                    .computeConstantExpression(argument) as? String
-            }
-        }
-    }
-
-    private fun extractKotlinStringTemplatePath(template: KtStringTemplateExpression): String? {
-        JavaPsiFacade
-            .getInstance(template.project)
-            .constantEvaluationHelper
-            .computeConstantExpression(template)
-            ?.let { return it as? String }
-        return buildString {
-            for (entry in template.entries) {
-                when (entry) {
-                    is KtLiteralStringTemplateEntry -> append(entry.text)
-                    is KtEscapeStringTemplateEntry -> append(entry.unescapedValue)
-                    else -> return null
-                }
-            }
-        }
-    }
-
-    private fun resolveKotlinStringConstant(reference: KtNameReferenceExpression): String? {
-        JavaPsiFacade
-            .getInstance(reference.project)
-            .constantEvaluationHelper
-            .computeConstantExpression(reference)
-            ?.let { return it as? String }
-        when (val resolved = reference.reference?.resolve()) {
-            is PsiField -> {
-                return staticFinalStringLiteral(resolved)
-            }
-
-            is KtProperty -> {
-                if (!resolved.hasModifier(KtTokens.CONST_KEYWORD)) {
-                    return null
-                }
-                val initializer = resolved.initializer as? KtStringTemplateExpression ?: return null
-                if (initializer.entries.size != 1) {
-                    return null
-                }
-                return initializer.entries
-                    .single()
-                    .text
-                    .removeSurrounding("\"")
-            }
-
-            else -> {
-                return null
-            }
-        }
     }
 }

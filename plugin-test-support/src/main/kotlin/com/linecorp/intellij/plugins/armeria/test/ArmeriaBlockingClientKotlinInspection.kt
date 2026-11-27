@@ -43,7 +43,7 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
             override fun visitCallExpression(expression: KtCallExpression) {
                 super.visitCallExpression(expression)
                 val extension =
-                    ArmeriaJUnitServerExtensionSupport.enclosingServerExtension(expression, scope, extensionCache) ?: return
+                    ArmeriaKotlinJUnitServerExtensionSupport.enclosingServerExtension(expression, scope, extensionCache) ?: return
                 if (!usesAsyncWebClient(expression, extension.variableName)) {
                     return
                 }
@@ -77,7 +77,7 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
             }
 
             is KtCallExpression -> {
-                if (ArmeriaJUnitServerExtensionSupport.matchesKotlinServerReceiver(qualifier, serverVariableName)) {
+                if (ArmeriaKotlinJUnitServerExtensionSupport.matchesKotlinServerReceiver(qualifier, serverVariableName)) {
                     methodName in setOf("webClient", "httpUri")
                 } else {
                     usesAsyncWebClientOnQualifier(qualifier, serverVariableName, methodName)
@@ -112,7 +112,7 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
                 (qualifier.parent as? KtDotQualifiedExpression)
                     ?.takeIf { it.selectorExpression == qualifier }
                     ?.receiverExpression
-            if (ArmeriaJUnitServerExtensionSupport.matchesKotlinServerReceiver(receiver ?: return false, serverVariableName)) {
+            if (ArmeriaKotlinJUnitServerExtensionSupport.matchesKotlinServerReceiver(receiver ?: return false, serverVariableName)) {
                 return methodName in HTTP_METHOD_NAMES
             }
         }
@@ -152,7 +152,7 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
             return false
         }
         val ofArgument = ofCall.valueArguments.firstOrNull()?.getArgumentExpression() ?: return false
-        return ArmeriaJUnitServerExtensionSupport.referencesServerHttpUri(ofArgument, serverVariableName)
+        return ArmeriaKotlinJUnitServerExtensionSupport.referencesServerHttpUri(ofArgument, serverVariableName)
     }
 
     private fun isWebClientReceiver(expression: KtExpression): Boolean =
@@ -238,11 +238,11 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
                 (call.parent as? KtDotQualifiedExpression)
                     ?.takeIf { it.selectorExpression == call }
                     ?.receiverExpression
-            return ArmeriaJUnitServerExtensionSupport.matchesKotlinServerReceiver(receiver ?: return false, serverVariableName)
+            return ArmeriaKotlinJUnitServerExtensionSupport.matchesKotlinServerReceiver(receiver ?: return false, serverVariableName)
         }
         if (factoryName == "of") {
             val ofArgument = call.valueArguments.firstOrNull()?.getArgumentExpression() ?: return false
-            return ArmeriaJUnitServerExtensionSupport.referencesServerHttpUri(ofArgument, serverVariableName)
+            return ArmeriaKotlinJUnitServerExtensionSupport.referencesServerHttpUri(ofArgument, serverVariableName)
         }
         if (call.calleeExpression is KtDotQualifiedExpression) {
             return isWebClientOfFactoryCall(call, serverVariableName)
@@ -256,7 +256,7 @@ class ArmeriaBlockingClientKotlinInspection : LocalInspectionTool() {
             return null
         }
         val argument = call.valueArguments.firstOrNull()?.getArgumentExpression()
-        return ArmeriaBlockingClientPathSupport.extractKotlinRequestPath(argument)
+        return ArmeriaKotlinBlockingClientPathSupport.extractKotlinRequestPath(argument)
     }
 
     companion object {

@@ -17,19 +17,14 @@ import com.intellij.psi.codeStyle.JavaCodeStyleManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinPluginSupport
-import com.linecorp.intellij.plugins.armeria.explorer.support.toArmeriaLightClass
 import com.linecorp.intellij.plugins.armeria.message
-import org.jetbrains.kotlin.idea.base.psi.addMemberDeclaration
-import org.jetbrains.kotlin.name.FqName
-import org.jetbrains.kotlin.psi.KtClass
-import org.jetbrains.kotlin.psi.KtClassOrObject
-import org.jetbrains.kotlin.psi.KtFile
-import org.jetbrains.kotlin.psi.KtNamedFunction
-import org.jetbrains.kotlin.psi.KtObjectDeclaration
-import org.jetbrains.kotlin.psi.KtPsiFactory
-import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
-import org.jetbrains.kotlin.resolve.ImportPath
 
+/**
+ * Java/Core test-method insertion entry point.
+ *
+ * Kotlin PSI operations are delegated to [ArmeriaKotlinTestMethodSupport] only after the
+ * optional Kotlin plugin availability guard so this class remains loadable without Kotlin.
+ */
 internal object ArmeriaTestMethodInserter {
     fun insertFromRouteExplorer(
         project: Project,
@@ -50,7 +45,7 @@ internal object ArmeriaTestMethodInserter {
                     ArmeriaTestLanguage.JAVA
                 }
 
-                isKotlinPluginAvailable() -> {
+                isKotlinPluginAvailable() && ArmeriaKotlinTestMethodSupport.isKotlinClass(targetClass) -> {
                     ArmeriaTestLanguage.KOTLIN
                 }
 
@@ -71,25 +66,21 @@ internal object ArmeriaTestMethodInserter {
                 }
 
                 0 -> {
-                    run {
-                        Messages.showWarningDialog(
-                            project,
-                            message("test.support.insert.noServerExtension"),
-                            message("test.support.insert.title"),
-                        )
-                        return false
-                    }
+                    Messages.showWarningDialog(
+                        project,
+                        message("test.support.insert.noServerExtension"),
+                        message("test.support.insert.title"),
+                    )
+                    return false
                 }
 
                 else -> {
-                    run {
-                        Messages.showWarningDialog(
-                            project,
-                            message("test.support.insert.ambiguousServerExtension"),
-                            message("test.support.insert.title"),
-                        )
-                        return false
-                    }
+                    Messages.showWarningDialog(
+                        project,
+                        message("test.support.insert.ambiguousServerExtension"),
+                        message("test.support.insert.title"),
+                    )
+                    return false
                 }
             }
         val methodName = ArmeriaTestMethodGenerator.suggestMethodName(route)
@@ -101,30 +92,16 @@ internal object ArmeriaTestMethodInserter {
             )
             return false
         }
-        val kotlinTarget =
-            if (language == ArmeriaTestLanguage.KOTLIN) {
-                resolveKotlinTargetClassOrObject(project, targetClass)
-            } else {
-                null
-            }
-        if (language == ArmeriaTestLanguage.KOTLIN) {
-            val ktTarget =
-                kotlinTarget ?: run {
-                    Messages.showWarningDialog(
-                        project,
-                        message("test.support.insert.noTarget"),
-                        message("test.support.insert.title"),
-                    )
-                    return false
-                }
-            if (ktTarget.declarations.filterIsInstance<KtNamedFunction>().any { it.name == methodName }) {
-                Messages.showInfoMessage(
-                    project,
-                    message("test.support.insert.methodExists", methodName),
-                    message("test.support.insert.title"),
-                )
-                return false
-            }
+        if (language == ArmeriaTestLanguage.KOTLIN &&
+            isKotlinPluginAvailable() &&
+            ArmeriaKotlinTestMethodSupport.hasKotlinMethod(project, targetClass, methodName)
+        ) {
+            Messages.showInfoMessage(
+                project,
+                message("test.support.insert.methodExists", methodName),
+                message("test.support.insert.title"),
+            )
+            return false
         }
         val methodText = ArmeriaTestMethodGenerator.generateTestMethod(route, extension.serverReceiver, language)
         if (project.isDisposed) {
@@ -137,9 +114,8 @@ internal object ArmeriaTestMethodInserter {
             {
                 if (language == ArmeriaTestLanguage.JAVA) {
                     insertJavaMethod(project, targetClass, methodText)
-                } else {
-                    val ktTarget = kotlinTarget ?: return@runWriteCommandAction
-                    insertKotlinMethod(project, ktTarget, methodText)
+                } else if (isKotlinPluginAvailable()) {
+                    ArmeriaKotlinTestMethodSupport.insertKotlinMethodFor(project, targetClass, methodText)
                 }
             },
         )
@@ -165,51 +141,6 @@ internal object ArmeriaTestMethodInserter {
         editor?.scrollingModel?.scrollToCaret(ScrollType.CENTER)
     }
 
-    internal fun insertKotlinMethod(
-        project: Project,
-        ktTarget: KtClassOrObject,
-        methodText: String,
-    ) {
-        val factory = KtPsiFactory(project)
-        val function = factory.createFunction(methodText)
-        val added = ktTarget.addMemberDeclaration(function)
-        val ktFile = ktTarget.containingKtFile
-        insertKotlinImport(project, ktFile, "org.junit.jupiter.api.Test")
-        insertKotlinImport(project, ktFile, "org.junit.jupiter.api.Assertions.assertEquals")
-        if (methodText.contains("WebClient")) {
-            insertKotlinImport(project, ktFile, ArmeriaJUnitServerExtensionSupport.WEB_CLIENT_CLASS)
-        }
-        val editor =
-            ktFile.virtualFile
-                ?.let { FileEditorManager.getInstance(project).openFile(it, true).firstOrNull() as? Editor }
-        editor?.caretModel?.moveToOffset(added.textRange.startOffset)
-        editor?.scrollingModel?.scrollToCaret(ScrollType.CENTER)
-    }
-
-    private fun insertKotlinImport(
-        project: Project,
-        ktFile: KtFile,
-        fqName: String,
-    ) {
-        val path = FqName(fqName)
-        if (ktFile.importDirectives.any { it.importedFqName == path }) {
-            return
-        }
-        val factory = KtPsiFactory(project)
-        val directive = factory.createImportDirective(ImportPath.fromString(fqName))
-        val importList = ktFile.importList
-        if (importList != null) {
-            importList.add(directive)
-            return
-        }
-        val packageDirective = ktFile.packageDirective
-        if (packageDirective != null) {
-            ktFile.addAfter(directive, packageDirective)
-        } else {
-            ktFile.add(directive)
-        }
-    }
-
     private fun resolveTargetClass(
         project: Project,
         route: ArmeriaRoute,
@@ -231,7 +162,7 @@ internal object ArmeriaTestMethodInserter {
             }
         if (selectedPsiFile != null && selectedEditor != null) {
             if (isKotlinPluginAvailable()) {
-                kotlinDeclarationLightClassAtCaret(elementAtCaret)?.let { kotlinClass ->
+                ArmeriaKotlinTestMethodSupport.lightClassAtCaret(elementAtCaret)?.let { kotlinClass ->
                     if (ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, kotlinClass).isNotEmpty()) {
                         return kotlinClass
                     }
@@ -250,7 +181,7 @@ internal object ArmeriaTestMethodInserter {
                 }
 
                 isKotlinPluginAvailable() -> {
-                    (selectedPsiFile as? KtFile)?.singleTopLevelKotlinDeclaration()?.toArmeriaLightClass()
+                    ArmeriaKotlinTestMethodSupport.topLevelLightClass(selectedPsiFile)
                 }
 
                 else -> {
@@ -305,79 +236,23 @@ internal object ArmeriaTestMethodInserter {
             return true
         }
         if (elementAtCaret != null) {
-            if (isKotlinPluginAvailable()) {
-                if (elementAtCaret.getParentOfType<KtClass>(true) != null) {
-                    return true
-                }
-                elementAtCaret
-                    .getParentOfType<KtObjectDeclaration>(true)
-                    ?.takeUnless { it.isCompanion() }
-                    ?.let { return true }
-            }
             if (PsiTreeUtil.getParentOfType(elementAtCaret, PsiClass::class.java) != null) {
                 return true
             }
         }
-        return when {
-            selectedPsiFile is PsiJavaFile -> {
-                selectedPsiFile.classes.any { it.containingClass == null }
-            }
-
-            isKotlinPluginAvailable() && selectedPsiFile is KtFile -> {
-                selectedPsiFile.declarations.any { declaration ->
-                    declaration is KtClass ||
-                        (declaration is KtObjectDeclaration && !declaration.isCompanion())
-                }
-            }
-
-            else -> {
-                false
-            }
+        if (selectedPsiFile is PsiJavaFile && selectedPsiFile.classes.any { it.containingClass == null }) {
+            return true
         }
-    }
-
-    private fun resolveKotlinTargetClassOrObject(
-        project: Project,
-        targetClass: PsiClass,
-    ): KtClassOrObject? {
-        val selectedFile = FileEditorManager.getInstance(project).selectedFiles.firstOrNull()
-        selectedFile
-            ?.let { PsiManager.getInstance(project).findFile(it) as? KtFile }
-            ?.declarations
-            ?.filterIsInstance<KtClassOrObject>()
-            ?.firstOrNull { it.fqName?.asString() == targetClass.qualifiedName }
-            ?.let { return it }
-        return ArmeriaJUnitServerExtensionSupport.toKtClassOrObject(targetClass)
+        return isKotlinPluginAvailable() &&
+            ArmeriaKotlinTestMethodSupport.hasResolvableKotlinClass(selectedPsiFile, elementAtCaret)
     }
 
     private fun isKotlinPluginAvailable(): Boolean = ArmeriaKotlinPluginSupport.isKotlinPluginAvailable()
 
-    private fun kotlinDeclarationLightClassAtCaret(elementAtCaret: PsiElement?): PsiClass? {
-        if (elementAtCaret == null) {
-            return null
-        }
-        elementAtCaret.getParentOfType<KtClass>(true)?.toArmeriaLightClass()?.let { return it }
-        elementAtCaret
-            .getParentOfType<KtObjectDeclaration>(true)
-            ?.takeUnless { it.isCompanion() }
-            ?.toArmeriaLightClass()
-            ?.let { return it }
-        return null
-    }
-
-    private fun KtFile.singleTopLevelKotlinDeclaration(): KtClassOrObject? {
-        val topLevelDeclarations =
-            declarations.filter { declaration ->
-                declaration is KtClass ||
-                    (declaration is KtObjectDeclaration && !declaration.isCompanion())
-            }
-        return topLevelDeclarations.singleOrNull() as? KtClassOrObject
-    }
-
     private fun resolveJavaTargetClass(
         project: Project,
         javaFile: PsiJavaFile,
-        elementAtCaret: com.intellij.psi.PsiElement?,
+        elementAtCaret: PsiElement?,
     ): PsiClass? {
         val topLevelClasses = javaFile.classes.filter { it.containingClass == null }
         elementAtCaret

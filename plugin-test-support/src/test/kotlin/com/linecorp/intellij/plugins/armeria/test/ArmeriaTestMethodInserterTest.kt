@@ -46,7 +46,7 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
         val ktClass = psiFile.declarations.filterIsInstance<KtClass>().single()
         val lightClass = ktClass.toArmeriaLightClass()!!
 
-        assertEquals(ktClass, ArmeriaJUnitServerExtensionSupport.toKtClass(lightClass))
+        assertEquals(ktClass, ArmeriaKotlinJUnitServerExtensionSupport.toKtClass(lightClass))
     }
 
     fun testInsertsJavaTestMethodForServerExtensionClass() {
@@ -105,7 +105,7 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
         WriteCommandAction.runWriteCommandAction(
             project,
             {
-                ArmeriaTestMethodInserter.insertKotlinMethod(
+                ArmeriaKotlinTestMethodSupport.insertKotlinMethod(
                     project,
                     ktClass,
                     ArmeriaTestMethodGenerator.generateTestMethod(
@@ -355,7 +355,7 @@ class ArmeriaTestMethodInserterTest : ArmeriaLightJavaCodeInsightFixtureTestCase
         WriteCommandAction.runWriteCommandAction(
             project,
             {
-                ArmeriaTestMethodInserter.insertKotlinMethod(
+                ArmeriaKotlinTestMethodSupport.insertKotlinMethod(
                     project,
                     ktObject,
                     ArmeriaTestMethodGenerator.generateTestMethod(

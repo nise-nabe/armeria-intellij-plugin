@@ -58,7 +58,7 @@ class ArmeriaBlockingClientKotlinInspectionTest : ArmeriaLightJavaCodeInsightFix
             """.trimIndent(),
         )
         val getCall = findGetCall(myFixture.file as KtFile)
-        assertTrue(ArmeriaJUnitServerExtensionSupport.referencesServerVariable(getCall, "server"))
+        assertTrue(ArmeriaKotlinJUnitServerExtensionSupport.referencesServerVariable(getCall, "server"))
 
         val manager = InspectionManager.getInstance(project)
         val holder = ProblemsHolder(manager, myFixture.file, false)
@@ -108,7 +108,7 @@ class ArmeriaBlockingClientKotlinInspectionTest : ArmeriaLightJavaCodeInsightFix
             """.trimIndent(),
         )
         val getCall = findGetCall(myFixture.file as KtFile)
-        assertTrue(ArmeriaJUnitServerExtensionSupport.referencesServerVariable(getCall, "server"))
+        assertTrue(ArmeriaKotlinJUnitServerExtensionSupport.referencesServerVariable(getCall, "server"))
 
         val manager = InspectionManager.getInstance(project)
         val holder = ProblemsHolder(manager, myFixture.file, false)

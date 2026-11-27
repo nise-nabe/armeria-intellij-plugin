@@ -16,4 +16,20 @@ class ArmeriaReferenceFileIndexTest {
     fun referencesArmeriaPackage_excludesUnrelatedPackages() {
         assertFalse(ArmeriaReferenceFileIndex.referencesArmeriaPackage("import example.armeria.client.WebClient;"))
     }
+
+    @Test
+    fun containsDocServiceExampleReference_matchesExampleMethodsOnly() {
+        assertTrue(ArmeriaReferenceFileIndex.containsDocServiceExampleReference(".exampleRequests(\"{}\")"))
+        assertTrue(ArmeriaReferenceFileIndex.containsDocServiceExampleReference(".exampleHeaders(\"x\")"))
+        assertFalse(ArmeriaReferenceFileIndex.containsDocServiceExampleReference(".examples(\"{}\")"))
+    }
+
+    @Test
+    fun containsJUnitServerExtensionReference_matchesImportOrAnnotation() {
+        assertTrue(
+            ArmeriaReferenceFileIndex.containsJUnitServerExtensionReference("import org.junit.jupiter.api.extension.RegisterExtension;"),
+        )
+        assertTrue(ArmeriaReferenceFileIndex.containsJUnitServerExtensionReference("@RegisterExtension"))
+        assertFalse(ArmeriaReferenceFileIndex.containsJUnitServerExtensionReference("@ExtendWith"))
+    }
 }
