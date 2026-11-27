@@ -48,7 +48,7 @@ class ArmeriaReferenceFileIndex : ScalarIndexExtension<Int>() {
 
     override fun dependsOnFileContent(): Boolean = true
 
-    override fun getVersion(): Int = 2
+    override fun getVersion(): Int = 3
 
     companion object {
         private const val ARMERIA_REFERENCE_KEY = 1
