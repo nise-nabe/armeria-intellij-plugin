@@ -37,7 +37,7 @@ internal object ArmeriaKotlinClientInvocationCollector {
         val invocation = invocationFromCall(call, methodName) ?: return false
         val factory = resolveOwningFactory(ArmeriaKotlinClientCollector.qualifierReceiver(call))
         val protocol =
-            factory?.clientType?.let { ClientProtocol.fromPresentableName(it) }
+            factory?.protocol
                 ?: ArmeriaClientSupport.protocolForClass(ArmeriaKotlinClientCollector.resolveContainingClass(call))
                 ?: ClientProtocol.HTTP
         val uri = factory?.uri?.takeIf { it.isNotBlank() } ?: invocation.path

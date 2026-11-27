@@ -23,7 +23,7 @@ internal object ArmeriaJavaClientInvocationCollector {
         val invocation = invocationFromCall(expression, methodName) ?: return false
         val factory = resolveOwningFactory(expression.methodExpression.qualifierExpression)
         val protocol =
-            factory?.clientType?.let { ClientProtocol.fromPresentableName(it) }
+            factory?.protocol
                 ?: protocolFromResolvedCall(expression)
                 ?: ClientProtocol.HTTP
         val uri = factory?.uri?.takeIf { it.isNotBlank() } ?: invocation.path

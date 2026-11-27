@@ -6,6 +6,7 @@ import com.intellij.psi.SmartPsiElementPointer
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRouteMetadata
 
 data class ArmeriaClientEndpoint(
+    val protocol: ClientProtocol,
     val clientType: String,
     val target: String,
     val uri: String,
@@ -30,7 +31,7 @@ data class ArmeriaClientEndpoint(
     companion object {
         fun create(
             element: PsiElement,
-            clientType: String,
+            protocol: ClientProtocol,
             target: String,
             uri: String,
             decorators: List<String> = emptyList(),
@@ -45,7 +46,8 @@ data class ArmeriaClientEndpoint(
             sourceFileUrl: String? = null,
         ): ArmeriaClientEndpoint =
             ArmeriaClientEndpoint(
-                clientType = clientType,
+                protocol = protocol,
+                clientType = protocol.presentableName(),
                 target = target,
                 uri = uri,
                 moduleName = ArmeriaRouteMetadata.moduleName(element),
