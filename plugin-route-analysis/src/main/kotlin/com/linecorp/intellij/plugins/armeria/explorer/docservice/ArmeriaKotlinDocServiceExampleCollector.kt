@@ -36,6 +36,7 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
                     ArmeriaDocServiceExampleCollector.DOC_SERVICE_BUILDER_CLASS,
                     GlobalSearchScope.allScope(project),
                 )
+        val preciselyCollectedCalls = mutableSetOf<KtCallExpression>()
         if (builderClass != null) {
             for (methodName in listOf("exampleRequests", "exampleHeaders")) {
                 for (method in builderClass.findMethodsByName(methodName, false)) {
@@ -46,18 +47,20 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
                         if (ArmeriaKotlinExpressionSupport.resolveCallName(call) != methodName) {
                             return@forEach
                         }
+                        preciselyCollectedCalls += call
                         parseCall(call, methodName, builder)
                     }
                 }
             }
         }
-        collectFromKotlinFiles(project, exampleFiles, builder)
+        collectFromKotlinFiles(project, exampleFiles, builder, preciselyCollectedCalls)
     }
 
     private fun collectFromKotlinFiles(
         project: Project,
         exampleFiles: List<VirtualFile>,
         builder: ArmeriaDocServiceExampleIndex.Builder,
+        preciselyCollectedCalls: Set<KtCallExpression>,
     ) {
         for (virtualFile in exampleFiles) {
             if (virtualFile.extension != "kt") continue
@@ -72,7 +75,7 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
                 if (methodName != "exampleRequests" && methodName != "exampleHeaders") {
                     return@forEachDescendant
                 }
-                if (!looksLikeDocServiceBuilder(call)) {
+                if (call in preciselyCollectedCalls || !looksLikeDocServiceBuilder(call)) {
                     return@forEachDescendant
                 }
                 parseCall(call, methodName, builder)

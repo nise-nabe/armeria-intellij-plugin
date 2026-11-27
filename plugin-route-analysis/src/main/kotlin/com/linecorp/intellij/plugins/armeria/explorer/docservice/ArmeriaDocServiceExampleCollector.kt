@@ -79,6 +79,7 @@ object ArmeriaDocServiceExampleCollector {
                 DOC_SERVICE_BUILDER_CLASS,
                 GlobalSearchScope.allScope(project),
             )
+        val preciselyCollectedCalls = mutableSetOf<PsiMethodCallExpression>()
         if (builderClass != null) {
             for (methodName in EXAMPLE_METHOD_NAMES) {
                 for (method in builderClass.findMethodsByName(methodName, false)) {
@@ -89,18 +90,20 @@ object ArmeriaDocServiceExampleCollector {
                         if (call.methodExpression.referenceName != methodName) {
                             return@forEach
                         }
+                        preciselyCollectedCalls += call
                         parseJavaCall(call, methodName, builder)
                     }
                 }
             }
         }
-        collectFromJavaFiles(project, exampleFiles, builder)
+        collectFromJavaFiles(project, exampleFiles, builder, preciselyCollectedCalls)
     }
 
     private fun collectFromJavaFiles(
         project: Project,
         exampleFiles: List<VirtualFile>,
         builder: ArmeriaDocServiceExampleIndex.Builder,
+        preciselyCollectedCalls: Set<PsiMethodCallExpression>,
     ) {
         for (virtualFile in exampleFiles) {
             if (virtualFile.extension != "java") continue
@@ -115,7 +118,7 @@ object ArmeriaDocServiceExampleCollector {
                 if (methodName !in EXAMPLE_METHOD_NAMES) {
                     return@forEachDescendant
                 }
-                if (!looksLikeDocServiceBuilder(call)) {
+                if (call in preciselyCollectedCalls || !looksLikeDocServiceBuilder(call)) {
                     return@forEachDescendant
                 }
                 parseJavaCall(call, methodName, builder)
