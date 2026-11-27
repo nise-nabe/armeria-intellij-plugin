@@ -2,6 +2,7 @@ package com.linecorp.intellij.plugins.armeria.explorer.docservice
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiClassObjectAccessExpression
@@ -57,16 +58,20 @@ object ArmeriaDocServiceExampleCollector {
         scope: GlobalSearchScope,
     ): ArmeriaDocServiceExampleIndex {
         val builder = ArmeriaDocServiceExampleIndex.Builder()
-        collectJava(project, scope, builder)
+        val exampleFiles = ArmeriaReferenceFileIndex.findDocServiceExampleFiles(project, scope)
+        if (exampleFiles.isEmpty()) {
+            return builder.build()
+        }
+        collectJava(project, exampleFiles, builder)
         if (ArmeriaKotlinPluginSupport.isKotlinPluginAvailable()) {
-            ArmeriaKotlinDocServiceExampleCollector.collect(project, scope, builder)
+            ArmeriaKotlinDocServiceExampleCollector.collect(project, exampleFiles, builder)
         }
         return builder.build()
     }
 
     private fun collectJava(
         project: Project,
-        scope: GlobalSearchScope,
+        exampleFiles: List<VirtualFile>,
         builder: ArmeriaDocServiceExampleIndex.Builder,
     ) {
         val builderClass =
@@ -77,7 +82,7 @@ object ArmeriaDocServiceExampleCollector {
         if (builderClass != null) {
             for (methodName in EXAMPLE_METHOD_NAMES) {
                 for (method in builderClass.findMethodsByName(methodName, false)) {
-                    ReferencesSearch.search(method, scope).forEach { reference ->
+                    ReferencesSearch.search(method, GlobalSearchScope.filesScope(project, exampleFiles)).forEach { reference ->
                         val call =
                             PsiTreeUtil.getParentOfType(reference.element, PsiMethodCallExpression::class.java)
                                 ?: return@forEach
@@ -89,15 +94,15 @@ object ArmeriaDocServiceExampleCollector {
                 }
             }
         }
-        collectFromJavaFiles(project, scope, builder)
+        collectFromJavaFiles(project, exampleFiles, builder)
     }
 
     private fun collectFromJavaFiles(
         project: Project,
-        scope: GlobalSearchScope,
+        exampleFiles: List<VirtualFile>,
         builder: ArmeriaDocServiceExampleIndex.Builder,
     ) {
-        for (virtualFile in ArmeriaReferenceFileIndex.findDocServiceExampleFiles(project, scope)) {
+        for (virtualFile in exampleFiles) {
             if (virtualFile.extension != "java") continue
             val psiFile = PsiManager.getInstance(project).findFile(virtualFile) as? PsiJavaFile ?: continue
             val text = psiFile.viewProvider.contents

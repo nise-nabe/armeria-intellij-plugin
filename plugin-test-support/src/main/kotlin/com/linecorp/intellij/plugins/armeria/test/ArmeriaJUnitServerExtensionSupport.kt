@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.test
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.roots.TestSourcesFilter
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiClass
@@ -141,7 +142,14 @@ internal object ArmeriaJUnitServerExtensionSupport {
     /** True when [file] is under a test source root (IDE markers only; filename is not considered). */
     fun isInTestSourceContent(file: PsiFile): Boolean {
         val virtualFile = file.virtualFile ?: return false
-        val project = file.project
+        return isInTestSourceContent(virtualFile, file.project)
+    }
+
+    /** True when [virtualFile] is under a test source root. */
+    fun isInTestSourceContent(
+        virtualFile: VirtualFile,
+        project: Project,
+    ): Boolean {
         val fileIndex = ProjectRootManager.getInstance(project).fileIndex
         return fileIndex.isInTestSourceContent(virtualFile) ||
             TestSourcesFilter.isTestSources(virtualFile, project)
@@ -197,10 +205,15 @@ internal object ArmeriaJUnitServerExtensionSupport {
         testClassName: String,
         project: Project,
         scope: GlobalSearchScope,
-    ): List<ArmeriaJUnitServerExtension> =
-        ArmeriaJUnitServerExtensionCollector
+    ): List<ArmeriaJUnitServerExtension> {
+        val testClass = JavaPsiFacade.getInstance(project).findClass(testClassName, scope)
+        if (testClass != null) {
+            return ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, testClass)
+        }
+        return ArmeriaJUnitServerExtensionCollector
             .collect(project)
             .filter { extension -> canAccessServerExtension(testClassName, extension.containingClassName, project, scope) }
+    }
 
     internal fun canAccessServerExtension(
         testClassName: String,

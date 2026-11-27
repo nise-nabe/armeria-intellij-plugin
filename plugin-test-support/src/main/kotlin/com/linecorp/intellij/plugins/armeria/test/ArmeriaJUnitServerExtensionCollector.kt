@@ -7,6 +7,8 @@ import com.intellij.psi.JavaRecursiveElementWalkingVisitor
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiJavaFile
 import com.intellij.psi.PsiManager
+import com.intellij.psi.PsiModifier
+import com.intellij.psi.PsiModifierListOwner
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
@@ -36,35 +38,86 @@ object ArmeriaJUnitServerExtensionCollector {
                     }
                 )
                 ?: return emptyList()
-        val fromFields = extensionsFromClassHierarchy(psiClass)
-        if (fromFields.isNotEmpty()) {
-            return fromFields
+        val directExtensions = extensionsFromClassHierarchy(psiClass)
+        val outerClassNames = outerClassNames(psiClass, PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID))
+        val accessibleExtensions =
+            collect(project)
+                .filter { extension ->
+                    ArmeriaJUnitServerExtensionSupport.canAccessServerExtension(
+                        testClassName,
+                        extension.containingClassName,
+                        project,
+                        scope,
+                    )
+                }.filter { extension ->
+                    extension.containingClassName !in outerClassNames || canAccessOuterExtension(psiClass, extension)
+                }
+        return (directExtensions + accessibleExtensions).distinctBy { "${it.containingClassName}#${it.variableName}" }
+    }
+
+    private fun outerClassNames(
+        psiClass: PsiClass,
+        kotlinPluginLoaded: Boolean,
+    ): Set<String> =
+        generateSequence(psiClass.containingClass) { it.containingClass }
+            .mapNotNull { outerClass ->
+                outerClass.qualifiedName
+                    ?: if (kotlinPluginLoaded) {
+                        ArmeriaKotlinJUnitServerExtensionSupport.kotlinClassQualifiedName(outerClass)
+                    } else {
+                        null
+                    }
+            }.toSet()
+
+    private fun canAccessOuterExtension(
+        psiClass: PsiClass,
+        extension: ArmeriaJUnitServerExtension,
+    ): Boolean {
+        if (!psiClass.hasModifierProperty(PsiModifier.STATIC)) {
+            return true
         }
-        return collect(project)
-            .filter { extension ->
-                ArmeriaJUnitServerExtensionSupport.canAccessServerExtension(
-                    testClassName,
-                    extension.containingClassName,
-                    project,
-                    scope,
-                )
-            }.distinctBy { "${it.containingClassName}#${it.variableName}" }
+        val owner = extension.pointer.element as? PsiModifierListOwner ?: return true
+        return owner.hasModifierProperty(PsiModifier.STATIC)
     }
 
     private fun extensionsFromClassHierarchy(psiClass: PsiClass): List<ArmeriaJUnitServerExtension> {
         val extensions = mutableListOf<ArmeriaJUnitServerExtension>()
         val seen = mutableSetOf<String>()
-        var current: PsiClass? = psiClass
-        while (current != null) {
-            for (extension in ArmeriaJUnitServerExtensionSupport.serverExtensionsInClass(current)) {
-                val key = "${extension.containingClassName}#${extension.variableName}"
-                if (seen.add(key)) {
-                    extensions += extension
-                }
+        val visited = mutableListOf<PsiClass>()
+        val pending = ArrayDeque<PsiClass>()
+        val kotlinPluginLoaded = PluginManagerCore.isLoaded(KOTLIN_PLUGIN_ID)
+        pending.add(psiClass)
+        while (pending.isNotEmpty()) {
+            val current = pending.removeFirst()
+            if (visited.any { it.isEquivalentTo(current) }) {
+                continue
             }
-            current = current.superClass
+            visited += current
+            addDirectExtensions(current, kotlinPluginLoaded, extensions, seen)
+            pending.addAll(current.supers)
         }
         return extensions
+    }
+
+    private fun addDirectExtensions(
+        psiClass: PsiClass,
+        kotlinPluginLoaded: Boolean,
+        extensions: MutableList<ArmeriaJUnitServerExtension>,
+        seen: MutableSet<String>,
+    ) {
+        val directExtensions = ArmeriaJUnitServerExtensionSupport.serverExtensionsInClass(psiClass)
+        val classExtensions =
+            if (directExtensions.isEmpty() && kotlinPluginLoaded) {
+                ArmeriaKotlinJUnitServerExtensionSupport.serverExtensionsInKotlinClass(psiClass)
+            } else {
+                directExtensions
+            }
+        for (extension in classExtensions) {
+            val key = "${extension.containingClassName}#${extension.variableName}"
+            if (seen.add(key)) {
+                extensions += extension
+            }
+        }
     }
 
     private fun compute(project: Project): CachedValueProvider.Result<List<ArmeriaJUnitServerExtension>> {
@@ -73,6 +126,7 @@ object ArmeriaJUnitServerExtensionCollector {
         val seen = mutableSetOf<String>()
         for (virtualFile in ArmeriaReferenceFileIndex.findJUnitServerExtensionFiles(project, scope)) {
             if (virtualFile.extension != "java") continue
+            if (!ArmeriaJUnitServerExtensionSupport.isInTestSourceContent(virtualFile, project)) continue
             val file = PsiManager.getInstance(project).findFile(virtualFile) as? PsiJavaFile ?: continue
             if (!ArmeriaJUnitServerExtensionSupport.fileMayContainRegisterExtension(file.text)) {
                 continue

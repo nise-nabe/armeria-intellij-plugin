@@ -61,6 +61,45 @@ class ArmeriaDocServiceExampleCollectorTest : ArmeriaFixtureTestBase() {
         assertTrue(routes.any { it.isDocService && it.path == "/docs" })
     }
 
+    fun testAppliesExamplesWhenNoDocServiceRouteIsDetected() {
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class HelloService {
+                @Get("/hello")
+                public String hello() {
+                    return "ok";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.docs.DocService;
+
+            public class Main {
+                public static void main(String[] args) {
+                    DocService.builder()
+                            .exampleRequests(HelloService.class, "hello", "{\"name\":\"Armeria\"}")
+                            .build();
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteAnalysisCollector.collect(project)
+        val hello = routes.single { it.path == "/hello" && it.httpMethod == "GET" }
+
+        assertTrue(routes.none { it.isDocService })
+        assertEquals(listOf("{\"name\":\"Armeria\"}"), hello.exampleRequests)
+    }
+
     fun testExampleRequestsMatchByServiceNameString() {
         myFixture.addClass(
             """

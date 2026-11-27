@@ -28,6 +28,43 @@ class ArmeriaKotlinJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsig
         assertEquals("example.ExampleServiceTest", extensions.single().containingClassName)
     }
 
+    fun testCollectsOnlyTestSourceFiles() {
+        myFixture.withTemporaryMainSourceRoot {
+            myFixture.addFileToProject(
+                "main/Production.kt",
+                """
+                package example
+
+                import org.junit.jupiter.api.extension.RegisterExtension
+                import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+                class Production {
+                    @RegisterExtension
+                    val productionServer: ServerExtension = object : ServerExtension() {}
+                }
+                """.trimIndent(),
+            )
+            myFixture.addFileToProject(
+                "ExampleServiceTest.kt",
+                """
+                package example
+
+                import org.junit.jupiter.api.extension.RegisterExtension
+                import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+                class ExampleServiceTest {
+                    @RegisterExtension
+                    val testServer: ServerExtension = object : ServerExtension() {}
+                }
+                """.trimIndent(),
+            )
+
+            val extensions = ArmeriaJUnitServerExtensionCollector.collect(project)
+
+            assertEquals(listOf("testServer"), extensions.map { it.variableName })
+        }
+    }
+
     fun testCollectsRegisterExtensionFromInferredTypeProperty() {
         myFixture.configureByText(
             "ExampleServiceTest.kt",

@@ -7,6 +7,7 @@ import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiManager
+import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnalysisCollector
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
@@ -59,6 +60,43 @@ class ArmeriaBlockingClientInspectionTest : ArmeriaLightJavaCodeInsightFixtureTe
         )
 
         myFixture.testHighlighting(true, false, true)
+    }
+
+    fun testProductionKotlinBaseServerRemainsAccessibleToInspectionScope() {
+        myFixture.withTemporaryMainSourceRoot {
+            myFixture.addFileToProject(
+                "main/KotlinBaseTest.kt",
+                """
+                package example
+
+                import com.linecorp.armeria.testing.junit5.server.ServerExtension
+                import org.junit.jupiter.api.extension.RegisterExtension
+
+                abstract class KotlinBaseTest {
+                    @field:RegisterExtension
+                    val inheritedServer: ServerExtension = object : ServerExtension() {}
+                }
+                """.trimIndent(),
+            )
+            myFixture.addFileToProject(
+                "InheritedServerTest.java",
+                """
+                package example;
+
+                public class InheritedServerTest extends KotlinBaseTest {
+                }
+                """.trimIndent(),
+            )
+
+            val extensions =
+                ArmeriaJUnitServerExtensionSupport.serverExtensionsAccessibleFrom(
+                    "example.InheritedServerTest",
+                    project,
+                    GlobalSearchScope.projectScope(project),
+                )
+
+            assertEquals(listOf("inheritedServer"), extensions.map { it.variableName })
+        }
     }
 
     fun testNoWarningForBlockingWebClient() {

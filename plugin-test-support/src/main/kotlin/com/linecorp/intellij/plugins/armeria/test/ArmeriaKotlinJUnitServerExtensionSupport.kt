@@ -200,6 +200,28 @@ internal object ArmeriaKotlinJUnitServerExtensionSupport {
 
     fun kotlinClassQualifiedName(psiClass: PsiClass): String? = toKtClassOrObject(psiClass)?.fqName?.asString()
 
+    fun serverExtensionsInKotlinClass(psiClass: PsiClass): List<ArmeriaJUnitServerExtension> {
+        val classOrObject = toKtClassOrObject(psiClass) ?: return emptyList()
+        val extensions = mutableListOf<ArmeriaJUnitServerExtension>()
+        classOrObject.declarations.forEach { declaration ->
+            when (declaration) {
+                is KtProperty -> serverExtensionFromKotlinProperty(declaration)?.let(extensions::add)
+                is KtNamedFunction -> serverExtensionFromKotlinFunction(declaration)?.let(extensions::add)
+            }
+        }
+        if (classOrObject is KtClass) {
+            for (companion in classOrObject.companionObjects) {
+                companion.declarations.forEach { declaration ->
+                    when (declaration) {
+                        is KtProperty -> serverExtensionFromKotlinProperty(declaration)?.let(extensions::add)
+                        is KtNamedFunction -> serverExtensionFromKotlinFunction(declaration)?.let(extensions::add)
+                    }
+                }
+            }
+        }
+        return extensions.distinctBy { "${it.containingClassName}#${it.variableName}" }
+    }
+
     fun kotlinSuperTypeNames(
         className: String,
         project: Project,
