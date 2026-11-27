@@ -39,7 +39,6 @@ testing {
             useJUnit(libs.versions.junit4.get())
             dependencies {
                 implementation(project())
-                implementation(testFixtures(project(":plugin-route-collectors")))
                 implementation(libs.junit4)
             }
             sources {
