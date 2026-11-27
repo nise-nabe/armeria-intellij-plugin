@@ -22,6 +22,8 @@
     </extensions>
 
     <extensions defaultExtensionNs="com.intellij">
+        <applicationService serviceInterface="com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaTestMethodGeneration"
+                            serviceImplementation="com.linecorp.intellij.plugins.armeria.test.ArmeriaTestMethodGenerationServiceImpl" />
         <moduleBuilder builderClass="com.linecorp.intellij.plugins.armeria.module.ArmeriaModuleBuilder" />
         <framework.type implementation="com.linecorp.intellij.plugins.armeria.framework.ArmeriaFrameworkEx" />
         <spellchecker.bundledDictionaryProvider implementation="com.linecorp.intellij.plugins.armeria.ArmeriaDictionaryProvider" />

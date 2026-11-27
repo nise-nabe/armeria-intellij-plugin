@@ -6,7 +6,6 @@ plugins {
 
 dependencies {
     implementation(project(":plugin-route-analysis"))
-    implementation(project(":plugin-test-support"))
     implementation(project(":plugin-shared"))
     intellijPlatform {
         intellijIdeaUltimate(
