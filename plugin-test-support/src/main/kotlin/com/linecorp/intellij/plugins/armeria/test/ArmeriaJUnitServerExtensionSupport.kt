@@ -12,6 +12,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiJavaFile
+import com.intellij.psi.PsiMember
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiModifierListOwner
@@ -189,16 +190,31 @@ internal object ArmeriaJUnitServerExtensionSupport {
         scope: GlobalSearchScope,
         cachedExtensions: MutableMap<String, List<ArmeriaJUnitServerExtension>>? = null,
     ): ArmeriaJUnitServerExtension? {
-        val className = enclosingTestClassName(element) ?: return null
+        val testClass = PsiTreeUtil.getParentOfType(element, PsiClass::class.java) ?: return null
         val project = element.project
+        val cacheKey = serverExtensionCacheKey(testClass)
         val extensions =
-            cachedExtensions?.getOrPut(className) {
-                serverExtensionsAccessibleFrom(className, project, scope)
-            } ?: serverExtensionsAccessibleFrom(className, project, scope)
+            cachedExtensions?.getOrPut(cacheKey) {
+                serverExtensionsAccessibleFrom(testClass, project, scope)
+            } ?: serverExtensionsAccessibleFrom(testClass, project, scope)
         if (extensions.isEmpty()) {
             return null
         }
         return resolveScopedExtension(extensions)
+    }
+
+    fun serverExtensionsAccessibleFrom(
+        testClass: PsiClass,
+        project: Project,
+        scope: GlobalSearchScope,
+    ): List<ArmeriaJUnitServerExtension> = ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, testClass)
+
+    internal fun serverExtensionCacheKey(testClass: PsiClass): String {
+        val fileKey =
+            testClass.containingFile?.virtualFile?.path
+                ?: testClass.containingFile?.name
+                ?: System.identityHashCode(testClass).toString()
+        return "$fileKey#${testClass.qualifiedName ?: testClass.name.orEmpty()}"
     }
 
     fun serverExtensionsAccessibleFrom(
@@ -213,6 +229,55 @@ internal object ArmeriaJUnitServerExtensionSupport {
         return ArmeriaJUnitServerExtensionCollector
             .collect(project)
             .filter { extension -> canAccessServerExtension(testClassName, extension.containingClassName, project, scope) }
+    }
+
+    internal fun canAccessServerExtension(
+        testClass: PsiClass,
+        extension: ArmeriaJUnitServerExtension,
+        project: Project,
+        scope: GlobalSearchScope,
+    ): Boolean {
+        val element = extension.pointer.element
+        var ownerClass = (element as? PsiMember)?.containingClass
+        if (ownerClass == null && element != null && ArmeriaKotlinPluginSupport.isKotlinPluginAvailable()) {
+            ownerClass = ArmeriaKotlinJUnitServerExtensionSupport.kotlinContainingLightClass(element)
+        }
+        if (ownerClass != null) {
+            return generateSequence(testClass) { it.containingClass }.any { current ->
+                current.isEquivalentTo(ownerClass) || current.isInheritor(ownerClass, true)
+            }
+        }
+        return canAccessServerExtension(testClass, extension.containingClassName, project, scope)
+    }
+
+    internal fun canAccessServerExtension(
+        testClass: PsiClass,
+        extensionClassName: String,
+        project: Project,
+        scope: GlobalSearchScope,
+    ): Boolean {
+        val testClassName =
+            testClass.qualifiedName
+                ?: if (ArmeriaKotlinPluginSupport.isKotlinPluginAvailable()) {
+                    ArmeriaKotlinJUnitServerExtensionSupport.kotlinClassQualifiedName(testClass)
+                } else {
+                    null
+                }
+                ?: return false
+        if (isEnclosingOrNestedTestClass(testClassName, extensionClassName)) {
+            return true
+        }
+        if (extensionClassName.isEmpty()) {
+            return false
+        }
+        val extensionClass = JavaPsiFacade.getInstance(project).findClass(extensionClassName, scope)
+        if (extensionClass != null && testClass.isInheritor(extensionClass, true)) {
+            return true
+        }
+        if (!ArmeriaKotlinPluginSupport.isKotlinPluginAvailable()) {
+            return false
+        }
+        return extensionClassName in ArmeriaKotlinJUnitServerExtensionSupport.kotlinSuperTypeNames(testClassName, project, scope)
     }
 
     internal fun canAccessServerExtension(

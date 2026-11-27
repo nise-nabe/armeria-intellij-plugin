@@ -10,6 +10,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinPlugi
 import com.linecorp.intellij.plugins.armeria.explorer.support.toArmeriaLightClass
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaJUnitServerExtensionSupport.REGISTER_EXTENSION_ANNOTATION
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaJUnitServerExtensionSupport.REGISTER_EXTENSION_ANNOTATION_SHORT
+import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClass
@@ -170,16 +171,33 @@ internal object ArmeriaKotlinJUnitServerExtensionSupport {
         scope: GlobalSearchScope,
         cachedExtensions: MutableMap<String, List<ArmeriaJUnitServerExtension>>? = null,
     ): ArmeriaJUnitServerExtension? {
-        val className = enclosingTestClassName(element) ?: return null
+        val testClass = enclosingTestClass(element) ?: return null
         val project = element.project
+        val cacheKey = ArmeriaJUnitServerExtensionSupport.serverExtensionCacheKey(testClass)
         val extensions =
-            cachedExtensions?.getOrPut(className) {
-                serverExtensionsAccessibleFrom(className, project, scope)
-            } ?: serverExtensionsAccessibleFrom(className, project, scope)
+            cachedExtensions?.getOrPut(cacheKey) {
+                ArmeriaJUnitServerExtensionSupport.serverExtensionsAccessibleFrom(testClass, project, scope)
+            } ?: ArmeriaJUnitServerExtensionSupport.serverExtensionsAccessibleFrom(testClass, project, scope)
         if (extensions.isEmpty()) {
             return null
         }
         return ArmeriaJUnitServerExtensionSupport.resolveScopedExtension(extensions)
+    }
+
+    fun enclosingTestClass(element: PsiElement): PsiClass? {
+        if (isKotlinPluginAvailable()) {
+            element.getParentOfType<KtObjectDeclaration>(true)?.let { objectDeclaration ->
+                val attributed =
+                    if (objectDeclaration.isCompanion()) {
+                        kotlinClassBodyOwner(objectDeclaration)
+                    } else {
+                        objectDeclaration
+                    }
+                return attributed?.toArmeriaLightClass()
+            }
+            element.getParentOfType<KtClass>(true)?.toArmeriaLightClass()?.let { return it }
+        }
+        return PsiTreeUtil.getParentOfType(element, PsiClass::class.java)
     }
 
     fun serverExtensionsAccessibleFrom(
@@ -198,9 +216,38 @@ internal object ArmeriaKotlinJUnitServerExtensionSupport {
                 )
             }
 
+    fun kotlinContainingLightClass(element: PsiElement): PsiClass? {
+        val declaration = element as? KtDeclaration ?: return null
+        val owner = kotlinClassBodyOwner(declaration) ?: return null
+        val attributed =
+            if (owner is KtObjectDeclaration && owner.isCompanion()) {
+                kotlinClassBodyOwner(owner)
+            } else {
+                owner
+            }
+        return attributed?.toArmeriaLightClass()
+    }
+
     fun kotlinClassQualifiedName(psiClass: PsiClass): String? = toKtClassOrObject(psiClass)?.fqName?.asString()
 
     fun kotlinClassPackageName(psiClass: PsiClass): String? = toKtClassOrObject(psiClass)?.containingKtFile?.packageFqName?.asString()
+
+    fun isKotlinStaticNestedClass(psiClass: PsiClass): Boolean {
+        val classOrObject = toKtClassOrObject(psiClass) ?: return false
+        var current = classOrObject.parent
+        while (current != null) {
+            if (current is KtClassOrObject) {
+                return classOrObject !is KtClass || !classOrObject.hasModifier(KtTokens.INNER_KEYWORD)
+            }
+            current = current.parent
+        }
+        return false
+    }
+
+    fun isStaticLikeKotlinExtension(element: PsiElement): Boolean {
+        val declaration = element as? KtDeclaration ?: return false
+        return kotlinClassBodyOwner(declaration) is KtObjectDeclaration
+    }
 
     fun serverExtensionsInKotlinClass(psiClass: PsiClass): List<ArmeriaJUnitServerExtension> {
         val classOrObject = toKtClassOrObject(psiClass) ?: return emptyList()

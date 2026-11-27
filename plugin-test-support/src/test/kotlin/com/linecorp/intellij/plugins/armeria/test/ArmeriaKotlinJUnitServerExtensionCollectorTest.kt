@@ -1,6 +1,9 @@
 package com.linecorp.intellij.plugins.armeria.test
 
+import com.linecorp.intellij.plugins.armeria.explorer.support.toArmeriaLightClass
 import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
+import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtFile
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -78,6 +81,44 @@ class ArmeriaKotlinJUnitServerExtensionCollectorTest : ArmeriaLightJavaCodeInsig
         val extensions = ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, javaFile.classes.single())
 
         assertTrue(extensions.isEmpty())
+    }
+
+    fun testSkipsOuterInstanceExtensionsFromNonInnerNestedClass() {
+        val psiFile =
+            myFixture.configureByText(
+                "OuterTest.kt",
+                """
+                package example
+
+                import org.junit.jupiter.api.extension.RegisterExtension
+                import com.linecorp.armeria.testing.junit5.server.ServerExtension
+
+                open class BaseTest {
+                    @RegisterExtension
+                    val inheritedOuterServer: ServerExtension = object : ServerExtension() {}
+                }
+
+                class OuterTest : BaseTest() {
+                    @RegisterExtension
+                    val outerServer: ServerExtension = object : ServerExtension() {}
+
+                    class NestedTest {
+                        @RegisterExtension
+                        val nestedServer: ServerExtension = object : ServerExtension() {}
+                    }
+                }
+                """.trimIndent(),
+            ) as KtFile
+        val outerClass = psiFile.declarations.filterIsInstance<KtClass>().single { it.name == "OuterTest" }
+        val nestedClass =
+            outerClass.declarations
+                .filterIsInstance<KtClass>()
+                .single()
+                .toArmeriaLightClass()!!
+
+        val extensions = ArmeriaJUnitServerExtensionCollector.extensionsInClass(project, nestedClass)
+
+        assertEquals(listOf("nestedServer"), extensions.map { it.variableName })
     }
 
     fun testCollectsOnlyTestSourceFiles() {
