@@ -1,6 +1,5 @@
 package com.linecorp.intellij.plugins.armeria.explorer.docservice
 
-import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.intellij.psi.JavaPsiFacade
@@ -15,7 +14,6 @@ import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiMethodCallExpression
 import com.intellij.psi.PsiNewExpression
 import com.intellij.psi.PsiReferenceExpression
-import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.searches.ReferencesSearch
 import com.intellij.psi.util.CachedValue
@@ -24,6 +22,7 @@ import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.util.PsiUtil
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinPluginSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaReferenceFileIndex
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCacheSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
@@ -98,7 +97,8 @@ object ArmeriaDocServiceExampleCollector {
         scope: GlobalSearchScope,
         builder: ArmeriaDocServiceExampleIndex.Builder,
     ) {
-        for (virtualFile in FileTypeIndex.getFiles(JavaFileType.INSTANCE, scope)) {
+        for (virtualFile in ArmeriaReferenceFileIndex.findDocServiceExampleFiles(project, scope)) {
+            if (virtualFile.extension != "java") continue
             val psiFile = PsiManager.getInstance(project).findFile(virtualFile) as? PsiJavaFile ?: continue
             val text = psiFile.viewProvider.contents
             if (!text.contains("exampleRequests") && !text.contains("exampleHeaders")) {

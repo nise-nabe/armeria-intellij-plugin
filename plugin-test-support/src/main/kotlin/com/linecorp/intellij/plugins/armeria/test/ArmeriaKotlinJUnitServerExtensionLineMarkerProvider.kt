@@ -20,14 +20,14 @@ class ArmeriaKotlinJUnitServerExtensionLineMarkerProvider : LineMarkerProviderDe
         }
         val property = element.parent as? KtProperty
         if (property != null && element == property.nameIdentifier) {
-            if (ArmeriaJUnitServerExtensionSupport.serverExtensionFromKotlinProperty(property) != null) {
+            if (ArmeriaKotlinJUnitServerExtensionSupport.serverExtensionFromKotlinProperty(property) != null) {
                 return markerFor(property.nameIdentifier ?: property, property.textRange, property.name)
             }
             return null
         }
         val function = element.parent as? KtNamedFunction
         if (function != null && element.node.elementType == KtTokens.IDENTIFIER && element.text == function.name) {
-            if (ArmeriaJUnitServerExtensionSupport.serverExtensionFromKotlinFunction(function) != null) {
+            if (ArmeriaKotlinJUnitServerExtensionSupport.serverExtensionFromKotlinFunction(function) != null) {
                 return markerFor(function.nameIdentifier ?: function, function.textRange, function.name)
             }
         }

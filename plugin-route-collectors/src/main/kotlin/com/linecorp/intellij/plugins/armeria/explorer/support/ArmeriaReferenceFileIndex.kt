@@ -33,6 +33,12 @@ class ArmeriaReferenceFileIndex : ScalarIndexExtension<Int>() {
                 if (ArmeriaRouteSupport.SPRING_BOOT_ARMERIA_FILE_INDICATORS.any(contents::contains)) {
                     put(SPRING_BOOT_ARMERIA_REFERENCE_KEY, null)
                 }
+                if (containsDocServiceExampleReference(contents)) {
+                    put(DOC_SERVICE_EXAMPLE_REFERENCE_KEY, null)
+                }
+                if (containsJUnitServerExtensionReference(contents)) {
+                    put(JUNIT_SERVER_EXTENSION_REFERENCE_KEY, null)
+                }
             }
         }
 
@@ -42,11 +48,13 @@ class ArmeriaReferenceFileIndex : ScalarIndexExtension<Int>() {
 
     override fun dependsOnFileContent(): Boolean = true
 
-    override fun getVersion(): Int = 1
+    override fun getVersion(): Int = 2
 
     companion object {
         private const val ARMERIA_REFERENCE_KEY = 1
         private const val SPRING_BOOT_ARMERIA_REFERENCE_KEY = 2
+        private const val DOC_SERVICE_EXAMPLE_REFERENCE_KEY = 3
+        private const val JUNIT_SERVER_EXTENSION_REFERENCE_KEY = 4
         private val SOURCE_EXTENSIONS = setOf("java", "kt", "kts", "scala")
         private val ARMERIA_PACKAGE_PATTERN = Regex("""com\s*\.\s*linecorp\s*\.\s*armeria""")
 
@@ -62,15 +70,51 @@ class ArmeriaReferenceFileIndex : ScalarIndexExtension<Int>() {
             scope: GlobalSearchScope,
             includeSpringBootArmeriaIndicators: Boolean = false,
         ): List<VirtualFile> {
-            if (!isRegistered()) {
-                return fallbackFiles(project, scope, includeSpringBootArmeriaIndicators)
-            }
             val keys =
                 if (includeSpringBootArmeriaIndicators) {
                     setOf(ARMERIA_REFERENCE_KEY, SPRING_BOOT_ARMERIA_REFERENCE_KEY)
                 } else {
                     setOf(ARMERIA_REFERENCE_KEY)
                 }
+            if (!isRegistered()) {
+                return fallbackFiles(project, scope, includeSpringBootArmeriaIndicators)
+            }
+            return filesWithKeys(project, scope, keys)
+        }
+
+        fun findDocServiceExampleFiles(
+            project: Project,
+            scope: GlobalSearchScope,
+        ): List<VirtualFile> =
+            findIndexedFiles(project, scope, DOC_SERVICE_EXAMPLE_REFERENCE_KEY) { contents ->
+                containsDocServiceExampleReference(contents)
+            }
+
+        fun findJUnitServerExtensionFiles(
+            project: Project,
+            scope: GlobalSearchScope,
+        ): List<VirtualFile> =
+            findIndexedFiles(project, scope, JUNIT_SERVER_EXTENSION_REFERENCE_KEY) { contents ->
+                containsJUnitServerExtensionReference(contents)
+            }
+
+        private fun findIndexedFiles(
+            project: Project,
+            scope: GlobalSearchScope,
+            key: Int,
+            fallbackPredicate: (String) -> Boolean,
+        ): List<VirtualFile> {
+            if (!isRegistered()) {
+                return fallbackFiles(project, scope, fallbackPredicate)
+            }
+            return filesWithKeys(project, scope, setOf(key))
+        }
+
+        private fun filesWithKeys(
+            project: Project,
+            scope: GlobalSearchScope,
+            keys: Set<Int>,
+        ): List<VirtualFile> {
             val files = linkedSetOf<VirtualFile>()
             for (key in keys) {
                 FileBasedIndex.getInstance().getFilesWithKey(
@@ -88,6 +132,13 @@ class ArmeriaReferenceFileIndex : ScalarIndexExtension<Int>() {
 
         internal fun referencesArmeriaPackage(contents: CharSequence): Boolean = ARMERIA_PACKAGE_PATTERN.containsMatchIn(contents)
 
+        internal fun containsDocServiceExampleReference(contents: CharSequence): Boolean =
+            contents.contains("exampleRequests") || contents.contains("exampleHeaders")
+
+        internal fun containsJUnitServerExtensionReference(contents: CharSequence): Boolean =
+            contents.contains("org.junit.jupiter.api.extension.RegisterExtension") ||
+                contents.contains("@RegisterExtension")
+
         private fun isRegistered(): Boolean =
             FileBasedIndexExtension.EXTENSION_POINT_NAME.extensionList.any { extension ->
                 extension.name.name == NAME.name
@@ -98,17 +149,24 @@ class ArmeriaReferenceFileIndex : ScalarIndexExtension<Int>() {
             scope: GlobalSearchScope,
             includeSpringBootArmeriaIndicators: Boolean,
         ): List<VirtualFile> =
+            fallbackFiles(project, scope) { contents ->
+                referencesArmeriaPackage(contents) ||
+                    (
+                        includeSpringBootArmeriaIndicators &&
+                            ArmeriaRouteSupport.SPRING_BOOT_ARMERIA_FILE_INDICATORS.any(contents::contains)
+                    )
+            }
+
+        private fun fallbackFiles(
+            project: Project,
+            scope: GlobalSearchScope,
+            predicate: (String) -> Boolean,
+        ): List<VirtualFile> =
             SOURCE_EXTENSIONS
                 .flatMap { extension -> FilenameIndex.getAllFilesByExt(project, extension, scope) }
                 .distinct()
-                .filter { file ->
-                    val contents = loadText(file)
-                    referencesArmeriaPackage(contents) ||
-                        (
-                            includeSpringBootArmeriaIndicators &&
-                                ArmeriaRouteSupport.SPRING_BOOT_ARMERIA_FILE_INDICATORS.any(contents::contains)
-                        )
-                }.sortedWith(compareBy({ it.path }, { it.name }))
+                .filter { file -> predicate(loadText(file)) }
+                .sortedWith(compareBy({ it.path }, { it.name }))
 
         private fun loadText(file: VirtualFile): String = FileDocumentManager.getInstance().getDocument(file)?.text ?: loadSavedText(file)
 

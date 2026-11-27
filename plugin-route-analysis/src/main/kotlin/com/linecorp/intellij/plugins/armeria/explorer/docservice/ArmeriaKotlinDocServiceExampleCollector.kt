@@ -5,13 +5,12 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiManager
-import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.search.searches.ReferencesSearch
 import com.intellij.psi.util.PsiTreeUtil
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaReferenceFileIndex
 import com.linecorp.intellij.plugins.armeria.psi.forEachDescendant
-import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtClassLiteralExpression
 import org.jetbrains.kotlin.psi.KtClassOrObject
@@ -59,7 +58,8 @@ internal object ArmeriaKotlinDocServiceExampleCollector {
         scope: GlobalSearchScope,
         builder: ArmeriaDocServiceExampleIndex.Builder,
     ) {
-        for (virtualFile in FileTypeIndex.getFiles(KotlinFileType.INSTANCE, scope)) {
+        for (virtualFile in ArmeriaReferenceFileIndex.findDocServiceExampleFiles(project, scope)) {
+            if (virtualFile.extension != "kt") continue
             val ktFile = PsiManager.getInstance(project).findFile(virtualFile) as? KtFile ?: continue
             val text = ktFile.viewProvider.contents
             if (!text.contains("exampleRequests") && !text.contains("exampleHeaders")) {
