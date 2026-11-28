@@ -83,6 +83,30 @@ class ArmeriaRouteDuplicateIndexCoreTest : ArmeriaFixtureTestBase() {
         assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
     }
 
+    fun testWildcardlessAbsoluteGlobDuplicatesExactServicePath() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("glob:/health", new FirstService())
+                        .service("/health", new SecondService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass("package example; public class FirstService {}")
+        myFixture.addClass("package example; public class SecondService {}")
+
+        assertEquals(1, ArmeriaRouteDuplicateIndex.duplicateGroups(project).size)
+    }
+
     fun testRegexRoutesWithEquivalentTrailingSlashPrefixesAreDuplicates() {
         myFixture.configureByText(
             "First.java",

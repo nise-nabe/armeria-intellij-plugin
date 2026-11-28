@@ -85,46 +85,62 @@ object ArmeriaPathVariableSupport {
         pathType: PathType? = null,
     ): String {
         val typed = typedPath(path)
-        if ((pathType ?: typed.pathType) != PathType.EXACT) {
+        val effectivePathType = pathType ?: typed.pathType
+        val body = path.substring(typed.bodyStart)
+        if (effectivePathType == PathType.GLOB) {
+            return if ('*' in body) {
+                path
+            } else {
+                literalPathShape(body)
+            }
+        }
+        if (effectivePathType != PathType.EXACT) {
             return path
         }
-        val body = path.substring(typed.bodyStart)
         val bindVariables = !explicitExactPath && typed.bindVariables
-        return body
+        return if (bindVariables) {
+            parameterizedExactPathShape(body)
+        } else {
+            literalPathShape(body)
+        }
+    }
+
+    private fun literalPathShape(path: String): String =
+        path
+            .split('/')
+            .joinToString("/") { segment -> literalShapeSegment(segment) }
+
+    private fun parameterizedExactPathShape(path: String): String =
+        path
             .split('/')
             .joinToString("/") { segment ->
-                if (!bindVariables) {
-                    literalShapeSegment(segment)
-                } else {
-                    when {
-                        segment.startsWith("{") && segment.endsWith("}") -> {
-                            val inner = segment.substring(1, segment.length - 1)
-                            val constraintIndex = inner.indexOf(':')
-                            val catchAll = inner.startsWith("*")
-                            val constraint =
-                                if (constraintIndex < 0) {
-                                    ""
-                                } else {
-                                    inner.substring(constraintIndex + 1)
-                                }
-                            variableShapeSegment(catchAll, constraint)
-                        }
+                when {
+                    segment.startsWith("{") && segment.endsWith("}") -> {
+                        val inner = segment.substring(1, segment.length - 1)
+                        val constraintIndex = inner.indexOf(':')
+                        val catchAll = inner.startsWith("*")
+                        val constraint =
+                            if (constraintIndex < 0) {
+                                ""
+                            } else {
+                                inner.substring(constraintIndex + 1)
+                            }
+                        variableShapeSegment(catchAll, constraint)
+                    }
 
-                        segment.startsWith(":*") && segment.length > 2 -> {
-                            variableShapeSegment(catchAll = true, constraint = "")
-                        }
+                    segment.startsWith(":*") && segment.length > 2 -> {
+                        variableShapeSegment(catchAll = true, constraint = "")
+                    }
 
-                        segment.startsWith(":") && segment.length > 1 -> {
-                            variableShapeSegment(catchAll = false, constraint = "")
-                        }
+                    segment.startsWith(":") && segment.length > 1 -> {
+                        variableShapeSegment(catchAll = false, constraint = "")
+                    }
 
-                        else -> {
-                            literalShapeSegment(segment)
-                        }
+                    else -> {
+                        literalShapeSegment(segment)
                     }
                 }
             }
-    }
 
     private fun literalShapeSegment(segment: String): String = "L${segment.length}:$segment"
 
