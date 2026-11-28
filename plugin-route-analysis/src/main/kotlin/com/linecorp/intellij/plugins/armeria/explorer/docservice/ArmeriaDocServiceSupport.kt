@@ -24,26 +24,30 @@ object ArmeriaDocServiceSupport {
         baseUrl: String = DEFAULT_BASE_URL,
     ): String? = docServiceRoutes(routes).firstOrNull()?.let { url(it, baseUrl) }
 
-    fun listenPortBinding(routes: List<ArmeriaRoute>): Pair<Int, Boolean>? {
-        val binding =
-            routes
-                .filter { it.routeMatch == RouteMatch.LISTEN_PORT }
-                .mapNotNull { route ->
-                    val port = route.path.removePrefix(":").toIntOrNull() ?: return@mapNotNull null
-                    val tokens = route.protocol.split('+').map { it.trim().uppercase() }
-                    val https = "HTTPS" in tokens && "HTTP" !in tokens
-                    port to https
-                }.sortedBy { it.first }
-                .firstOrNull()
-        return binding
+    fun listenPortBindings(routes: List<ArmeriaRoute>): List<Pair<Int, Boolean>> =
+        routes
+            .filter { it.routeMatch == RouteMatch.LISTEN_PORT }
+            .mapNotNull { route ->
+                val port = route.path.removePrefix(":").toIntOrNull() ?: return@mapNotNull null
+                val tokens = route.protocol.split('+').map { it.trim().uppercase() }
+                val https = "HTTPS" in tokens && "HTTP" !in tokens
+                port to https
+            }.distinct()
+            .sortedWith(compareBy<Pair<Int, Boolean>> { it.first }.thenBy { it.second })
+
+    fun listenPortBinding(routes: List<ArmeriaRoute>): Pair<Int, Boolean>? = listenPortBindings(routes).firstOrNull()
+
+    fun serverBaseUrl(binding: Pair<Int, Boolean>): String {
+        val (port, https) = binding
+        return "${if (https) "https" else "http"}://localhost:$port"
     }
 
     fun serverBaseUrl(
         routes: List<ArmeriaRoute>,
         defaultBaseUrl: String = DEFAULT_BASE_URL,
     ): String {
-        val (port, https) = listenPortBinding(routes) ?: return defaultBaseUrl
-        return "${if (https) "https" else "http"}://localhost:$port"
+        val binding = listenPortBinding(routes) ?: return defaultBaseUrl
+        return serverBaseUrl(binding)
     }
 
     fun docsBaseUrl(

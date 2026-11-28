@@ -13,10 +13,17 @@ internal object ArmeriaRouteCurlSupport {
         staticRoutes: List<ArmeriaRoute>,
         lastSyncedDocsBaseUrl: String?,
     ): String? {
-        if (route.routeMatch == RouteMatch.NON_HTTP || !ArmeriaHttpRequestGenerator.supports(route)) {
-            return null
-        }
-        val method = ArmeriaHttpRequestGenerator.httpMethod(route)
+        val method = supportedHttpMethod(route) ?: return null
+        val url = urlText(route, staticRoutes, lastSyncedDocsBaseUrl) ?: return null
+        return "curl -X $method ${shellQuote(url)}"
+    }
+
+    fun urlText(
+        route: ArmeriaRoute,
+        staticRoutes: List<ArmeriaRoute>,
+        lastSyncedDocsBaseUrl: String?,
+    ): String? {
+        supportedHttpMethod(route) ?: return null
         val path =
             ArmeriaPathVariableSupport.pathWithPlaceholders(
                 route.path,
@@ -25,7 +32,14 @@ internal object ArmeriaRouteCurlSupport {
             )
         val normalizedPath = path.takeIf { it.startsWith("/") } ?: "/$path"
         val baseUrl = syncedServerBaseUrl(lastSyncedDocsBaseUrl) ?: ArmeriaDocServiceSupport.serverBaseUrl(staticRoutes)
-        return "curl -X $method ${shellQuote(baseUrl.trimEnd('/') + normalizedPath)}"
+        return baseUrl.trimEnd('/') + normalizedPath
+    }
+
+    private fun supportedHttpMethod(route: ArmeriaRoute): String? {
+        if (route.routeMatch == RouteMatch.NON_HTTP || !ArmeriaHttpRequestGenerator.supports(route)) {
+            return null
+        }
+        return ArmeriaHttpRequestGenerator.httpMethod(route)
     }
 
     private fun syncedServerBaseUrl(docsBaseUrl: String?): String? {

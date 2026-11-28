@@ -62,6 +62,18 @@ class ArmeriaRouteCurlSupportTest {
     }
 
     @Test
+    fun urlText_usesDetectedStaticListenPort() {
+        val url =
+            ArmeriaRouteCurlSupport.urlText(
+                route = route(path = "/users/{id}"),
+                staticRoutes = listOf(listenPort(":9090", "HTTP")),
+                lastSyncedDocsBaseUrl = null,
+            )
+
+        assertEquals("http://localhost:9090/users/{id}", url)
+    }
+
+    @Test
     fun curlText_returnsNullForNonHttpRoutes() {
         assertNull(
             ArmeriaRouteCurlSupport.curlText(
