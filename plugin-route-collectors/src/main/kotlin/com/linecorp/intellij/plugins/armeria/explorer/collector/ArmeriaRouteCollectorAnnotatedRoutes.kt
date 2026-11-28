@@ -64,8 +64,8 @@ object ArmeriaRouteCollectorAnnotatedRoutes {
         val executionHints = ArmeriaTimeoutSupport.collectExecutionHints(method)
         for ((httpMethod, paths) in routeAnnotationPaths) {
             for (rawPath in paths) {
-                val parsedPath = ArmeriaRouteSupport.parsePathType(rawPath)
-                val combinedPath = ArmeriaRouteSupport.combinePaths(classPrefix, parsedPath.path)
+                val parsedPath = ArmeriaRouteSupport.parsePathWithPrefix(classPrefix, rawPath)
+                val combinedPath = parsedPath.path
                 routes +=
                     ArmeriaRoute.create(
                         element = method,

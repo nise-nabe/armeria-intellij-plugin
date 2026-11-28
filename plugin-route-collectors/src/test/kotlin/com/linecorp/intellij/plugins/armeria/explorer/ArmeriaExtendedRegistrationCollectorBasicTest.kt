@@ -88,9 +88,9 @@ class ArmeriaExtendedRegistrationCollectorBasicTest : ArmeriaFixtureTestBase() {
         collectRoutes().also { it.singleRoute() }.assertRoute(path = "/foo", pathType = PathType.REGEX)
     }
 
-    fun testCollectGlobPathAnnotationNormalizesLeadingSlash() {
+    fun testCollectGlobPathAnnotationPreservesRelativeGlobSemantics() {
         configureFixture("extendedRegistration/basic/globPathAnnotation/HelloService.java")
-        collectRoutes().also { it.singleRoute() }.assertRoute(path = "/foo/**", pathType = PathType.GLOB)
+        collectRoutes().also { it.singleRoute() }.assertRoute(path = "/**/foo/**", pathType = PathType.GLOB)
     }
 
     fun testCollectFluentRoutePathPrefix() {

@@ -18,6 +18,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.Arm
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.FluentRouteChainInfo
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.RouteValueResolution
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaPathVariableSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteTargetExtractor
@@ -265,7 +266,15 @@ internal object ArmeriaJavaRouteValueExtractor {
         if (resolved.isEmpty() || resolved.any { it == null }) {
             return null
         }
-        return resolved.filterNotNull().distinctBy { listOf(it.httpMethod, it.path, it.pathType, it.explicitExactPath) }.singleOrNull()
+        return resolved
+            .filterNotNull()
+            .distinctBy {
+                listOf(
+                    it.httpMethod,
+                    ArmeriaPathVariableSupport.pathShapeForOverlap(it.path, it.explicitExactPath),
+                    it.pathType,
+                )
+            }.singleOrNull()
     }
 
     private fun resolveMethod(call: PsiMethodCallExpression): PsiMethod? {

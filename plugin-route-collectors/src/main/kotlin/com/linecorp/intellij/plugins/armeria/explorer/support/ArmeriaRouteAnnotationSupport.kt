@@ -96,7 +96,7 @@ internal object ArmeriaRouteAnnotationSupport {
                     }
                     pathAnnotationPaths
                 }
-            httpMethod to rawPaths.ifEmpty { listOf("/") }.distinct()
+            httpMethod to rawPaths.ifEmpty { listOf("") }.distinct()
         }
     }
 
@@ -214,7 +214,7 @@ internal object ArmeriaRouteAnnotationSupport {
             }
 
             trimmed.startsWith("glob:") -> {
-                ParsedArmeriaPath(PathType.GLOB, ArmeriaRouteSupport.normalizePath(trimmed.removePrefix("glob:")))
+                ParsedArmeriaPath(PathType.GLOB, normalizeGlobPath(trimmed.removePrefix("glob:")))
             }
 
             trimmed.startsWith("exact:") -> {
@@ -231,8 +231,16 @@ internal object ArmeriaRouteAnnotationSupport {
         }
     }
 
+    private fun normalizeGlobPath(glob: String): String {
+        val trimmed = glob.trim()
+        return if (trimmed.startsWith("/")) trimmed else "/**/$trimmed"
+    }
+
     private fun preserveOrNormalizePath(path: String): String {
         val trimmed = path.trim()
+        if (trimmed.isEmpty()) {
+            return ""
+        }
         return if (hasPathTypePrefix(trimmed)) trimmed else ArmeriaRouteSupport.normalizePath(trimmed)
     }
 

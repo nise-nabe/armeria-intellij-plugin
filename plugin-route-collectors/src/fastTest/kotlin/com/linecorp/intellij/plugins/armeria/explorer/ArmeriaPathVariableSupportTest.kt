@@ -180,24 +180,20 @@ class ArmeriaPathVariableSupportTest {
     @Test
     fun pathShapeForOverlapKeepsExactTypedVariableShapedTextLiteral() {
         assertEquals(
-            "/users/{id}",
             ArmeriaPathVariableSupport.pathShapeForOverlap("exact:/users/{id}"),
-        )
-        assertEquals(
-            "/users/{id}",
             ArmeriaPathVariableSupport.pathShapeForOverlap("/users/{id}", explicitExactPath = true),
         )
         assertEquals(
-            "/users/{}",
-            ArmeriaPathVariableSupport.pathShapeForOverlap("/users/{id}"),
-        )
-        assertEquals(
-            "/users/{:[0-9]+}",
-            ArmeriaPathVariableSupport.pathShapeForOverlap("/users/{id:[0-9]+}"),
+            ArmeriaPathVariableSupport.pathShapeForOverlap("exact:/health"),
+            ArmeriaPathVariableSupport.pathShapeForOverlap("/health"),
         )
         assertNotEquals(
             ArmeriaPathVariableSupport.pathShapeForOverlap("exact:/users/{id}"),
             ArmeriaPathVariableSupport.pathShapeForOverlap("/users/{name}"),
+        )
+        assertNotEquals(
+            ArmeriaPathVariableSupport.pathShapeForOverlap("exact:/files/{}"),
+            ArmeriaPathVariableSupport.pathShapeForOverlap("/files/{name}"),
         )
         assertNotEquals(
             ArmeriaPathVariableSupport.pathShapeForOverlap("/files/{*path}"),

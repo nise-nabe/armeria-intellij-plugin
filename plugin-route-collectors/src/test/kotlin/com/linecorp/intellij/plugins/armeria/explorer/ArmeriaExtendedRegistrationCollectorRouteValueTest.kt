@@ -88,6 +88,49 @@ class ArmeriaExtendedRegistrationCollectorRouteValueTest : ArmeriaFixtureTestBas
             .also { route -> assertTrue(route.explicitExactPath) }
     }
 
+    fun testTwoArgumentRouteBuilderRootPathKeepsTrailingSlash() {
+        configureService(
+            """
+            Server.builder()
+                .service(Route.builder().path("/api", "/").build(), new HelloService())
+                .build();
+            """,
+        )
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/api/", pathType = PathType.EXACT)
+    }
+
+    fun testTwoArgumentRouteBuilderExplicitExactRootPathKeepsTrailingSlash() {
+        configureService(
+            """
+            Server.builder()
+                .service(Route.builder().path("/api", "exact:/").build(), new HelloService())
+                .build();
+            """,
+        )
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/api/", pathType = PathType.EXACT)
+            .also { route -> assertTrue(route.explicitExactPath) }
+    }
+
+    fun testTwoArgumentRouteBuilderEmptyPathUsesPrefixWithoutTrailingSlash() {
+        configureService(
+            """
+            Server.builder()
+                .service(Route.builder().path("/api", "").build(), new HelloService())
+                .build();
+            """,
+        )
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/api", pathType = PathType.EXACT)
+    }
+
     fun testCollectsServiceRegistrationWithRouteOfMethodAndPath() {
         configureService(
             """
@@ -210,6 +253,38 @@ class ArmeriaExtendedRegistrationCollectorRouteValueTest : ArmeriaFixtureTestBas
         addHelloService()
 
         assertTrue(collectRoutes().none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
+    }
+
+    fun testCollectsRouteMethodWhenBranchesReturnSameExactUrl() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Route;
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service(pick(true), new HelloService())
+                        .build();
+                }
+
+                private static Route pick(boolean flag) {
+                    if (flag) {
+                        return Route.of("/health");
+                    }
+                    return Route.of("exact:/health");
+                }
+            }
+            """.trimIndent(),
+        )
+        addHelloService()
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/health", pathType = PathType.EXACT)
     }
 
     fun testCollectsStandaloneRouteBuilderBuildWithHandler() {

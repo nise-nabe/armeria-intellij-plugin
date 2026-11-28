@@ -88,38 +88,51 @@ object ArmeriaPathVariableSupport {
             return path
         }
         val body = path.substring(typed.bodyStart)
-        if (explicitExactPath || !typed.bindVariables) {
-            return body
-        }
+        val bindVariables = !explicitExactPath && typed.bindVariables
         return body
             .split('/')
             .joinToString("/") { segment ->
-                when {
-                    segment.startsWith("{") && segment.endsWith("}") -> {
-                        val inner = segment.substring(1, segment.length - 1)
-                        val constraintIndex = inner.indexOf(':')
-                        val catchAll = inner.startsWith("*")
-                        if (constraintIndex < 0) {
-                            if (catchAll) "{*}" else "{}"
-                        } else {
-                            val prefix = if (catchAll) "{*:" else "{:"
-                            "$prefix${inner.substring(constraintIndex + 1)}}"
+                if (!bindVariables) {
+                    literalShapeSegment(segment)
+                } else {
+                    when {
+                        segment.startsWith("{") && segment.endsWith("}") -> {
+                            val inner = segment.substring(1, segment.length - 1)
+                            val constraintIndex = inner.indexOf(':')
+                            val catchAll = inner.startsWith("*")
+                            val constraint =
+                                if (constraintIndex < 0) {
+                                    ""
+                                } else {
+                                    inner.substring(constraintIndex + 1)
+                                }
+                            variableShapeSegment(catchAll, constraint)
                         }
-                    }
 
-                    segment.startsWith(":*") && segment.length > 2 -> {
-                        "{*}"
-                    }
+                        segment.startsWith(":*") && segment.length > 2 -> {
+                            variableShapeSegment(catchAll = true, constraint = "")
+                        }
 
-                    segment.startsWith(":") && segment.length > 1 -> {
-                        "{}"
-                    }
+                        segment.startsWith(":") && segment.length > 1 -> {
+                            variableShapeSegment(catchAll = false, constraint = "")
+                        }
 
-                    else -> {
-                        segment
+                        else -> {
+                            literalShapeSegment(segment)
+                        }
                     }
                 }
             }
+    }
+
+    private fun literalShapeSegment(segment: String): String = "L${segment.length}:$segment"
+
+    private fun variableShapeSegment(
+        catchAll: Boolean,
+        constraint: String,
+    ): String {
+        val kind = if (catchAll) "C" else "V"
+        return "$kind${constraint.length}:$constraint"
     }
 
     fun pathVariableOccurrences(path: String): List<PathVariableOccurrence> {

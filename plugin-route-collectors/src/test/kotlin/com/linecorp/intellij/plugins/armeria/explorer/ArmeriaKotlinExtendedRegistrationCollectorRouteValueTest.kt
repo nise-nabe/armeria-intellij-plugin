@@ -188,6 +188,37 @@ class ArmeriaKotlinExtendedRegistrationCollectorRouteValueTest : ArmeriaFixtureT
         assertTrue(collectRoutes().none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
     }
 
+    fun testCollectsRouteMethodWhenBranchesReturnSameExactUrl() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Route
+            import com.linecorp.armeria.server.Server
+
+            class HelloService
+
+            fun main() {
+                Server.builder()
+                    .service(pick(true), HelloService())
+                    .build()
+            }
+
+            fun pick(flag: Boolean): Route {
+                if (flag) {
+                    return Route.of("/health")
+                }
+                return Route.of("exact:/health")
+            }
+            """.trimIndent(),
+        )
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/health", pathType = PathType.EXACT)
+    }
+
     fun testCollectsStandaloneRouteBuilderBuildWithHandler() {
         myFixture.configureByText(
             "Main.kt",
