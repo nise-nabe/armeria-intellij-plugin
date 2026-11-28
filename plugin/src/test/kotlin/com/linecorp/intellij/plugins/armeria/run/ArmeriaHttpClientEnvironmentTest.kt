@@ -96,6 +96,24 @@ class ArmeriaHttpClientEnvironmentTest : ArmeriaLightJavaCodeInsightFixtureTestC
         assertTrue(merged.contains("\"port\": \"9090\""), merged)
     }
 
+    fun testMergeInsertsMissingValuesBeforeTrailingComment() {
+        val existing =
+            """
+            {
+              "armeria": {
+                "host": "localhost"
+                // Runtime values are generated below.
+              }
+            }
+            """.trimIndent()
+
+        val merged = ArmeriaHttpClientEnvironment.merge(project, existing, "127.0.0.1", 9090)
+
+        assertTrue(merged.contains("\"host\": \"127.0.0.1\",\n    \"port\": \"9090\""), merged)
+        assertTrue(merged.contains("// Runtime values are generated below."), merged)
+        assertTrue(merged.indexOf("\"port\": \"9090\"") < merged.indexOf("// Runtime values"), merged)
+    }
+
     fun testMergeLeavesUnparseableJsonUnchanged() {
         val existing = "{ \"armeria\": {"
 

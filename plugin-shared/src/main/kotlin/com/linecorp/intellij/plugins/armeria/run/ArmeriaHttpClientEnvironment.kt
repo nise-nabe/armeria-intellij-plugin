@@ -4,8 +4,10 @@ import com.intellij.json.JsonFileType
 import com.intellij.json.psi.JsonFile
 import com.intellij.json.psi.JsonObject
 import com.intellij.openapi.project.Project
+import com.intellij.psi.PsiComment
 import com.intellij.psi.PsiErrorElement
 import com.intellij.psi.PsiFileFactory
+import com.intellij.psi.PsiWhiteSpace
 import com.intellij.psi.util.PsiTreeUtil
 
 object ArmeriaHttpClientEnvironment {
@@ -110,7 +112,7 @@ object ArmeriaHttpClientEnvironment {
             }
         }
         if (missing.isNotEmpty()) {
-            val insertOffset = insertionOffset(text, armeriaObject.textRange.endOffset)
+            val insertOffset = insertionOffset(armeriaObject)
             val needsComma = needsCommaBeforeInsert(text, insertOffset, armeriaObject.propertyList.isNotEmpty())
             edits +=
                 TextEdit(
@@ -129,7 +131,7 @@ object ArmeriaHttpClientEnvironment {
         port: Int,
         https: Boolean,
     ): String {
-        val insertOffset = insertionOffset(text, root.textRange.endOffset)
+        val insertOffset = insertionOffset(root)
         val needsComma = needsCommaBeforeInsert(text, insertOffset, root.propertyList.isNotEmpty())
         val inserted =
             buildString {
@@ -173,13 +175,13 @@ object ArmeriaHttpClientEnvironment {
             }
         }
 
-    private fun insertionOffset(
-        text: String,
-        objectEndOffset: Int,
-    ): Int {
-        var offset = objectEndOffset - 1
-        while (offset > 0 && text[offset - 1].isWhitespace()) {
-            offset--
+    private fun insertionOffset(jsonObject: JsonObject): Int {
+        val closingBrace = jsonObject.lastChild
+        var element = closingBrace.prevSibling
+        var offset = closingBrace.textRange.startOffset
+        while (element is PsiWhiteSpace || element is PsiComment) {
+            offset = element.textRange.startOffset
+            element = element.prevSibling
         }
         return offset
     }
