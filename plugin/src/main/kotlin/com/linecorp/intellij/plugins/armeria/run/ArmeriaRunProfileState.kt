@@ -18,6 +18,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.util.Key
 import com.linecorp.intellij.plugins.armeria.message
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
@@ -58,13 +59,15 @@ class ArmeriaRunProfileState(
         val openedDocService = AtomicBoolean(false)
         val serverStarted = AtomicBoolean(false)
         val urlsRef = AtomicReference<ArmeriaRunServiceUrls?>(null)
+        val startupOutputs = ConcurrentHashMap<Key<*>, StringBuilder>()
         result.processHandler.addProcessListener(
             object : ProcessListener {
                 override fun onTextAvailable(
                     event: ProcessEvent,
                     outputType: Key<*>,
                 ) {
-                    if (!looksLikeServerStarted(event.text)) {
+                    val startupOutput = startupOutputs.computeIfAbsent(outputType) { StringBuilder() }
+                    if (!looksLikeServerStarted(appendStartupOutput(startupOutput, event.text))) {
                         return
                     }
                     if (!serverStarted.compareAndSet(false, true)) {
@@ -137,11 +140,31 @@ class ArmeriaRunProfileState(
     }
 
     companion object {
+        private const val STARTUP_OUTPUT_BUFFER_LIMIT = 4096
+
+        internal fun appendStartupOutput(
+            buffer: StringBuilder,
+            text: String?,
+        ): String {
+            if (text.isNullOrEmpty()) {
+                return ""
+            }
+            synchronized(buffer) {
+                val combined = buffer.toString() + text
+                buffer.setLength(0)
+                buffer.append(combined.takeLast(STARTUP_OUTPUT_BUFFER_LIMIT))
+                return combined
+            }
+        }
+
+        private val ANSI_CONTROL_SEQUENCE = Regex("\u001B\\[[0-?]*[ -/]*[@-~]")
+
         internal fun looksLikeServerStarted(text: String?): Boolean {
             if (text.isNullOrBlank()) {
                 return false
             }
-            return text.contains("Serving HTTP") || text.contains("Started server")
+            val plainText = text.replace(ANSI_CONTROL_SEQUENCE, "")
+            return plainText.contains("Serving HTTP") || plainText.contains("Started server")
         }
     }
 }

@@ -5,6 +5,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaPathVariabl
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class ArmeriaPathVariableSupportTest {
@@ -162,6 +163,46 @@ class ArmeriaPathVariableSupportTest {
             ArmeriaPathVariableSupport.replacePathVariableName("exact:/users/{id}", "id", "userId"),
         )
         assertEquals(listOf("id"), ArmeriaPathVariableSupport.extractPathVariables("/users/{id}"))
+    }
+
+    @Test
+    fun pathShapeForOverlapCanonicalizesVariableNames() {
+        assertEquals(
+            ArmeriaPathVariableSupport.pathShapeForOverlap("/users/{id}/:action"),
+            ArmeriaPathVariableSupport.pathShapeForOverlap("/users/{name}/{action}"),
+        )
+        assertEquals(
+            ArmeriaPathVariableSupport.pathShapeForOverlap("/users/{id:[0-9]{1,10}}"),
+            ArmeriaPathVariableSupport.pathShapeForOverlap("/users/{name:[0-9]{1,10}}"),
+        )
+    }
+
+    @Test
+    fun pathShapeForOverlapCanonicalizesExactTypedPathsAndKeepsConstraintsDistinct() {
+        assertEquals(
+            "/users/{}",
+            ArmeriaPathVariableSupport.pathShapeForOverlap("exact:/users/{id}"),
+        )
+        assertEquals(
+            "/users/{}",
+            ArmeriaPathVariableSupport.pathShapeForOverlap("/users/{id}"),
+        )
+        assertEquals(
+            "/users/{:[0-9]+}",
+            ArmeriaPathVariableSupport.pathShapeForOverlap("/users/{id:[0-9]+}"),
+        )
+        assertEquals(
+            ArmeriaPathVariableSupport.pathShapeForOverlap("exact:/users/{id}"),
+            ArmeriaPathVariableSupport.pathShapeForOverlap("/users/{name}"),
+        )
+        assertNotEquals(
+            ArmeriaPathVariableSupport.pathShapeForOverlap("/files/{*path}"),
+            ArmeriaPathVariableSupport.pathShapeForOverlap("/files/{id}"),
+        )
+        assertEquals(
+            ArmeriaPathVariableSupport.pathShapeForOverlap("/files/{*path}"),
+            ArmeriaPathVariableSupport.pathShapeForOverlap("/files/:*name"),
+        )
     }
 
     @Test

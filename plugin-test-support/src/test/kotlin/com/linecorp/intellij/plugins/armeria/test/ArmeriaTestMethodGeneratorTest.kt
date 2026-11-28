@@ -37,6 +37,12 @@ class ArmeriaTestMethodGeneratorTest {
     }
 
     @Test
+    fun suggestMethodNameForNumericLeadingGetPathIsValidIdentifier() {
+        val name = ArmeriaTestMethodGenerator.suggestMethodName(route(path = "/123"))
+        assertEquals("route123ReturnsSuccess", name)
+    }
+
+    @Test
     fun generateJavaTestMethodUsesBlockingClientWhenRouteIsBlocking() {
         val generated =
             ArmeriaTestMethodGenerator.generateTestMethod(

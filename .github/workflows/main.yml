@@ -50,6 +50,10 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: 25
+      - name: Route Maven Central to Google GCS mirror
+        run: |
+          mkdir -p ~/.gradle/init.d
+          cp .github/gradle/maven-central-mirror.init.gradle.kts ~/.gradle/init.d/
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
       - run: ./gradlew ${{ matrix.task }}
 
@@ -63,6 +67,10 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: 25
+      - name: Route Maven Central to Google GCS mirror
+        run: |
+          mkdir -p ~/.gradle/init.d
+          cp .github/gradle/maven-central-mirror.init.gradle.kts ~/.gradle/init.d/
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
       # Report-only. Not part of check, so the ubuntu/windows/macos build matrix does not
       # download the 2026.3 IDE archive.
@@ -85,6 +93,10 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.java-version }}
+      - name: Route Maven Central to Google GCS mirror
+        run: |
+          mkdir -p ~/.gradle/init.d
+          cp .github/gradle/maven-central-mirror.init.gradle.kts ~/.gradle/init.d/
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6
       # Ubuntu already runs the split unit/platform test matrix above. Run the full test
       # suite on Windows and macOS so OS-specific path, VFS, and process behavior is covered.

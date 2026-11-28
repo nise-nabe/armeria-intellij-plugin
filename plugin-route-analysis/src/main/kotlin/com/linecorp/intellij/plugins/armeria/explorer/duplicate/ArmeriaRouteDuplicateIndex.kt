@@ -13,6 +13,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnal
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaPathVariableSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCacheSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 
@@ -236,7 +237,7 @@ object ArmeriaRouteDuplicateIndex {
             fun from(route: ArmeriaRoute): NonMountBucketKey =
                 NonMountBucketKey(
                     regex = route.pathType == PathType.REGEX,
-                    path = route.path,
+                    path = ArmeriaPathVariableSupport.pathShapeForOverlap(route.path),
                     virtualHostName = route.virtualHostName,
                 )
         }
@@ -295,7 +296,8 @@ object ArmeriaRouteDuplicateIndex {
             }
 
             else -> {
-                first.path == second.path
+                ArmeriaPathVariableSupport.pathShapeForOverlap(first.path) ==
+                    ArmeriaPathVariableSupport.pathShapeForOverlap(second.path)
             }
         }
     }

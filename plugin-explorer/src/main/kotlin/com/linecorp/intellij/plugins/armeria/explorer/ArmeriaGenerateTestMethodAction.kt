@@ -32,6 +32,6 @@ class ArmeriaGenerateTestMethodAction(
         if (!testMethodGeneration.supports(route)) {
             return
         }
-        testMethodGeneration.insertFromRouteExplorer(project, route)
+        testMethodGeneration.insertFromRouteExplorerAsync(project, route)
     }
 }

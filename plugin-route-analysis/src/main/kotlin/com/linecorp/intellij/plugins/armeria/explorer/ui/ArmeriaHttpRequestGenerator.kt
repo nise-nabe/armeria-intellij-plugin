@@ -9,6 +9,8 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaGrpcServiceOptionsSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaPathVariableSupport
 import com.linecorp.intellij.plugins.armeria.message
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.util.Locale
 
 object ArmeriaHttpRequestGenerator {
@@ -17,6 +19,7 @@ object ArmeriaHttpRequestGenerator {
 
     private val NON_SLUG_CHARACTERS = Regex("[^a-zA-Z0-9._-]")
     private val GRAPHQL_OPERATION_TARGET = Regex("""^(Query|Mutation|Subscription)\.[A-Za-z_][A-Za-z0-9_]*$""")
+    private val HEADER_NAME = Regex("""^[!#$%&'*+.^_`|~0-9A-Za-z-]+$""")
 
     fun supports(route: ArmeriaRoute): Boolean {
         if (isWebSocketRoute(route)) {
@@ -122,15 +125,18 @@ object ArmeriaHttpRequestGenerator {
             appendLine("$method $normalizedBaseUrl$pathWithQuery")
             val emittedHeaderNames = linkedSetOf<String>()
             for ((name, value) in matchHeaderFields(route.contentHints)) {
-                appendLine("$name: $value")
+                if (!HEADER_NAME.matches(name)) {
+                    continue
+                }
+                appendLine("$name: ${sanitizeHeaderValue(value)}")
                 emittedHeaderNames += name.lowercase(Locale.ROOT)
             }
             for (header in route.exampleHeaders) {
                 val headerName = header.substringBefore(':').trim()
-                if (headerName.isEmpty() || headerName.lowercase(Locale.ROOT) in emittedHeaderNames) {
+                if (':' !in header || !HEADER_NAME.matches(headerName) || headerName.lowercase(Locale.ROOT) in emittedHeaderNames) {
                     continue
                 }
-                appendLine(header)
+                appendLine("$headerName: ${sanitizeHeaderValue(header.substringAfter(':', ""))}")
                 emittedHeaderNames += headerName.lowercase(Locale.ROOT)
             }
             val resolvedContentType =
@@ -311,8 +317,19 @@ object ArmeriaHttpRequestGenerator {
         if (fields.isEmpty()) {
             return ""
         }
-        return fields.joinToString("&") { (name, value) -> "$name=$value" }
+        return fields.joinToString("&") { (name, value) ->
+            "${encodeQueryComponent(name)}=${encodeQueryComponent(value)}"
+        }
     }
+
+    private fun encodeQueryComponent(value: String): String = URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20")
+
+    private fun sanitizeHeaderValue(value: String): String =
+        value
+            .replace('\r', ' ')
+            .replace('\n', ' ')
+            .filter { it == '\t' || (it >= ' ' && it != '\u007f') }
+            .trim(' ', '\t')
 
     private fun appendQuery(
         path: String,

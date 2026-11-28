@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.inspection
 import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.psi.PsiElementVisitor
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaPathVariableSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.toArmeriaLightClass
 import com.linecorp.intellij.plugins.armeria.message
 import org.jetbrains.kotlin.psi.KtClass
@@ -24,7 +25,7 @@ class ArmeriaDuplicateRouteKotlinInspection : LocalInspectionTool() {
                 for (function in routeAnnotatedFunctions(klass)) {
                     for (route in ArmeriaKotlinMethodRoute.all(function)) {
                         for (path in route.paths) {
-                            val key = route.httpMethod to path
+                            val key = route.httpMethod to ArmeriaPathVariableSupport.pathShapeForOverlap(path)
                             val previous = seen.putIfAbsent(key, function)
                             if (previous != null) {
                                 duplicateFunctions += previous

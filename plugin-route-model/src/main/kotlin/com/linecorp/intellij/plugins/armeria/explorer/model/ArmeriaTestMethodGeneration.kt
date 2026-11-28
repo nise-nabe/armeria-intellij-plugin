@@ -9,4 +9,11 @@ interface ArmeriaTestMethodGeneration {
         project: Project,
         route: ArmeriaRoute,
     ): Boolean
+
+    fun insertFromRouteExplorerAsync(
+        project: Project,
+        route: ArmeriaRoute,
+    ) {
+        insertFromRouteExplorer(project, route)
+    }
 }

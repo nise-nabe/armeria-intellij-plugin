@@ -129,6 +129,26 @@ class ArmeriaHttpRequestGeneratorTest {
     }
 
     @Test
+    fun requestText_sanitizesExampleHeadersAndEncodesMatchParameters() {
+        val route =
+            route(
+                contentHints =
+                    listOf(
+                        message("route.explorer.hint.matchesParam", "filter=a b&x=1"),
+                        message("route.explorer.hint.matchesParam", "multi=a\nb"),
+                    ),
+                exampleHeaders = listOf("x-client: one\ntwo", "x-client: duplicate", "malformed"),
+            )
+
+        val text = ArmeriaHttpRequestGenerator.requestText(route)
+
+        assertTrue(text.contains("GET http://localhost:8080/api?filter=a%20b%26x%3D1&multi=a%0Ab"), text)
+        assertTrue(text.contains("x-client: one two"), text)
+        assertFalse(text.contains("x-client: duplicate"), text)
+        assertFalse(text.contains("malformed"), text)
+    }
+
+    @Test
     fun httpMethod_defaultsHealthCheckAndFluentRoutesToGet() {
         assertEquals("GET", ArmeriaHttpRequestGenerator.httpMethod(route(routeMatch = RouteMatch.HEALTH_CHECK)))
         assertEquals("GET", ArmeriaHttpRequestGenerator.httpMethod(route(httpMethod = "", routeMatch = RouteMatch.ROUTE_FLUENT)))
@@ -784,5 +804,17 @@ class ArmeriaHttpRequestGeneratorTest {
         override fun getVirtualFile(): VirtualFile = throw UnsupportedOperationException()
 
         override fun getPsiRange(): TextRange? = null
+    }
+
+    @Test
+    fun requestText_trimsWhitespaceAroundQueryParameterNames() {
+        val route = route(contentHints = listOf(message("route.explorer.hint.matchesParam", "env =prod")))
+        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("env=prod"))
+    }
+
+    @Test
+    fun requestText_encodesSinglePipeInQueryParameterValue() {
+        val route = route(contentHints = listOf(message("route.explorer.hint.matchesParam", "fields=id|name")))
+        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("fields=id%7Cname"))
     }
 }

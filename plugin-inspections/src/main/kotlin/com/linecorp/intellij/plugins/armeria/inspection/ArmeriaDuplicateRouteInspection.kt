@@ -6,6 +6,7 @@ import com.intellij.psi.JavaElementVisitor
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiMethod
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaPathVariableSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.message
 
@@ -23,7 +24,11 @@ class ArmeriaDuplicateRouteInspection : AbstractBaseJavaLocalInspectionTool() {
                 for (method in aClass.methods) {
                     for (route in ArmeriaMethodRoute.from(method)) {
                         for (path in route.paths) {
-                            val key = route.httpMethod to ArmeriaRouteSupport.combinePaths(route.classPrefix, path)
+                            val key =
+                                route.httpMethod to
+                                    ArmeriaPathVariableSupport.pathShapeForOverlap(
+                                        ArmeriaRouteSupport.combinePaths(route.classPrefix, path),
+                                    )
                             val previous = seen.putIfAbsent(key, method)
                             if (previous != null) {
                                 duplicateRoutes += previous

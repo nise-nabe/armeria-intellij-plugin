@@ -21,9 +21,21 @@ internal object ArmeriaTestMethodGenerator {
     fun suggestMethodName(route: ArmeriaRoute): String {
         val pathPart = pathToCamelCase(route.path)
         return when (httpMethod(route).uppercase(Locale.ROOT)) {
-            "GET" -> if (pathPart.isEmpty()) "rootReturnsSuccess" else "${pathPart}ReturnsSuccess"
-            "POST" -> "post${capitalize(pathPart)}"
-            else -> "${httpMethod(route).lowercase(Locale.ROOT)}${capitalize(pathPart)}"
+            "GET" -> {
+                when {
+                    pathPart.isEmpty() -> "rootReturnsSuccess"
+                    pathPart.first().isDigit() -> "route${capitalize(pathPart)}ReturnsSuccess"
+                    else -> "${pathPart}ReturnsSuccess"
+                }
+            }
+
+            "POST" -> {
+                "post${capitalize(pathPart)}"
+            }
+
+            else -> {
+                "${httpMethod(route).lowercase(Locale.ROOT)}${capitalize(pathPart)}"
+            }
         }
     }
 
