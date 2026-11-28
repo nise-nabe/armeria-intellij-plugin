@@ -1,5 +1,7 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.notification.NotificationGroupManager
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -11,6 +13,7 @@ import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.ui.Messages
 import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceEndpointValidator
 import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceMountResolver
+import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceSupport
 import com.linecorp.intellij.plugins.armeria.message
 
 class ArmeriaSyncRuntimeRoutesAction :
@@ -26,13 +29,14 @@ class ArmeriaSyncRuntimeRoutesAction :
                 .candidateMountPaths(staticRoutes, userMountPath = null)
                 .firstOrNull()
                 .orEmpty()
+        val listenPort = ArmeriaDocServiceSupport.listenPortBinding(staticRoutes)
         val dialog =
             ArmeriaDocServiceSyncDialog(
                 project = project,
                 defaultHost = "localhost",
-                defaultPort = "8080",
+                defaultPort = (listenPort?.first ?: 8080).toString(),
                 defaultMountPath = defaultMountPath,
-                defaultUseHttps = false,
+                defaultUseHttps = listenPort?.second ?: false,
             )
         if (!dialog.showAndGet()) {
             return
@@ -77,15 +81,18 @@ class ArmeriaSyncRuntimeRoutesAction :
                                     if (explorerPanel != null) {
                                         explorerPanel.scheduleInitialRefreshIfNeeded()
                                         explorerPanel.applyRuntimeRoutes(result.routes, result.specificationUrl)
-                                        Messages.showInfoMessage(
-                                            project,
-                                            message(
-                                                "route.explorer.sync.success",
-                                                result.routes.size,
-                                                result.specificationUrl,
-                                            ),
-                                            message("route.explorer.action.syncRuntime"),
-                                        )
+                                        NotificationGroupManager
+                                            .getInstance()
+                                            .getNotificationGroup("armeria.notifications")
+                                            .createNotification(
+                                                message("route.explorer.action.syncRuntime"),
+                                                message(
+                                                    "route.explorer.sync.success",
+                                                    result.routes.size,
+                                                    result.specificationUrl,
+                                                ),
+                                                NotificationType.INFORMATION,
+                                            ).notify(project)
                                     } else {
                                         Messages.showWarningDialog(
                                             project,

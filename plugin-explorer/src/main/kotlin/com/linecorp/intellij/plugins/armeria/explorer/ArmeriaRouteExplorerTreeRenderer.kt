@@ -3,6 +3,7 @@ package com.linecorp.intellij.plugins.armeria.explorer
 import com.intellij.ui.ColoredTreeCellRenderer
 import com.intellij.ui.SimpleTextAttributes
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpMethodPill
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteDetailFormatter
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteTreeBuilder
@@ -79,6 +80,10 @@ internal class ArmeriaRouteExplorerTreeRenderer : ColoredTreeCellRenderer() {
         ArmeriaRouteTreeLabel.matchSuffix(route)?.let { suffix ->
             append("  ", SimpleTextAttributes.REGULAR_ATTRIBUTES)
             append(suffix, SimpleTextAttributes.GRAYED_ATTRIBUTES)
+        }
+        if (route.routeMatch == RouteMatch.RUNTIME) {
+            append("  ", SimpleTextAttributes.REGULAR_ATTRIBUTES)
+            append(message("route.explorer.badge.runtime"), SimpleTextAttributes.GRAYED_ATTRIBUTES)
         }
         ArmeriaRouteDetailFormatter.secondaryDelegationText(route)?.let { secondary ->
             append(secondary, SimpleTextAttributes.GRAYED_ATTRIBUTES)

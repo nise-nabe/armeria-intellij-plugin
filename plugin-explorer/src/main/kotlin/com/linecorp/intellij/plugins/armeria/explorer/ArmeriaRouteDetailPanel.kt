@@ -1,22 +1,30 @@
 package com.linecorp.intellij.plugins.armeria.explorer
 
+import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.application.WriteIntentReadAction
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.ui.TitledSeparator
+import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
+import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceSupport
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaFileServiceRootResolver
+import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaRouteNavigation
+import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaHttpRequestGenerator
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteDetailFormatter
 import com.linecorp.intellij.plugins.armeria.message
 import com.linecorp.intellij.plugins.armeria.pluginUnloadDisposable
 import java.awt.BorderLayout
+import java.awt.FlowLayout
+import java.awt.datatransfer.StringSelection
 import javax.swing.JComponent
 import javax.swing.JPanel
 
@@ -25,8 +33,50 @@ import javax.swing.JPanel
  */
 class ArmeriaRouteDetailPanel(
     private val project: Project,
+    private val routesProvider: () -> List<ArmeriaRoute> = { emptyList() },
+    private val staticRoutesProvider: () -> List<ArmeriaRoute> = { emptyList() },
+    private val lastSyncedDocsBaseUrlProvider: () -> String? = { null },
 ) : JPanel(BorderLayout()) {
     private var routeGeneration = 0
+    private var currentRoute: ArmeriaRoute? = null
+
+    private val jumpToSourceLink =
+        ActionLink(message("route.explorer.action.jumpToSource")) {
+            val route = currentRoute ?: return@ActionLink
+            ArmeriaRouteNavigation.navigateToRoute(project, route)
+        }
+    private val copyCurlLink =
+        ActionLink(message("route.explorer.action.copyCurl")) {
+            val route = currentRoute ?: return@ActionLink
+            val command =
+                ArmeriaRouteCurlSupport.curlText(
+                    route = route,
+                    staticRoutes = staticRoutesProvider(),
+                    lastSyncedDocsBaseUrl = lastSyncedDocsBaseUrlProvider(),
+                ) ?: return@ActionLink
+            CopyPasteManager.getInstance().setContents(StringSelection(command))
+        }
+    private val generateHttpLink =
+        ActionLink(message("route.explorer.action.generateHttpRequest")) {
+            val route = currentRoute ?: return@ActionLink
+            ArmeriaHttpRequestFileWriter.createOrUpdate(
+                project = project,
+                route = route,
+                routes = routesProvider(),
+                lastSyncedDocsBaseUrl = lastSyncedDocsBaseUrlProvider(),
+            )
+        }
+    private val openDebugFormLink =
+        ActionLink(message("route.explorer.action.openDocServiceDebugForm")) {
+            val route = currentRoute ?: return@ActionLink
+            val url =
+                ArmeriaDocServiceSupport.debugFormUrl(
+                    route = route,
+                    routes = routesProvider(),
+                    lastSyncedBaseUrl = lastSyncedDocsBaseUrlProvider(),
+                ) ?: return@ActionLink
+            BrowserUtil.browse(url)
+        }
 
     private val detailStatus = wrappingValueLabel()
     private val detailMethod = JBLabel()
@@ -73,7 +123,16 @@ class ArmeriaRouteDetailPanel(
                 },
             )
 
-        add(
+        val actionRow =
+            JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0)).apply {
+                border = JBUI.Borders.emptyBottom(8)
+                for (link in listOf(jumpToSourceLink, copyCurlLink, generateHttpLink, openDebugFormLink)) {
+                    link.autoHideOnDisable = true
+                    add(link)
+                }
+            }
+
+        val sectionsPanel =
             JPanel(
                 com.intellij.ui.components.panels
                     .VerticalLayout(JBUI.scale(10)),
@@ -82,6 +141,11 @@ class ArmeriaRouteDetailPanel(
                 add(detailSection(message("route.explorer.detail.block.registration"), registrationBody))
                 add(detailSection(message("route.explorer.detail.block.implementation"), implementationBody))
                 add(attachmentsBlock)
+            }
+        add(
+            JPanel(BorderLayout()).apply {
+                add(actionRow, BorderLayout.NORTH)
+                add(sectionsPanel, BorderLayout.CENTER)
             },
             BorderLayout.CENTER,
         )
@@ -90,6 +154,8 @@ class ArmeriaRouteDetailPanel(
 
     fun setRoute(route: ArmeriaRoute?) {
         val generation = ++routeGeneration
+        currentRoute = route
+        updateActionState()
         if (route == null) {
             clear()
             return
@@ -118,6 +184,26 @@ class ArmeriaRouteDetailPanel(
         }
     }
 
+    private fun updateActionState() {
+        val route = currentRoute
+        jumpToSourceLink.isEnabled = route != null
+        copyCurlLink.isEnabled =
+            route != null &&
+            ArmeriaRouteCurlSupport.curlText(
+                route = route,
+                staticRoutes = staticRoutesProvider(),
+                lastSyncedDocsBaseUrl = lastSyncedDocsBaseUrlProvider(),
+            ) != null
+        generateHttpLink.isEnabled = route != null && ArmeriaHttpRequestGenerator.supports(route)
+        openDebugFormLink.isEnabled =
+            route != null &&
+            ArmeriaDocServiceSupport.debugFormUrl(
+                route = route,
+                routes = routesProvider(),
+                lastSyncedBaseUrl = lastSyncedDocsBaseUrlProvider(),
+            ) != null
+    }
+
     private fun updateFileServiceRootStatus(
         route: ArmeriaRoute,
         generation: Int,
@@ -144,6 +230,7 @@ class ArmeriaRouteDetailPanel(
 
     fun clear() {
         ++routeGeneration
+        currentRoute = null
         handlerFieldLabel.text = message("route.explorer.detail.handler")
         setWrappingText(detailStatus, "")
         setWrappingText(detailRegistration, "")
@@ -158,6 +245,7 @@ class ArmeriaRouteDetailPanel(
         registeredInRow.isVisible = false
         definitionRow.isVisible = false
         attachmentsBlock.isVisible = false
+        updateActionState()
     }
 
     private fun detailSection(
