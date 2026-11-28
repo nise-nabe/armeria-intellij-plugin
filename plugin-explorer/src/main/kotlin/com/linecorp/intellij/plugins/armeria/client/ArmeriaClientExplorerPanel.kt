@@ -14,6 +14,7 @@ import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.components.JBTextField
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
 import com.linecorp.intellij.plugins.armeria.expireWithPluginUnload
@@ -23,6 +24,8 @@ import com.linecorp.intellij.plugins.armeria.message
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Dimension
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -30,6 +33,8 @@ import javax.swing.DefaultListCellRenderer
 import javax.swing.DefaultListModel
 import javax.swing.JPanel
 import javax.swing.KeyStroke
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
 import javax.swing.event.ListSelectionEvent
 import javax.swing.event.ListSelectionListener
 
@@ -39,11 +44,23 @@ class ArmeriaClientExplorerPanel(
     Disposable {
     private var initialRefreshScheduled = false
     private var pendingEndpointSelection: ArmeriaClientEndpoint? = null
+    private var collectedEndpoints: List<ArmeriaClientEndpoint> = emptyList()
 
-    private val listModel = DefaultListModel<ArmeriaClientEndpoint>()
+    private val listModel = DefaultListModel<ClientListItem>()
     private val endpointList = JBList(listModel)
     private val statusLabel = JBLabel()
-    private val clientDetailPanel = ArmeriaClientDetailPanel()
+    private val searchField =
+        JBTextField().apply {
+            emptyText.text = message("client.explorer.filter.search")
+        }
+    private val clientDetailPanel =
+        ArmeriaClientDetailPanel { endpoint ->
+            ArmeriaClientRouteNavigation.openMatchingRoutes(
+                project,
+                endpoint,
+                parentDisposable = this@ArmeriaClientExplorerPanel,
+            )
+        }
 
     init {
         val actionGroup =
@@ -60,11 +77,11 @@ class ArmeriaClientExplorerPanel(
                         override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
 
                         override fun update(e: AnActionEvent) {
-                            e.presentation.isEnabled = endpointList.selectedValue != null
+                            e.presentation.isEnabled = selectedEndpoint() != null
                         }
 
                         override fun actionPerformed(e: AnActionEvent) {
-                            val endpoint = endpointList.selectedValue ?: return
+                            val endpoint = selectedEndpoint() ?: return
                             ArmeriaClientRouteNavigation.openMatchingRoutes(
                                 project,
                                 endpoint,
@@ -73,7 +90,7 @@ class ArmeriaClientExplorerPanel(
                         }
                     },
                 )
-                add(ArmeriaGenerateClientHttpRequestAction { endpointList.selectedValue })
+                add(ArmeriaGenerateClientHttpRequestAction { selectedEndpoint() })
             }
         toolbar =
             ActionManager
@@ -82,6 +99,16 @@ class ArmeriaClientExplorerPanel(
                 .also {
                     it.targetComponent = this
                 }.component
+
+        searchField.document.addDocumentListener(
+            object : DocumentListener {
+                override fun insertUpdate(e: DocumentEvent) = refreshListPresentation()
+
+                override fun removeUpdate(e: DocumentEvent) = refreshListPresentation()
+
+                override fun changedUpdate(e: DocumentEvent) = refreshListPresentation()
+            },
+        )
 
         endpointList.emptyText.text = message("client.explorer.empty")
         endpointList.cellRenderer =
@@ -93,18 +120,32 @@ class ArmeriaClientExplorerPanel(
                     isSelected: Boolean,
                     cellHasFocus: Boolean,
                 ): Component {
-                    val label = if (value is ArmeriaClientEndpoint) formatListLabel(value) else value?.toString()
+                    val label =
+                        when (value) {
+                            is ClientListItem.Group -> value.label
+                            is ClientListItem.Endpoint -> formatListLabel(value.endpoint)
+                            else -> value?.toString()
+                        }
                     val component = super.getListCellRendererComponent(list, label, index, isSelected, cellHasFocus)
                     toolTipText = null
-                    if (value is ArmeriaClientEndpoint) {
-                        toolTipText = buildClientTooltip(value)
+                    font = list.font
+                    border = JBUI.Borders.empty(2, 4)
+                    when (value) {
+                        is ClientListItem.Group -> {
+                            font = list.font.deriveFont(java.awt.Font.BOLD)
+                        }
+
+                        is ClientListItem.Endpoint -> {
+                            border = JBUI.Borders.empty(2, 16, 2, 4)
+                            toolTipText = buildClientTooltip(value.endpoint)
+                        }
                     }
                     return component
                 }
             }
         endpointList.addListSelectionListener(
             ListSelectionListener { _: ListSelectionEvent ->
-                clientDetailPanel.setEndpoint(endpointList.selectedValue)
+                clientDetailPanel.setEndpoint(selectedEndpoint())
             },
         )
         endpointList.addMouseListener(
@@ -140,18 +181,46 @@ class ArmeriaClientExplorerPanel(
                 minimumSize = Dimension(JBUI.scale(300), 0)
             }
         val splitter =
-            OnePixelSplitter(false, 0.65f).apply {
+            OnePixelSplitter(true, 0.55f).apply {
                 firstComponent = listScrollPane
                 secondComponent = detailPanel
                 setHonorComponentsMinimumSize(false)
             }
 
+        val headerPanel =
+            JPanel(BorderLayout()).apply {
+                add(statusLabel, BorderLayout.NORTH)
+                add(
+                    JPanel(BorderLayout()).apply {
+                        border = JBUI.Borders.empty(4, 0)
+                        add(searchField, BorderLayout.CENTER)
+                    },
+                    BorderLayout.CENTER,
+                )
+            }
         val contentPanel =
             JPanel(BorderLayout()).apply {
                 border = JBUI.Borders.empty(8, 8, 0, 8)
-                add(statusLabel, BorderLayout.NORTH)
+                add(headerPanel, BorderLayout.NORTH)
                 add(splitter, BorderLayout.CENTER)
             }
+
+        fun updateSplitterOrientation() {
+            val horizontal = contentPanel.width >= JBUI.scale(700)
+            val vertical = !horizontal
+            if (splitter.orientation != vertical) {
+                splitter.orientation = vertical
+                splitter.proportion = if (horizontal) 0.65f else 0.55f
+            }
+        }
+        contentPanel.addComponentListener(
+            object : ComponentAdapter() {
+                override fun componentResized(event: ComponentEvent) {
+                    updateSplitterOrientation()
+                }
+            },
+        )
+        updateSplitterOrientation()
         setContent(contentPanel)
 
         clientDetailPanel.clear()
@@ -175,21 +244,23 @@ class ArmeriaClientExplorerPanel(
             .expireWith(this)
             .expireWithPluginUnload()
             .coalesceBy(this)
-            .finishOnUiThread(ModalityState.any()) { collectedEndpoints ->
+            .finishOnUiThread(ModalityState.any()) { endpoints ->
+                collectedEndpoints = endpoints
                 val pending = pendingEndpointSelection
-                val previous = endpointList.selectedValue
+                val previous = selectedEndpoint()
                 listModel.removeAllElements()
-                collectedEndpoints.forEach(listModel::addElement)
+                groupedItems(filterEndpoints(endpoints)).forEach(listModel::addElement)
                 if (collectedEndpoints.isNotEmpty()) {
                     pendingEndpointSelection = null
                     val preferred = pending ?: previous
                     when {
                         preferred != null && selectEndpointNow(preferred) -> Unit
                         pending != null && previous != null -> selectEndpointNow(previous)
+                        else -> firstVisibleEndpoint()?.let(::selectEndpointNow)
                     }
                 }
-                updateStatusLabel(collectedEndpoints)
-                clientDetailPanel.setEndpoint(endpointList.selectedValue)
+                updateStatusLabel(endpoints)
+                clientDetailPanel.setEndpoint(selectedEndpoint())
             }.submit(AppExecutorUtil.getAppExecutorService())
     }
 
@@ -204,7 +275,7 @@ class ArmeriaClientExplorerPanel(
 
     private fun selectEndpointNow(endpoint: ArmeriaClientEndpoint): Boolean {
         for (index in 0 until listModel.size) {
-            val candidate = listModel.getElementAt(index)
+            val candidate = (listModel.getElementAt(index) as? ClientListItem.Endpoint)?.endpoint ?: continue
             if (sameEndpoint(candidate, endpoint)) {
                 endpointList.selectedIndex = index
                 endpointList.ensureIndexIsVisible(index)
@@ -227,6 +298,74 @@ class ArmeriaClientExplorerPanel(
             left.uri == right.uri &&
             left.target == right.target &&
             left.moduleName == right.moduleName
+    }
+
+    private fun selectedEndpoint(): ArmeriaClientEndpoint? = (endpointList.selectedValue as? ClientListItem.Endpoint)?.endpoint
+
+    private fun firstVisibleEndpoint(): ArmeriaClientEndpoint? {
+        for (index in 0 until listModel.size) {
+            val endpoint = (listModel.getElementAt(index) as? ClientListItem.Endpoint)?.endpoint
+            if (endpoint != null) {
+                return endpoint
+            }
+        }
+        return null
+    }
+
+    private fun filterEndpoints(endpoints: List<ArmeriaClientEndpoint>): List<ArmeriaClientEndpoint> {
+        val query = searchField.text.trim().lowercase()
+        if (query.isEmpty()) {
+            return endpoints
+        }
+        return endpoints.filter { endpoint ->
+            buildString {
+                append(ArmeriaClientInvocationSupport.presentableLabel(endpoint))
+                append(' ')
+                append(endpoint.clientType)
+                append(' ')
+                append(endpoint.uri)
+                append(' ')
+                append(endpoint.target)
+                append(' ')
+                append(endpoint.moduleName)
+                endpoint.endpointGroup?.let {
+                    append(' ')
+                    append(it)
+                }
+            }.lowercase().contains(query)
+        }
+    }
+
+    private fun groupedItems(endpoints: List<ArmeriaClientEndpoint>): List<ClientListItem> {
+        val sorted =
+            endpoints.sortedWith(
+                compareBy<ArmeriaClientEndpoint> { it.moduleName }
+                    .thenBy { it.clientType }
+                    .thenBy { ArmeriaClientInvocationSupport.presentableLabel(it) },
+            )
+        val items = mutableListOf<ClientListItem>()
+        var currentGroup: String? = null
+        for (endpoint in sorted) {
+            val group = "${endpoint.moduleName} · ${endpoint.clientType}"
+            if (group != currentGroup) {
+                items += ClientListItem.Group(group)
+                currentGroup = group
+            }
+            items += ClientListItem.Endpoint(endpoint)
+        }
+        return items
+    }
+
+    private fun refreshListPresentation() {
+        val selected = selectedEndpoint()
+        listModel.removeAllElements()
+        groupedItems(filterEndpoints(collectedEndpoints)).forEach(listModel::addElement)
+        if (selected != null) {
+            selectEndpointNow(selected)
+        } else {
+            firstVisibleEndpoint()?.let(::selectEndpointNow)
+        }
+        clientDetailPanel.setEndpoint(selectedEndpoint())
     }
 
     private fun endpointIdentity(endpoint: ArmeriaClientEndpoint): Pair<String, Int>? {
@@ -256,7 +395,7 @@ class ArmeriaClientExplorerPanel(
     }
 
     private fun navigateToSelection() {
-        val endpoint = endpointList.selectedValue ?: return
+        val endpoint = selectedEndpoint() ?: return
         ArmeriaRouteNavigation.navigateToPointer(
             project,
             endpoint.pointer,
@@ -303,4 +442,14 @@ class ArmeriaClientExplorerPanel(
         }
 
     override fun dispose() = Unit
+}
+
+private sealed interface ClientListItem {
+    data class Group(
+        val label: String,
+    ) : ClientListItem
+
+    data class Endpoint(
+        val endpoint: ArmeriaClientEndpoint,
+    ) : ClientListItem
 }

@@ -2,15 +2,25 @@ package com.linecorp.intellij.plugins.armeria.client
 
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.ui.TitledSeparator
+import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.FormBuilder
 import com.intellij.util.ui.JBUI
 import com.linecorp.intellij.plugins.armeria.message
 import java.awt.BorderLayout
+import java.awt.FlowLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
 
-class ArmeriaClientDetailPanel : JPanel(BorderLayout()) {
+class ArmeriaClientDetailPanel(
+    private val openMatchingRoute: (ArmeriaClientEndpoint) -> Unit = {},
+) : JPanel(BorderLayout()) {
+    private var currentEndpoint: ArmeriaClientEndpoint? = null
+    private val goToMatchingRouteLink =
+        ActionLink(message("client.explorer.action.gotoRoute")) {
+            currentEndpoint?.let(openMatchingRoute)
+        }
+
     private val detailClientType = JBLabel()
     private val detailUri = wrappingValueLabel()
     private val detailHttpMethod = JBLabel()
@@ -55,7 +65,13 @@ class ArmeriaClientDetailPanel : JPanel(BorderLayout()) {
                 },
             )
 
-        add(
+        val actionRow =
+            JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+                border = JBUI.Borders.emptyBottom(8)
+                goToMatchingRouteLink.autoHideOnDisable = true
+                add(goToMatchingRouteLink)
+            }
+        val sectionsPanel =
             JPanel(
                 com.intellij.ui.components.panels
                     .VerticalLayout(JBUI.scale(10)),
@@ -63,6 +79,11 @@ class ArmeriaClientDetailPanel : JPanel(BorderLayout()) {
                 add(detailSection(message("client.explorer.detail.block.overview"), overviewBody))
                 add(metadataBlock)
                 add(decoratorsBlock)
+            }
+        add(
+            JPanel(BorderLayout()).apply {
+                add(actionRow, BorderLayout.NORTH)
+                add(sectionsPanel, BorderLayout.CENTER)
             },
             BorderLayout.CENTER,
         )
@@ -70,6 +91,8 @@ class ArmeriaClientDetailPanel : JPanel(BorderLayout()) {
     }
 
     fun setEndpoint(endpoint: ArmeriaClientEndpoint?) {
+        currentEndpoint = endpoint
+        goToMatchingRouteLink.isEnabled = endpoint != null
         if (endpoint == null) {
             clear()
             return

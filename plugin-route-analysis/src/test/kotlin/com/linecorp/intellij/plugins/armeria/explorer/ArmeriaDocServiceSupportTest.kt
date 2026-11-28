@@ -49,20 +49,54 @@ class ArmeriaDocServiceSupportTest {
         assertNull(ArmeriaDocServiceSupport.primaryUrl(listOf(httpRoute())))
     }
 
+    @Test
+    fun listenPortBinding_detectsHttpAndHttpsPorts() {
+        assertEquals(8080 to false, ArmeriaDocServiceSupport.listenPortBinding(listOf(listenPort(":8080", "HTTP"))))
+        assertEquals(8443 to true, ArmeriaDocServiceSupport.listenPortBinding(listOf(listenPort(":8443", "HTTPS"))))
+    }
+
+    @Test
+    fun listenPortBinding_prefersLowestDetectedPort() {
+        val routes = listOf(listenPort(":9090", "HTTP"), listenPort(":8080", "HTTP"))
+
+        assertEquals(8080 to false, ArmeriaDocServiceSupport.listenPortBinding(routes))
+    }
+
+    @Test
+    fun docsBaseUrl_usesDetectedListenPortAndScheme() {
+        val routes = listOf(listenPort(":8443", "HTTPS"), docServiceRoute(path = "/docs"))
+
+        assertEquals("https://localhost:8443/docs", ArmeriaDocServiceSupport.docsBaseUrl(routes))
+    }
+
+    @Test
+    fun docsBaseUrl_ignoresNonListenPortRoutes() {
+        val routes = listOf(httpRoute(), docServiceRoute(path = "/docs"))
+
+        assertEquals("http://localhost:8080/docs", ArmeriaDocServiceSupport.docsBaseUrl(routes))
+    }
+
     private fun docServiceRoute(path: String = "/docs"): ArmeriaRoute = route(path = path, isDocService = true)
 
     private fun httpRoute(): ArmeriaRoute = route()
 
+    private fun listenPort(
+        path: String,
+        protocol: String,
+    ): ArmeriaRoute = route(path = path, protocol = protocol, routeMatch = RouteMatch.LISTEN_PORT)
+
     private fun route(
         path: String = "/api",
         isDocService: Boolean = false,
+        protocol: String? = null,
+        routeMatch: RouteMatch = RouteMatch.SERVICE,
     ): ArmeriaRoute =
         ArmeriaRoute(
-            protocol = if (isDocService) "DocService" else "HTTP",
+            protocol = protocol ?: if (isDocService) "DocService" else "HTTP",
             httpMethod = "GET",
             path = path,
             target = "Handler",
-            routeMatch = RouteMatch.SERVICE,
+            routeMatch = routeMatch,
             moduleName = "app",
             targetUnresolved = false,
             isDocService = isDocService,

@@ -10,6 +10,9 @@ import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.fileEditor.FileEditorManagerEvent
+import com.intellij.openapi.fileEditor.FileEditorManagerListener
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
@@ -17,6 +20,7 @@ import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.TreeUIHelper
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.components.JBTextField
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
@@ -24,17 +28,26 @@ import com.linecorp.intellij.plugins.armeria.expireWithPluginUnload
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnalysisCollector
 import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceDebugFormUrl
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
+import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaRouteNavigation
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteTreeBuilder
 import com.linecorp.intellij.plugins.armeria.message
 import java.awt.BorderLayout
 import java.awt.Dimension
+import java.awt.FlowLayout
+import java.awt.datatransfer.StringSelection
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import javax.swing.JComboBox
 import javax.swing.JPanel
 import javax.swing.JTree
 import javax.swing.KeyStroke
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
 import javax.swing.event.TreeSelectionEvent
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
@@ -51,6 +64,14 @@ class ArmeriaRouteExplorerPanel(
     private var initialRefreshScheduled = false
     private var pendingRouteSelection: ArmeriaRoute? = null
 
+    private val searchField =
+        JBTextField().apply {
+            emptyText.text = message("route.explorer.filter.search")
+        }
+    private val methodFilter = JComboBox(methodFilterChoices())
+    private val protocolFilter = JComboBox(protocolFilterChoices())
+    private val sourceFilter = JComboBox(sourceFilterChoices())
+
     private val routeTree =
         Tree().apply {
             isRootVisible = false
@@ -58,13 +79,85 @@ class ArmeriaRouteExplorerPanel(
             emptyText.text = message("route.explorer.empty")
         }
     private val statusLabel = JBLabel()
-    private val routeDetailPanel = ArmeriaRouteDetailPanel(project)
+    private val routeDetailPanel =
+        ArmeriaRouteDetailPanel(
+            project,
+            routesProvider = { allRoutes() },
+            staticRoutesProvider = { routeState.staticRoutes },
+            lastSyncedDocsBaseUrlProvider = { routeState.lastDocServiceBaseUrl },
+        )
     private val detailFootnote =
         JBLabel(message("route.explorer.footnote.static")).apply {
             foreground = JBUI.CurrentTheme.Label.disabledForeground()
         }
 
     init {
+        val jumpToSourceAction =
+            object : DumbAwareAction(message("route.explorer.action.jumpToSource")) {
+                override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+                override fun update(e: AnActionEvent) {
+                    e.presentation.isEnabled = selectedRouteFromTree() != null
+                }
+
+                override fun actionPerformed(e: AnActionEvent) {
+                    navigateToSelection()
+                }
+            }
+        val copyPathAction =
+            object : DumbAwareAction(message("route.explorer.action.copyPath")) {
+                override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+                override fun update(e: AnActionEvent) {
+                    e.presentation.isEnabled = selectedRouteFromTree() != null
+                }
+
+                override fun actionPerformed(e: AnActionEvent) {
+                    val route = selectedRouteFromTree() ?: return
+                    CopyPasteManager.getInstance().setContents(StringSelection(route.path))
+                }
+            }
+        val copyCurlAction =
+            object : DumbAwareAction(message("route.explorer.action.copyCurl")) {
+                override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+                override fun update(e: AnActionEvent) {
+                    e.presentation.isEnabled = selectedRouteFromTree()?.let(::curlText) != null
+                }
+
+                override fun actionPerformed(e: AnActionEvent) {
+                    val command = selectedRouteFromTree()?.let(::curlText) ?: return
+                    CopyPasteManager.getInstance().setContents(StringSelection(command))
+                }
+            }
+        val generateHttpRequestAction =
+            ArmeriaGenerateHttpRequestAction(
+                selectedRouteProvider = { selectedRouteFromTree() },
+                routesProvider = { moduleFilteredRoutes(allRoutes()) },
+                lastSyncedDocsBaseUrlProvider = { routeState.lastDocServiceBaseUrl },
+            )
+        val generateTestMethodAction =
+            ArmeriaGenerateTestMethodAction(selectedRouteProvider = { selectedRouteFromTree() })
+        val gotoMatchingClientAction =
+            ArmeriaGotoMatchingClientAction(
+                selectedRouteProvider = { selectedRouteFromTree() },
+                parentDisposable = this@ArmeriaRouteExplorerPanel,
+            )
+        val openDebugFormAction =
+            ArmeriaOpenDocServiceDebugFormAction(
+                selectedRouteProvider = { selectedRouteFromTree() },
+                routesProvider = { moduleFilteredRoutes(allRoutes()) },
+                lastSyncedBaseUrlProvider = { routeState.lastDocServiceBaseUrl },
+            )
+        val routeActionsGroup =
+            DefaultActionGroup(message("route.explorer.action.group.route"), true).apply {
+                add(generateHttpRequestAction)
+                add(generateTestMethodAction)
+                add(gotoMatchingClientAction)
+                add(openDebugFormAction)
+                addSeparator()
+                add(ArmeriaExportOpenApiAction { moduleFilteredRoutes(allRoutes()) })
+            }
         val actionGroup =
             DefaultActionGroup().apply {
                 add(
@@ -90,35 +183,25 @@ class ArmeriaRouteExplorerPanel(
                         }
                     },
                 )
-                add(
-                    ArmeriaGenerateHttpRequestAction(
-                        selectedRouteProvider = { selectedRouteFromTree() },
-                        routesProvider = { filterRoutes(allRoutes()) },
-                        lastSyncedDocsBaseUrlProvider = { routeState.lastDocServiceBaseUrl },
-                    ),
-                )
-                add(ArmeriaExportOpenApiAction { filterRoutes(allRoutes()) })
-                add(ArmeriaGenerateTestMethodAction(selectedRouteProvider = { selectedRouteFromTree() }))
-                add(
-                    ArmeriaGotoMatchingClientAction(
-                        selectedRouteProvider = { selectedRouteFromTree() },
-                        parentDisposable = this@ArmeriaRouteExplorerPanel,
-                    ),
-                )
                 add(ArmeriaSyncRuntimeRoutesAction())
                 add(
                     ArmeriaOpenDocServiceAction(
-                        routesProvider = { filterRoutes(allRoutes()) },
+                        routesProvider = { moduleFilteredRoutes(allRoutes()) },
                         lastSyncedBaseUrlProvider = { routeState.lastDocServiceBaseUrl },
                     ),
                 )
-                add(
-                    ArmeriaOpenDocServiceDebugFormAction(
-                        selectedRouteProvider = { selectedRouteFromTree() },
-                        routesProvider = { filterRoutes(allRoutes()) },
-                        lastSyncedBaseUrlProvider = { routeState.lastDocServiceBaseUrl },
-                    ),
-                )
+                add(routeActionsGroup)
+            }
+        val popupActionGroup =
+            DefaultActionGroup().apply {
+                add(jumpToSourceAction)
+                add(copyPathAction)
+                add(copyCurlAction)
+                addSeparator()
+                add(generateHttpRequestAction)
+                add(generateTestMethodAction)
+                add(gotoMatchingClientAction)
+                add(openDebugFormAction)
             }
         toolbar =
             ActionManager
@@ -127,6 +210,37 @@ class ArmeriaRouteExplorerPanel(
                 .also {
                     it.targetComponent = this
                 }.component
+
+        searchField.document.addDocumentListener(
+            object : DocumentListener {
+                override fun insertUpdate(e: DocumentEvent) = filtersChanged()
+
+                override fun removeUpdate(e: DocumentEvent) = filtersChanged()
+
+                override fun changedUpdate(e: DocumentEvent) = filtersChanged()
+            },
+        )
+        for (filter in listOf(methodFilter, protocolFilter, sourceFilter)) {
+            filter.addActionListener { filtersChanged() }
+        }
+        project.messageBus.connect(this).subscribe(
+            FileEditorManagerListener.FILE_EDITOR_MANAGER,
+            object : FileEditorManagerListener {
+                override fun selectionChanged(event: FileEditorManagerEvent) {
+                    if (currentModuleOnly) {
+                        rebuildTree()
+                        updateStatusLabel()
+                    }
+                }
+            },
+        )
+
+        val popupMenu =
+            ActionManager
+                .getInstance()
+                .createActionPopupMenu("ArmeriaRouteExplorerPopup", popupActionGroup)
+        popupMenu.setTargetComponent(routeTree)
+        routeTree.componentPopupMenu = popupMenu.component
 
         routeTree.cellRenderer = ArmeriaRouteExplorerTreeRenderer()
         TreeUIHelper.getInstance().installTreeSpeedSearch(
@@ -183,18 +297,52 @@ class ArmeriaRouteExplorerPanel(
                 minimumSize = Dimension(JBUI.scale(300), 0)
             }
         val splitter =
-            OnePixelSplitter(false, 0.7f).apply {
+            OnePixelSplitter(true, 0.55f).apply {
                 firstComponent = treeScrollPane
                 secondComponent = detailPanel
                 setHonorComponentsMinimumSize(false)
             }
 
+        val filterRow =
+            JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)).apply {
+                add(methodFilter)
+                add(protocolFilter)
+                add(sourceFilter)
+            }
+        val filterPanel =
+            JPanel(BorderLayout()).apply {
+                border = JBUI.Borders.empty(4, 0)
+                add(searchField, BorderLayout.CENTER)
+                add(filterRow, BorderLayout.SOUTH)
+            }
+        val headerPanel =
+            JPanel(BorderLayout()).apply {
+                add(statusLabel, BorderLayout.NORTH)
+                add(filterPanel, BorderLayout.CENTER)
+            }
         val contentPanel =
             JPanel(BorderLayout()).apply {
                 border = JBUI.Borders.empty(8, 8, 0, 8)
-                add(statusLabel, BorderLayout.NORTH)
+                add(headerPanel, BorderLayout.NORTH)
                 add(splitter, BorderLayout.CENTER)
             }
+
+        fun updateSplitterOrientation() {
+            val horizontal = contentPanel.width >= JBUI.scale(700)
+            val vertical = !horizontal
+            if (splitter.orientation != vertical) {
+                splitter.orientation = vertical
+                splitter.proportion = if (horizontal) 0.7f else 0.55f
+            }
+        }
+        contentPanel.addComponentListener(
+            object : ComponentAdapter() {
+                override fun componentResized(event: ComponentEvent) {
+                    updateSplitterOrientation()
+                }
+            },
+        )
+        updateSplitterOrientation()
         setContent(contentPanel)
 
         routeDetailPanel.clear()
@@ -273,8 +421,13 @@ class ArmeriaRouteExplorerPanel(
         if (pending != null && previousSelection != null && applyRouteSelection(previousSelection)) {
             return
         }
-        selectedRoute = null
-        routeDetailPanel.setRoute(null)
+        val initialRoute =
+            visibleRoutes.firstOrNull { it.routeMatch != RouteMatch.LISTEN_PORT }
+                ?: visibleRoutes.first()
+        if (!applyRouteSelection(initialRoute)) {
+            selectedRoute = null
+            routeDetailPanel.setRoute(null)
+        }
     }
 
     private fun applyRouteSelection(route: ArmeriaRoute): Boolean {
@@ -291,7 +444,7 @@ class ArmeriaRouteExplorerPanel(
 
     private fun updateStatusLabel() {
         val collectedRoutes = allRoutes()
-        statusLabel.text =
+        val summary =
             if (
                 currentModuleOnly &&
                 ArmeriaRouteExplorerFiltering.selectedEditorModule(project) == null &&
@@ -300,6 +453,13 @@ class ArmeriaRouteExplorerPanel(
                 message("route.explorer.summary.moduleFilterNoEditor")
             } else {
                 ArmeriaRouteExplorerFiltering.summary(filterRoutes(collectedRoutes))
+            }
+        val syncedUrl = routeState.lastDocServiceBaseUrl
+        statusLabel.text =
+            if (syncedUrl.isNullOrBlank() || routeState.runtimeRoutes.isEmpty()) {
+                summary
+            } else {
+                "$summary · ${message("route.explorer.summary.synced", syncedUrl)}"
             }
     }
 
@@ -313,8 +473,54 @@ class ArmeriaRouteExplorerPanel(
             }
     }
 
-    private fun filterRoutes(routes: List<ArmeriaRoute>): List<ArmeriaRoute> =
+    private fun moduleFilteredRoutes(routes: List<ArmeriaRoute>): List<ArmeriaRoute> =
         ArmeriaRouteExplorerFiltering.filterRoutes(project, routes, currentModuleOnly)
+
+    private fun filterRoutes(routes: List<ArmeriaRoute>): List<ArmeriaRoute> {
+        var filtered = moduleFilteredRoutes(routes)
+        val query = searchField.text.trim().lowercase()
+        if (query.isNotEmpty()) {
+            filtered = filtered.filter { it.speedSearchText.lowercase().contains(query) }
+        }
+        val method = (methodFilter.selectedItem as? FilterChoice)?.value
+        if (!method.isNullOrEmpty()) {
+            filtered = filtered.filter { it.httpMethod.equals(method, ignoreCase = true) }
+        }
+        val protocol = (protocolFilter.selectedItem as? FilterChoice)?.value
+        if (!protocol.isNullOrEmpty()) {
+            filtered = filtered.filter { matchesProtocolFilter(it, protocol) }
+        }
+        when ((sourceFilter.selectedItem as? FilterChoice)?.value) {
+            SOURCE_STATIC -> filtered = filtered.filter { it.routeMatch != RouteMatch.RUNTIME }
+            SOURCE_RUNTIME -> filtered = filtered.filter { it.routeMatch == RouteMatch.RUNTIME }
+        }
+        return filtered
+    }
+
+    private fun matchesProtocolFilter(
+        route: ArmeriaRoute,
+        protocol: String,
+    ): Boolean =
+        when (protocol) {
+            PROTOCOL_HTTP -> route.protocolType == RouteProtocol.HTTP || route.protocol.equals("HTTP", ignoreCase = true)
+            PROTOCOL_GRPC -> route.protocolType == RouteProtocol.GRPC || route.protocol.equals("gRPC", ignoreCase = true)
+            PROTOCOL_GRAPHQL -> route.protocolType == RouteProtocol.GRAPHQL || route.protocol.equals("GraphQL", ignoreCase = true)
+            PROTOCOL_THRIFT -> route.protocolType == RouteProtocol.THRIFT || route.protocol.equals("Thrift", ignoreCase = true)
+            PROTOCOL_DOC_SERVICE -> route.isDocService || route.protocolType == RouteProtocol.DOC_SERVICE
+            else -> true
+        }
+
+    private fun filtersChanged() {
+        rebuildTree()
+        updateStatusLabel()
+    }
+
+    private fun curlText(route: ArmeriaRoute): String? =
+        ArmeriaRouteCurlSupport.curlText(
+            route = route,
+            staticRoutes = routeState.staticRoutes,
+            lastSyncedDocsBaseUrl = routeState.lastDocServiceBaseUrl,
+        )
 
     private fun navigateToSelection() {
         val route = selectedRouteFromTree() ?: return
@@ -329,3 +535,47 @@ class ArmeriaRouteExplorerPanel(
 
     override fun dispose() = Unit
 }
+
+private const val SOURCE_STATIC = "static"
+private const val SOURCE_RUNTIME = "runtime"
+private const val PROTOCOL_HTTP = "http"
+private const val PROTOCOL_GRPC = "grpc"
+private const val PROTOCOL_GRAPHQL = "graphql"
+private const val PROTOCOL_THRIFT = "thrift"
+private const val PROTOCOL_DOC_SERVICE = "docservice"
+
+private data class FilterChoice(
+    val label: String,
+    val value: String? = null,
+) {
+    override fun toString(): String = label
+}
+
+private fun methodFilterChoices(): Array<FilterChoice> =
+    arrayOf(
+        FilterChoice(message("route.explorer.filter.allMethods")),
+        FilterChoice("GET", "GET"),
+        FilterChoice("POST", "POST"),
+        FilterChoice("PUT", "PUT"),
+        FilterChoice("PATCH", "PATCH"),
+        FilterChoice("DELETE", "DELETE"),
+        FilterChoice("OPTIONS", "OPTIONS"),
+        FilterChoice("HEAD", "HEAD"),
+    )
+
+private fun protocolFilterChoices(): Array<FilterChoice> =
+    arrayOf(
+        FilterChoice(message("route.explorer.filter.allProtocols")),
+        FilterChoice("HTTP", PROTOCOL_HTTP),
+        FilterChoice("gRPC", PROTOCOL_GRPC),
+        FilterChoice("GraphQL", PROTOCOL_GRAPHQL),
+        FilterChoice("Thrift", PROTOCOL_THRIFT),
+        FilterChoice("DocService", PROTOCOL_DOC_SERVICE),
+    )
+
+private fun sourceFilterChoices(): Array<FilterChoice> =
+    arrayOf(
+        FilterChoice(message("route.explorer.filter.allSources")),
+        FilterChoice(message("route.explorer.filter.static"), SOURCE_STATIC),
+        FilterChoice(message("route.explorer.filter.runtime"), SOURCE_RUNTIME),
+    )
