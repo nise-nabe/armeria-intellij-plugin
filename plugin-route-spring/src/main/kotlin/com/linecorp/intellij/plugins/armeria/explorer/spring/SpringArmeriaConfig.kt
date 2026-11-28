@@ -33,3 +33,8 @@ internal data class SpringArmeriaConfig(
 
     fun resolvedMetricsPath(): String = metricsPath ?: SpringArmeriaConfigSemantics.DEFAULT_METRICS_PATH
 }
+
+internal data class SpringArmeriaConfigDocument(
+    val profile: String?,
+    val config: SpringArmeriaConfig,
+)

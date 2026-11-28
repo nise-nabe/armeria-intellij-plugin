@@ -275,6 +275,62 @@ class ArmeriaOpenApiDocumentGeneratorTest {
     }
 
     @Test
+    fun document_equivalentTemplateNamesAreDuplicates() {
+        val yaml =
+            ArmeriaOpenApiDocumentGenerator.document(
+                listOf(
+                    route(path = "/users/{id}", target = "first.UserService#get()"),
+                    route(path = "/users/{name}", target = "second.UserService#get()"),
+                ),
+            )
+
+        assertEquals(1, yaml.lines().count { it.trim() == "get:" }, yaml)
+        assertTrue(yaml.contains("\"/users/{id}\""), yaml)
+        assertFalse(yaml.contains("\"/users/{name}\""), yaml)
+        assertTrue(yaml.contains("Skipped duplicate GET /users/{name}"), yaml)
+    }
+
+    @Test
+    fun document_equivalentTemplateMethodsShareFirstPathAndParameterNames() {
+        val yaml =
+            ArmeriaOpenApiDocumentGenerator.document(
+                listOf(
+                    route(path = "/users/{id}", target = "first.UserService#get()"),
+                    route(httpMethod = "POST", path = "/users/{name}", target = "second.UserService#create()"),
+                ),
+            )
+
+        assertEquals(1, yaml.lines().count { it.contains("\"/users/{id}\":") }, yaml)
+        assertTrue(yaml.contains("post:"), yaml)
+        assertTrue(yaml.contains("name: \"id\""), yaml)
+        assertFalse(yaml.contains("name: \"name\""), yaml)
+        assertFalse(yaml.contains("\"/users/{name}\""), yaml)
+    }
+
+    @Test
+    fun document_explicitExactColonLiteralIsNotAPathParameter() {
+        val yaml =
+            ArmeriaOpenApiDocumentGenerator.document(
+                listOf(route(path = "/status/:ready", explicitExactPath = true)),
+            )
+
+        assertTrue(yaml.contains("\"/status/:ready\""), yaml)
+        assertFalse(yaml.contains("name: \"ready\""), yaml)
+        assertFalse(yaml.contains("\"/status/{ready}\""), yaml)
+    }
+
+    @Test
+    fun document_explicitExactBraceLiteralIsEncoded() {
+        val yaml =
+            ArmeriaOpenApiDocumentGenerator.document(
+                listOf(route(path = "/files/{id}", explicitExactPath = true)),
+            )
+
+        assertTrue(yaml.contains("\"/files/%7Bid%7D\""), yaml)
+        assertFalse(yaml.contains("name: \"id\""), yaml)
+    }
+
+    @Test
     fun document_sseAnnotatedHttpIncluded() {
         val yaml =
             ArmeriaOpenApiDocumentGenerator.document(
@@ -334,6 +390,7 @@ class ArmeriaOpenApiDocumentGeneratorTest {
         protocolType: RouteProtocol? = RouteProtocol.HTTP,
         routeMatch: RouteMatch = RouteMatch.ANNOTATED_HTTP,
         pathType: PathType = PathType.EXACT,
+        explicitExactPath: Boolean = false,
         target: String = "Handler",
         contentHints: List<String> = emptyList(),
     ): ArmeriaRoute =
@@ -348,6 +405,7 @@ class ArmeriaOpenApiDocumentGeneratorTest {
             targetUnresolved = false,
             isDocService = false,
             pathType = pathType,
+            explicitExactPath = explicitExactPath,
             decorators = emptyList(),
             exceptionHandlers = emptyList(),
             contentHints = contentHints,

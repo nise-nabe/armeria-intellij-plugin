@@ -53,6 +53,7 @@ internal object ArmeriaAnnotatedMetadataSupport {
         method: PsiMethod,
         path: String,
         pathType: PathType,
+        explicitExactPath: Boolean = false,
     ): List<String> {
         val methodDescription = method.getAnnotation(DESCRIPTION_ANNOTATION)
         return buildList {
@@ -66,7 +67,7 @@ internal object ArmeriaAnnotatedMetadataSupport {
             addAll(collectDefaults(method))
             collectDescription(methodDescription)?.let { add(it) }
             collectClassDescription(method.containingClass, methodDescription)?.let { add(it) }
-            collectPathVariables(path, pathType).takeIf { it.isNotEmpty() }?.let { vars ->
+            collectPathVariables(path, pathType, explicitExactPath).takeIf { it.isNotEmpty() }?.let { vars ->
                 add(message("route.explorer.hint.pathVariables", vars.joinToString(", ")))
             }
         }
@@ -199,5 +200,6 @@ internal object ArmeriaAnnotatedMetadataSupport {
     private fun collectPathVariables(
         path: String,
         pathType: PathType,
-    ): List<String> = ArmeriaPathVariableSupport.extractPathVariables(path, pathType)
+        explicitExactPath: Boolean,
+    ): List<String> = ArmeriaPathVariableSupport.extractPathVariables(path, pathType, explicitExactPath)
 }

@@ -7,6 +7,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.SmartPsiElementPointer
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
+import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.message
 import org.junit.Test
@@ -28,6 +29,13 @@ class ArmeriaTestMethodGeneratorTest {
     @Test
     fun rejectsNonHttpRoute() {
         assertFalse(ArmeriaTestMethodGenerator.supports(route(routeMatch = RouteMatch.NON_HTTP, httpMethod = "")))
+    }
+
+    @Test
+    fun rejectsNonConcretePathTypes() {
+        assertFalse(ArmeriaTestMethodGenerator.supports(route(pathType = PathType.REGEX, path = "^/users/\\d+$")))
+        assertFalse(ArmeriaTestMethodGenerator.supports(route(pathType = PathType.GLOB, path = "/assets/**")))
+        assertTrue(ArmeriaTestMethodGenerator.supports(route(pathType = PathType.PREFIX, path = "/api")))
     }
 
     @Test
@@ -101,6 +109,7 @@ class ArmeriaTestMethodGeneratorTest {
         httpMethod: String = "GET",
         path: String = "/api",
         routeMatch: RouteMatch = RouteMatch.ANNOTATED_HTTP,
+        pathType: PathType = PathType.EXACT,
         executionHints: List<String> = emptyList(),
     ): ArmeriaRoute =
         ArmeriaRoute(
@@ -112,6 +121,7 @@ class ArmeriaTestMethodGeneratorTest {
             moduleName = "app",
             targetUnresolved = false,
             isDocService = false,
+            pathType = pathType,
             decorators = emptyList(),
             exceptionHandlers = emptyList(),
             executionHints = executionHints,
