@@ -524,12 +524,12 @@ class ArmeriaRouteExplorerPanel(
 
             SOURCE_RUNTIME_ONLY -> {
                 val diff = ArmeriaRuntimeStaticDiff.compare(routeState.staticRoutes, routeState.runtimeRoutes)
-                filtered = filtered.filter(diff::isRuntimeOnly)
+                filtered = if (routeState.runtimeRoutes.isEmpty()) emptyList() else filtered.filter(diff::isRuntimeOnly)
             }
 
             SOURCE_STATIC_ONLY -> {
                 val diff = ArmeriaRuntimeStaticDiff.compare(routeState.staticRoutes, routeState.runtimeRoutes)
-                filtered = filtered.filter(diff::isStaticOnly)
+                filtered = if (routeState.runtimeRoutes.isEmpty()) emptyList() else filtered.filter(diff::isStaticOnly)
             }
         }
         return filtered

@@ -107,6 +107,17 @@ class ArmeriaRuntimeStaticDiffTest {
     }
 
     @Test
+    fun summarize_matchesEquivalentTrailingSlashes() {
+        val summary =
+            ArmeriaRuntimeStaticDiff.summarize(
+                staticRoutes = listOf(route(path = "/users/", httpMethod = "GET", routeMatch = RouteMatch.ANNOTATED_HTTP)),
+                runtimeRoutes = listOf(route(path = "/users", httpMethod = "GET", routeMatch = RouteMatch.RUNTIME)),
+            )
+
+        assertEquals(ArmeriaRuntimeStaticDiff.Summary(sharedCount = 1, runtimeOnlyCount = 0, staticOnlyCount = 0), summary)
+    }
+
+    @Test
     fun summarize_preservesExplicitExactVariablesAsLiterals() {
         val summary =
             ArmeriaRuntimeStaticDiff.summarize(

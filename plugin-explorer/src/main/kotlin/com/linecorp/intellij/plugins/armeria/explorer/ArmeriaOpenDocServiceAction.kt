@@ -24,6 +24,15 @@ internal class ArmeriaOpenDocServiceAction(
             e.presentation.description = null
             return
         }
+        val routes = routesProvider()
+        val offersPortChoice =
+            lastSyncedBaseUrlProvider().isNullOrBlank() &&
+                ArmeriaDocServiceSupport.listenPortBindings(routes).size > 1
+        if (offersPortChoice) {
+            e.presentation.isEnabled = ArmeriaDocServiceSupport.hasDocService(routes)
+            e.presentation.description = message("route.explorer.action.openDocService.description")
+            return
+        }
         val url = resolveUrl()
         e.presentation.isEnabled = url != null
         e.presentation.description =

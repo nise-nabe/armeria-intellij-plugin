@@ -85,10 +85,11 @@ internal object ArmeriaRuntimeStaticDiff {
     )
 
     private fun canonicalRoute(route: ArmeriaRoute): CanonicalRoute {
+        val normalizedPath = if (route.path.length > 1) route.path.trimEnd('/') else route.path
         val pathShape =
             trimTrailingSlash(
                 ArmeriaPathVariableSupport.pathShapeForOverlap(
-                    path = route.path,
+                    path = normalizedPath,
                     explicitExactPath = route.explicitExactPath,
                     pathType = route.pathType,
                 ),
