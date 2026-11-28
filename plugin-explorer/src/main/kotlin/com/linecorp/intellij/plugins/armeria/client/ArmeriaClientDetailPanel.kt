@@ -121,6 +121,8 @@ class ArmeriaClientDetailPanel(
     }
 
     fun clear() {
+        currentEndpoint = null
+        goToMatchingRouteLink.isEnabled = false
         detailClientType.text = ""
         setWrappingText(detailUri, "")
         detailHttpMethod.text = ""

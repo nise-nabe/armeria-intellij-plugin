@@ -230,6 +230,7 @@ class ArmeriaRouteDetailPanel(
 
     fun clear() {
         ++routeGeneration
+        currentRoute = null
         handlerFieldLabel.text = message("route.explorer.detail.handler")
         setWrappingText(detailStatus, "")
         setWrappingText(detailRegistration, "")

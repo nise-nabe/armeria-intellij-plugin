@@ -50,6 +50,18 @@ class ArmeriaRouteCurlSupportTest {
     }
 
     @Test
+    fun curlText_preservesIpv6SyncedHostBrackets() {
+        val command =
+            ArmeriaRouteCurlSupport.curlText(
+                route = route(path = "/api"),
+                staticRoutes = emptyList(),
+                lastSyncedDocsBaseUrl = "http://[::1]:8080/docs",
+            )
+
+        assertEquals("curl -X GET 'http://[::1]:8080/api'", command)
+    }
+
+    @Test
     fun curlText_returnsNullForNonHttpRoutes() {
         assertNull(
             ArmeriaRouteCurlSupport.curlText(

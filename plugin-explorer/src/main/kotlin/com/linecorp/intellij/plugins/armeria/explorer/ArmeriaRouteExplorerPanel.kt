@@ -24,7 +24,6 @@ import com.intellij.ui.components.JBTextField
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
-import com.linecorp.intellij.plugins.armeria.expireWithPluginUnload
 import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteAnalysisCollector
 import com.linecorp.intellij.plugins.armeria.explorer.docservice.ArmeriaDocServiceDebugFormUrl
 import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
@@ -33,6 +32,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaRouteNavigation
 import com.linecorp.intellij.plugins.armeria.explorer.ui.ArmeriaRouteTreeBuilder
 import com.linecorp.intellij.plugins.armeria.message
+import com.linecorp.intellij.plugins.armeria.pluginUnloadDisposable
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.FlowLayout
@@ -63,6 +63,9 @@ class ArmeriaRouteExplorerPanel(
     private var currentModuleOnly = false
     private var initialRefreshScheduled = false
     private var pendingRouteSelection: ArmeriaRoute? = null
+
+    @Volatile
+    private var disposed = false
 
     private val searchField =
         JBTextField().apply {
@@ -364,8 +367,7 @@ class ArmeriaRouteExplorerPanel(
             .nonBlocking<List<ArmeriaRoute>> {
                 ArmeriaRouteAnalysisCollector.collect(project, includeProtoRoutes = true)
             }.inSmartMode(project)
-            .expireWith(this)
-            .expireWithPluginUnload()
+            .expireWhen { disposed || pluginUnloadDisposable().isDisposed }
             .coalesceBy(this)
             .finishOnUiThread(ModalityState.any()) { collectedRoutes ->
                 if (generation != refreshGeneration) {
@@ -533,7 +535,9 @@ class ArmeriaRouteExplorerPanel(
         selectedRoute?.let { sink[ArmeriaRouteDataKeys.SELECTED_ROUTE] = it }
     }
 
-    override fun dispose() = Unit
+    override fun dispose() {
+        disposed = true
+    }
 }
 
 private const val SOURCE_STATIC = "static"

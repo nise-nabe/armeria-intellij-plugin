@@ -35,10 +35,11 @@ internal object ArmeriaRouteCurlSupport {
         val uri = runCatching { URI(docsBaseUrl) }.getOrNull() ?: return null
         val scheme = uri.scheme ?: return null
         val host = uri.host ?: return null
+        val renderedHost = if (':' in host && !host.startsWith("[")) "[$host]" else host
         return buildString {
             append(scheme)
             append("://")
-            append(host)
+            append(renderedHost)
             if (uri.port >= 0) {
                 append(':')
                 append(uri.port)

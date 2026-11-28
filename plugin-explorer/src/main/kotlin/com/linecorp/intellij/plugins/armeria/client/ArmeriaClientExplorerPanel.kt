@@ -17,10 +17,10 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.util.ui.JBUI
-import com.linecorp.intellij.plugins.armeria.expireWithPluginUnload
 import com.linecorp.intellij.plugins.armeria.explorer.ArmeriaGenerateClientHttpRequestAction
 import com.linecorp.intellij.plugins.armeria.explorer.navigation.ArmeriaRouteNavigation
 import com.linecorp.intellij.plugins.armeria.message
+import com.linecorp.intellij.plugins.armeria.pluginUnloadDisposable
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Dimension
@@ -45,6 +45,9 @@ class ArmeriaClientExplorerPanel(
     private var initialRefreshScheduled = false
     private var pendingEndpointSelection: ArmeriaClientEndpoint? = null
     private var collectedEndpoints: List<ArmeriaClientEndpoint> = emptyList()
+
+    @Volatile
+    private var disposed = false
 
     private val listModel = DefaultListModel<ClientListItem>()
     private val endpointList = JBList(listModel)
@@ -241,15 +244,15 @@ class ArmeriaClientExplorerPanel(
             .nonBlocking<List<ArmeriaClientEndpoint>> {
                 ArmeriaClientCollector.collect(project)
             }.inSmartMode(project)
-            .expireWith(this)
-            .expireWithPluginUnload()
+            .expireWhen { disposed || pluginUnloadDisposable().isDisposed }
             .coalesceBy(this)
             .finishOnUiThread(ModalityState.any()) { endpoints ->
                 collectedEndpoints = endpoints
                 val pending = pendingEndpointSelection
                 val previous = selectedEndpoint()
+                val visibleEndpoints = filterEndpoints(endpoints)
                 listModel.removeAllElements()
-                groupedItems(filterEndpoints(endpoints)).forEach(listModel::addElement)
+                groupedItems(visibleEndpoints).forEach(listModel::addElement)
                 if (collectedEndpoints.isNotEmpty()) {
                     pendingEndpointSelection = null
                     val preferred = pending ?: previous
@@ -259,7 +262,7 @@ class ArmeriaClientExplorerPanel(
                         else -> firstVisibleEndpoint()?.let(::selectEndpointNow)
                     }
                 }
-                updateStatusLabel(endpoints)
+                updateStatusLabel(visibleEndpoints, endpoints.size)
                 clientDetailPanel.setEndpoint(selectedEndpoint())
             }.submit(AppExecutorUtil.getAppExecutorService())
     }
@@ -358,14 +361,16 @@ class ArmeriaClientExplorerPanel(
 
     private fun refreshListPresentation() {
         val selected = selectedEndpoint()
+        val visibleEndpoints = filterEndpoints(collectedEndpoints)
         listModel.removeAllElements()
-        groupedItems(filterEndpoints(collectedEndpoints)).forEach(listModel::addElement)
+        groupedItems(visibleEndpoints).forEach(listModel::addElement)
         if (selected != null) {
             selectEndpointNow(selected)
         } else {
             firstVisibleEndpoint()?.let(::selectEndpointNow)
         }
         clientDetailPanel.setEndpoint(selectedEndpoint())
+        updateStatusLabel(visibleEndpoints, collectedEndpoints.size)
     }
 
     private fun endpointIdentity(endpoint: ArmeriaClientEndpoint): Pair<String, Int>? {
@@ -377,16 +382,27 @@ class ArmeriaClientExplorerPanel(
         return fileUrl to offset
     }
 
-    private fun updateStatusLabel(collectedEndpoints: List<ArmeriaClientEndpoint>) {
+    private fun updateStatusLabel(
+        visibleEndpoints: List<ArmeriaClientEndpoint>,
+        totalEndpointCount: Int,
+    ) {
         statusLabel.text =
-            if (collectedEndpoints.isEmpty()) {
-                message("client.explorer.summary.empty")
+            if (visibleEndpoints.isEmpty()) {
+                if (totalEndpointCount == 0) {
+                    message("client.explorer.summary.empty")
+                } else {
+                    message("client.explorer.summary.noMatches")
+                }
             } else {
                 buildString {
-                    append(message("client.explorer.summary.endpoints", collectedEndpoints.size))
+                    if (visibleEndpoints.size == totalEndpointCount) {
+                        append(message("client.explorer.summary.endpoints", visibleEndpoints.size))
+                    } else {
+                        append(message("client.explorer.summary.filtered", visibleEndpoints.size, totalEndpointCount))
+                    }
                     append(" · ")
                     append(
-                        collectedEndpoints.groupBy { it.clientType }.entries.joinToString {
+                        visibleEndpoints.groupBy { it.clientType }.entries.joinToString {
                             message("client.explorer.summary.typeBreakdown", it.key, it.value.size)
                         },
                     )
@@ -441,7 +457,9 @@ class ArmeriaClientExplorerPanel(
             append(')')
         }
 
-    override fun dispose() = Unit
+    override fun dispose() {
+        disposed = true
+    }
 }
 
 private sealed interface ClientListItem {
