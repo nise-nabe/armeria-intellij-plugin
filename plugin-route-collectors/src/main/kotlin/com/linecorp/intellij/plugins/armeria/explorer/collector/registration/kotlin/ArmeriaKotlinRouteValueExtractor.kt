@@ -302,7 +302,7 @@ internal object ArmeriaKotlinRouteValueExtractor {
             .distinctBy {
                 listOf(
                     it.httpMethod,
-                    ArmeriaPathVariableSupport.pathShapeForOverlap(it.path, it.explicitExactPath),
+                    ArmeriaPathVariableSupport.pathShapeForOverlap(it.path, it.explicitExactPath, it.pathType),
                     it.pathType,
                 )
             }.singleOrNull()

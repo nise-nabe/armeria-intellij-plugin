@@ -114,7 +114,8 @@ object ArmeriaRouteSupport {
             return prefix
         }
         val handler = parsePathType(rawPath)
-        val combinedBody = combineAnnotatedPathBodies(prefix.pathType, prefix.path, handler.pathType, handler.path)
+        val effectivePrefixPath = if (prefix.path.endsWith("/")) prefix.path else "${prefix.path}/"
+        val combinedBody = combineAnnotatedPathBodies(prefix.pathType, effectivePrefixPath, handler.pathType, handler.path)
         val displayType = annotatedPathDisplayType(prefix.pathType, handler.pathType)
         return ParsedArmeriaPath(displayType, combinedBody, handler.explicitExactPath)
     }
@@ -208,7 +209,12 @@ object ArmeriaRouteSupport {
         val trimmedHandler = handler.trim()
         val handlerHadStartAnchor = trimmedHandler.startsWith("^")
         val handlerBody = trimmedHandler.removePrefix("^")
-        val combined = prefixBody + handlerBody
+        val combined =
+            if (prefixBody.endsWith("/") && handlerBody.startsWith("/")) {
+                prefixBody + handlerBody.substring(1)
+            } else {
+                prefixBody + handlerBody
+            }
         return if (handlerHadStartAnchor && !prefixBody.startsWith("^")) {
             "^$combined"
         } else {

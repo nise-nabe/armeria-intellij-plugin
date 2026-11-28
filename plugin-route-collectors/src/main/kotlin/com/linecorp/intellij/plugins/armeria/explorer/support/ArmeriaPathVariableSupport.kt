@@ -82,9 +82,10 @@ object ArmeriaPathVariableSupport {
     fun pathShapeForOverlap(
         path: String,
         explicitExactPath: Boolean = false,
+        pathType: PathType? = null,
     ): String {
         val typed = typedPath(path)
-        if (typed.pathType != PathType.EXACT) {
+        if ((pathType ?: typed.pathType) != PathType.EXACT) {
             return path
         }
         val body = path.substring(typed.bodyStart)

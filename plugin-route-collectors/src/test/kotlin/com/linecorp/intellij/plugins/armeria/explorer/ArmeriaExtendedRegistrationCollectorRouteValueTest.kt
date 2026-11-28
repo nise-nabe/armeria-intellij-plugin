@@ -287,6 +287,36 @@ class ArmeriaExtendedRegistrationCollectorRouteValueTest : ArmeriaFixtureTestBas
             .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/health", pathType = PathType.EXACT)
     }
 
+    fun testSkipsRouteMethodWhenBranchesReturnDifferentRegexPaths() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Route;
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service(pick(true), new HelloService())
+                        .build();
+                }
+
+                private static Route pick(boolean flag) {
+                    if (flag) {
+                        return Route.of("regex:^/files/:draft");
+                    }
+                    return Route.of("regex:^/files/:published");
+                }
+            }
+            """.trimIndent(),
+        )
+        addHelloService()
+
+        assertTrue(collectRoutes().none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
+    }
+
     fun testCollectsStandaloneRouteBuilderBuildWithHandler() {
         myFixture.configureByText(
             "Main.java",

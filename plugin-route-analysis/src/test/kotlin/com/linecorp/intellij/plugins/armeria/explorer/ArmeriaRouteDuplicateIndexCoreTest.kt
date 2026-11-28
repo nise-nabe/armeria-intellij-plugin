@@ -83,6 +83,44 @@ class ArmeriaRouteDuplicateIndexCoreTest : ArmeriaFixtureTestBase() {
         assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
     }
 
+    fun testRegexRoutesWithEquivalentTrailingSlashPrefixesAreDuplicates() {
+        myFixture.configureByText(
+            "First.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.PathPrefix;
+
+            @PathPrefix("/v1")
+            public class First {
+                @Get("regex:.*")
+                public String first() {
+                    return "first";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.PathPrefix;
+
+            @PathPrefix("/v1/")
+            public class Second {
+                @Get("regex:.*")
+                public String second() {
+                    return "second";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertEquals(1, ArmeriaRouteDuplicateIndex.duplicateGroups(project).size)
+    }
+
     fun testDifferentHttpMethodsOnSamePathAreNotDuplicates() {
         myFixture.configureByText(
             "Routes.java",
