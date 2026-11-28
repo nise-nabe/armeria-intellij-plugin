@@ -199,6 +199,10 @@ class ArmeriaPathVariableSupportTest {
             ArmeriaPathVariableSupport.pathShapeForOverlap("/files/{*path}"),
             ArmeriaPathVariableSupport.pathShapeForOverlap("/files/{id}"),
         )
+        assertEquals(
+            ArmeriaPathVariableSupport.pathShapeForOverlap("/files/{*path}"),
+            ArmeriaPathVariableSupport.pathShapeForOverlap("/files/:*name"),
+        )
     }
 
     @Test

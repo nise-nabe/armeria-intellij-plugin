@@ -101,6 +101,10 @@ object ArmeriaPathVariableSupport {
                         }
                     }
 
+                    segment.startsWith(":*") && segment.length > 2 -> {
+                        "{*}"
+                    }
+
                     segment.startsWith(":") && segment.length > 1 -> {
                         "{}"
                     }
