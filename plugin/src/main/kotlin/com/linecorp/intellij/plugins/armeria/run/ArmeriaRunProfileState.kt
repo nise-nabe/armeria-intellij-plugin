@@ -157,11 +157,14 @@ class ArmeriaRunProfileState(
             }
         }
 
+        private val ANSI_CONTROL_SEQUENCE = Regex("\u001B\\[[0-?]*[ -/]*[@-~]")
+
         internal fun looksLikeServerStarted(text: String?): Boolean {
             if (text.isNullOrBlank()) {
                 return false
             }
-            return text.contains("Serving HTTP") || text.contains("Started server")
+            val plainText = text.replace(ANSI_CONTROL_SEQUENCE, "")
+            return plainText.contains("Serving HTTP") || plainText.contains("Started server")
         }
     }
 }

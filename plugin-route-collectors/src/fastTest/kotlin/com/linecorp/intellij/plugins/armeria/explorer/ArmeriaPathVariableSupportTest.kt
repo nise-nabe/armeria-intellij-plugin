@@ -5,6 +5,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaPathVariabl
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class ArmeriaPathVariableSupportTest {
@@ -193,6 +194,10 @@ class ArmeriaPathVariableSupportTest {
         assertEquals(
             ArmeriaPathVariableSupport.pathShapeForOverlap("exact:/users/{id}"),
             ArmeriaPathVariableSupport.pathShapeForOverlap("/users/{name}"),
+        )
+        assertNotEquals(
+            ArmeriaPathVariableSupport.pathShapeForOverlap("/files/{*path}"),
+            ArmeriaPathVariableSupport.pathShapeForOverlap("/files/{id}"),
         )
     }
 

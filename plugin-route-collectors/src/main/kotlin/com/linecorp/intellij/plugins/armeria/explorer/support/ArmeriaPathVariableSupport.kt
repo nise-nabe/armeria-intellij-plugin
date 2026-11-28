@@ -92,10 +92,12 @@ object ArmeriaPathVariableSupport {
                     segment.startsWith("{") && segment.endsWith("}") -> {
                         val inner = segment.substring(1, segment.length - 1)
                         val constraintIndex = inner.indexOf(':')
+                        val catchAll = inner.startsWith("*")
                         if (constraintIndex < 0) {
-                            "{}"
+                            if (catchAll) "{*}" else "{}"
                         } else {
-                            "{:${inner.substring(constraintIndex + 1)}}"
+                            val prefix = if (catchAll) "{*:" else "{:"
+                            "$prefix${inner.substring(constraintIndex + 1)}}"
                         }
                     }
 

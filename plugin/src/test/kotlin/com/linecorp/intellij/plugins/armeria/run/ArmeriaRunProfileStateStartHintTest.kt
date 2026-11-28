@@ -21,4 +21,9 @@ class ArmeriaRunProfileStateStartHintTest {
             ArmeriaRunProfileState.looksLikeServerStarted(ArmeriaRunProfileState.appendStartupOutput(buffer, "ing HTTP at /0.0.0.0:8080")),
         )
     }
+
+    @Test
+    fun startupHintIgnoresAnsiColorSequences() {
+        assertTrue(ArmeriaRunProfileState.looksLikeServerStarted("Serving \u001B[32mHTTP\u001B[0m at /0.0.0.0:8080"))
+    }
 }
