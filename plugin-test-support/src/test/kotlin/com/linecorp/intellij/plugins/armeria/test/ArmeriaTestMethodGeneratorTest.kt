@@ -35,6 +35,7 @@ class ArmeriaTestMethodGeneratorTest {
     fun rejectsNonConcretePathTypes() {
         assertFalse(ArmeriaTestMethodGenerator.supports(route(pathType = PathType.REGEX, path = "^/users/\\d+$")))
         assertFalse(ArmeriaTestMethodGenerator.supports(route(pathType = PathType.GLOB, path = "/assets/**")))
+        assertTrue(ArmeriaTestMethodGenerator.supports(route(pathType = PathType.GLOB, path = "/health")))
         assertTrue(ArmeriaTestMethodGenerator.supports(route(pathType = PathType.PREFIX, path = "/api")))
     }
 

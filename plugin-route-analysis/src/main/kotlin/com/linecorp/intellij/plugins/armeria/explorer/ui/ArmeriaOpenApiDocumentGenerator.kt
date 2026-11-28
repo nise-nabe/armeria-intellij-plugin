@@ -200,9 +200,13 @@ object ArmeriaOpenApiDocumentGenerator {
                 emptyList()
             } else {
                 ArmeriaPathVariableSupport
-                    .extractPathVariables(route.path, route.pathType, route.explicitExactPath)
-                    .ifEmpty { ArmeriaPathVariableSupport.extractPathVariables(path) }
-                    .mapIndexed { index, name -> canonicalPathVariableNames.getOrNull(index) ?: name }
+                    .pathVariableOccurrences(route.path, route.pathType)
+                    .map { it.name }
+                    .ifEmpty {
+                        ArmeriaPathVariableSupport
+                            .pathVariableOccurrences(path, PathType.EXACT)
+                            .map { it.name }
+                    }.mapIndexed { index, name -> canonicalPathVariableNames.getOrNull(index) ?: name }
             }
         val pathParameters =
             pathVariables

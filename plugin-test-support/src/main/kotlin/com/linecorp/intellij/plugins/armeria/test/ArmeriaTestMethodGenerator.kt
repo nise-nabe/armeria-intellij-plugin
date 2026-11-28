@@ -16,8 +16,11 @@ internal object ArmeriaTestMethodGenerator {
     fun supports(route: ArmeriaRoute): Boolean =
         route.routeMatch == RouteMatch.ANNOTATED_HTTP &&
             route.httpMethod.isNotBlank() &&
-            route.pathType != PathType.REGEX &&
-            route.pathType != PathType.GLOB
+            (
+                route.pathType == PathType.EXACT ||
+                    route.pathType == PathType.PREFIX ||
+                    (route.pathType == PathType.GLOB && !route.path.contains('*'))
+            )
 
     fun requiresBlockingClient(route: ArmeriaRoute): Boolean = route.executionHints.contains(message("route.explorer.execution.blocking"))
 

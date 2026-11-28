@@ -308,6 +308,25 @@ class ArmeriaOpenApiDocumentGeneratorTest {
     }
 
     @Test
+    fun document_equivalentTemplateRepeatedVariablesMapByOccurrence() {
+        val yaml =
+            ArmeriaOpenApiDocumentGenerator.document(
+                listOf(
+                    route(path = "/users/{id}/posts/{id}/comments/{commentId}", target = "first.UserService#get()"),
+                    route(
+                        httpMethod = "POST",
+                        path = "/users/{user}/posts/{user}/comments/{bodyId}",
+                        target = "second.UserService#create()",
+                    ),
+                ),
+            )
+
+        assertTrue(yaml.contains("post:"), yaml)
+        assertEquals(2, yaml.lines().count { it.contains("name: \"commentId\"") }, yaml)
+        assertFalse(yaml.contains("name: \"bodyId\""), yaml)
+    }
+
+    @Test
     fun document_explicitExactColonLiteralIsNotAPathParameter() {
         val yaml =
             ArmeriaOpenApiDocumentGenerator.document(
