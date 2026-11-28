@@ -4,6 +4,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.ArmeriaRouteColl
 import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.FileServiceRootKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.GrpcRouteHint
+import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKnownHttpServiceClassifier
@@ -51,6 +52,103 @@ class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
         val serviceRoute = routes.firstOrNull { it.path == "/api" && it.routeMatch == RouteMatch.SERVICE }
         kotlinAssertNotNull(serviceRoute)
         assertEquals("example.HelloService", serviceRoute.target)
+    }
+
+    fun testCollectExplicitExactServiceRegistrationPreservesLiteralSemantics() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("exact:/status/:ready", new HelloService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val serviceRoute = ArmeriaRouteCollector.collect(project).single { it.routeMatch == RouteMatch.SERVICE }
+
+        assertEquals("/status/:ready", serviceRoute.path)
+        assertTrue(serviceRoute.explicitExactPath)
+    }
+
+    fun testServiceUnderKeepsTypedLookingTextAsPlainPrefix() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .serviceUnder("/exact:/status/", new HelloService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val serviceRoute = ArmeriaRouteCollector.collect(project).single { it.routeMatch == RouteMatch.SERVICE_UNDER }
+
+        assertEquals("/exact:/status/", serviceRoute.path)
+        assertFalse(serviceRoute.explicitExactPath)
+    }
+
+    fun testRelativeAndAbsoluteGlobServiceRegistrationsKeepDistinctPaths() {
+        myFixture.configureByText(
+            "Main.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.Server;
+
+            public class Main {
+                public static void main(String[] args) {
+                    Server.builder()
+                        .service("glob:*.css", new HelloService())
+                        .service("glob:/*.css", new HelloService())
+                        .build();
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            public class HelloService {
+            }
+            """.trimIndent(),
+        )
+
+        val serviceRoutes = ArmeriaRouteCollector.collect(project).filter { it.routeMatch == RouteMatch.SERVICE }
+
+        assertEquals(setOf("/**/*.css", "/*.css"), serviceRoutes.map { it.path }.toSet())
+        assertTrue(serviceRoutes.all { it.pathType == PathType.GLOB })
     }
 
     fun testCollectServiceRegistration() {

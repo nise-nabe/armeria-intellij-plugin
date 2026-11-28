@@ -12,6 +12,7 @@ data class ArmeriaKotlinMethodRoute(
     val paths: List<String>,
     val rawPaths: List<String>,
     val classPrefix: String,
+    val explicitExactPaths: List<Boolean>,
 ) {
     companion object {
         fun from(function: KtNamedFunction): ArmeriaKotlinMethodRoute? = all(function).firstOrNull()
@@ -64,11 +65,19 @@ data class ArmeriaKotlinMethodRoute(
                             }
                             pathAnnotationPaths
                         }.ifEmpty { listOf("/") }
-                val paths =
+                val formattedPaths =
                     rawPaths
-                        .map { rawPath -> ArmeriaRouteSupport.formatAnnotatedHandlerPath(classPrefix, rawPath) }
-                        .distinct()
-                ArmeriaKotlinMethodRoute(httpMethod, paths, rawPaths, classPrefix)
+                        .map { rawPath ->
+                            ArmeriaRouteSupport.formatAnnotatedHandlerPath(classPrefix, rawPath) to
+                                ArmeriaRouteSupport.isExplicitExactPath(rawPath)
+                        }.distinct()
+                ArmeriaKotlinMethodRoute(
+                    httpMethod,
+                    formattedPaths.map { it.first },
+                    rawPaths,
+                    classPrefix,
+                    formattedPaths.map { it.second },
+                )
             }
         }
 

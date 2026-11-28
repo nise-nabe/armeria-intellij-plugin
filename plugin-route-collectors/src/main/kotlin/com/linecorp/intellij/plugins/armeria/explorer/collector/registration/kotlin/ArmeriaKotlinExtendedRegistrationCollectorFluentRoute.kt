@@ -126,6 +126,7 @@ internal object ArmeriaKotlinExtendedRegistrationCollectorFluentRoute {
             target = chainInfo.target,
             routeMatch = RouteMatch.ROUTE_FLUENT,
             pathType = chainInfo.pathType,
+            explicitExactPath = chainInfo.explicitExactPath,
             decorators = ArmeriaKotlinDecoratorSupport.collectProgrammaticDecorators(metadataCall, chainInfo.path),
             timeoutHints = ArmeriaKotlinTimeoutSupport.collectBuilderTimeoutHints(metadataCall),
         )

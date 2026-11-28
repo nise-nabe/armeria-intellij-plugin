@@ -26,8 +26,13 @@ class ArmeriaDuplicateRouteScalaInspection : LocalInspectionTool() {
                 val seen = mutableMapOf<Pair<String, String>, PsiMethod>()
                 for (function in routeAnnotatedFunctions(definition)) {
                     for (route in ArmeriaScalaInspectionSupport.methodRoutes(function)) {
-                        for (path in route.paths) {
-                            val key = route.httpMethod to ArmeriaPathVariableSupport.pathShapeForOverlap(path)
+                        for ((index, path) in route.paths.withIndex()) {
+                            val key =
+                                route.httpMethod to
+                                    ArmeriaPathVariableSupport.pathShapeForOverlap(
+                                        path,
+                                        explicitExactPath = route.explicitExactPaths.getOrElse(index) { false },
+                                    )
                             val previous = seen.putIfAbsent(key, function)
                             if (previous != null) {
                                 duplicateFunctions += previous

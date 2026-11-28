@@ -10,6 +10,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.Flu
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.RouteValueResolution
 import com.linecorp.intellij.plugins.armeria.explorer.collector.registration.java.ArmeriaJavaRouteValueExtractor
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaKotlinExpressionSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaPathVariableSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollectionMetrics
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import org.jetbrains.kotlin.psi.KtCallExpression
@@ -241,12 +242,13 @@ internal object ArmeriaKotlinRouteValueExtractor {
             }
         }
         val rawPath = ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(pathExpression) ?: return null
-        val (pathType, path) = ArmeriaRouteSupport.parsePathType(rawPath)
+        val parsedPath = ArmeriaRouteSupport.parsePathType(rawPath)
         return FluentRouteChainInfo(
             httpMethod = httpMethod,
-            path = path,
-            pathType = pathType,
+            path = parsedPath.path,
+            pathType = parsedPath.pathType,
             target = target,
+            explicitExactPath = parsedPath.explicitExactPath,
         )
     }
 
@@ -295,7 +297,15 @@ internal object ArmeriaKotlinRouteValueExtractor {
         if (resolved.isEmpty() || resolved.any { it == null }) {
             return null
         }
-        return resolved.filterNotNull().distinctBy { Triple(it.httpMethod, it.path, it.pathType) }.singleOrNull()
+        return resolved
+            .filterNotNull()
+            .distinctBy {
+                listOf(
+                    it.httpMethod,
+                    ArmeriaPathVariableSupport.pathShapeForOverlap(it.path, it.explicitExactPath, it.pathType),
+                    it.pathType,
+                )
+            }.singleOrNull()
     }
 
     private fun resolveCallDeclaration(call: KtCallExpression): PsiElement? {

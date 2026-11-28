@@ -101,22 +101,29 @@ object ArmeriaRouteSupport {
 
     fun extractPathAnnotations(method: PsiMethod): List<String> = ArmeriaRouteAnnotationSupport.extractPathAnnotations(method)
 
-    internal fun parsePathType(rawPath: String): Pair<PathType, String> = ArmeriaRouteAnnotationSupport.parsePathType(rawPath)
+    internal fun parsePathType(rawPath: String): ParsedArmeriaPath = ArmeriaRouteAnnotationSupport.parsePathType(rawPath)
+
+    fun isExplicitExactPath(path: String): Boolean = path.trim().startsWith("exact:")
+
+    internal fun parsePathWithPrefix(
+        pathPrefix: String,
+        rawPath: String,
+    ): ParsedArmeriaPath {
+        val prefix = parsePathType(pathPrefix.ifBlank { "/" })
+        if (rawPath.isEmpty()) {
+            return prefix
+        }
+        val handler = parsePathType(rawPath)
+        val effectivePrefixPath = if (prefix.path.endsWith("/")) prefix.path else "${prefix.path}/"
+        val combinedBody = combineAnnotatedPathBodies(prefix.pathType, effectivePrefixPath, handler.pathType, handler.path)
+        val displayType = annotatedPathDisplayType(prefix.pathType, handler.pathType)
+        return ParsedArmeriaPath(displayType, combinedBody, handler.explicitExactPath)
+    }
 
     fun combinePaths(
         prefix: String,
         path: String,
-    ): String {
-        val normalizedPrefix = normalizePath(prefix)
-        val normalizedPath = normalizePath(path)
-        if (normalizedPrefix == "/") {
-            return normalizedPath
-        }
-        if (normalizedPath == "/") {
-            return normalizedPrefix
-        }
-        return "${normalizedPrefix.removeSuffix("/")}/${normalizedPath.removePrefix("/")}"
-    }
+    ): String = concatArmeriaPaths(normalizePath(prefix), normalizePath(path))
 
     fun normalizePath(path: String): String {
         if (path.isBlank()) {
@@ -130,15 +137,12 @@ object ArmeriaRouteSupport {
         classPrefix: String,
         rawPath: String,
     ): String {
-        val (handlerPathType, handlerPath) = parsePathType(rawPath.ifBlank { "/" })
-        val (prefixPathType, prefixPath) = parsePathType(classPrefix.ifBlank { "/" })
-        val combinedBody = combineAnnotatedPathBodies(prefixPathType, prefixPath, handlerPathType, handlerPath)
-        val displayType = annotatedPathDisplayType(prefixPathType, handlerPathType)
-        return when (displayType) {
-            PathType.EXACT -> combinedBody
-            PathType.PREFIX -> "prefix:$combinedBody"
-            PathType.REGEX -> "regex:$combinedBody"
-            PathType.GLOB -> "glob:$combinedBody"
+        val parsed = parsePathWithPrefix(classPrefix, rawPath)
+        return when (parsed.pathType) {
+            PathType.EXACT -> parsed.path
+            PathType.PREFIX -> "prefix:${parsed.path}"
+            PathType.REGEX -> "regex:${parsed.path}"
+            PathType.GLOB -> "glob:${parsed.path}"
         }
     }
 
@@ -164,16 +168,37 @@ object ArmeriaRouteSupport {
         if (prefixPath == "/" || prefixPath.isBlank()) {
             return handlerPath
         }
-        if (handlerPath == "/" || handlerPath.isBlank()) {
+        if (handlerPath.isBlank()) {
             return prefixPath
         }
         if (prefixPathType == PathType.EXACT && handlerPathType == PathType.EXACT) {
-            return combinePaths(prefixPath, handlerPath)
+            return concatArmeriaPaths(prefixPath, handlerPath)
+        }
+        if (handlerPath == "/") {
+            return prefixPath
         }
         if (prefixPathType == PathType.REGEX || handlerPathType == PathType.REGEX) {
             return joinRegexPathBodies(prefixPath, handlerPath)
         }
         return combinePaths(prefixPath, handlerPath)
+    }
+
+    private fun concatArmeriaPaths(
+        prefix: String,
+        path: String,
+    ): String {
+        if (path.isEmpty()) {
+            return prefix
+        }
+        if (prefix == "/") {
+            return if (path.startsWith("/")) path else "/$path"
+        }
+        val concatenationPrefix = if (prefix.endsWith("/")) prefix else "$prefix/"
+        return if (path.startsWith("/")) {
+            concatenationPrefix + path.substring(1)
+        } else {
+            concatenationPrefix + path
+        }
     }
 
     private fun joinRegexPathBodies(
@@ -184,7 +209,12 @@ object ArmeriaRouteSupport {
         val trimmedHandler = handler.trim()
         val handlerHadStartAnchor = trimmedHandler.startsWith("^")
         val handlerBody = trimmedHandler.removePrefix("^")
-        val combined = prefixBody + handlerBody
+        val combined =
+            if (prefixBody.endsWith("/") && handlerBody.startsWith("/")) {
+                prefixBody + handlerBody.substring(1)
+            } else {
+                prefixBody + handlerBody
+            }
         return if (handlerHadStartAnchor && !prefixBody.startsWith("^")) {
             "^$combined"
         } else {

@@ -148,6 +148,69 @@ class ArmeriaDuplicateRouteScalaInspectionTest : ArmeriaFixtureTestBase5() {
         assertDuplicateRouteHighlights(2)
     }
 
+    @Test
+    fun allowsDistinctExplicitExactPathsWithColonShapedText() {
+        myFixture.configureByText(
+            "ExactService.scala",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+
+            class ExactService {
+                @Get("exact:/status/:ready")
+                def ready(): String = "ready"
+
+                @Get("exact:/status/:live")
+                def live(): String = "live"
+            }
+            """.trimIndent(),
+        )
+        assertDuplicateRouteHighlights(0)
+    }
+
+    @Test
+    fun allowsExplicitExactCatchAllShapedTextAgainstParameterizedRoute() {
+        myFixture.configureByText(
+            "ExactService.scala",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+
+            class ExactService {
+                @Get("exact:/files/:*status")
+                def status(): String = "status"
+
+                @Get("/files/{*path}")
+                def files(): String = "files"
+            }
+            """.trimIndent(),
+        )
+        assertDuplicateRouteHighlights(0)
+    }
+
+    @Test
+    fun highlightsSameExplicitExactPath() {
+        myFixture.configureByText(
+            "ExactService.scala",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+
+            class ExactService {
+                @Get("exact:/status/:ready")
+                def first(): String = "first"
+
+                @Get("exact:/status/:ready")
+                def second(): String = "second"
+            }
+            """.trimIndent(),
+        )
+        assertDuplicateRouteHighlights(2)
+    }
+
     private fun assertDuplicateRouteHighlights(expectedCount: Int) {
         val expected = message("inspection.duplicate.route.problem")
         val highlights = myFixture.doHighlighting().filter { it.description == expected }

@@ -115,6 +115,54 @@ class ArmeriaRouteCollectorAnnotatedRouteTest : ArmeriaFixtureTestBase() {
         assertEquals("/v1/items", routes.single().path)
     }
 
+    fun testCollectPathPrefixWithEmptyMethodPathDoesNotAddTrailingSlash() {
+        myFixture.configureByText(
+            "PrefixedService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.PathPrefix;
+
+            @PathPrefix("/v1")
+            public class PrefixedService {
+                @Get
+                public String index() {
+                    return "index";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertEquals("/v1", routes.single().path)
+    }
+
+    fun testCollectPathPrefixWithRootMethodPathKeepsTrailingSlash() {
+        myFixture.configureByText(
+            "PrefixedService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+            import com.linecorp.armeria.server.annotation.PathPrefix;
+
+            @PathPrefix("/v1")
+            public class PrefixedService {
+                @Get("/")
+                public String index() {
+                    return "index";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        val routes = ArmeriaRouteCollector.collect(project)
+
+        assertEquals("/v1/", routes.single().path)
+    }
+
     fun testCollectAnnotatedRoute_blockingOnMethod() {
         myFixture.addClass(
             """

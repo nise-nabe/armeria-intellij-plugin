@@ -73,19 +73,45 @@ object ArmeriaPathVariableSupport {
     }
 
     /**
-     * Shape used when deciding whether two exact paths can match the same request.
+     * Shape used when deciding whether two exact paths are equivalent matchers.
      * Variable names do not affect matching, so simple brace captures and colon parameters
      * occupying a complete path segment are canonicalized. Capture constraints are kept
-     * because different constraints may match disjoint values. The `exact:` type prefix
-     * is stripped because its concrete path can still overlap a parameterized route.
+     * because different constraints may match disjoint values. Explicit `exact:` paths do not
+     * bind variables, so variable-shaped text in them remains literal.
      */
-    fun pathShapeForOverlap(path: String): String {
+    fun pathShapeForOverlap(
+        path: String,
+        explicitExactPath: Boolean = false,
+        pathType: PathType? = null,
+    ): String {
         val typed = typedPath(path)
-        if (typed.pathType != PathType.EXACT) {
+        val effectivePathType = pathType ?: typed.pathType
+        val body = path.substring(typed.bodyStart)
+        if (effectivePathType == PathType.GLOB) {
+            return if ('*' in body) {
+                path
+            } else {
+                literalPathShape(body)
+            }
+        }
+        if (effectivePathType != PathType.EXACT) {
             return path
         }
-        val body = path.substring(typed.bodyStart)
-        return body
+        val bindVariables = !explicitExactPath && typed.bindVariables
+        return if (bindVariables) {
+            parameterizedExactPathShape(body)
+        } else {
+            literalPathShape(body)
+        }
+    }
+
+    private fun literalPathShape(path: String): String =
+        path
+            .split('/')
+            .joinToString("/") { segment -> literalShapeSegment(segment) }
+
+    private fun parameterizedExactPathShape(path: String): String =
+        path
             .split('/')
             .joinToString("/") { segment ->
                 when {
@@ -93,27 +119,37 @@ object ArmeriaPathVariableSupport {
                         val inner = segment.substring(1, segment.length - 1)
                         val constraintIndex = inner.indexOf(':')
                         val catchAll = inner.startsWith("*")
-                        if (constraintIndex < 0) {
-                            if (catchAll) "{*}" else "{}"
-                        } else {
-                            val prefix = if (catchAll) "{*:" else "{:"
-                            "$prefix${inner.substring(constraintIndex + 1)}}"
-                        }
+                        val constraint =
+                            if (constraintIndex < 0) {
+                                ""
+                            } else {
+                                inner.substring(constraintIndex + 1)
+                            }
+                        variableShapeSegment(catchAll, constraint)
                     }
 
                     segment.startsWith(":*") && segment.length > 2 -> {
-                        "{*}"
+                        variableShapeSegment(catchAll = true, constraint = "")
                     }
 
                     segment.startsWith(":") && segment.length > 1 -> {
-                        "{}"
+                        variableShapeSegment(catchAll = false, constraint = "")
                     }
 
                     else -> {
-                        segment
+                        literalShapeSegment(segment)
                     }
                 }
             }
+
+    private fun literalShapeSegment(segment: String): String = "L${segment.length}:$segment"
+
+    private fun variableShapeSegment(
+        catchAll: Boolean,
+        constraint: String,
+    ): String {
+        val kind = if (catchAll) "C" else "V"
+        return "$kind${constraint.length}:$constraint"
     }
 
     fun pathVariableOccurrences(path: String): List<PathVariableOccurrence> {

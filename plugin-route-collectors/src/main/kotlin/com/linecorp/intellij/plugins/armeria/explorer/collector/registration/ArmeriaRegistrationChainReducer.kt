@@ -3,6 +3,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.collector.decorator.Armeri
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.ServiceRegistrationMethod
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
+import com.linecorp.intellij.plugins.armeria.explorer.support.ParsedArmeriaPath
 
 internal data class RegistrationChainStep(
     val methodName: String,
@@ -16,6 +17,7 @@ internal data class FluentRouteChainInfo(
     val path: String,
     val pathType: PathType,
     val target: String,
+    val explicitExactPath: Boolean = false,
 )
 
 internal data class RouteDecoratorChainInfo(
@@ -35,6 +37,7 @@ internal object ArmeriaRegistrationChainReducer {
         var httpMethod = ""
         var path = "/"
         var pathType = PathType.EXACT
+        var explicitExactPath = false
         var mountPrefix: String? = null
         var methodPath: String? = null
         var foundRoute = false
@@ -53,9 +56,10 @@ internal object ArmeriaRegistrationChainReducer {
                         return null
                     }
                     parsePathFromStep(step)?.let { parsed ->
-                        methodPath = parsed.second
-                        path = parsed.second
-                        pathType = parsed.first
+                        methodPath = parsed.path
+                        path = parsed.path
+                        pathType = parsed.pathType
+                        explicitExactPath = parsed.explicitExactPath
                         foundPath = true
                     }
                 }
@@ -71,15 +75,18 @@ internal object ArmeriaRegistrationChainReducer {
                     }
                     val parsed =
                         if (step.rawMethodArgs.size >= 2) {
-                            // path(prefix, pathPattern) concatenates both arguments.
-                            ArmeriaRouteSupport.parsePathType((step.firstStringArg ?: "") + step.secondStringArg)
+                            ArmeriaRouteSupport.parsePathWithPrefix(
+                                step.firstStringArg ?: "/",
+                                step.secondStringArg ?: "",
+                            )
                         } else {
                             parsePathFromStep(step)
                         }
                     parsed?.let {
-                        methodPath = it.second
-                        path = it.second
-                        pathType = it.first
+                        methodPath = it.path
+                        path = it.path
+                        pathType = it.pathType
+                        explicitExactPath = it.explicitExactPath
                         foundPath = true
                     }
                 }
@@ -90,9 +97,9 @@ internal object ArmeriaRegistrationChainReducer {
                     }
                     val raw = step.firstStringArg ?: path
                     val parsed = ArmeriaRouteSupport.parsePathType("prefix:$raw")
-                    mountPrefix = parsed.second
-                    pathType = parsed.first
-                    path = parsed.second
+                    mountPrefix = parsed.path
+                    pathType = parsed.pathType
+                    path = parsed.path
                     foundPath = true
                 }
 
@@ -102,8 +109,8 @@ internal object ArmeriaRegistrationChainReducer {
                     }
                     val raw = step.firstStringArg ?: path
                     val parsed = ArmeriaRouteSupport.parsePathType("regex:$raw")
-                    pathType = parsed.first
-                    path = parsed.second
+                    pathType = parsed.pathType
+                    path = parsed.path
                     foundPath = true
                 }
 
@@ -113,8 +120,8 @@ internal object ArmeriaRegistrationChainReducer {
                     }
                     val raw = step.firstStringArg ?: path
                     val parsed = ArmeriaRouteSupport.parsePathType("glob:$raw")
-                    pathType = parsed.first
-                    path = parsed.second
+                    pathType = parsed.pathType
+                    path = parsed.path
                     foundPath = true
                 }
 
@@ -149,6 +156,7 @@ internal object ArmeriaRegistrationChainReducer {
             path = resolvedPath,
             pathType = resolvedPathType,
             target = handlerTarget ?: defaultTarget,
+            explicitExactPath = explicitExactPath,
         )
     }
 
@@ -177,8 +185,8 @@ internal object ArmeriaRegistrationChainReducer {
                                 else -> raw
                             },
                         )
-                    pathType = parsed.first
-                    pathPattern = parsed.second
+                    pathType = parsed.pathType
+                    pathPattern = parsed.path
                 }
 
                 "methods", "method" -> {
@@ -199,7 +207,7 @@ internal object ArmeriaRegistrationChainReducer {
         return RouteDecoratorChainInfo(pathPattern, pathType, methods, decoratorLabel)
     }
 
-    private fun parsePathFromStep(step: RegistrationChainStep): Pair<PathType, String>? {
+    private fun parsePathFromStep(step: RegistrationChainStep): ParsedArmeriaPath? {
         val raw = step.firstStringArg ?: return null
         return ArmeriaRouteSupport.parsePathType(raw)
     }

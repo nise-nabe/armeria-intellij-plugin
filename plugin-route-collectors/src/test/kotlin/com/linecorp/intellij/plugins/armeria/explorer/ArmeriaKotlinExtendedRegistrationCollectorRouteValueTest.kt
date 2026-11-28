@@ -43,6 +43,36 @@ class ArmeriaKotlinExtendedRegistrationCollectorRouteValueTest : ArmeriaFixtureT
             .also { route -> assertTrue(route.target.endsWith("HelloService")) }
     }
 
+    fun testCollectsExplicitExactRouteOfAsLiteralPath() {
+        configureService(
+            """
+            Server.builder()
+                .service(Route.of("exact:/status/:ready"), HelloService())
+                .build()
+            """,
+        )
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/status/:ready", pathType = PathType.EXACT)
+            .also { route -> assertTrue(route.explicitExactPath) }
+    }
+
+    fun testCollectsExplicitExactRouteBuilderPathAsLiteralPath() {
+        configureService(
+            """
+            Server.builder()
+                .service(Route.builder().path("exact:/status/:ready").build(), HelloService())
+                .build()
+            """,
+        )
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/status/:ready", pathType = PathType.EXACT)
+            .also { route -> assertTrue(route.explicitExactPath) }
+    }
+
     fun testCollectsServiceRegistrationWithRouteOfMethodAndPath() {
         configureService(
             """
@@ -151,6 +181,66 @@ class ArmeriaKotlinExtendedRegistrationCollectorRouteValueTest : ArmeriaFixtureT
                     return Route.of("/a")
                 }
                 return Route.of("/b")
+            }
+            """.trimIndent(),
+        )
+
+        assertTrue(collectRoutes().none { it.routeMatch == RouteMatch.ROUTE_FLUENT })
+    }
+
+    fun testCollectsRouteMethodWhenBranchesReturnSameExactUrl() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Route
+            import com.linecorp.armeria.server.Server
+
+            class HelloService
+
+            fun main() {
+                Server.builder()
+                    .service(pick(true), HelloService())
+                    .build()
+            }
+
+            fun pick(flag: Boolean): Route {
+                if (flag) {
+                    return Route.of("/health")
+                }
+                return Route.of("exact:/health")
+            }
+            """.trimIndent(),
+        )
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/health", pathType = PathType.EXACT)
+    }
+
+    fun testSkipsRouteMethodWhenBranchesReturnDifferentRegexPaths() {
+        myFixture.configureByText(
+            "Main.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.Route
+            import com.linecorp.armeria.server.Server
+
+            class HelloService
+
+            fun main() {
+                Server.builder()
+                    .service(pick(true), HelloService())
+                    .build()
+            }
+
+            fun pick(flag: Boolean): Route {
+                if (flag) {
+                    return Route.of("regex:^/files/:draft")
+                }
+                return Route.of("regex:^/files/:published")
             }
             """.trimIndent(),
         )
