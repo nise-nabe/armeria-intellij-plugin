@@ -133,6 +133,41 @@ class ArmeriaSpringConfigRouteCollectorTest : ArmeriaLightJavaCodeInsightFixture
         assertTrue(routes.any { it.isDocService && it.target.contains("[dev]") })
     }
 
+    fun testMultiDocumentYamlMergesProfileSpecificArmeriaConfig() {
+        val psiFile =
+            myFixture.configureByText(
+                "application.yml",
+                """
+                armeria:
+                  ports:
+                    - port: 8080
+                      protocols:
+                        - http
+                  internal-services:
+                    include: docs
+                ---
+                spring:
+                  config:
+                    activate:
+                      on-profile: dev
+                armeria:
+                  ports:
+                    - port: 9090
+                      protocols:
+                        - http
+                  docs-path: /dev/docs
+                """.trimIndent(),
+            )
+
+        val routes = mutableListOf<ArmeriaRoute>()
+        ArmeriaSpringConfigRouteCollector.collectFromPsiFile(psiFile, routes, mutableSetOf())
+
+        assertTrue(routes.any { it.path == ":8080" && !it.target.contains("[dev]") })
+        assertTrue(routes.any { it.path == ":9090" && it.target.contains("[dev]") })
+        assertTrue(routes.any { it.isDocService && it.path == "/dev/docs" && it.target.contains("[dev]") })
+        assertFalse(routes.any { it.isDocService && it.path == "/dev/docs" && !it.target.contains("[dev]") })
+    }
+
     fun testIgnoresServerPortFalsePositive() {
         val psiFile =
             myFixture.configureByText(

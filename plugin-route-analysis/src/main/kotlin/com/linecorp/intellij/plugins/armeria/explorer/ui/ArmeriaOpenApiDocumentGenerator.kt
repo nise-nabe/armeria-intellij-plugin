@@ -21,6 +21,7 @@ object ArmeriaOpenApiDocumentGenerator {
     private val SIMPLE_IDENTIFIER = Regex("^[A-Za-z_][A-Za-z0-9_]*$")
     private val STATUS_CODE = Regex("""^\d{3}$""")
     private val OPERATION_ID_INVALID = Regex("[^A-Za-z0-9_.-]+")
+    private val OPENAPI_TEMPLATE_SEGMENT = Regex("^\\{[^{}]+}$")
 
     fun exportable(route: ArmeriaRoute): Boolean {
         if (isUnframedGrpcMethod(route)) {
@@ -36,21 +37,25 @@ object ArmeriaOpenApiDocumentGenerator {
     }
 
     fun document(routes: List<ArmeriaRoute>): String {
-        val operationsByPath = linkedMapOf<String, LinkedHashMap<String, OpenApiOperation>>()
+        val operationsByPath = linkedMapOf<String, OpenApiPathOperations>()
         val duplicates = mutableListOf<Pair<String, String>>()
         val usedOperationIds = mutableSetOf<String>()
         for (route in routes) {
             if (!exportable(route)) {
                 continue
             }
-            val path = toOpenApiPath(route.path)
+            val path = toOpenApiPath(route.path, route.explicitExactPath)
             val method = httpMethod(route)
-            val methods = operationsByPath.getOrPut(path) { linkedMapOf() }
+            val pathOperations =
+                operationsByPath.getOrPut(canonicalOpenApiPath(path)) {
+                    OpenApiPathOperations(path, linkedMapOf(), openApiPathVariables(path))
+                }
+            val methods = pathOperations.methods
             if (method in methods) {
                 duplicates += method.uppercase(Locale.ROOT) to path
                 continue
             }
-            methods[method] = toOperation(route, path, method, usedOperationIds)
+            methods[method] = toOperation(route, path, method, usedOperationIds, pathOperations.variableNames)
         }
         return buildString {
             writeComments(routes, duplicates)
@@ -67,10 +72,10 @@ object ArmeriaOpenApiDocumentGenerator {
                 return@buildString
             }
             appendMap(0, "paths") {
-                for ((path, methods) in operationsByPath) {
-                    appendMap(1, path) {
+                for ((_, pathOperations) in operationsByPath) {
+                    appendMap(1, pathOperations.displayPath) {
                         for (method in OPENAPI_METHODS) {
-                            val operation = methods[method] ?: continue
+                            val operation = pathOperations.methods[method] ?: continue
                             writeOperation(2, method, operation)
                         }
                     }
@@ -175,6 +180,7 @@ object ArmeriaOpenApiDocumentGenerator {
         path: String,
         method: String,
         usedOperationIds: MutableSet<String>,
+        canonicalPathVariableNames: List<String>,
     ): OpenApiOperation {
         val unframedGrpc = isUnframedGrpcMethod(route)
         val consumes =
@@ -189,10 +195,21 @@ object ArmeriaOpenApiDocumentGenerator {
             } else {
                 ArmeriaRouteContentHintSupport.mediaTypes(route.contentHints, "route.explorer.hint.produces")
             }
+        val pathVariables =
+            if (route.explicitExactPath) {
+                emptyList()
+            } else {
+                ArmeriaPathVariableSupport
+                    .pathVariableOccurrences(route.path, route.pathType)
+                    .map { it.name }
+                    .ifEmpty {
+                        ArmeriaPathVariableSupport
+                            .pathVariableOccurrences(path, PathType.EXACT)
+                            .map { it.name }
+                    }.mapIndexed { index, name -> canonicalPathVariableNames.getOrNull(index) ?: name }
+            }
         val pathParameters =
-            ArmeriaPathVariableSupport
-                .extractPathVariables(route.path, route.pathType)
-                .ifEmpty { ArmeriaPathVariableSupport.extractPathVariables(path) }
+            pathVariables
                 .distinct()
                 .map { OpenApiParameter(it, "path", required = true) }
         val headerParameters =
@@ -273,10 +290,37 @@ object ArmeriaOpenApiDocumentGenerator {
         return ArmeriaGrpcServiceOptionsSupport.hasUnframedHint(route.contentHints)
     }
 
-    private fun toOpenApiPath(rawPath: String): String {
-        val converted = ArmeriaPathVariableSupport.pathWithPlaceholders(rawPath.trim(), PathType.EXACT)
-        return ensureLeadingSlash(converted)
+    private fun toOpenApiPath(
+        rawPath: String,
+        explicitExactPath: Boolean,
+    ): String {
+        val converted =
+            ArmeriaPathVariableSupport.pathWithPlaceholders(
+                rawPath.trim(),
+                PathType.EXACT,
+                explicitExactPath,
+            )
+        val literalTemplateBracesEncoded =
+            if (explicitExactPath) {
+                converted.replace("{", "%7B").replace("}", "%7D")
+            } else {
+                converted
+            }
+        return ensureLeadingSlash(literalTemplateBracesEncoded)
     }
+
+    private fun canonicalOpenApiPath(path: String): String =
+        path
+            .split('/')
+            .joinToString("/") { segment ->
+                if (OPENAPI_TEMPLATE_SEGMENT.matches(segment)) "{}" else segment
+            }
+
+    private fun openApiPathVariables(path: String): List<String> =
+        path
+            .split('/')
+            .filter { OPENAPI_TEMPLATE_SEGMENT.matches(it) }
+            .map { it.substring(1, it.length - 1) }
 
     private fun ensureLeadingSlash(path: String): String {
         if (path.isEmpty()) {
@@ -370,6 +414,12 @@ object ArmeriaOpenApiDocumentGenerator {
             }
             append('"')
         }
+
+    private data class OpenApiPathOperations(
+        val displayPath: String,
+        val methods: LinkedHashMap<String, OpenApiOperation>,
+        val variableNames: List<String>,
+    )
 
     private data class OpenApiOperation(
         val operationId: String,

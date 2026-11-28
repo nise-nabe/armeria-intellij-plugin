@@ -772,6 +772,7 @@ class ArmeriaHttpRequestGeneratorTest {
         exampleRequests: List<String> = emptyList(),
         exampleHeaders: List<String> = emptyList(),
         isDocService: Boolean = false,
+        explicitExactPath: Boolean = false,
     ): ArmeriaRoute =
         ArmeriaRoute(
             protocol = protocol,
@@ -784,6 +785,7 @@ class ArmeriaHttpRequestGeneratorTest {
             targetUnresolved = false,
             isDocService = isDocService,
             pathType = pathType,
+            explicitExactPath = explicitExactPath,
             decorators = emptyList(),
             exceptionHandlers = emptyList(),
             contentHints = contentHints,
@@ -816,5 +818,13 @@ class ArmeriaHttpRequestGeneratorTest {
     fun requestText_encodesSinglePipeInQueryParameterValue() {
         val route = route(contentHints = listOf(message("route.explorer.hint.matchesParam", "fields=id|name")))
         assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("fields=id%7Cname"))
+    }
+
+    @Test
+    fun requestText_preservesExplicitExactColonLiteral() {
+        val route = route(path = "/status/:ready", explicitExactPath = true)
+        val text = ArmeriaHttpRequestGenerator.requestText(route)
+        assertTrue(text.contains("/status/:ready"), text)
+        assertFalse(text.contains("/status/{ready}"), text)
     }
 }

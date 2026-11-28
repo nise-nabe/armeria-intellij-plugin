@@ -14,9 +14,11 @@ import org.jetbrains.yaml.psi.YAMLValue
  * Call only when `org.jetbrains.plugins.yaml` is loaded.
  */
 internal object ArmeriaYamlSpringConfigReader {
-    fun read(psiFile: PsiFile): SpringArmeriaConfig {
+    fun read(psiFile: PsiFile): SpringArmeriaConfig = readProfiledDocuments(psiFile).firstOrNull()?.config ?: SpringArmeriaConfig()
+
+    fun readProfiledDocuments(psiFile: PsiFile): List<SpringArmeriaConfigDocument> {
         val yamlFile = resolveYamlFile(psiFile)
-        return readYamlFile(yamlFile)
+        return readYamlDocuments(yamlFile)
     }
 
     /**
@@ -32,8 +34,41 @@ internal object ArmeriaYamlSpringConfigReader {
             .createDummyYamlWithText(psiFile.text)
     }
 
-    private fun readYamlFile(yamlFile: YAMLFile): SpringArmeriaConfig {
-        val armeria = findTopLevelArmeriaMapping(yamlFile) ?: return SpringArmeriaConfig()
+    private fun readYamlDocuments(yamlFile: YAMLFile): List<SpringArmeriaConfigDocument> {
+        val parsed =
+            yamlFile.documents.mapNotNull { document ->
+                val root = document.topLevelValue as? YAMLMapping ?: return@mapNotNull null
+                val armeria = root.getKeyValueByKey("armeria") ?: return@mapNotNull null
+                val mapping = armeria.value as? YAMLMapping ?: return@mapNotNull null
+                SpringArmeriaConfigDocument(
+                    profile = readDocumentProfile(root),
+                    config = readArmeriaMapping(mapping),
+                )
+            }
+        if (parsed.isEmpty()) {
+            return emptyList()
+        }
+        val baseDocuments = parsed.filter { it.profile == null }
+        val baseConfig =
+            baseDocuments
+                .map { it.config }
+                .fold(SpringArmeriaConfig(), ::mergeConfigs)
+        val effectiveDocuments = mutableListOf<SpringArmeriaConfigDocument>()
+        if (baseDocuments.isNotEmpty()) {
+            effectiveDocuments += SpringArmeriaConfigDocument(profile = null, config = baseConfig)
+        }
+        for (profile in parsed.mapNotNull { it.profile }.distinct()) {
+            val profileConfig =
+                parsed
+                    .filter { it.profile == profile }
+                    .map { it.config }
+                    .fold(baseConfig, ::mergeConfigs)
+            effectiveDocuments += SpringArmeriaConfigDocument(profile = profile, config = profileConfig)
+        }
+        return effectiveDocuments
+    }
+
+    private fun readArmeriaMapping(armeria: YAMLMapping): SpringArmeriaConfig {
         val ports = readPorts(armeria)
         val internalServices = childMapping(armeria, "internal-services", "internalServices")
         val includeKv = internalServices?.let { childKeyValue(it, "include") }
@@ -56,14 +91,29 @@ internal object ArmeriaYamlSpringConfigReader {
         )
     }
 
-    private fun findTopLevelArmeriaMapping(yamlFile: YAMLFile): YAMLMapping? {
-        for (document in yamlFile.documents) {
-            val root = document.topLevelValue as? YAMLMapping ?: continue
-            val armeria = root.getKeyValueByKey("armeria") ?: continue
-            val mapping = armeria.value as? YAMLMapping ?: continue
-            return mapping
-        }
-        return null
+    private fun mergeConfigs(
+        base: SpringArmeriaConfig,
+        override: SpringArmeriaConfig,
+    ): SpringArmeriaConfig =
+        SpringArmeriaConfig(
+            ports = override.ports.ifEmpty { base.ports },
+            includes = override.includes.ifEmpty { base.includes },
+            docsPath = override.docsPath ?: base.docsPath,
+            healthPath = override.healthPath ?: base.healthPath,
+            metricsPath = override.metricsPath ?: base.metricsPath,
+            internalServicesPort = override.internalServicesPort ?: base.internalServicesPort,
+            includeElement = override.includeElement ?: base.includeElement,
+            docsPathElement = override.docsPathElement ?: base.docsPathElement,
+            healthPathElement = override.healthPathElement ?: base.healthPathElement,
+            metricsPathElement = override.metricsPathElement ?: base.metricsPathElement,
+        )
+
+    private fun readDocumentProfile(root: YAMLMapping): String? {
+        val spring = childKeyValue(root, "spring")?.value as? YAMLMapping ?: return null
+        val config = childKeyValue(spring, "config")?.value as? YAMLMapping
+        val activate = childKeyValue(config, "activate")?.value as? YAMLMapping
+        scalarText(childKeyValue(activate, "on-profile", "onProfile")?.value)?.let { return it }
+        return scalarText(childKeyValue(spring, "profiles")?.value)
     }
 
     private fun readPorts(armeria: YAMLMapping): List<SpringArmeriaPortBinding> {

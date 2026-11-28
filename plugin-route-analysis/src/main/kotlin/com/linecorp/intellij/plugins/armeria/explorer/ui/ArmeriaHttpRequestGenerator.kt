@@ -103,7 +103,12 @@ object ArmeriaHttpRequestGenerator {
             }
         }
         val method = httpMethod(route)
-        val resolvedPath = ArmeriaPathVariableSupport.pathWithPlaceholders(route.path, route.pathType)
+        val resolvedPath =
+            ArmeriaPathVariableSupport.pathWithPlaceholders(
+                route.path,
+                route.pathType,
+                route.explicitExactPath,
+            )
         val pathWithQuery = appendQuery(resolvedPath, matchQueryString(route.contentHints))
         val consumes = ArmeriaRouteContentHintSupport.mediaTypes(route.contentHints, "route.explorer.hint.consumes")
         val produces = ArmeriaRouteContentHintSupport.mediaTypes(route.contentHints, "route.explorer.hint.produces")

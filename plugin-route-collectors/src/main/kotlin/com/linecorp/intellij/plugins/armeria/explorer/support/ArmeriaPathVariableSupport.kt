@@ -23,7 +23,13 @@ object ArmeriaPathVariableSupport {
     fun extractPathVariables(
         path: String,
         pathType: PathType,
-    ): List<String> = pathVariableOccurrences(path, pathType).map { it.name }.distinct()
+        explicitExactPath: Boolean = false,
+    ): List<String> {
+        if (explicitExactPath && pathType == PathType.EXACT) {
+            return emptyList()
+        }
+        return pathVariableOccurrences(path, pathType).map { it.name }.distinct()
+    }
 
     fun replacePathVariableName(
         path: String,
@@ -60,13 +66,17 @@ object ArmeriaPathVariableSupport {
 
     /**
      * Rewrites brace captures (`{id:regex}`, `{*path}`) to `{name}` and colon parameters
-     * (`:name` after `/`) to `{name}`. Regex and glob paths are returned unchanged.
+     * (`:name` after `/`) to `{name}`. Regex, glob, and explicit exact paths are returned unchanged.
      */
     fun pathWithPlaceholders(
         path: String,
         pathType: PathType,
+        explicitExactPath: Boolean = false,
     ): String {
-        if (pathType == PathType.REGEX || pathType == PathType.GLOB) {
+        if (pathType == PathType.REGEX ||
+            pathType == PathType.GLOB ||
+            (explicitExactPath && pathType == PathType.EXACT)
+        ) {
             return path
         }
         return replaceColonPathParameters(replaceBraceCapturesWithNames(path))

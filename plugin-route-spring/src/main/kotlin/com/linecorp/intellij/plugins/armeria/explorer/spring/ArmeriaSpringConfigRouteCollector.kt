@@ -163,13 +163,24 @@ object ArmeriaSpringConfigRouteCollector {
         if (!text.contains("armeria")) {
             return
         }
-        val config =
-            when {
-                psiFile.name.endsWith(".properties") -> parseProperties(text)
-                isYamlPluginAvailable() -> ArmeriaYamlSpringConfigReader.read(psiFile)
-                else -> return
+        val fileProfile = profileFromFileName(psiFile.name)
+        when {
+            psiFile.name.endsWith(".properties") -> {
+                emitRoutes(parseProperties(text), psiFile, fileProfile, routes, seenConfigRoutes)
             }
-        emitRoutes(config, psiFile, profileFromFileName(psiFile.name), routes, seenConfigRoutes)
+
+            isYamlPluginAvailable() -> {
+                for (document in ArmeriaYamlSpringConfigReader.readProfiledDocuments(psiFile)) {
+                    emitRoutes(
+                        document.config,
+                        psiFile,
+                        document.profile ?: fileProfile,
+                        routes,
+                        seenConfigRoutes,
+                    )
+                }
+            }
+        }
     }
 
     internal fun parseProperties(text: String): SpringArmeriaConfig {

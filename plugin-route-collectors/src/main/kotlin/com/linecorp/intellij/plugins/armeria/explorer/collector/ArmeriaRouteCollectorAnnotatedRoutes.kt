@@ -80,7 +80,13 @@ object ArmeriaRouteCollectorAnnotatedRoutes {
                         decorators = methodDecorators.distinct(),
                         exceptionHandlers = methodExceptionHandlers.distinct(),
                         executionHints = executionHints,
-                        contentHints = ArmeriaAnnotatedMetadataSupport.collectContentHints(method, combinedPath, parsedPath.pathType),
+                        contentHints =
+                            ArmeriaAnnotatedMetadataSupport.collectContentHints(
+                                method,
+                                combinedPath,
+                                parsedPath.pathType,
+                                parsedPath.explicitExactPath,
+                            ),
                     )
             }
         }

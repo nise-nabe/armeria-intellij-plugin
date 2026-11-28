@@ -227,5 +227,13 @@ class ArmeriaPathVariableSupportTest {
             "/users/**",
             ArmeriaPathVariableSupport.pathWithPlaceholders("/users/**", PathType.GLOB),
         )
+        assertEquals(
+            "/status/:ready",
+            ArmeriaPathVariableSupport.pathWithPlaceholders(
+                "/status/:ready",
+                PathType.EXACT,
+                explicitExactPath = true,
+            ),
+        )
     }
 }
