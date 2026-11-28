@@ -75,13 +75,14 @@ Output a **findings table** (id, source, path, priority, action). Sources: `dete
 
 Tier controls cost; each tier still completes in one invocation.
 
-| Tier | When | Subagent |
-|------|------|----------|
+| Tier | When | Audit pass |
+|------|------|------------|
 | **A** | Docs / scripts / ≤2 files and ≤30 net lines | **Skip** — Phase 1 table is the audit |
-| **B** | Typical code PR | **One** audit subagent |
-| **C** | Large diff or many files | **One** audit subagent; closure subagent in Phase 5 only for `/thermos` Tier C |
+| **B** | Typical code PR | **One** audit subagent when the host supports subagents |
+| **C** | Large diff or many files | **One** audit subagent when the host supports subagents; closure subagent in Phase 5 only for `/thermos` Tier C |
+| Devin sessions | Any tier | **No child Devin session is required.** Perform one manual blind audit in the parent session and rely on the mandatory closure pass as the second check. Do not spend quota trying to create an audit child session. |
 
-### Subagent input (mandatory — simulates a new session)
+### Subagent input (mandatory when a subagent is available — simulates a new session)
 
 Pass **only**:
 
@@ -93,9 +94,12 @@ Pass **only**:
 **Do not pass:** parent agent analysis, earlier findings table, chat history summary, or
 "we already checked X".
 
-Parent agent: **no** long manual P0–P3 audit in parallel with the subagent.
+Parent agent: **no** long manual P0–P3 audit in parallel with the subagent. In Devin sessions,
+perform that manual audit as the substitute audit pass instead of creating a child session:
+read only the diff and repository context needed to evaluate it, do not reuse prior conclusions,
+and record rows with `source: manual audit`.
 
-Merge subagent rows into the findings table (`source: audit`). Deduplicate by path + concern.
+Merge audit rows into the findings table (`source: audit` or `source: manual audit`). Deduplicate by path + concern.
 
 ## Phase 3 — Triage gate (block until clear)
 
@@ -118,14 +122,15 @@ No SHIP with open P3 rows marked "later".
 
 Run **after** fixes are committed (before push). **Always** run findings closure and
 deterministic re-scan (steps 1–3 below). Closure subagent (step 5) only for Tier C `/thermos`
-audits.
+audits in hosts that support subagents; never required in Devin sessions.
 
 1. `git diff origin/<baseRefName or $BASE>...HEAD` — post-fix diff only.
 2. **Findings closure:** every row from Phases 1–2 has a terminal status.
 3. **Deterministic re-scan:** re-run Phase 1 checklist on **newly changed hunks** only.
 4. **Tests:** rerun only if fix commit touched production or test code (`git diff START_HEAD..HEAD --name-only`).
-5. Tier C only: **one** closure subagent with **post-fix diff only** — same blind-input rules as Phase 2.
+5. Tier C only, outside Devin sessions: **one** closure subagent with **post-fix diff only** — same blind-input rules as Phase 2.
    - If it reports new P0–P1 → return to Phase 4 once; do not loop.
+   - In Devin sessions, skip this subagent step; the findings closure and deterministic re-scan are sufficient.
 
 **SHIP blocked** if any P0–P2 row is open or closure finds new P0–P1.
 
@@ -140,7 +145,7 @@ git push -u origin <headRefName>
   Post the findings table in a **PR comment**, not in the PR body (`pr-description-format.mdc`).
 - Link created P3 issues.
 
-User summary: findings table, SHIP verdict, PR link. State that closure pass ran (no second session required).
+User summary: findings table, SHIP verdict, PR link. State that closure pass ran. In Devin sessions, do not frame the missing child session as a blocker or quota failure; the manual blind audit plus closure pass is the supported path.
 
 ## Cloud Agent ordering (with implementation workflows)
 
