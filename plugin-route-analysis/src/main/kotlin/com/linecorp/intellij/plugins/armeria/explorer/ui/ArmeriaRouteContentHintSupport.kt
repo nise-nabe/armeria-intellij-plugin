@@ -9,10 +9,6 @@ object ArmeriaRouteContentHintSupport {
     private val METHODS_WITH_BODY = setOf("POST", "PUT", "PATCH")
     private val NEWLINE_CHARACTERS = Regex("[\\r\\n]+")
 
-    // tchar minus a trailing '!' immediately before '=' so `name!=value` is not a header pair.
-    private val SIMPLE_EQUALITY_MATCH =
-        Regex("""^([A-Za-z0-9_!#\$%&'*+.^`|~-]+)(?<!!)=([^=].*)$""", RegexOption.DOT_MATCHES_ALL)
-
     fun isHint(
         hint: String,
         messageKey: String,
@@ -51,8 +47,15 @@ object ArmeriaRouteContentHintSupport {
         messageKey: String,
     ): List<Pair<String, String>> =
         payloads(contentHints, messageKey).mapNotNull { condition ->
-            val match = SIMPLE_EQUALITY_MATCH.matchEntire(condition.trim()) ?: return@mapNotNull null
-            match.groupValues[1] to match.groupValues[2]
+            val trimmed = condition.trim()
+            val equalsIndex = trimmed.indexOf('=')
+            if (equalsIndex <= 0 ||
+                trimmed[equalsIndex - 1] == '!' ||
+                trimmed.getOrNull(equalsIndex + 1) == '='
+            ) {
+                return@mapNotNull null
+            }
+            trimmed.substring(0, equalsIndex) to trimmed.substring(equalsIndex + 1)
         }
 
     fun isJsonMediaType(mediaType: String): Boolean {

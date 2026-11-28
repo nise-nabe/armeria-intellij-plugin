@@ -179,12 +179,14 @@ internal object ArmeriaTestMethodInserter {
         targetClass: PsiClass,
         methodText: String,
     ) {
-        val anchor = targetClass.methods.lastOrNull() ?: targetClass
+        val method = PsiElementFactory.getInstance(project).createMethodFromText(methodText, targetClass)
+        val anchor = targetClass.methods.lastOrNull()
         val added =
-            targetClass.addAfter(
-                PsiElementFactory.getInstance(project).createMethodFromText(methodText, targetClass),
-                anchor,
-            ) as PsiMethod
+            if (anchor == null) {
+                targetClass.add(method) as PsiMethod
+            } else {
+                targetClass.addAfter(method, anchor) as PsiMethod
+            }
         JavaCodeStyleManager.getInstance(project).shortenClassReferences(added)
         targetClass.containingFile.virtualFile?.let { virtualFile ->
             ArmeriaFileEditorOpenSupport.openFileAtOffset(project, virtualFile, added.textRange.startOffset)

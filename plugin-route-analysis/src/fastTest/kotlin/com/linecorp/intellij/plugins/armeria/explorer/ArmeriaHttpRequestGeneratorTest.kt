@@ -805,4 +805,10 @@ class ArmeriaHttpRequestGeneratorTest {
 
         override fun getPsiRange(): TextRange? = null
     }
+
+    @Test
+    fun requestText_encodesWhitespaceInQueryParameterNames() {
+        val route = route(contentHints = listOf(message("route.explorer.hint.matchesParam", "sp ace=a b")))
+        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("sp%20ace=a%20b"))
+    }
 }

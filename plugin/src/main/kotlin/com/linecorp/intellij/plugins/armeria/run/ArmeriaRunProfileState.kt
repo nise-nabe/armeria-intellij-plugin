@@ -140,7 +140,7 @@ class ArmeriaRunProfileState(
     }
 
     companion object {
-        private const val SERVER_STARTED_MARKER_LENGTH = 14
+        private const val STARTUP_OUTPUT_BUFFER_LIMIT = 4096
 
         internal fun appendStartupOutput(
             buffer: StringBuilder,
@@ -152,7 +152,7 @@ class ArmeriaRunProfileState(
             synchronized(buffer) {
                 val combined = buffer.toString() + text
                 buffer.setLength(0)
-                buffer.append(combined.takeLast(SERVER_STARTED_MARKER_LENGTH - 1))
+                buffer.append(combined.takeLast(STARTUP_OUTPUT_BUFFER_LIMIT))
                 return combined
             }
         }
