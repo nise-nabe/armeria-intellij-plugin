@@ -807,8 +807,8 @@ class ArmeriaHttpRequestGeneratorTest {
     }
 
     @Test
-    fun requestText_encodesWhitespaceInQueryParameterNames() {
-        val route = route(contentHints = listOf(message("route.explorer.hint.matchesParam", "sp ace=a b")))
-        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("sp%20ace=a%20b"))
+    fun requestText_trimsWhitespaceAroundQueryParameterNames() {
+        val route = route(contentHints = listOf(message("route.explorer.hint.matchesParam", "env =prod")))
+        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("env=prod"))
     }
 }
