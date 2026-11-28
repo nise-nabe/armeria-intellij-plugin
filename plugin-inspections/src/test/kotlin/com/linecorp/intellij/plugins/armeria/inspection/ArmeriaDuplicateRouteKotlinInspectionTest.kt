@@ -118,6 +118,27 @@ class ArmeriaDuplicateRouteKotlinInspectionTest : ArmeriaLightJavaCodeInsightFix
         myFixture.testHighlighting(true, false, true)
     }
 
+    fun testHighlightsSameExplicitExactPath() {
+        myFixture.configureByText(
+            "ExactService.kt",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+
+            class ExactService {
+                @Get("exact:/status/:ready")
+                fun <warning descr="This annotated Armeria route duplicates another HTTP method/path combination in the same service class.">first</warning>(): String = "first"
+
+                @Get("exact:/status/:ready")
+                fun <warning descr="This annotated Armeria route duplicates another HTTP method/path combination in the same service class.">second</warning>(): String = "second"
+            }
+            """.trimIndent(),
+        )
+
+        myFixture.testHighlighting(true, false, true)
+    }
+
     private fun registerArmeriaStubs() {
         myFixture.configureByText(
             "Get.kt",

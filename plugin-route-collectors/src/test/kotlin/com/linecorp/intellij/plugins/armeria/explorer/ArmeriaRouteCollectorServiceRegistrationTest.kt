@@ -96,7 +96,7 @@ class ArmeriaRouteCollectorServiceRegistrationTest : ArmeriaFixtureTestBase() {
             public class Main {
                 public static void main(String[] args) {
                     Server.builder()
-                        .serviceUnder("exact:/status/", new HelloService())
+                        .serviceUnder("/exact:/status/", new HelloService())
                         .build();
                 }
             }

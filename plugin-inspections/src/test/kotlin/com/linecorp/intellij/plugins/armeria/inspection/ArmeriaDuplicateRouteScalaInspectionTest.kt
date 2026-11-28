@@ -190,6 +190,27 @@ class ArmeriaDuplicateRouteScalaInspectionTest : ArmeriaFixtureTestBase5() {
         assertDuplicateRouteHighlights(0)
     }
 
+    @Test
+    fun highlightsSameExplicitExactPath() {
+        myFixture.configureByText(
+            "ExactService.scala",
+            """
+            package example
+
+            import com.linecorp.armeria.server.annotation.Get
+
+            class ExactService {
+                @Get("exact:/status/:ready")
+                def first(): String = "first"
+
+                @Get("exact:/status/:ready")
+                def second(): String = "second"
+            }
+            """.trimIndent(),
+        )
+        assertDuplicateRouteHighlights(2)
+    }
+
     private fun assertDuplicateRouteHighlights(expectedCount: Int) {
         val expected = message("inspection.duplicate.route.problem")
         val highlights = myFixture.doHighlighting().filter { it.description == expected }
