@@ -184,7 +184,12 @@ internal object ArmeriaSpringMvcRouteCollector {
         val target = buildMethodTarget(controller, method)
         for (classPrefix in classPrefixes) {
             for (rawPath in paths) {
-                val combinedPath = ArmeriaRouteSupport.combinePaths(classPrefix, rawPath)
+                val combinedPath =
+                    if (rawPath.isEmpty()) {
+                        ArmeriaRouteSupport.normalizePath(classPrefix)
+                    } else {
+                        ArmeriaRouteSupport.combinePaths(classPrefix, rawPath)
+                    }
                 for (httpMethod in httpMethods) {
                     routes +=
                         SpringMvcRoute(
