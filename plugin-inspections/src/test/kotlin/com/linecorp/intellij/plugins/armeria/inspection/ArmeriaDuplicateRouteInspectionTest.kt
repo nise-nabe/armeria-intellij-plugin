@@ -205,6 +205,81 @@ class ArmeriaDuplicateRouteInspectionTest : ArmeriaFixtureTestBase() {
         assertNoDuplicateRouteHighlights()
     }
 
+    fun testAllowsDistinctExplicitExactPathsWithColonShapedText() {
+        myFixture.configureByText(
+            "ExactService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class ExactService {
+                @Get("exact:/status/:ready")
+                public String ready() {
+                    return "ready";
+                }
+
+                @Get("exact:/status/:live")
+                public String live() {
+                    return "live";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertNoDuplicateRouteHighlights()
+    }
+
+    fun testAllowsExplicitExactCatchAllShapedTextAgainstParameterizedRoute() {
+        myFixture.configureByText(
+            "ExactService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class ExactService {
+                @Get("exact:/files/:*status")
+                public String status() {
+                    return "status";
+                }
+
+                @Get("/files/{*path}")
+                public String files() {
+                    return "files";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertNoDuplicateRouteHighlights()
+    }
+
+    fun testHighlightsSameExplicitExactPath() {
+        myFixture.configureByText(
+            "ExactService.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class ExactService {
+                @Get("exact:/status/:ready")
+                public String first() {
+                    return "first";
+                }
+
+                @Get("exact:/status/:ready")
+                public String second() {
+                    return "second";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertDuplicateRouteHighlightsOnMethods("ExactService", "first", "ExactService", "second")
+    }
+
     private fun assertNoDuplicateRouteHighlights() {
         val routeDuplicateHighlights =
             myFixture.doHighlighting().filter {

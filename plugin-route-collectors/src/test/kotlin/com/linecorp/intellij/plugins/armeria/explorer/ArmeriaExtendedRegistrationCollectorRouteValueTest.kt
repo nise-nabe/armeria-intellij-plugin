@@ -43,6 +43,51 @@ class ArmeriaExtendedRegistrationCollectorRouteValueTest : ArmeriaFixtureTestBas
             .also { route -> assertEquals("example.HelloService", route.target) }
     }
 
+    fun testCollectsExplicitExactRouteOfAsLiteralPath() {
+        configureService(
+            """
+            Server.builder()
+                .service(Route.of("exact:/status/:ready"), new HelloService())
+                .build();
+            """,
+        )
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/status/:ready", pathType = PathType.EXACT)
+            .also { route -> assertTrue(route.explicitExactPath) }
+    }
+
+    fun testCollectsExplicitExactRouteBuilderPathAsLiteralPath() {
+        configureService(
+            """
+            Server.builder()
+                .service(Route.builder().path("exact:/status/:ready").build(), new HelloService())
+                .build();
+            """,
+        )
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/status/:ready", pathType = PathType.EXACT)
+            .also { route -> assertTrue(route.explicitExactPath) }
+    }
+
+    fun testCollectsExplicitExactTwoArgumentRouteBuilderPathAsLiteralPath() {
+        configureService(
+            """
+            Server.builder()
+                .service(Route.builder().path("/api", "exact:/status/:ready").build(), new HelloService())
+                .build();
+            """,
+        )
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/api/status/:ready", pathType = PathType.EXACT)
+            .also { route -> assertTrue(route.explicitExactPath) }
+    }
+
     fun testCollectsServiceRegistrationWithRouteOfMethodAndPath() {
         configureService(
             """

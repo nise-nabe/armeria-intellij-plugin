@@ -156,6 +156,108 @@ class ArmeriaRouteDuplicateIndexCoreTest : ArmeriaFixtureTestBase() {
         assertEquals(1, ArmeriaRouteDuplicateIndex.duplicateGroups(project).size)
     }
 
+    fun testExplicitExactColonShapedLiteralsAreNotDuplicates() {
+        myFixture.configureByText(
+            "First.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class First {
+                @Get("exact:/status/:ready")
+                public String first() {
+                    return "first";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class Second {
+                @Get("exact:/status/:live")
+                public String second() {
+                    return "second";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
+    }
+
+    fun testExplicitExactCatchAllShapedLiteralIsNotParameterizedDuplicate() {
+        myFixture.configureByText(
+            "First.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class First {
+                @Get("exact:/files/:*status")
+                public String first() {
+                    return "first";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class Second {
+                @Get("/files/{*path}")
+                public String second() {
+                    return "second";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertTrue(ArmeriaRouteDuplicateIndex.duplicateGroups(project).isEmpty())
+    }
+
+    fun testSameExplicitExactLiteralRoutesAreDuplicates() {
+        myFixture.configureByText(
+            "First.java",
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class First {
+                @Get("exact:/status/:ready")
+                public String first() {
+                    return "first";
+                }
+            }
+            """.trimIndent(),
+        )
+        myFixture.addClass(
+            """
+            package example;
+
+            import com.linecorp.armeria.server.annotation.Get;
+
+            public class Second {
+                @Get("exact:/status/:ready")
+                public String second() {
+                    return "second";
+                }
+            }
+            """.trimIndent(),
+        )
+
+        assertEquals(1, ArmeriaRouteDuplicateIndex.duplicateGroups(project).size)
+    }
+
     fun testConflictingRoutesExcludesCurrentRegistration() {
         myFixture.configureByText(
             "First.java",

@@ -101,7 +101,20 @@ object ArmeriaRouteSupport {
 
     fun extractPathAnnotations(method: PsiMethod): List<String> = ArmeriaRouteAnnotationSupport.extractPathAnnotations(method)
 
-    internal fun parsePathType(rawPath: String): Pair<PathType, String> = ArmeriaRouteAnnotationSupport.parsePathType(rawPath)
+    internal fun parsePathType(rawPath: String): ParsedArmeriaPath = ArmeriaRouteAnnotationSupport.parsePathType(rawPath)
+
+    fun isExplicitExactPath(path: String): Boolean = path.trim().startsWith("exact:")
+
+    internal fun parsePathWithPrefix(
+        pathPrefix: String,
+        rawPath: String,
+    ): ParsedArmeriaPath {
+        val handler = parsePathType(rawPath.ifBlank { "/" })
+        val prefix = parsePathType(pathPrefix.ifBlank { "/" })
+        val combinedBody = combineAnnotatedPathBodies(prefix.pathType, prefix.path, handler.pathType, handler.path)
+        val displayType = annotatedPathDisplayType(prefix.pathType, handler.pathType)
+        return ParsedArmeriaPath(displayType, combinedBody, handler.explicitExactPath)
+    }
 
     fun combinePaths(
         prefix: String,
@@ -130,15 +143,12 @@ object ArmeriaRouteSupport {
         classPrefix: String,
         rawPath: String,
     ): String {
-        val (handlerPathType, handlerPath) = parsePathType(rawPath.ifBlank { "/" })
-        val (prefixPathType, prefixPath) = parsePathType(classPrefix.ifBlank { "/" })
-        val combinedBody = combineAnnotatedPathBodies(prefixPathType, prefixPath, handlerPathType, handlerPath)
-        val displayType = annotatedPathDisplayType(prefixPathType, handlerPathType)
-        return when (displayType) {
-            PathType.EXACT -> combinedBody
-            PathType.PREFIX -> "prefix:$combinedBody"
-            PathType.REGEX -> "regex:$combinedBody"
-            PathType.GLOB -> "glob:$combinedBody"
+        val parsed = parsePathWithPrefix(classPrefix, rawPath)
+        return when (parsed.pathType) {
+            PathType.EXACT -> parsed.path
+            PathType.PREFIX -> "prefix:${parsed.path}"
+            PathType.REGEX -> "regex:${parsed.path}"
+            PathType.GLOB -> "glob:${parsed.path}"
         }
     }
 

@@ -64,12 +64,18 @@ internal object ArmeriaScalaInspectionSupport {
                     }
                     collected
                 }
-            val paths =
+            val formattedPaths =
                 rawPaths
                     .ifEmpty { listOf("/") }
-                    .map { rawPath -> ArmeriaRouteSupport.formatAnnotatedHandlerPath(classPrefix, rawPath) }
-                    .distinct()
-            ArmeriaScalaMethodRoute(httpMethod, paths)
+                    .map { rawPath ->
+                        ArmeriaRouteSupport.formatAnnotatedHandlerPath(classPrefix, rawPath) to
+                            ArmeriaRouteSupport.isExplicitExactPath(rawPath)
+                    }.distinct()
+            ArmeriaScalaMethodRoute(
+                httpMethod,
+                formattedPaths.map { it.first },
+                formattedPaths.map { it.second },
+            )
         }
     }
 
@@ -215,6 +221,7 @@ internal object ArmeriaScalaInspectionSupport {
 internal data class ArmeriaScalaMethodRoute(
     val httpMethod: String,
     val paths: List<String>,
+    val explicitExactPaths: List<Boolean>,
 )
 
 internal fun <T> Option<T>.orNull(): T? = if (isDefined) get() else null

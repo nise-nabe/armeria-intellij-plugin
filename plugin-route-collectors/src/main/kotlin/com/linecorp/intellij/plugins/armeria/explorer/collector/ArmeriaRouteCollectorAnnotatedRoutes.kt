@@ -64,8 +64,8 @@ object ArmeriaRouteCollectorAnnotatedRoutes {
         val executionHints = ArmeriaTimeoutSupport.collectExecutionHints(method)
         for ((httpMethod, paths) in routeAnnotationPaths) {
             for (rawPath in paths) {
-                val (pathType, normalizedPath) = ArmeriaRouteSupport.parsePathType(rawPath)
-                val combinedPath = ArmeriaRouteSupport.combinePaths(classPrefix, normalizedPath)
+                val parsedPath = ArmeriaRouteSupport.parsePathType(rawPath)
+                val combinedPath = ArmeriaRouteSupport.combinePaths(classPrefix, parsedPath.path)
                 routes +=
                     ArmeriaRoute.create(
                         element = method,
@@ -75,11 +75,12 @@ object ArmeriaRouteCollectorAnnotatedRoutes {
                         path = combinedPath,
                         target = target,
                         routeMatch = RouteMatch.ANNOTATED_HTTP,
-                        pathType = pathType,
+                        pathType = parsedPath.pathType,
+                        explicitExactPath = parsedPath.explicitExactPath,
                         decorators = methodDecorators.distinct(),
                         exceptionHandlers = methodExceptionHandlers.distinct(),
                         executionHints = executionHints,
-                        contentHints = ArmeriaAnnotatedMetadataSupport.collectContentHints(method, combinedPath, pathType),
+                        contentHints = ArmeriaAnnotatedMetadataSupport.collectContentHints(method, combinedPath, parsedPath.pathType),
                     )
             }
         }

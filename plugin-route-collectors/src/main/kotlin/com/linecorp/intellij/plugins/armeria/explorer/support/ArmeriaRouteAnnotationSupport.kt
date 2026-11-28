@@ -9,6 +9,12 @@ import com.intellij.psi.PsiLiteralExpression
 import com.intellij.psi.PsiMethod
 import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 
+internal data class ParsedArmeriaPath(
+    val pathType: PathType,
+    val path: String,
+    val explicitExactPath: Boolean = false,
+)
+
 internal object ArmeriaRouteAnnotationSupport {
     const val PATH_ANNOTATION = "com.linecorp.armeria.server.annotation.Path"
     const val PATH_PREFIX_ANNOTATION = "com.linecorp.armeria.server.annotation.PathPrefix"
@@ -196,14 +202,32 @@ internal object ArmeriaRouteAnnotationSupport {
             .filter { it.qualifiedName == PATH_ANNOTATION }
             .flatMap(::extractPaths)
 
-    fun parsePathType(rawPath: String): Pair<PathType, String> {
+    fun parsePathType(rawPath: String): ParsedArmeriaPath {
         val trimmed = rawPath.trim()
         return when {
-            trimmed.startsWith("prefix:") -> PathType.PREFIX to ArmeriaRouteSupport.normalizePath(trimmed.removePrefix("prefix:"))
-            trimmed.startsWith("regex:") -> PathType.REGEX to trimmed.removePrefix("regex:").trim()
-            trimmed.startsWith("glob:") -> PathType.GLOB to ArmeriaRouteSupport.normalizePath(trimmed.removePrefix("glob:"))
-            trimmed.startsWith("exact:") -> PathType.EXACT to ArmeriaRouteSupport.normalizePath(trimmed.removePrefix("exact:"))
-            else -> PathType.EXACT to ArmeriaRouteSupport.normalizePath(trimmed)
+            trimmed.startsWith("prefix:") -> {
+                ParsedArmeriaPath(PathType.PREFIX, ArmeriaRouteSupport.normalizePath(trimmed.removePrefix("prefix:")))
+            }
+
+            trimmed.startsWith("regex:") -> {
+                ParsedArmeriaPath(PathType.REGEX, trimmed.removePrefix("regex:").trim())
+            }
+
+            trimmed.startsWith("glob:") -> {
+                ParsedArmeriaPath(PathType.GLOB, ArmeriaRouteSupport.normalizePath(trimmed.removePrefix("glob:")))
+            }
+
+            trimmed.startsWith("exact:") -> {
+                ParsedArmeriaPath(
+                    PathType.EXACT,
+                    ArmeriaRouteSupport.normalizePath(trimmed.removePrefix("exact:")),
+                    explicitExactPath = true,
+                )
+            }
+
+            else -> {
+                ParsedArmeriaPath(PathType.EXACT, ArmeriaRouteSupport.normalizePath(trimmed))
+            }
         }
     }
 

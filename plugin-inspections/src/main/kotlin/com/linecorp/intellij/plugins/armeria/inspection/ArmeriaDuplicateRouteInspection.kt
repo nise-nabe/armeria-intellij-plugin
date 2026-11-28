@@ -27,7 +27,8 @@ class ArmeriaDuplicateRouteInspection : AbstractBaseJavaLocalInspectionTool() {
                             val key =
                                 route.httpMethod to
                                     ArmeriaPathVariableSupport.pathShapeForOverlap(
-                                        ArmeriaRouteSupport.combinePaths(route.classPrefix, path),
+                                        ArmeriaRouteSupport.formatAnnotatedHandlerPath(route.classPrefix, path),
+                                        explicitExactPath = ArmeriaRouteSupport.isExplicitExactPath(path),
                                     )
                             val previous = seen.putIfAbsent(key, method)
                             if (previous != null) {

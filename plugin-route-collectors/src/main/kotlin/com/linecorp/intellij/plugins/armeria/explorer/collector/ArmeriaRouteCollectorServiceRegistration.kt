@@ -19,6 +19,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.model.ArmeriaRoute
 import com.linecorp.intellij.plugins.armeria.explorer.model.CoreServiceRegistrationMethod
 import com.linecorp.intellij.plugins.armeria.explorer.model.DelegationKind
 import com.linecorp.intellij.plugins.armeria.explorer.model.FileServiceRoot
+import com.linecorp.intellij.plugins.armeria.explorer.model.PathType
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteMatch
 import com.linecorp.intellij.plugins.armeria.explorer.model.RouteProtocol
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaBuilderMetadataSupport
@@ -31,6 +32,7 @@ import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteCollec
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteSupport
 import com.linecorp.intellij.plugins.armeria.explorer.support.ArmeriaRouteTargetExtractor
 import com.linecorp.intellij.plugins.armeria.explorer.support.KnownHttpServiceKind
+import com.linecorp.intellij.plugins.armeria.explorer.support.ParsedArmeriaPath
 import com.linecorp.intellij.plugins.armeria.message
 
 object ArmeriaRouteCollectorServiceRegistration {
@@ -262,7 +264,14 @@ object ArmeriaRouteCollectorServiceRegistration {
         val annotatedServiceHasPathPrefix =
             explicitPathPrefix
                 ?: (registrationMethod == CoreServiceRegistrationMethod.ANNOTATED_SERVICE && argumentCount > 1)
-        val normalizedPath = ArmeriaRouteSupport.normalizePath(path)
+        val parsedPath =
+            if (registrationMethod == CoreServiceRegistrationMethod.SERVICE) {
+                ArmeriaRouteSupport.parsePathType(path)
+            } else {
+                // serviceUnder/annotatedService take plain path prefixes, not typed path patterns.
+                ParsedArmeriaPath(PathType.EXACT, ArmeriaRouteSupport.normalizePath(path))
+            }
+        val normalizedPath = parsedPath.path
         val programmaticDecorators = decorators ?: ArmeriaBuilderMetadataSupport.collectProgrammaticDecorators(element, normalizedPath)
         val timeoutHints = ArmeriaBuilderMetadataSupport.collectBuilderTimeoutHints(element)
         val delegationKind: DelegationKind? =
@@ -284,6 +293,8 @@ object ArmeriaRouteCollectorServiceRegistration {
                 isDocService = ArmeriaKnownHttpServiceClassifier.isDocService(kind),
                 excludeFromDuplicateIndex = ArmeriaKnownHttpServiceClassifier.excludeFromDuplicateIndex(kind),
                 annotatedServiceHasPathPrefix = annotatedServiceHasPathPrefix,
+                pathType = parsedPath.pathType,
+                explicitExactPath = parsedPath.explicitExactPath,
                 decorators = programmaticDecorators,
                 timeoutHints = timeoutHints,
                 contentHints =

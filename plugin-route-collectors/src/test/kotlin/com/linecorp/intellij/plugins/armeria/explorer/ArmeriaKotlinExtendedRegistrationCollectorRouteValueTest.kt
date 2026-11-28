@@ -43,6 +43,36 @@ class ArmeriaKotlinExtendedRegistrationCollectorRouteValueTest : ArmeriaFixtureT
             .also { route -> assertTrue(route.target.endsWith("HelloService")) }
     }
 
+    fun testCollectsExplicitExactRouteOfAsLiteralPath() {
+        configureService(
+            """
+            Server.builder()
+                .service(Route.of("exact:/status/:ready"), HelloService())
+                .build()
+            """,
+        )
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/status/:ready", pathType = PathType.EXACT)
+            .also { route -> assertTrue(route.explicitExactPath) }
+    }
+
+    fun testCollectsExplicitExactRouteBuilderPathAsLiteralPath() {
+        configureService(
+            """
+            Server.builder()
+                .service(Route.builder().path("exact:/status/:ready").build(), HelloService())
+                .build()
+            """,
+        )
+
+        collectRoutes()
+            .also { it.singleRoute() }
+            .assertRoute(RouteMatch.ROUTE_FLUENT, path = "/status/:ready", pathType = PathType.EXACT)
+            .also { route -> assertTrue(route.explicitExactPath) }
+    }
+
     fun testCollectsServiceRegistrationWithRouteOfMethodAndPath() {
         configureService(
             """

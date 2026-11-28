@@ -241,12 +241,13 @@ internal object ArmeriaKotlinRouteValueExtractor {
             }
         }
         val rawPath = ArmeriaKotlinExpressionSupport.extractKotlinStringConstant(pathExpression) ?: return null
-        val (pathType, path) = ArmeriaRouteSupport.parsePathType(rawPath)
+        val parsedPath = ArmeriaRouteSupport.parsePathType(rawPath)
         return FluentRouteChainInfo(
             httpMethod = httpMethod,
-            path = path,
-            pathType = pathType,
+            path = parsedPath.path,
+            pathType = parsedPath.pathType,
             target = target,
+            explicitExactPath = parsedPath.explicitExactPath,
         )
     }
 
@@ -295,7 +296,7 @@ internal object ArmeriaKotlinRouteValueExtractor {
         if (resolved.isEmpty() || resolved.any { it == null }) {
             return null
         }
-        return resolved.filterNotNull().distinctBy { Triple(it.httpMethod, it.path, it.pathType) }.singleOrNull()
+        return resolved.filterNotNull().distinctBy { listOf(it.httpMethod, it.path, it.pathType, it.explicitExactPath) }.singleOrNull()
     }
 
     private fun resolveCallDeclaration(call: KtCallExpression): PsiElement? {

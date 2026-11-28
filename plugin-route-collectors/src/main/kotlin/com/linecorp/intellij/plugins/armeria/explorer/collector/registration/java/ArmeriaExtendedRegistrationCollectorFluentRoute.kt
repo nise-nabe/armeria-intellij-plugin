@@ -107,6 +107,7 @@ internal object ArmeriaExtendedRegistrationCollectorFluentRoute {
             target = chainInfo.target,
             routeMatch = RouteMatch.ROUTE_FLUENT,
             pathType = chainInfo.pathType,
+            explicitExactPath = chainInfo.explicitExactPath,
             decorators = ArmeriaDecoratorSupport.collectProgrammaticDecorators(metadataCall, chainInfo.path),
             timeoutHints = ArmeriaTimeoutSupport.collectBuilderTimeoutHints(metadataCall),
         )

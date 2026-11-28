@@ -40,6 +40,8 @@ data class ArmeriaRoute(
     val fileServiceRoot: FileServiceRoot? = null,
     /** Stable protocol identity for known protocols; [protocol] remains the display/free-form label. */
     val protocolType: RouteProtocol? = null,
+    /** True when the source pattern used Armeria's explicit `exact:` prefix, making variable-shaped text literal. */
+    val explicitExactPath: Boolean = false,
 ) {
     fun resolveSourceHint(): String {
         val element = pointer.element ?: return ""
@@ -181,6 +183,7 @@ data class ArmeriaRoute(
             exampleHeaders: List<String> = emptyList(),
             fileServiceRoot: FileServiceRoot? = null,
             protocolType: RouteProtocol? = null,
+            explicitExactPath: Boolean = false,
         ): ArmeriaRoute =
             ArmeriaRoute(
                 protocol = protocol,
@@ -208,6 +211,7 @@ data class ArmeriaRoute(
                 exampleHeaders = exampleHeaders,
                 fileServiceRoot = fileServiceRoot,
                 protocolType = protocolType,
+                explicitExactPath = explicitExactPath,
             )
 
         fun createRuntime(

@@ -237,7 +237,7 @@ object ArmeriaRouteDuplicateIndex {
             fun from(route: ArmeriaRoute): NonMountBucketKey =
                 NonMountBucketKey(
                     regex = route.pathType == PathType.REGEX,
-                    path = ArmeriaPathVariableSupport.pathShapeForOverlap(route.path),
+                    path = ArmeriaPathVariableSupport.pathShapeForOverlap(route.path, route.explicitExactPath),
                     virtualHostName = route.virtualHostName,
                 )
         }
@@ -296,8 +296,8 @@ object ArmeriaRouteDuplicateIndex {
             }
 
             else -> {
-                ArmeriaPathVariableSupport.pathShapeForOverlap(first.path) ==
-                    ArmeriaPathVariableSupport.pathShapeForOverlap(second.path)
+                ArmeriaPathVariableSupport.pathShapeForOverlap(first.path, first.explicitExactPath) ==
+                    ArmeriaPathVariableSupport.pathShapeForOverlap(second.path, second.explicitExactPath)
             }
         }
     }
