@@ -49,7 +49,7 @@ object ArmeriaRouteContentHintSupport {
         messageKey: String,
     ): List<Pair<String, String>> =
         payloads(contentHints, messageKey).mapNotNull { condition ->
-            if ('|' in condition) {
+            if ("||" in condition) {
                 return@mapNotNull null
             }
             val match = SIMPLE_EQUALITY_MATCH.matchEntire(condition) ?: return@mapNotNull null

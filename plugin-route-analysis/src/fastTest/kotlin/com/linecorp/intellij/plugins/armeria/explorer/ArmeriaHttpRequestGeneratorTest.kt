@@ -811,4 +811,10 @@ class ArmeriaHttpRequestGeneratorTest {
         val route = route(contentHints = listOf(message("route.explorer.hint.matchesParam", "env =prod")))
         assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("env=prod"))
     }
+
+    @Test
+    fun requestText_encodesSinglePipeInQueryParameterValue() {
+        val route = route(contentHints = listOf(message("route.explorer.hint.matchesParam", "fields=id|name")))
+        assertTrue(ArmeriaHttpRequestGenerator.requestText(route).contains("fields=id%7Cname"))
+    }
 }
