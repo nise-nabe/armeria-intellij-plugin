@@ -1,5 +1,13 @@
 package com.linecorp.intellij.plugins.armeria.run
 
+import com.intellij.json.JsonFileType
+import com.intellij.json.psi.JsonFile
+import com.intellij.json.psi.JsonObject
+import com.intellij.openapi.project.Project
+import com.intellij.psi.PsiErrorElement
+import com.intellij.psi.PsiFileFactory
+import com.intellij.psi.util.PsiTreeUtil
+
 object ArmeriaHttpClientEnvironment {
     const val FILE_NAME = "http-client.env.json"
     const val ENV_NAME = "armeria"
@@ -7,8 +15,6 @@ object ArmeriaHttpClientEnvironment {
     const val PORT_KEY = "port"
     const val SCHEME_KEY = "scheme"
     const val REQUEST_BASE_URL = "{{scheme}}://{{host}}:{{port}}"
-
-    private val ARMERIA_OBJECT = Regex(""""$ENV_NAME"\s*:\s*\{([^{}]*)}""")
 
     fun content(
         host: String,
@@ -26,6 +32,7 @@ object ArmeriaHttpClientEnvironment {
         }
 
     fun merge(
+        project: Project,
         existing: String?,
         host: String,
         port: Int,
@@ -34,15 +41,24 @@ object ArmeriaHttpClientEnvironment {
         if (existing.isNullOrBlank()) {
             return content(host, port, https)
         }
-        val match = ARMERIA_OBJECT.find(existing)
-        if (match == null) {
-            return insertArmeriaEnv(existing, host, port, https) ?: content(host, port, https)
+        val root = readRootObject(project, existing)
+        if (root == null) {
+            return existing
         }
-        var body = match.groupValues[1]
-        body = upsertProperty(body, HOST_KEY, host)
-        body = upsertProperty(body, PORT_KEY, port.toString())
-        body = upsertProperty(body, SCHEME_KEY, scheme(https))
-        return existing.replaceRange(match.groups[1]!!.range, body)
+        val armeriaProperty = root.findProperty(ENV_NAME)
+        if (armeriaProperty == null) {
+            return insertArmeriaEnv(existing, root, host, port, https)
+        }
+        val armeriaObject = armeriaProperty.value as? JsonObject
+        if (armeriaObject == null) {
+            val replacement = "\"$ENV_NAME\": ${armeriaObjectJson(host, port, https)}"
+            return existing.replaceRange(
+                armeriaProperty.textRange.startOffset,
+                armeriaProperty.textRange.endOffset,
+                replacement,
+            )
+        }
+        return mergeArmeriaObject(existing, armeriaObject, host, port, https)
     }
 
     fun requestBaseUrl(
@@ -56,46 +72,142 @@ object ArmeriaHttpClientEnvironment {
             requested
         }
 
-    private fun insertArmeriaEnv(
-        existing: String,
+    private fun readRootObject(
+        project: Project,
+        text: String,
+    ): JsonObject? {
+        val file =
+            PsiFileFactory
+                .getInstance(project)
+                .createFileFromText(FILE_NAME, JsonFileType.INSTANCE, text) as? JsonFile
+        if (file == null || PsiTreeUtil.findChildOfType(file, PsiErrorElement::class.java) != null) {
+            return null
+        }
+        return file.topLevelValue as? JsonObject
+    }
+
+    private fun mergeArmeriaObject(
+        text: String,
+        armeriaObject: JsonObject,
         host: String,
         port: Int,
         https: Boolean,
-    ): String? {
-        val rootEnd = existing.lastIndexOf('}')
-        if (rootEnd < 0) {
-            return null
+    ): String {
+        val values =
+            linkedMapOf(
+                HOST_KEY to host,
+                PORT_KEY to port.toString(),
+                SCHEME_KEY to scheme(https),
+            )
+        val edits = mutableListOf<TextEdit>()
+        val missing = mutableListOf<Pair<String, String>>()
+        for ((key, value) in values) {
+            val jsonValue = armeriaObject.findProperty(key)?.value
+            if (jsonValue == null) {
+                missing += key to value
+            } else {
+                edits += TextEdit(jsonValue.textRange.startOffset, jsonValue.textRange.endOffset, jsonString(value))
+            }
         }
-        val before = existing.substring(0, rootEnd).trimEnd()
-        val needsComma = before.lastOrNull()?.let { it != '{' && it != ',' } == true
-        val envBlock =
+        if (missing.isNotEmpty()) {
+            val insertOffset = insertionOffset(text, armeriaObject.textRange.endOffset)
+            val needsComma = needsCommaBeforeInsert(text, insertOffset, armeriaObject.propertyList.isNotEmpty())
+            edits +=
+                TextEdit(
+                    insertOffset,
+                    insertOffset,
+                    insertedProperties(missing, needsComma),
+                )
+        }
+        return applyEdits(text, edits)
+    }
+
+    private fun insertArmeriaEnv(
+        text: String,
+        root: JsonObject,
+        host: String,
+        port: Int,
+        https: Boolean,
+    ): String {
+        val insertOffset = insertionOffset(text, root.textRange.endOffset)
+        val needsComma = needsCommaBeforeInsert(text, insertOffset, root.propertyList.isNotEmpty())
+        val inserted =
             buildString {
                 if (needsComma) {
                     append(',')
                 }
-                appendLine()
-                appendLine("  \"$ENV_NAME\": {")
-                appendLine("    \"$HOST_KEY\": ${jsonString(host)},")
-                appendLine("    \"$PORT_KEY\": \"$port\",")
-                appendLine("    \"$SCHEME_KEY\": ${jsonString(scheme(https))}")
-                append("  }")
-                appendLine()
+                append('\n')
+                append("  \"$ENV_NAME\": ")
+                append(armeriaObjectJson(host, port, https))
             }
-        return before + envBlock + existing.substring(rootEnd)
+        return text.replaceRange(insertOffset, insertOffset, inserted)
     }
 
-    private fun upsertProperty(
-        body: String,
-        key: String,
-        value: String,
-    ): String {
-        val pattern = Regex("(\"$key\"\\s*:\\s*)\"([^\"\\\\]*)\"")
-        if (pattern.containsMatchIn(body)) {
-            return pattern.replace(body, "$1${jsonString(value)}")
+    private fun armeriaObjectJson(
+        host: String,
+        port: Int,
+        https: Boolean,
+    ): String =
+        buildString {
+            appendLine("{")
+            appendLine("    \"$HOST_KEY\": ${jsonString(host)},")
+            appendLine("    \"$PORT_KEY\": \"$port\",")
+            appendLine("    \"$SCHEME_KEY\": ${jsonString(scheme(https))}")
+            append("  }")
         }
-        val trimmed = body.trimEnd()
-        val separator = if (trimmed.isEmpty() || trimmed.endsWith(',') || trimmed.endsWith('{')) "" else ","
-        return "$trimmed$separator\n    \"$key\": ${jsonString(value)}\n  "
+
+    private fun insertedProperties(
+        properties: List<Pair<String, String>>,
+        needsComma: Boolean,
+    ): String =
+        buildString {
+            if (needsComma) {
+                append(',')
+            }
+            properties.forEachIndexed { index, (key, value) ->
+                append('\n')
+                append("    \"$key\": ${jsonString(value)}")
+                if (index < properties.lastIndex) {
+                    append(',')
+                }
+            }
+        }
+
+    private fun insertionOffset(
+        text: String,
+        objectEndOffset: Int,
+    ): Int {
+        var offset = objectEndOffset - 1
+        while (offset > 0 && text[offset - 1].isWhitespace()) {
+            offset--
+        }
+        return offset
+    }
+
+    private fun needsCommaBeforeInsert(
+        text: String,
+        insertOffset: Int,
+        hasProperties: Boolean,
+    ): Boolean {
+        if (!hasProperties) {
+            return false
+        }
+        var offset = insertOffset - 1
+        while (offset >= 0 && text[offset].isWhitespace()) {
+            offset--
+        }
+        return offset >= 0 && text[offset] != ',' && text[offset] != '{'
+    }
+
+    private fun applyEdits(
+        text: String,
+        edits: List<TextEdit>,
+    ): String {
+        var updated = text
+        for (edit in edits.sortedByDescending { it.startOffset }) {
+            updated = updated.replaceRange(edit.startOffset, edit.endOffset, edit.replacement)
+        }
+        return updated
     }
 
     private fun scheme(https: Boolean): String = if (https) "https" else "http"
@@ -115,4 +227,10 @@ object ArmeriaHttpClientEnvironment {
             }
             append('"')
         }
+
+    private data class TextEdit(
+        val startOffset: Int,
+        val endOffset: Int,
+        val replacement: String,
+    )
 }

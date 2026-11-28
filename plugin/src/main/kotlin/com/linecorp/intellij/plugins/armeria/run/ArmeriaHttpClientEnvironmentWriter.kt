@@ -58,6 +58,7 @@ internal object ArmeriaHttpClientEnvironmentWriter {
                                 ?.let { LoadTextUtil.loadText(it).toString() }
                         val content =
                             ArmeriaHttpClientEnvironment.merge(
+                                project,
                                 previous,
                                 ArmeriaRunUrlBuilder.LOOPBACK_HOST,
                                 listen.port,

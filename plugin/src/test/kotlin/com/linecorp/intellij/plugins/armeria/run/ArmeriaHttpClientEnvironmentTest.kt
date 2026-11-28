@@ -1,12 +1,11 @@
 package com.linecorp.intellij.plugins.armeria.run
 
-import org.junit.Test
+import com.linecorp.intellij.plugins.armeria.test.ArmeriaLightJavaCodeInsightFixtureTestCase
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class ArmeriaHttpClientEnvironmentTest {
-    @Test
-    fun content_writesHostAndPort() {
+class ArmeriaHttpClientEnvironmentTest : ArmeriaLightJavaCodeInsightFixtureTestCase() {
+    fun testContentWritesHostAndPort() {
         val json = ArmeriaHttpClientEnvironment.content("127.0.0.1", 8080)
 
         assertTrue(json.contains("\"armeria\""))
@@ -15,16 +14,14 @@ class ArmeriaHttpClientEnvironmentTest {
         assertTrue(json.contains("\"scheme\": \"http\""))
     }
 
-    @Test
-    fun merge_blankExistingUsesFreshContent() {
+    fun testMergeBlankExistingUsesFreshContent() {
         assertEquals(
             ArmeriaHttpClientEnvironment.content("127.0.0.1", 9090),
-            ArmeriaHttpClientEnvironment.merge(null, "127.0.0.1", 9090),
+            ArmeriaHttpClientEnvironment.merge(project, null, "127.0.0.1", 9090),
         )
     }
 
-    @Test
-    fun merge_updatesExistingArmeriaEnv() {
+    fun testMergeUpdatesExistingArmeriaEnv() {
         val existing =
             """
             {
@@ -39,7 +36,7 @@ class ArmeriaHttpClientEnvironmentTest {
             }
             """.trimIndent()
 
-        val merged = ArmeriaHttpClientEnvironment.merge(existing, "127.0.0.1", 9090)
+        val merged = ArmeriaHttpClientEnvironment.merge(project, existing, "127.0.0.1", 9090)
 
         assertTrue(merged.contains("\"host\": \"127.0.0.1\""))
         assertTrue(merged.contains("\"port\": \"9090\""))
@@ -49,8 +46,63 @@ class ArmeriaHttpClientEnvironmentTest {
         assertTrue(merged.contains("\"port\": \"443\""))
     }
 
-    @Test
-    fun merge_insertsArmeriaEnvWithoutDroppingOthers() {
+    fun testMergePreservesNestedValuesInsideArmeriaEnv() {
+        val existing =
+            """
+            {
+              "armeria": {
+                "host": "localhost",
+                "retry": {
+                  "attempts": 3,
+                  "path": "/nested/{value}"
+                }
+              },
+              "prod": {
+                "host": "example.com"
+              }
+            }
+            """.trimIndent()
+
+        val merged = ArmeriaHttpClientEnvironment.merge(project, existing, "127.0.0.1", 9090, https = true)
+
+        assertEquals(1, Regex("\\\"armeria\\\"\\s*:").findAll(merged).count(), merged)
+        assertTrue(merged.contains("\"host\": \"127.0.0.1\""), merged)
+        assertTrue(merged.contains("\"port\": \"9090\""), merged)
+        assertTrue(merged.contains("\"scheme\": \"https\""), merged)
+        assertTrue(merged.contains("\"attempts\": 3"), merged)
+        assertTrue(merged.contains("/nested/{value}"), merged)
+        assertTrue(merged.contains("example.com"), merged)
+    }
+
+    fun testMergePreservesJsonComments() {
+        val existing =
+            """
+            {
+              // Local development server.
+              "armeria": {
+                "host": "localhost",
+                "retry": {
+                  "attempts": 3
+                }
+              }
+            }
+            """.trimIndent()
+
+        val merged = ArmeriaHttpClientEnvironment.merge(project, existing, "127.0.0.1", 9090)
+
+        assertEquals(1, Regex("\\\"armeria\\\"\\s*:").findAll(merged).count(), merged)
+        assertTrue(merged.contains("// Local development server."), merged)
+        assertTrue(merged.contains("\"attempts\": 3"), merged)
+        assertTrue(merged.contains("\"port\": \"9090\""), merged)
+    }
+
+    fun testMergeLeavesUnparseableJsonUnchanged() {
+        val existing = "{ \"armeria\": {"
+
+        assertEquals(existing, ArmeriaHttpClientEnvironment.merge(project, existing, "127.0.0.1", 9090))
+    }
+
+    fun testMergeInsertsArmeriaEnvWithoutDroppingOthers() {
         val existing =
             """
             {
@@ -61,23 +113,21 @@ class ArmeriaHttpClientEnvironmentTest {
             }
             """.trimIndent()
 
-        val merged = ArmeriaHttpClientEnvironment.merge(existing, "127.0.0.1", 8080)
+        val merged = ArmeriaHttpClientEnvironment.merge(project, existing, "127.0.0.1", 8080)
 
         assertTrue(merged.contains("\"armeria\""))
         assertTrue(merged.contains("\"host\": \"127.0.0.1\""))
         assertTrue(merged.contains("example.com"))
     }
 
-    @Test
-    fun merge_writesHttpsScheme() {
-        val json = ArmeriaHttpClientEnvironment.merge(null, "127.0.0.1", 8443, https = true)
+    fun testMergeWritesHttpsScheme() {
+        val json = ArmeriaHttpClientEnvironment.merge(project, null, "127.0.0.1", 8443, https = true)
 
         assertTrue(json.contains("\"scheme\": \"https\""))
         assertTrue(json.contains("\"port\": \"8443\""))
     }
 
-    @Test
-    fun requestBaseUrl_usesVariablesWhenEnvExists() {
+    fun testRequestBaseUrlUsesVariablesWhenEnvExists() {
         assertEquals(
             ArmeriaHttpClientEnvironment.REQUEST_BASE_URL,
             ArmeriaHttpClientEnvironment.requestBaseUrl(
