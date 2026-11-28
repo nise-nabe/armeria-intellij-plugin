@@ -56,6 +56,17 @@ class ArmeriaRouteDetailPanel(
                 ) ?: return@ActionLink
             CopyPasteManager.getInstance().setContents(StringSelection(command))
         }
+    private val copyUrlLink =
+        ActionLink(message("route.explorer.action.copyUrl")) {
+            val route = currentRoute ?: return@ActionLink
+            val url =
+                ArmeriaRouteCurlSupport.urlText(
+                    route = route,
+                    staticRoutes = staticRoutesProvider(),
+                    lastSyncedDocsBaseUrl = lastSyncedDocsBaseUrlProvider(),
+                ) ?: return@ActionLink
+            CopyPasteManager.getInstance().setContents(StringSelection(url))
+        }
     private val generateHttpLink =
         ActionLink(message("route.explorer.action.generateHttpRequest")) {
             val route = currentRoute ?: return@ActionLink
@@ -126,7 +137,7 @@ class ArmeriaRouteDetailPanel(
         val actionRow =
             JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(8), 0)).apply {
                 border = JBUI.Borders.emptyBottom(8)
-                for (link in listOf(jumpToSourceLink, copyCurlLink, generateHttpLink, openDebugFormLink)) {
+                for (link in listOf(jumpToSourceLink, copyUrlLink, copyCurlLink, generateHttpLink, openDebugFormLink)) {
                     link.autoHideOnDisable = true
                     add(link)
                 }
@@ -187,6 +198,13 @@ class ArmeriaRouteDetailPanel(
     private fun updateActionState() {
         val route = currentRoute
         jumpToSourceLink.isEnabled = route != null
+        copyUrlLink.isEnabled =
+            route != null &&
+            ArmeriaRouteCurlSupport.urlText(
+                route = route,
+                staticRoutes = staticRoutesProvider(),
+                lastSyncedDocsBaseUrl = lastSyncedDocsBaseUrlProvider(),
+            ) != null
         copyCurlLink.isEnabled =
             route != null &&
             ArmeriaRouteCurlSupport.curlText(

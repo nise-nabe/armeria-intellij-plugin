@@ -29,7 +29,8 @@ class ArmeriaSyncRuntimeRoutesAction :
                 .candidateMountPaths(staticRoutes, userMountPath = null)
                 .firstOrNull()
                 .orEmpty()
-        val listenPort = ArmeriaDocServiceSupport.listenPortBinding(staticRoutes)
+        val listenPortBindings = ArmeriaDocServiceSupport.listenPortBindings(staticRoutes)
+        val listenPort = listenPortBindings.firstOrNull()
         val dialog =
             ArmeriaDocServiceSyncDialog(
                 project = project,
@@ -37,6 +38,7 @@ class ArmeriaSyncRuntimeRoutesAction :
                 defaultPort = (listenPort?.first ?: 8080).toString(),
                 defaultMountPath = defaultMountPath,
                 defaultUseHttps = listenPort?.second ?: false,
+                listenPortBindings = listenPortBindings,
             )
         if (!dialog.showAndGet()) {
             return

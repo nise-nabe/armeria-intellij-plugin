@@ -120,6 +120,19 @@ class ArmeriaRouteExplorerPanel(
                     CopyPasteManager.getInstance().setContents(StringSelection(route.path))
                 }
             }
+        val copyUrlAction =
+            object : DumbAwareAction(message("route.explorer.action.copyUrl")) {
+                override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+                override fun update(e: AnActionEvent) {
+                    e.presentation.isEnabled = selectedRouteFromTree()?.let(::urlText) != null
+                }
+
+                override fun actionPerformed(e: AnActionEvent) {
+                    val url = selectedRouteFromTree()?.let(::urlText) ?: return
+                    CopyPasteManager.getInstance().setContents(StringSelection(url))
+                }
+            }
         val copyCurlAction =
             object : DumbAwareAction(message("route.explorer.action.copyCurl")) {
                 override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
@@ -199,6 +212,7 @@ class ArmeriaRouteExplorerPanel(
             DefaultActionGroup().apply {
                 add(jumpToSourceAction)
                 add(copyPathAction)
+                add(copyUrlAction)
                 add(copyCurlAction)
                 addSeparator()
                 add(generateHttpRequestAction)
@@ -471,7 +485,14 @@ class ArmeriaRouteExplorerPanel(
             if (runtimeCount == 0) {
                 message("route.explorer.footnote.static")
             } else {
-                message("route.explorer.footnote.runtime", runtimeCount)
+                val diff = ArmeriaRuntimeStaticDiff.compare(routeState.staticRoutes, routeState.runtimeRoutes).summary()
+                message(
+                    "route.explorer.footnote.runtimeDiff",
+                    runtimeCount,
+                    diff.sharedCount,
+                    diff.runtimeOnlyCount,
+                    diff.staticOnlyCount,
+                )
             }
     }
 
@@ -493,8 +514,23 @@ class ArmeriaRouteExplorerPanel(
             filtered = filtered.filter { matchesProtocolFilter(it, protocol) }
         }
         when ((sourceFilter.selectedItem as? FilterChoice)?.value) {
-            SOURCE_STATIC -> filtered = filtered.filter { it.routeMatch != RouteMatch.RUNTIME }
-            SOURCE_RUNTIME -> filtered = filtered.filter { it.routeMatch == RouteMatch.RUNTIME }
+            SOURCE_STATIC -> {
+                filtered = filtered.filter { it.routeMatch != RouteMatch.RUNTIME }
+            }
+
+            SOURCE_RUNTIME -> {
+                filtered = filtered.filter { it.routeMatch == RouteMatch.RUNTIME }
+            }
+
+            SOURCE_RUNTIME_ONLY -> {
+                val diff = ArmeriaRuntimeStaticDiff.compare(routeState.staticRoutes, routeState.runtimeRoutes)
+                filtered = filtered.filter(diff::isRuntimeOnly)
+            }
+
+            SOURCE_STATIC_ONLY -> {
+                val diff = ArmeriaRuntimeStaticDiff.compare(routeState.staticRoutes, routeState.runtimeRoutes)
+                filtered = filtered.filter(diff::isStaticOnly)
+            }
         }
         return filtered
     }
@@ -543,6 +579,13 @@ class ArmeriaRouteExplorerPanel(
         updateStatusLabel()
     }
 
+    private fun urlText(route: ArmeriaRoute): String? =
+        ArmeriaRouteCurlSupport.urlText(
+            route = route,
+            staticRoutes = routeState.staticRoutes,
+            lastSyncedDocsBaseUrl = routeState.lastDocServiceBaseUrl,
+        )
+
     private fun curlText(route: ArmeriaRoute): String? =
         ArmeriaRouteCurlSupport.curlText(
             route = route,
@@ -568,6 +611,8 @@ class ArmeriaRouteExplorerPanel(
 
 private const val SOURCE_STATIC = "static"
 private const val SOURCE_RUNTIME = "runtime"
+private const val SOURCE_RUNTIME_ONLY = "runtimeOnly"
+private const val SOURCE_STATIC_ONLY = "staticOnly"
 private const val PROTOCOL_HTTP = "http"
 private const val PROTOCOL_GRPC = "grpc"
 private const val PROTOCOL_GRAPHQL = "graphql"
@@ -608,4 +653,6 @@ private fun sourceFilterChoices(): Array<FilterChoice> =
         FilterChoice(message("route.explorer.filter.allSources")),
         FilterChoice(message("route.explorer.filter.static"), SOURCE_STATIC),
         FilterChoice(message("route.explorer.filter.runtime"), SOURCE_RUNTIME),
+        FilterChoice(message("route.explorer.filter.runtimeOnly"), SOURCE_RUNTIME_ONLY),
+        FilterChoice(message("route.explorer.filter.staticOnly"), SOURCE_STATIC_ONLY),
     )

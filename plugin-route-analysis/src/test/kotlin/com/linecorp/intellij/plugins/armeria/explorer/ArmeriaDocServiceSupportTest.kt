@@ -63,6 +63,22 @@ class ArmeriaDocServiceSupportTest {
     }
 
     @Test
+    fun listenPortBindings_returnsDistinctDetectedPortsInOrder() {
+        val routes =
+            listOf(
+                listenPort(":9090", "HTTP"),
+                listenPort(":8080", "HTTP"),
+                listenPort(":8443", "HTTPS"),
+                listenPort(":9090", "HTTP"),
+            )
+
+        assertEquals(
+            listOf(8080 to false, 8443 to true, 9090 to false),
+            ArmeriaDocServiceSupport.listenPortBindings(routes),
+        )
+    }
+
+    @Test
     fun docsBaseUrl_usesDetectedListenPortAndScheme() {
         val routes = listOf(listenPort(":8443", "HTTPS"), docServiceRoute(path = "/docs"))
 
