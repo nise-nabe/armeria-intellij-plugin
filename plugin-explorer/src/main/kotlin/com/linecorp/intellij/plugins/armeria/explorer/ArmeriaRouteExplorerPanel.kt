@@ -486,7 +486,7 @@ class ArmeriaRouteExplorerPanel(
         }
         val method = (methodFilter.selectedItem as? FilterChoice)?.value
         if (!method.isNullOrEmpty()) {
-            filtered = filtered.filter { it.httpMethod.equals(method, ignoreCase = true) }
+            filtered = filtered.filter { matchesMethodFilter(it, method) }
         }
         val protocol = (protocolFilter.selectedItem as? FilterChoice)?.value
         if (!protocol.isNullOrEmpty()) {
@@ -497,6 +497,32 @@ class ArmeriaRouteExplorerPanel(
             SOURCE_RUNTIME -> filtered = filtered.filter { it.routeMatch == RouteMatch.RUNTIME }
         }
         return filtered
+    }
+
+    private fun matchesMethodFilter(
+        route: ArmeriaRoute,
+        method: String,
+    ): Boolean {
+        if (route.httpMethod.equals(method, ignoreCase = true)) {
+            return true
+        }
+        if (route.httpMethod.isNotBlank()) {
+            return false
+        }
+        return when (route.routeMatch) {
+            RouteMatch.ANNOTATED_SERVICE,
+            RouteMatch.SERVICE,
+            RouteMatch.SERVICE_UNDER,
+            RouteMatch.ROUTE_FLUENT,
+            RouteMatch.DELEGATED,
+            -> true
+
+            RouteMatch.FILE_SERVICE,
+            RouteMatch.HEALTH_CHECK,
+            -> method.equals("GET", ignoreCase = true) || method.equals("HEAD", ignoreCase = true)
+
+            else -> false
+        }
     }
 
     private fun matchesProtocolFilter(
