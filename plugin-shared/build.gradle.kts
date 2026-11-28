@@ -13,6 +13,7 @@ dependencies {
             useInstaller = false
         }
         bundledPlugin("com.intellij.java")
+        bundledPlugin("com.intellij.modules.json")
         bundledPlugin("org.jetbrains.plugins.gradle")
         bundledPlugin("org.jetbrains.kotlin")
     }
